@@ -1,0 +1,57 @@
+# ==== الأنظمة والـ IDEs ======================================================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ==== ملفات السجلات (Logs) ===================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==== مجلدات التبعيات (node_modules) ========================================
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+.pnpm-store/
+
+# ==== متغيرات البيئة =========================================================
+.env
+.env.*            # مثل .env.local أو .env.production
+
+# ==== نواتج البناء (Build / Dist) ============================================
+dist/
+build/
+# Next.js (لو بتستعمله بالـ frontend)
+.next/
+out/
+
+# NestJS أو غيره (بالـ backend)
+backend/dist/
+backend/build/
+
+# Turborepo cache (لو بتستخدمه)
+.turbo/
+
+# ==== تغطية الاختبارات والتقارير =============================================
+coverage/
+.nyc_output/
+
+# ==== ملفات مؤقتة متنوعة =====================================================
+tmp/
+temp/
+.cache/
+*.tz
+*.swp
+*.swo
+*.bak
+
+# ==== ملفات قاعدة بيانات محلية (مثال Prisma) =================================
+prisma/*.db
+prisma/migrations/
+
+# ==== Docker overrides (اختياري) =============================================
+docker-compose.override.yml
