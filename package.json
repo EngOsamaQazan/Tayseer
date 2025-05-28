@@ -55,5 +55,9 @@
     "erp"
   ],
   "author": "Tayseer Team",
-  "license": "PROPRIETARY"
+  "license": "PROPRIETARY",
+  "dependencies": {
+    "@types/react-router-dom": "^5.3.3",
+    "react-router-dom": "^7.6.1"
+  }
 }

@@ -1,0 +1,271 @@
+# .ai-context - Tayseer Platform - Installment Companies Management System
+# Last Updated: 2025-05-25
+
+## 📋 Project Overview
+Project Name: Tayseer Platform - Installment Companies Management System
+Version: 1.0.0
+Status: In Development
+Type: Multi-Tenant SaaS Cloud System
+Purpose: Comprehensive management for electronics installment companies
+
+## 🎯 Main Objectives
+1. Automate operations and reduce manual work
+2. Ensure financial and inventory data accuracy
+3. Improve customer experience and service speed
+4. Provide accurate reports and analytics for decision making
+5. Ensure legal compliance and standards
+
+## 🏗️ Technical Architecture
+
+### Backend Stack
+- **Language**: TypeScript with Node.js
+- **Framework**: Express.js / Fastify
+- **API**: GraphQL (Apollo Server) + REST API
+- **Containerization**: Docker for microservices
+
+### Databases
+- **PostgreSQL**: Main relational database
+- **Redis**: Caching and session management
+- **MongoDB**: Document and file storage
+- **Elasticsearch**: Advanced text search
+
+### Frontend Stack
+- **Framework**: React with TypeScript
+- **State Management**: Redux Toolkit
+- **UI Library**: Material-UI / Ant Design
+- **Data Fetching**: React Query
+
+### Mobile Stack
+- **Framework**: React Native for cross-platform apps
+
+### Infrastructure
+- **Cloud**: AWS / Azure
+- **Orchestration**: Kubernetes
+- **CI/CD**: GitHub Actions
+- **Monitoring**: Prometheus + Grafana
+
+## 📦 Main System Modules
+
+### 1. Customer Management
+- Customer registration and file management
+- Credit inquiry integration
+- Customer classification and risk assessment
+- Document management
+- Default prediction using AI
+- Automated creditworthiness evaluation
+
+### 2. Inventory Management
+- Multi-warehouse management
+- Product registration and cataloging
+- Movement tracking and inventory count
+- Warranty management
+- Supplier management
+- Barcode system integration
+- Reorder alerts
+
+### 3. Installment Contracts
+- Contract creation and management
+- Installment and interest calculation
+- Payment scheduling
+- Payment tracking and arrears
+- Default management
+- Electronic signature
+- Smart contracts
+- Automated reminders
+
+### 4. Accounting System
+- Chart of accounts
+- Journal entries
+- Invoice generation
+- Expense and revenue tracking
+- Financial reporting
+- Tax management
+- Cash flow forecasting
+
+### 5. HR Management
+- Employee files
+- Attendance and fingerprint system
+- Leave management
+- Payroll processing
+- Commission calculation
+- Performance evaluation
+- Employee mobile app
+
+### 6. Advanced Task Management
+- Task assignment and priority setting
+- Progress tracking
+- Task delegation
+- Record linking
+- Real-time notifications
+- Subtasks
+- Kanban board
+- AI-powered task distribution
+
+### 7. Legal Department
+- Case file management
+- Legal procedure tracking
+- Court session scheduling
+- Judgment recording
+- Collection and seizure procedures
+- Court system integration
+
+### 8. Customer Service
+- Inquiry and complaint management
+- Call recording
+- Solution tracking
+- Satisfaction surveys
+- Ticketing system
+- Knowledge base
+- Multi-channel support
+
+### 9. BI & Reporting
+- Interactive dashboards
+- Sales and collection reports
+- Profitability analysis
+- Branch and employee performance
+- Predictive analytics
+- Trend analysis
+- Custom reports
+
+### 10. Investor System
+- Investor data management
+- Investment contracts
+- Portfolio management
+- Performance tracking
+- Profit distribution
+- Investor dashboard
+
+## 📂 Project Structure
+```
+tayseer-platform/
+├── backend/
+│   ├── src/
+│   │   ├── modules/        # Main modules
+│   │   ├── shared/         # Shared code
+│   │   ├── config/         # Configuration files
+│   │   └── server.ts       # Entry point
+│   ├── tests/             # Tests
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # Reusable components
+│   │   ├── modules/        # Frontend modules
+│   │   ├── store/          # Redux store
+│   │   └── App.tsx         # Main component
+│   └── package.json
+├── mobile/                 # React Native app
+├── shared/                 # Code shared between Frontend & Backend
+├── docker/                 # Docker files
+├── k8s/                   # Kubernetes files
+└── docs/                  # Documentation
+```
+
+## 🚀 Current Development Phase
+Currently in: **Phase 1 - Fundamentals**
+- ✅ Customer Management
+- 🔄 Inventory Management (In Progress)
+- 📋 Basic Contracts (Planned)
+
+## 🔐 Security Considerations
+- Zero Trust Architecture
+- JWT Authentication
+- Role-Based Access Control (RBAC)
+- Data Encryption (At rest & In transit)
+- GDPR Compliance
+- Comprehensive Audit Logs
+- Data Loss Prevention (DLP)
+
+## 🤖 AI Features
+- ML models for default prediction
+- NLP for data extraction from documents
+- Intelligent chatbots
+- Automated decision making
+- Dynamic pricing
+- Smart task distribution
+
+## 🛠️ Development Standards
+
+### Code Standards
+- Strict TypeScript usage
+- Follow ESLint & Prettier
+- Write tests for every new feature
+- Always use async/await
+- Comprehensive error handling
+- JSDoc for code documentation
+
+### Naming Conventions
+- Components: PascalCase (e.g., CustomerList.tsx)
+- Files: camelCase (e.g., customerService.ts)
+- CSS Classes: kebab-case (e.g., customer-card)
+- Constants: UPPER_SNAKE_CASE
+- Interfaces: Prefix with I (e.g., ICustomer)
+
+### API Structure
+- All endpoints start with `/api/v1`
+- Use appropriate HTTP status codes
+- Unified error handling
+- Use validation middleware
+- Document all endpoints with Swagger
+
+## 📊 Database Schema
+
+### PostgreSQL - Main Tables
+- customers
+- contracts
+- payments
+- products
+- inventory
+- employees
+- tasks
+- investors
+
+### Redis - Use Cases
+- sessions
+- cache
+- rate limiting
+- real-time notifications
+
+## 🚦 Important Commands
+```bash
+# Development
+npm run dev         # Start dev server
+npm run build       # Build for production
+npm run test        # Run tests
+npm run lint        # Code linting
+
+# Database
+npm run migrate     # Run migrations
+npm run seed        # Seed test data
+
+# Docker
+docker-compose up   # Start all services
+docker-compose down # Stop services
+```
+
+## 🐛 Known Issues
+- [ ] Slow performance in monthly sales reports query
+- [ ] Occasional Redis-PostgreSQL sync issues
+- [ ] Need to optimize Elasticsearch performance
+
+## 📝 Important Developer Notes
+1. Always use transactions for financial operations
+2. All deletions must be soft deletes
+3. Log all operations in audit log
+4. Use Redis caching extensively for performance
+5. Ensure validation at both API and Database levels
+6. Pay attention to error handling and detailed logging
+7. Use DTOs for layer communication
+8. Apply SOLID principles and Clean Architecture
+
+## 🔗 Important Links
+- [Full Documentation](/docs)
+- [API Documentation](/api/docs)
+- [Internal Knowledge Base](/wiki)
+- [Contributing Guide](CONTRIBUTING.md)
+
+## 🤝 Development Team
+Contact: dev@tayseer.com
+Slack Channel: #tayseer-dev
+
+---
+This file is updated periodically. Make sure to review it before starting any new task.
