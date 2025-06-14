@@ -64,7 +64,7 @@ export class CacheService {
   static async get<T>(key: string): Promise<T | null> {
     try {
       const value = await redisClient.get(key);
-      return value ? JSON.parse(value) : null;
+      return typeof value === 'string' ? JSON.parse(value) : null;
     } catch (error) {
       logger.error('خطأ في الحصول على القيمة من Redis:', error);
       throw error;
