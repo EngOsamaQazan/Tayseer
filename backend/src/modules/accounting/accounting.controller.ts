@@ -3,7 +3,7 @@ import accountingService from './accounting.service';
 import { accountingValidation } from './accounting.validation';
 import { ApiError } from '../../shared/utils/api-error';
 import { ApiResponse } from '../../shared/utils/api-response';
-import { logger } from '../../shared/utils/logger';
+import logger from '../../shared/utils/logger';
 import { auditLogUtil } from '../../shared/utils/audit-log';
 import { notificationUtil } from '../../shared/utils/notification';
 import { cacheUtil } from '../../shared/utils/cache';

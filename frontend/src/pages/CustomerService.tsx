@@ -275,4 +275,14 @@ export default function CustomerService() {
               </div>
               <div className="mr-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">قيد المعالجة
+                  <dt className="text-sm font-medium text-gray-500 truncate">قيد المعالجة</dt>
+                  <dd className="text-lg font-medium text-gray-900">15</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

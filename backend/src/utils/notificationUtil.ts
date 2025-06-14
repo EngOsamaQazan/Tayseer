@@ -1,6 +1,6 @@
 import { prisma } from '../config/database';
 import { logger } from './logger';
-import { emailUtil } from './email.utils';
+import { sendEmail } from './email.utils';
 
 export interface NotificationData {
   tenantId: string;
@@ -9,6 +9,7 @@ export interface NotificationData {
   title: string;
   message: string;
   metadata?: any;
+  channels?: string[];
   priority?: 'low' | 'medium' | 'high' | 'urgent';
 }
 
@@ -23,10 +24,10 @@ export const notificationUtil = {
           type: data.type,
           title: data.title,
           message: data.message,
-          metadata: data.metadata ? JSON.stringify(data.metadata) : null,
+          data: data.metadata ? JSON.stringify(data.metadata) : null,
           priority: data.priority || 'medium',
-          isRead: false,
-          createdAt: new Date()
+          channels: data.channels || [],
+          read: false
         }
       });
 
@@ -37,11 +38,11 @@ export const notificationUtil = {
 
       // Send email notification if user has email
       if (user?.email && (data.priority === 'high' || data.priority === 'urgent')) {
-        await emailUtil.sendNotification({
+        await sendEmail({
           to: user.email,
           subject: data.title,
-          body: data.message,
-          priority: data.priority
+          template: `<h3>${data.title}</h3><p>${data.message}</p>`,
+          data: { title: data.title, message: data.message }
         });
       }
 
@@ -55,30 +56,27 @@ export const notificationUtil = {
   async markAsRead(notificationId: string) {
     return prisma.notification.update({
       where: { id: notificationId },
-      data: { isRead: true }
+      data: { read: true }
     });
   },
-
   async markAllAsRead(userId: string) {
     return prisma.notification.updateMany({
-      where: { userId, isRead: false },
-      data: { isRead: true }
+      where: { userId },
+      data: { read: true }
     });
   },
-
   async getUnreadCount(userId: string) {
     return prisma.notification.count({
-      where: { userId, isRead: false }
+      where: { userId, read: false }
     });
   },
-
   async getUserNotifications(userId: string, options?: {
     limit?: number;
     offset?: number;
     unreadOnly?: boolean;
   }) {
     const where: any = { userId };
-    if (options?.unreadOnly) where.isRead = false;
+    if (options?.unreadOnly) where.read = false;
 
     return prisma.notification.findMany({
       where,

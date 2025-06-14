@@ -297,67 +297,9 @@ export const validateData = <T>(
   return { success: false, errors: result.error };
 };
 
-// دالة للدمج والتحقق
-export const mergeAndValidate = <T>(
-  schema: z.ZodSchema<T>,
-  existingData: T,
-  newData: unknown
-): { success: true; data: T } | { success: false; errors: z.ZodError } => {
-  const merged = { ...existingData, ...newData };
-  return validateData(schema, merged);
-};
+// Duplicate functions removed - they are already defined earlier in the file
 
-// دالة للتحقق من صلاحية البيانات
-export const isValidData = <T>(
-  schema: z.ZodSchema<T>,
-  data: unknown
-): data is T => {
-  return schema.safeParse(data).success;
-};
-
-// دالة لاستخراج الحقول المطلوبة
-export const getRequiredFields = <T>(
-  schema: z.ZodSchema<T>
-): string[] => {
-  const shape = (schema as any)._def.shape();
-  const required: string[] = [];
-  
-  Object.entries(shape).forEach(([key, value]: [string, any]) => {
-    if (!value.isOptional()) {
-      required.push(key);
-    }
-  });
-  
-  return required;
-};
-
-// دالة للتحقق من البيانات مع رسائل مخصصة
-export const validateWithCustomMessages = <T>(
-  schema: z.ZodSchema<T>,
-  data: unknown,
-  customMessages: Record<string, string>
-): { success: true; data: T } | { success: false; errors: string[] } => {
-  const result = schema.safeParse(data);
-  
-  if (result.success) {
-    return { success: true, data: result.data };
-  }
-  
-  const errors = result.error.errors.map((err) => {
-    const path = err.path.join('.');
-    return customMessages[path] || err.message;
-  });
-  
-  return { success: false, errors };
-};
-
-// تصدير أنواع TypeScript
-export type Customer = z.infer<typeof customerSchemas.create>;
-export type Product = z.infer<typeof productSchemas.create>;
-export type Contract = z.infer<typeof contractSchemas.create>;
-export type Employee = z.infer<typeof employeeSchemas.create>;
-export type Task = z.infer<typeof taskSchemas.create>;
-export type ReportCriteria = z.infer<typeof reportSchemas.criteria>;
+// تصدير أنواع TypeScript - تم نقلها إلى بداية الملف
 
 // دالة لتنسيق أخطاء Zod
 export const formatZodErrors = (error: z.ZodError): Record<string, string[]> => {
@@ -379,7 +321,7 @@ export const validatePartial = <T>(
   schema: z.ZodSchema<T>,
   data: unknown
 ): { success: true; data: Partial<T> } | { success: false; errors: z.ZodError } => {
-  const partialSchema = schema.partial();
+  const partialSchema = (schema as any).partial();
   const result = partialSchema.safeParse(data);
   
   if (result.success) {
@@ -389,64 +331,6 @@ export const validatePartial = <T>(
   return { success: false, errors: result.error };
 };
 
-// دالة للدمج والتحقق
-export const mergeAndValidate = <T>(
-  schema: z.ZodSchema<T>,
-  existingData: T,
-  newData: unknown
-): { success: true; data: T } | { success: false; errors: z.ZodError } => {
-  const merged = { ...existingData, ...newData };
-  return validateData(schema, merged);
-};
+// Duplicate functions removed - they are already defined earlier in the file
 
-// دالة للتحقق من صلاحية البيانات
-export const isValidData = <T>(
-  schema: z.ZodSchema<T>,
-  data: unknown
-): data is T => {
-  return schema.safeParse(data).success;
-};
-
-// دالة لاستخراج الحقول المطلوبة
-export const getRequiredFields = <T>(
-  schema: z.ZodSchema<T>
-): string[] => {
-  const shape = (schema as any)._def.shape();
-  const required: string[] = [];
-  
-  Object.entries(shape).forEach(([key, value]: [string, any]) => {
-    if (!value.isOptional()) {
-      required.push(key);
-    }
-  });
-  
-  return required;
-};
-
-// دالة للتحقق من البيانات مع رسائل مخصصة
-export const validateWithCustomMessages = <T>(
-  schema: z.ZodSchema<T>,
-  data: unknown,
-  customMessages: Record<string, string>
-): { success: true; data: T } | { success: false; errors: string[] } => {
-  const result = schema.safeParse(data);
-  
-  if (result.success) {
-    return { success: true, data: result.data };
-  }
-  
-  const errors = result.error.errors.map((err) => {
-    const path = err.path.join('.');
-    return customMessages[path] || err.message;
-  });
-  
-  return { success: false, errors };
-};
-
-// تصدير أنواع TypeScript
-export type Customer = z.infer<typeof customerSchemas.create>;
-export type Product = z.infer<typeof productSchemas.create>;
-export type Contract = z.infer<typeof contractSchemas.create>;
-export type Employee = z.infer<typeof employeeSchemas.create>;
-export type Task = z.infer<typeof taskSchemas.create>;
-export type ReportCriteria = z.infer<typeof reportSchemas.criteria>;
+// تصدير أنواع TypeScript - تم نقلها إلى بداية الملف

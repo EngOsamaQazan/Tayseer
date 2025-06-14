@@ -13,6 +13,31 @@ model User {
   id        String   @id @default(uuid())
   email     String   @unique
   name      String?
+  tenantId  String?
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  notifications Notification[]
+
+  @@index([tenantId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  tenantId  String?
+  userId    String?
+  type      String
+  priority  String
+  title     String
+  message   String
+  data      String?
+  channels  String[]
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([createdAt])
 }

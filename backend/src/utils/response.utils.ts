@@ -273,5 +273,5 @@ export const sendSSEMessage = (
   if (id) res.write(`id: ${id}\n`);
   if (event) res.write(`event: ${event}\n`);
   res.write(`data: ${JSON.stringify(data)}\n\n`);
-  res.flush?.();
+  // Note: flush is not available on Express Response object
 };

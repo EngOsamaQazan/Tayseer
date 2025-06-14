@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { ApiError } from '../../shared/utils/ApiError';
 import { RedisService } from '../../shared/services/redis.service';
-import { Logger } from '../../shared/utils/logger';
+import logger from '../../shared/utils/logger';
 import { AuditService } from '../audit/audit.service';
 import { NotificationService } from '../notifications/notification.service';
 import * as ExcelJS from 'exceljs';

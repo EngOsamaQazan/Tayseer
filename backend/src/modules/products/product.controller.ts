@@ -4,7 +4,7 @@ import productService from './product.service';
 import { productValidation } from './product.validation';
 import { ApiError } from '../../shared/errors/ApiError';
 import { ApiResponse } from '../../shared/utils/ApiResponse';
-import { logger } from '../../shared/utils/logger';
+import logger from '../../shared/utils/logger';
 import { auditLogUtil } from '../../shared/utils/auditLog';
 import { notificationUtil } from '../../shared/utils/notification';
 import { cacheUtil } from '../../shared/utils/cache';

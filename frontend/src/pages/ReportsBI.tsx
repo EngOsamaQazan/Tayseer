@@ -265,4 +265,11 @@ export default function ReportsBI() {
       </div>
 
       {/* شرائح العملاء */}
-      <div className
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        {/* Content will be added here */}
+      </div>
+    </div>
+  );
+};
+
+export default ReportsBI;

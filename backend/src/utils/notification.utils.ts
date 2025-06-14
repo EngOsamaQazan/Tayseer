@@ -2,7 +2,7 @@ import { Server as SocketServer } from 'socket.io';
 import { PrismaClient } from '@prisma/client';
 import { logger } from '../config/logger';
 import { sendEmail } from './email.utils';
-import { formatDate, formatTime } from './date.utils';
+import { formatDateTime } from './date.utils';
 import { formatCurrency } from './format.utils';
 
 const prisma = new PrismaClient();
@@ -162,7 +162,7 @@ export class NotificationService {
               <h2>${notification.title}</h2>
               <p>${notification.message}</p>
               ${notification.data ? `<pre>${JSON.stringify(JSON.parse(notification.data), null, 2)}</pre>` : ''}
-              <p style="color: #666; font-size: 12px;">تم الإرسال في: ${formatDate(notification.createdAt)} ${formatTime(notification.createdAt)}</p>
+              <p style="color: #666; font-size: 12px;">تم الإرسال في: ${formatDateTime(notification.createdAt)}</p>
             </div>
           `
         });
@@ -232,7 +232,7 @@ export class NotificationService {
   async markAsRead(notificationId: string, userId: string): Promise<void> {
     await prisma.notification.update({
       where: { id: notificationId, userId },
-      data: { read: true, readAt: new Date() }
+      data: { read: true }
     });
   }
 
@@ -240,7 +240,7 @@ export class NotificationService {
   async markAllAsRead(userId: string): Promise<void> {
     await prisma.notification.updateMany({
       where: { userId, read: false },
-      data: { read: true, readAt: new Date() }
+      data: { read: true }
     });
   }
 
@@ -307,7 +307,7 @@ export class NotificationService {
       type: NotificationType.INFO,
       priority: taskData.priority === 'HIGH' ? NotificationPriority.HIGH : NotificationPriority.MEDIUM,
       title: 'مهمة جديدة مسندة إليك',
-      message: `تم إسناد مهمة "${taskData.taskTitle}" إليك من قبل ${taskData.assignedBy}. تاريخ الاستحقاق: ${formatDate(taskData.dueDate)}`,
+      message: `تم إسناد مهمة "${taskData.taskTitle}" إليك من قبل ${taskData.assignedBy}. تاريخ الاستحقاق: ${formatDateTime(taskData.dueDate)}`,
       data: taskData,
       channels: [NotificationChannel.IN_APP, NotificationChannel.EMAIL]
     });
@@ -347,7 +347,7 @@ export class NotificationService {
       type: NotificationType.ALERT,
       priority: contractData.daysRemaining <= 7 ? NotificationPriority.URGENT : NotificationPriority.HIGH,
       title: 'تنبيه انتهاء عقد',
-      message: `العقد رقم ${contractData.contractNumber} مع ${contractData.customerName} سينتهي في ${formatDate(contractData.expiryDate)} (متبقي ${contractData.daysRemaining} يوم)`,
+      message: `العقد رقم ${contractData.contractNumber} مع ${contractData.customerName} سينتهي في ${formatDateTime(contractData.expiryDate)} (متبقي ${contractData.daysRemaining} يوم)`,
       data: contractData,
       channels: [NotificationChannel.IN_APP, NotificationChannel.EMAIL]
     });
@@ -508,7 +508,7 @@ export const notificationTemplates = {
   // قوالب المهام
   taskAssigned: (data: { taskTitle: string; assignedBy: string; dueDate: Date }) => ({
     title: 'مهمة جديدة',
-    message: `تم إسناد مهمة "${data.taskTitle}" إليك من قبل ${data.assignedBy}. الموعد النهائي: ${formatDate(data.dueDate)}`
+    message: `تم إسناد مهمة "${data.taskTitle}" إليك من قبل ${data.assignedBy}. الموعد النهائي: ${formatDateTime(data.dueDate)}`
   }),
   
   taskCompleted: (data: { taskTitle: string; completedBy: string }) => ({
@@ -535,7 +535,7 @@ export const notificationTemplates = {
   
   contractRenewed: (data: { contractNumber: string; customerName: string; newExpiryDate: Date }) => ({
     title: 'تم تجديد العقد',
-    message: `تم تجديد العقد رقم ${data.contractNumber} مع ${data.customerName} حتى ${formatDate(data.newExpiryDate)}`
+    message: `تم تجديد العقد رقم ${data.contractNumber} مع ${data.customerName} حتى ${formatDateTime(data.newExpiryDate)}`
   }),
 
   // قوالب النظام
@@ -546,9 +546,9 @@ export const notificationTemplates = {
   
   maintenanceScheduled: (data: { startTime: Date; duration: number }) => ({
     title: 'صيانة مجدولة',
-    message: `سيتم إجراء صيانة للنظام في ${formatDate(data.startTime)} ${formatTime(data.startTime)} لمدة ${data.duration} دقيقة`
+    message: `سيتم إجراء صيانة للنظام في ${formatDateTime(data.startTime)} لمدة ${data.duration} دقيقة`
   })
 };
 
-// تصدير الأنواع
-export type { Notification };
+// تصدير الأنواع - Notification type is now provided by Prisma
+// export type { Notification };

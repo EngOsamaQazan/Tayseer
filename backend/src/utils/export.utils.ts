@@ -5,7 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import { Parser } from 'json2csv';
 import { logger } from '@/config/logger';
-import { formatCurrency, formatDate } from './format.utils';
+import { formatCurrency } from './format.utils';
+import { formatDate } from './date.utils';
 
 // واجهة خيارات التصدير
 interface ExportOptions {
@@ -60,7 +61,7 @@ export const exportToExcel = async (options: ExportOptions): Promise<Buffer> => 
     worksheet.getRow(startRow).height = 25;
     
     // إضافة البيانات
-    options.data.forEach((item, index) => {
+    options.data.forEach((item) => {
       const rowData: any = {};
       
       options.columns!.forEach(col => {
@@ -177,7 +178,7 @@ export const exportToPDF = async (options: ExportOptions): Promise<Buffer> => {
       const y = doc.y;
       
       if (options.columns) {
-        options.columns.forEach((col, index) => {
+        options.columns.forEach((col) => {
           doc.text(col.header, x, y, {
             width: colWidth,
             align: 'center'
@@ -185,7 +186,7 @@ export const exportToPDF = async (options: ExportOptions): Promise<Buffer> => {
           x += colWidth;
         });
       } else if (options.headers) {
-        options.headers.forEach((header, index) => {
+        options.headers.forEach((header) => {
           doc.text(header, x, y, {
             width: colWidth,
             align: 'center'
@@ -202,12 +203,12 @@ export const exportToPDF = async (options: ExportOptions): Promise<Buffer> => {
       doc.moveDown();
       
       // إضافة البيانات
-      options.data.forEach((item, rowIndex) => {
+      options.data.forEach((item) => {
         x = doc.page.margins.left;
         const rowY = doc.y;
         
         if (options.columns) {
-          options.columns.forEach((col, colIndex) => {
+          options.columns.forEach((col) => {
             let value = item[col.key];
             
             // تنسيق القيم حسب النوع
@@ -230,7 +231,7 @@ export const exportToPDF = async (options: ExportOptions): Promise<Buffer> => {
             x += colWidth;
           });
         } else if (Array.isArray(item)) {
-          item.forEach((cell, cellIndex) => {
+          item.forEach((cell) => {
             doc.text(String(cell || ''), x, rowY, {
               width: colWidth,
               align: 'center'
@@ -238,7 +239,7 @@ export const exportToPDF = async (options: ExportOptions): Promise<Buffer> => {
             x += colWidth;
           });
         } else {
-          Object.values(item).forEach((cell, cellIndex) => {
+          Object.values(item).forEach((cell) => {
             doc.text(String(cell || ''), x, rowY, {
               width: colWidth,
               align: 'center'
@@ -425,19 +426,21 @@ export const createCustomReport = async (
   if (format === 'excel') {
     const workbook = new ExcelJS.Workbook();
     
-    sections.forEach((section, index) => {
+    sections.forEach((section) => {
       const worksheet = workbook.addWorksheet(section.title);
       worksheet.views = [{ rightToLeft: true }];
       
       // إضافة العنوان
-      worksheet.mergeCells('A1:' + String.fromCharCode(65 + section.columns.length - 1) + '1');
+      const colCount = section.columns?.length || 1;
+      worksheet.mergeCells('A1:' + String.fromCharCode(65 + colCount - 1) + '1');
       worksheet.getCell('A1').value = section.title;
       worksheet.getCell('A1').font = { size: 16, bold: true };
       worksheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
       worksheet.getRow(1).height = 30;
       
       // إضافة الأعمدة والبيانات
-      worksheet.columns = section.columns.map(col => ({
+      if (section.columns) {
+        worksheet.columns = section.columns.map(col => ({
         header: col.header,
         key: col.key,
         width: col.width || 15
@@ -450,7 +453,7 @@ export const createCustomReport = async (
       section.data.forEach(item => {
         const rowData: any = {};
         
-        section.columns.forEach(col => {
+        section.columns?.forEach(col => {
           let value = item[col.key];
           
           switch (col.type) {
@@ -470,10 +473,11 @@ export const createCustomReport = async (
         
         worksheet.addRow(rowData);
       });
+      }
       
       // تطبيق الحدود
       const lastRow = worksheet.lastRow?.number || 3;
-      const lastCol = section.columns.length;
+      const lastCol = section.columns?.length || 1;
       
       for (let row = 3; row <= lastRow; row++) {
         for (let col = 1; col <= lastCol; col++) {
@@ -500,7 +504,7 @@ export const createCustomReport = async (
       allData.push(...section.data);
       allData.push({}); // سطر فارغ
       
-      if (allColumns.length === 0) {
+      if (allColumns.length === 0 && section.columns) {
         allColumns.push(...section.columns);
       }
     });

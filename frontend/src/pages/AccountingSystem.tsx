@@ -49,37 +49,42 @@ export default function AccountingSystem() {
     return matchesSearch && matchesType;
   });
 
-  const calculateTotals = () => {
-    const income = transactions
-      .filter(t => t.type === 'income' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
-    const expense = transactions
-      .filter(t => t.type === 'expense' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { income, expense, balance: income - expense };
-  };
+  const totalIncome = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
 
-  const totals = calculateTotals();
+  const totalExpenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const netProfit = totalIncome - totalExpenses;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const formDataObj = new FormData(form);
+    
+    const transactionData: Transaction = {
+      id: editingTransaction?.id || Date.now(),
+      date: formDataObj.get('date') as string,
+      type: formDataObj.get('type') as 'income' | 'expense',
+      category: formDataObj.get('category') as string,
+      description: formDataObj.get('description') as string,
+      amount: parseFloat(formDataObj.get('amount') as string),
+      paymentMethod: formDataObj.get('paymentMethod') as string,
+      reference: formDataObj.get('reference') as string,
+      status: formDataObj.get('status') as 'completed' | 'pending' | 'cancelled',
+    };
+
     if (editingTransaction) {
-      setTransactions(transactions.map(t => t.id === editingTransaction.id ? { ...t, ...formData } : t));
+      setTransactions(transactions.map(t => t.id === editingTransaction.id ? transactionData : t));
     } else {
-      const newTransaction: Transaction = {
-        id: transactions.length + 1,
-        date: formData.date!,
-        type: formData.type as 'income' | 'expense',
-        category: formData.category!,
-        description: formData.description!,
-        amount: formData.amount!,
-        paymentMethod: formData.paymentMethod!,
-        reference: formData.reference!,
-        status: formData.status as 'completed' | 'pending' | 'cancelled',
-      };
-      setTransactions([...transactions, newTransaction]);
+      setTransactions([...transactions, transactionData]);
     }
-    handleCloseModal();
+
+    setShowModal(false);
+    setEditingTransaction(null);
+    form.reset();
   };
 
   const handleEdit = (transaction: Transaction) => {
@@ -89,13 +94,12 @@ export default function AccountingSystem() {
   };
 
   const handleDelete = (id: number) => {
-    if (window.confirm('هل أنت متأكد من حذف هذه المعاملة؟')) {
+    if (confirm('هل أنت متأكد من حذف هذه المعاملة؟')) {
       setTransactions(transactions.filter(t => t.id !== id));
     }
   };
 
-  const handleCloseModal = () => {
-    setShowModal(false);
+  const openModal = () => {
     setEditingTransaction(null);
     setFormData({
       date: new Date().toISOString().split('T')[0],
@@ -107,124 +111,126 @@ export default function AccountingSystem() {
       reference: '',
       status: 'pending',
     });
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'مكتملة';
-      case 'pending':
-        return 'معلقة';
-      case 'cancelled':
-        return 'ملغاة';
-      default:
-        return status;
-    }
+    setShowModal(true);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="sm:flex sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">النظام المحاسبي</h1>
-        <button
-          onClick={() => setShowModal(true)}
-          className="mt-3 sm:mt-0 inline-flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
-        >
-          <PlusIcon className="ml-2 h-4 w-4" />
-          إضافة معاملة جديدة
-        </button>
+    <div className="p-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">نظام المحاسبة</h1>
+        <p className="text-gray-600">إدارة المعاملات المالية والتقارير المحاسبية</p>
       </div>
 
-      {/* ملخص مالي */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ArrowUpIcon className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="mr-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">إجمالي الإيرادات</dt>
-                  <dd className="text-lg font-medium text-gray-900">{totals.income.toLocaleString()} جنيه</dd>
-                </dl>
-              </div>
+      {/* Financial Summary */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-green-50 p-6 rounded-lg border border-green-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-md">
+              <ArrowUpIcon className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="mr-4">
+              <p className="text-sm font-medium text-green-600">إجمالي الإيرادات</p>
+              <p className="text-2xl font-semibold text-green-900">{totalIncome.toLocaleString()} جنيه</p>
             </div>
           </div>
         </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ArrowDownIcon className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="mr-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">إجمالي المصروفات</dt>
-                  <dd className="text-lg font-medium text-gray-900">{totals.expense.toLocaleString()} جنيه</dd>
-                </dl>
-              </div>
+
+        <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-red-100 rounded-md">
+              <ArrowDownIcon className="h-6 w-6 text-red-600" />
+            </div>
+            <div className="mr-4">
+              <p className="text-sm font-medium text-red-600">إجمالي المصروفات</p>
+              <p className="text-2xl font-semibold text-red-900">{totalExpenses.toLocaleString()} جنيه</p>
             </div>
           </div>
         </div>
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="mr-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">الرصيد</dt>
-                  <dd className={`text-lg font-medium ${totals.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {totals.balance.toLocaleString()} جنيه
-                  </dd>
-                </dl>
-              </div>
+
+        <div className={`p-6 rounded-lg border ${
+          netProfit >= 0 
+            ? 'bg-blue-50 border-blue-200' 
+            : 'bg-orange-50 border-orange-200'
+        }`}>
+          <div className="flex items-center">
+            <div className={`p-2 rounded-md ${
+              netProfit >= 0 
+                ? 'bg-blue-100' 
+                : 'bg-orange-100'
+            }`}>
+              <ArrowUpIcon className={`h-6 w-6 ${
+                netProfit >= 0 
+                  ? 'text-blue-600' 
+                  : 'text-orange-600'
+              }`} />
+            </div>
+            <div className="mr-4">
+              <p className={`text-sm font-medium ${
+                netProfit >= 0 
+                  ? 'text-blue-600' 
+                  : 'text-orange-600'
+              }`}>صافي الربح</p>
+              <p className={`text-2xl font-semibold ${
+                netProfit >= 0 
+                  ? 'text-blue-900' 
+                  : 'text-orange-900'
+              }`}>{netProfit.toLocaleString()} جنيه</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+          <div className="flex items-center">
+            <div className="p-2 bg-gray-100 rounded-md">
+              <PlusIcon className="h-6 w-6 text-gray-600" />
+            </div>
+            <div className="mr-4">
+              <p className="text-sm font-medium text-gray-600">عدد المعاملات</p>
+              <p className="text-2xl font-semibold text-gray-900">{transactions.length}</p>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="bg-white p-6 rounded-lg shadow mb-6">
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="flex flex-col md:flex-row gap-4 flex-1">
+            <div className="relative">
+              <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="البحث في المعاملات..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full md:w-80"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <select
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
+            >
+              <option value="all">جميع المعاملات</option>
+              <option value="income">الإيرادات فقط</option>
+              <option value="expense">المصروفات فقط</option>
+            </select>
+          </div>
+          <button
+            onClick={openModal}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2"
+          >
+            <PlusIcon className="h-5 w-5" />
+            إضافة معاملة جديدة
+          </button>
+        </div>
+      </div>
+
+      {/* Transactions Table */}
       <div className="bg-white shadow rounded-lg">
-        <div className="p-4 border-b border-gray-200">
-          <div className="sm:flex sm:items-center sm:justify-between">
-            <div className="flex-1 ml-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="البحث في المعاملات..."
-                  className="w-full pr-10 pl-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <MagnifyingGlassIcon className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-            <div className="mt-3 sm:mt-0 sm:mr-0">
-              <select
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                value={filterType}
-                onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
-              >
-                <option value="all">جميع المعاملات</option>
-                <option value="income">الإيرادات</option>
-                <option value="expense">المصروفات</option>
-              </select>
-            </div>
-          </div>
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">المعاملات المالية</h3>
         </div>
-
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -234,9 +240,9 @@ export default function AccountingSystem() {
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الفئة</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الوصف</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المبلغ</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">طريقة الدفع</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المرجع</th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الحالة</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">إجراءات</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -259,4 +265,172 @@ export default function AccountingSystem() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                     {transaction.amount.toLocaleString()} جنيه
                   </td>
-                  <td className="px-6
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{transaction.reference}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      transaction.status === 'completed' ? 'bg-green-100 text-green-800' :
+                      transaction.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      {transaction.status === 'completed' ? 'مكتملة' :
+                       transaction.status === 'pending' ? 'معلقة' : 'ملغاة'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button
+                      onClick={() => handleEdit(transaction)}
+                      className="text-indigo-600 hover:text-indigo-900 ml-4"
+                    >
+                      <PencilIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(transaction.id)}
+                      className="text-red-600 hover:text-red-900"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                {editingTransaction ? 'تعديل المعاملة' : 'إضافة معاملة جديدة'}
+              </h3>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
+                  <input
+                    type="date"
+                    name="date"
+                    defaultValue={formData.date}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">النوع</label>
+                  <select
+                    name="type"
+                    defaultValue={formData.type}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="income">إيراد</option>
+                    <option value="expense">مصروف</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الفئة</label>
+                  <select
+                    name="category"
+                    defaultValue={formData.category}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">اختر الفئة</option>
+                    {(formData.type === 'income' ? categories.income : categories.expense).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">المبلغ</label>
+                  <input
+                    type="number"
+                    name="amount"
+                    defaultValue={formData.amount}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
+                <textarea
+                  name="description"
+                  defaultValue={formData.description}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">طريقة الدفع</label>
+                  <select
+                    name="paymentMethod"
+                    defaultValue={formData.paymentMethod}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="نقدي">نقدي</option>
+                    <option value="بطاقة ائتمان">بطاقة ائتمان</option>
+                    <option value="تحويل بنكي">تحويل بنكي</option>
+                    <option value="شيك">شيك</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">المرجع</label>
+                  <input
+                    type="text"
+                    name="reference"
+                    defaultValue={formData.reference}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">الحالة</label>
+                  <select
+                    name="status"
+                    defaultValue={formData.status}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="pending">معلقة</option>
+                    <option value="completed">مكتملة</option>
+                    <option value="cancelled">ملغاة</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-md ml-2"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md"
+                >
+                  {editingTransaction ? 'تحديث' : 'حفظ'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

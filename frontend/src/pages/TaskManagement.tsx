@@ -288,4 +288,13 @@ export default function TaskManagement() {
           </div>
         </div>
 
-        <div className="overflow-
+        <div className="overflow-x-auto">
+          {/* Table content will be added here */}
+          <div className="p-4 text-center text-gray-500">
+            جدول إدارة المهام سيتم إضافته هنا
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
