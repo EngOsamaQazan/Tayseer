@@ -13,6 +13,10 @@ $this->title = 'القسم القانوني';
 $this->params['breadcrumbs'][] = $this->title;
 
 $activeTab = Yii::$app->request->get('tab', 'cases');
+
+$pendingReqCount = (int)Yii::$app->db->createCommand(
+    "SELECT COUNT(*) FROM " . Yii::$app->db->tablePrefix . "judiciary_customers_actions WHERE request_status = 'pending' AND (is_deleted = 0 OR is_deleted IS NULL)"
+)->queryScalar();
 ?>
 
 <style>
@@ -43,6 +47,14 @@ $activeTab = Yii::$app->request->get('tab', 'cases');
     background:#F1F5F9; color:#64748B;
 }
 .lh-tab.active .lh-badge { background:#800020; color:#fff; }
+
+.lh-pending-queue{display:flex;align-items:center;gap:6px;padding:8px 16px;margin-right:auto;
+  font-size:12px;font-weight:600;color:#92400E;background:#FEF3C7;border-radius:8px;
+  text-decoration:none;transition:all .2s;white-space:nowrap;border:1px solid #FDE68A}
+.lh-pending-queue:hover{background:#FDE68A;color:#78350F;text-decoration:none}
+.lh-pending-queue i{font-size:14px}
+.lh-pending-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:20px;
+  padding:0 6px;border-radius:10px;font-size:10px;font-weight:700;background:#F59E0B;color:#fff}
 
 .lh-content {
     background:#fff; border:1px solid #E2E8F0; border-top:none;
@@ -116,6 +128,28 @@ $activeTab = Yii::$app->request->get('tab', 'cases');
 .ctl-item-img{margin-top:6px}
 .ctl-item-img a{font-size:10px;color:#3B82F6;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
 .ctl-item-img a:hover{text-decoration:underline}
+
+/* Approve/Reject actions */
+.ctl-req-actions{display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}
+.ctl-req-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:6px;font-size:11px;
+  font-weight:600;border:1px solid;cursor:pointer;transition:all .15s;white-space:nowrap}
+.ctl-req-btn.approve{background:#D1FAE5;color:#065F46;border-color:#A7F3D0}
+.ctl-req-btn.approve:hover{background:#065F46;color:#fff}
+.ctl-req-btn.reject{background:#FEE2E2;color:#991B1B;border-color:#FECACA}
+.ctl-req-btn.reject:hover{background:#991B1B;color:#fff}
+.ctl-req-btn:disabled{opacity:.5;cursor:not-allowed}
+.ctl-decision-form{display:none;margin-top:8px;padding:8px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px}
+.ctl-decision-form.open{display:block}
+.ctl-decision-input{width:100%;padding:6px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:12px;
+  resize:vertical;min-height:36px;font-family:inherit;margin-bottom:6px}
+.ctl-decision-input:focus{border-color:#800020;outline:none;box-shadow:0 0 0 2px rgba(128,0,32,.1)}
+.ctl-decision-actions{display:flex;gap:6px;justify-content:flex-end}
+.ctl-decision-submit{padding:4px 14px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;transition:all .15s}
+.ctl-decision-submit.confirm-approve{background:#065F46;color:#fff}
+.ctl-decision-submit.confirm-reject{background:#991B1B;color:#fff}
+.ctl-decision-submit:hover{opacity:.85}
+.ctl-decision-cancel{padding:4px 14px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #E2E8F0;
+  background:#fff;color:#64748B;cursor:pointer}
 
 /* date separator */
 .ctl-date-sep{text-align:center;margin:16px 0 8px;position:relative}
@@ -222,6 +256,13 @@ $activeTab = Yii::$app->request->get('tab', 'cases');
             <span class="lh-tab-label">المحولين للشكوى</span>
             <span class="lh-badge" id="lh-badge-legal">—</span>
         </button>
+        <?php if ($pendingReqCount > 0): ?>
+        <a href="<?= Url::to(['index', 'tab' => 'cases', 'pending_requests' => 1]) ?>" class="lh-pending-queue">
+            <i class="fa fa-clock-o"></i>
+            <span>طلبات معلّقة</span>
+            <span class="lh-pending-count"><?= $pendingReqCount ?></span>
+        </a>
+        <?php endif; ?>
     </div>
 
     <!-- ═══ Tab Content ═══ -->
@@ -273,6 +314,7 @@ $casesUrl       = Url::to(['tab-cases']);
 $actionsUrl     = Url::to(['tab-actions']);
 $persistenceUrl = Url::to(['tab-persistence']);
 $legalUrl       = Url::to(['tab-legal']);
+$updateReqStatusUrl = Url::to(['update-request-status']);
 
 $js = <<<JS
 (function(){
@@ -280,7 +322,8 @@ $js = <<<JS
         cases:       '{$casesUrl}',
         actions:     '{$actionsUrl}',
         persistence: '{$persistenceUrl}',
-        legal:       '{$legalUrl}'
+        legal:       '{$legalUrl}',
+        updateReqStatus: '{$updateReqStatusUrl}'
     };
 
     function loadTab(tab) {
@@ -417,7 +460,7 @@ $js = <<<JS
                 var sMap = {pending:'قيد الانتظار', approved:'مقبول', rejected:'مرفوض'};
                 statusHtml = '<span class="ctl-item-status ' + a.request_status + '">' + (sMap[a.request_status] || a.request_status) + '</span>';
             }
-            h += '<div class="ctl-item" data-nature="' + (a.action_nature || 'process') + '">';
+            h += '<div class="ctl-item" data-nature="' + (a.action_nature || 'process') + '" data-id="' + (a.id || '') + '">';
             h += '<div class="ctl-item-hdr">';
             h += '<span class="ctl-item-action">' + esc(a.action_name || '—') + '</span>';
             h += '<span class="ctl-item-date">' + esc(d) + '</span>';
@@ -431,6 +474,18 @@ $js = <<<JS
             if (a.created_by) h += '<span><i class="fa fa-user-circle"></i> ' + esc(a.created_by) + '</span>';
             if (a.created_at) h += '<span>' + esc(a.created_at) + '</span>';
             h += '</div>';
+            if (a.request_status === 'pending' && a.id) {
+                h += '<div class="ctl-req-actions">';
+                h += '<button type="button" class="ctl-req-btn approve" data-action-id="' + a.id + '" data-status="approved"><i class="fa fa-check"></i> موافقة</button>';
+                h += '<button type="button" class="ctl-req-btn reject" data-action-id="' + a.id + '" data-status="rejected"><i class="fa fa-times"></i> رفض</button>';
+                h += '</div>';
+                h += '<div class="ctl-decision-form" id="ctl-df-' + a.id + '">';
+                h += '<textarea class="ctl-decision-input" placeholder="نص القرار أو سبب الرفض (اختياري)..." rows="2"></textarea>';
+                h += '<div class="ctl-decision-actions">';
+                h += '<button type="button" class="ctl-decision-cancel">إلغاء</button>';
+                h += '<button type="button" class="ctl-decision-submit" data-action-id="' + a.id + '">تأكيد</button>';
+                h += '</div></div>';
+            }
             h += '</div>';
         }
         $('#ctlBody').html(h);
@@ -456,6 +511,54 @@ $js = <<<JS
         $(this).addClass('active');
         ctlFilter = $(this).data('filter');
         if (ctlData) ctlRenderTimeline(ctlData.timeline);
+    });
+
+    /* Approve / Reject workflow */
+    var pendingDecision = {};
+    $(document).on('click', '.ctl-req-btn', function() {
+        var id = $(this).data('action-id');
+        var st = $(this).data('status');
+        pendingDecision = {id: id, status: st};
+        var \$form = $('#ctl-df-' + id);
+        \$form.addClass('open');
+        \$form.find('.ctl-decision-submit')
+            .removeClass('confirm-approve confirm-reject')
+            .addClass(st === 'approved' ? 'confirm-approve' : 'confirm-reject')
+            .text(st === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض');
+        \$form.find('.ctl-decision-input').focus();
+    });
+
+    $(document).on('click', '.ctl-decision-cancel', function() {
+        $(this).closest('.ctl-decision-form').removeClass('open');
+        pendingDecision = {};
+    });
+
+    $(document).on('click', '.ctl-decision-submit', function() {
+        if (!pendingDecision.id) return;
+        var \$btn = $(this);
+        var \$form = \$btn.closest('.ctl-decision-form');
+        var decisionText = \$form.find('.ctl-decision-input').val().trim();
+        \$btn.prop('disabled', true).text('جاري الحفظ...');
+        $.post(urls.updateReqStatus, {
+            id: pendingDecision.id,
+            status: pendingDecision.status,
+            decision_text: decisionText,
+            _csrf: yii.getCsrfToken()
+        }).done(function(res) {
+            if (res.success && ctlData && ctlData.timeline) {
+                for (var j = 0; j < ctlData.timeline.length; j++) {
+                    if (ctlData.timeline[j].id == pendingDecision.id) {
+                        ctlData.timeline[j].request_status = res.new_status;
+                        if (decisionText) ctlData.timeline[j].decision_text = decisionText;
+                        break;
+                    }
+                }
+                ctlRenderTimeline(ctlData.timeline);
+            }
+        }).fail(function() {
+            alert('حدث خطأ أثناء الحفظ');
+            \$btn.prop('disabled', false).text('تأكيد');
+        }).always(function() { pendingDecision = {}; });
     });
 
 })();

@@ -5,7 +5,12 @@ use yii\helpers\Html;
 /**
  * @var array $aiData
  * @var backend\modules\contracts\models\Contracts $contract
+ * @var bool $isClosed
+ * @var bool $isJudiciaryPaid
  */
+
+$isClosed = $isClosed ?? false;
+$isJudiciaryPaid = $isJudiciaryPaid ?? false;
 
 $nba = $aiData['next_best_action'] ?? [];
 $alternatives = $aiData['alternatives'] ?? [];
@@ -22,10 +27,20 @@ $riskImpactArabic = ['low' => 'منخفض', 'medium' => 'متوسط', 'high' => 
             <i class="fa fa-magic"></i>
         </div>
         <span class="ocp-ai-panel__header-title">اقتراحات النظام</span>
-        <?php if (!empty($nba['confidence'])): ?>
+        <?php if (!$isClosed && !empty($nba['confidence'])): ?>
         <span class="ocp-ai-panel__confidence">ثقة <?= $nba['confidence'] ?>%</span>
         <?php endif; ?>
     </div>
+
+    <?php if ($isClosed): ?>
+    <div style="text-align:center;padding:var(--ocp-space-xl) var(--ocp-space-lg);color:var(--ocp-text-muted)">
+        <i class="fa fa-check-circle" style="font-size:36px;color:#16A34A;display:block;margin-bottom:12px"></i>
+        <div style="font-size:14px;font-weight:700;color:#166534;margin-bottom:6px">
+            <?= $isJudiciaryPaid ? 'عقد قضائي مسدد' : ($contract->status === 'finished' ? 'عقد مسدد بالكامل' : 'عقد مغلق') ?>
+        </div>
+        <div style="font-size:12px;line-height:1.6">لا توجد إجراءات مطلوبة لهذا العقد.<br>تم إيقاف جميع الاقتراحات والتنبيهات.</div>
+    </div>
+    <?php else: ?>
 
     <?php // ═══ NEXT BEST ACTION ═══ ?>
     <?php if (!empty($nba['action'])): ?>
@@ -164,4 +179,6 @@ $riskImpactArabic = ['low' => 'منخفض', 'medium' => 'متوسط', 'high' => 
         <?php endforeach; ?>
     </div>
     <?php endif; ?>
+
+    <?php endif; /* end !$isClosed */ ?>
 </div>

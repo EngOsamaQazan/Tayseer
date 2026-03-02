@@ -121,24 +121,7 @@ class CustomersSearch extends Customers
         $query->andFilterWhere(['=', 'name', $this->name]);
 
         if (!empty($this->q)) {
-            $hasJobJoin = false;
-            $words = preg_split('/\s+/u', trim($this->q), -1, PREG_SPLIT_NO_EMPTY);
-            foreach ($words as $w) {
-                $or = ['or',
-                    ['like', 'os_customers.name', $w],
-                    ['like', 'os_customers.id_number', $w],
-                    ['like', 'os_customers.primary_phone_number', $w],
-                    ['like', 'qj.name', $w],
-                ];
-                if (is_numeric($w)) {
-                    $or[] = ['=', 'os_customers.id', (int)$w];
-                }
-                if (!$hasJobJoin) {
-                    $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
-                    $hasJobJoin = true;
-                }
-                $query->andWhere($or);
-            }
+            $this->applyUnifiedSearch($query);
         }
 
         return $dataProvider;
@@ -203,26 +186,44 @@ class CustomersSearch extends Customers
         $query->andFilterWhere(['=', 'name', $this->name]);
 
         if (!empty($this->q)) {
-            $hasJobJoin = false;
-            $words = preg_split('/\s+/u', trim($this->q), -1, PREG_SPLIT_NO_EMPTY);
-            foreach ($words as $w) {
-                $or = ['or',
-                    ['like', 'os_customers.name', $w],
-                    ['like', 'os_customers.id_number', $w],
-                    ['like', 'os_customers.primary_phone_number', $w],
-                    ['like', 'qj.name', $w],
-                ];
-                if (is_numeric($w)) {
-                    $or[] = ['=', 'os_customers.id', (int)$w];
-                }
-                if (!$hasJobJoin) {
-                    $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
-                    $hasJobJoin = true;
-                }
-                $query->andWhere($or);
-            }
+            $this->applyUnifiedSearch($query);
         }
 
         return $query->count();
+    }
+
+    private static $cwIdx = 0;
+
+    private function applyUnifiedSearch($query)
+    {
+        $words = preg_split('/\s+/u', trim($this->q), -1, PREG_SPLIT_NO_EMPTY);
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(os_customers.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ى', 'ي')";
+        $nameNormNoSpace = "REPLACE($nameNorm, ' ', '')";
+        $hasJobJoin = false;
+        foreach ($words as $w) {
+            $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+            $wNorm = str_replace('ة', 'ه', $wNorm);
+            $wNorm = str_replace('ى', 'ي', $wNorm);
+            $p = ':cw' . (self::$cwIdx++);
+            $nameExpr = new \yii\db\Expression(
+                "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)",
+                [$p => '%' . $wNorm . '%']
+            );
+            $or = ['or', $nameExpr,
+                ['like', 'os_customers.id_number', $w],
+                ['like', 'os_customers.primary_phone_number', $w],
+            ];
+            if (is_numeric($w)) {
+                $or[] = ['=', 'os_customers.id', (int)$w];
+            }
+            if (!$hasJobJoin) {
+                $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
+                $hasJobJoin = true;
+            }
+            $jobNorm = "REPLACE(REPLACE(REPLACE(REPLACE(qj.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+            $jp = ':jw' . (self::$cwIdx);
+            $or[] = new \yii\db\Expression("$jobNorm LIKE $jp", [$jp => '%' . $wNorm . '%']);
+            $query->andWhere($or);
+        }
     }
 }

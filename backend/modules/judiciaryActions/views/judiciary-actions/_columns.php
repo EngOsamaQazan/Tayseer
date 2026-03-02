@@ -6,13 +6,23 @@ use backend\modules\judiciaryActions\models\JudiciaryActions;
 $natureStyles = [
     'request'    => ['icon' => 'fa-file-text-o', 'color' => '#3B82F6', 'bg' => '#EFF6FF', 'label' => 'طلب'],
     'document'   => ['icon' => 'fa-file-o',      'color' => '#8B5CF6', 'bg' => '#F5F3FF', 'label' => 'كتاب'],
-    'doc_status' => ['icon' => 'fa-exchange',     'color' => '#EA580C', 'bg' => '#FFF7ED', 'label' => 'حالة'],
+    'doc_status' => ['icon' => 'fa-exchange',     'color' => '#EA580C', 'bg' => '#FFF7ED', 'label' => 'حالة كتاب'],
     'process'    => ['icon' => 'fa-cog',          'color' => '#64748B', 'bg' => '#F1F5F9', 'label' => 'إداري'],
 ];
 
-$allNames = (new \yii\db\Query())->select(['id', 'name'])->from('os_judiciary_actions')->all();
+$allActionsRaw = (new \yii\db\Query())->select(['id', 'name', 'parent_request_ids'])->from('os_judiciary_actions')
+    ->where(['or', ['is_deleted' => 0], ['is_deleted' => null]])->all();
 $nameMap = [];
-foreach ($allNames as $an) $nameMap[$an['id']] = $an['name'];
+$childrenOf = [];
+foreach ($allActionsRaw as $an) {
+    $nameMap[$an['id']] = $an['name'];
+    if (!empty($an['parent_request_ids'])) {
+        foreach (explode(',', $an['parent_request_ids']) as $pid) {
+            $pid = (int)trim($pid);
+            if ($pid > 0) $childrenOf[$pid][] = (int)$an['id'];
+        }
+    }
+}
 
 return [
     [
@@ -45,7 +55,11 @@ return [
         'value' => function ($model) use ($natureStyles) {
             $n = $model->action_nature ?: 'process';
             $s = $natureStyles[$n] ?? $natureStyles['process'];
-            return '<span style="display:inline-block;padding:1px 5px;border-radius:5px;font-size:10px;font-weight:600;background:' . $s['bg'] . ';color:' . $s['color'] . ';white-space:nowrap">'
+            return '<span class="ja-inline-cell" data-id="' . $model->id . '" data-field="action_nature" data-value="' . Html::encode($n) . '"'
+                . ' style="display:inline-block;padding:1px 5px;border-radius:5px;font-size:10px;font-weight:600;'
+                . 'background:' . $s['bg'] . ';color:' . $s['color'] . ';white-space:nowrap;cursor:pointer;border:1px dashed transparent;transition:all .2s"'
+                . ' title="انقر للتعديل">'
+                . '<i class="fa fa-pencil" style="font-size:8px;margin-left:3px;opacity:.4"></i>'
                 . $s['label'] . '</span>';
         },
         'headerOptions' => ['style' => 'width:7%;padding:5px 2px;text-align:center'],
@@ -59,7 +73,13 @@ return [
         'format' => 'raw',
         'value' => function ($model) {
             $label = $model->getActionTypeLabel();
-            return '<span title="' . Html::encode($label) . '" style="font-size:10px;padding:1px 5px;border-radius:5px;background:#F1F5F9;color:#475569;white-space:nowrap;display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis">' . Html::encode($label) . '</span>';
+            $val = $model->action_type ?: '';
+            return '<span class="ja-inline-cell" data-id="' . $model->id . '" data-field="action_type" data-value="' . Html::encode($val) . '"'
+                . ' title="انقر للتعديل"'
+                . ' style="font-size:10px;padding:1px 5px;border-radius:5px;background:#F1F5F9;color:#475569;white-space:nowrap;'
+                . 'display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer;border:1px dashed transparent;transition:all .2s">'
+                . '<i class="fa fa-pencil" style="font-size:8px;margin-left:3px;opacity:.4"></i>'
+                . Html::encode($label) . '</span>';
         },
         'headerOptions' => ['style' => 'width:14%;padding:5px 2px;text-align:center'],
         'contentOptions' => ['style' => 'padding:5px 2px;text-align:center;overflow:hidden'],
@@ -68,28 +88,21 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'العلاقات',
         'format' => 'raw',
-        'value' => function ($model) use ($nameMap) {
+        'value' => function ($model) use ($nameMap, $childrenOf) {
             $parts = [];
-
-            $docIds = $model->getAllowedDocumentIds();
-            if (!empty($docIds)) {
-                $titles = [];
-                foreach ($docIds as $id) $titles[] = $nameMap[$id] ?? '#' . $id;
-                $parts[] = '<span title="كتب: ' . Html::encode(implode(', ', $titles)) . '" style="display:inline-block;padding:1px 4px;border-radius:4px;font-size:9px;background:#F5F3FF;color:#7C3AED;cursor:help"><i class="fa fa-file-o" style="font-size:8px"></i> ' . count($docIds) . '</span>';
-            }
-
-            $statusIds = $model->getAllowedStatusIds();
-            if (!empty($statusIds)) {
-                $titles = [];
-                foreach ($statusIds as $id) $titles[] = $nameMap[$id] ?? '#' . $id;
-                $parts[] = '<span title="حالات: ' . Html::encode(implode(', ', $titles)) . '" style="display:inline-block;padding:1px 4px;border-radius:4px;font-size:9px;background:#FFF7ED;color:#C2410C;cursor:help"><i class="fa fa-exchange" style="font-size:8px"></i> ' . count($statusIds) . '</span>';
-            }
 
             $parentIds = $model->getParentRequestIdList();
             if (!empty($parentIds)) {
                 $titles = [];
                 foreach ($parentIds as $id) $titles[] = $nameMap[$id] ?? '#' . $id;
-                $parts[] = '<span title="تبعيات: ' . Html::encode(implode(', ', $titles)) . '" style="display:inline-block;padding:1px 4px;border-radius:4px;font-size:9px;background:#EFF6FF;color:#2563EB;cursor:help"><i class="fa fa-level-up" style="font-size:8px"></i> ' . count($parentIds) . '</span>';
+                $parts[] = '<span title="آباء: ' . Html::encode(implode(', ', $titles)) . '" style="display:inline-block;padding:1px 4px;border-radius:4px;font-size:9px;background:#DCFCE7;color:#16A34A;cursor:help"><i class="fa fa-arrow-right" style="font-size:8px"></i> ' . count($parentIds) . '</span>';
+            }
+
+            $myChildren = $childrenOf[$model->id] ?? [];
+            if (!empty($myChildren)) {
+                $titles = [];
+                foreach ($myChildren as $id) $titles[] = $nameMap[$id] ?? '#' . $id;
+                $parts[] = '<span title="أبناء: ' . Html::encode(implode(', ', $titles)) . '" style="display:inline-block;padding:1px 4px;border-radius:4px;font-size:9px;background:#DBEAFE;color:#2563EB;cursor:help"><i class="fa fa-arrow-left" style="font-size:8px"></i> ' . count($myChildren) . '</span>';
             }
 
             return empty($parts) ? '<span style="color:#CBD5E1;font-size:11px">—</span>' : implode(' ', $parts);
@@ -121,13 +134,10 @@ return [
         'format' => 'raw',
         'value' => function ($model) {
             $id = $model->id;
-            $editUrl = Url::to(['update', 'id' => $id]);
-            $viewUrl = Url::to(['view', 'id' => $id]);
-            $delUrl  = Url::to(['confirm-delete', 'id' => $id]);
             return '<div class="ja-action-btns">'
-                . '<a href="' . $viewUrl . '" role="modal-remote" title="عرض" class="ja-act ja-act-view"><i class="fa fa-eye"></i></a>'
-                . '<a href="' . $editUrl . '" role="modal-remote" title="تعديل" class="ja-act ja-act-edit"><i class="fa fa-pencil"></i></a>'
-                . '<a href="' . $delUrl . '" role="modal-remote" title="حذف" class="ja-act ja-act-del" data-confirm="false" data-method="false"><i class="fa fa-trash-o"></i></a>'
+                . Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $id], ['role' => 'modal-remote', 'title' => 'عرض', 'class' => 'ja-act ja-act-view'])
+                . Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $id], ['role' => 'modal-remote', 'title' => 'تعديل', 'class' => 'ja-act ja-act-edit'])
+                . Html::a('<i class="fa fa-trash-o"></i>', ['confirm-delete', 'id' => $id], ['role' => 'modal-remote', 'title' => 'حذف', 'class' => 'ja-act ja-act-del', 'data-confirm' => false, 'data-method' => false])
                 . '</div>';
         },
         'headerOptions' => ['style' => 'width:10%;text-align:center;padding:5px 2px'],

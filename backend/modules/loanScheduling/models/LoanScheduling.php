@@ -177,4 +177,11 @@ class LoanScheduling extends \yii\db\ActiveRecord
             \backend\modules\contracts\models\Contracts::refreshContractStatus((int)$this->contract_id);
         }
     }
+
+    public function afterSoftDelete()
+    {
+        if ($this->contract_id) {
+            \backend\modules\contracts\models\Contracts::refreshContractStatus((int)$this->contract_id);
+        }
+    }
 }

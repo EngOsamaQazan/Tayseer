@@ -92,15 +92,32 @@ class CompaniesController extends Controller
         $q = trim($q);
         if (mb_strlen($q) < 2) return ['results' => []];
 
-        $rows = Companies::find()
-            ->select(['id', 'name', 'phone_number'])
-            ->andWhere(['or',
-                ['like', 'name', $q],
-                ['like', 'phone_number', $q],
-            ])
-            ->limit(10)
-            ->asArray()
-            ->all();
+        $db = Yii::$app->db;
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $nameNormNoSpace = "REPLACE($nameNorm, ' ', '')";
+
+        $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+        $nameParams = [];
+        $nameClauses = [];
+        foreach ($words as $i => $w) {
+            $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+            $wNorm = str_replace('ة', 'ه', $wNorm);
+            $wNorm = str_replace('ى', 'ي', $wNorm);
+            $p = ':nw' . $i;
+            $nameClauses[] = "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)";
+            $nameParams[$p] = '%' . $wNorm . '%';
+        }
+        $nameClause = implode(' AND ', $nameClauses);
+
+        $rows = $db->createCommand(
+            "SELECT id, name, phone_number
+             FROM {{%companies}}
+             WHERE ($nameClause)
+                OR phone_number LIKE :qLike
+             ORDER BY id DESC
+             LIMIT 10",
+            array_merge([':qLike' => '%' . $q . '%'], $nameParams)
+        )->queryAll();
 
         $results = [];
         foreach ($rows as $r) {

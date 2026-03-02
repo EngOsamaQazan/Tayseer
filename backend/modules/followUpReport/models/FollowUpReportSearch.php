@@ -44,6 +44,44 @@ class FollowUpReportSearch extends FollowUpReport
         return Model::scenarios();
     }
 
+    private static $cwIdx = 0;
+
+    private static function arabicNormalize(string $text): string
+    {
+        $text = str_replace(['أ', 'إ', 'آ'], 'ا', $text);
+        $text = str_replace('ة', 'ه', $text);
+        $text = str_replace('ى', 'ي', $text);
+        return $text;
+    }
+
+    private function applyUnifiedSearch($query)
+    {
+        if (empty($this->q)) return;
+        $q = trim($this->q);
+
+        $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(c.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $nameNormNoSpace = "REPLACE($nameNorm, ' ', '')";
+
+        foreach ($words as $w) {
+            $wNorm = self::arabicNormalize($w);
+            $p = ':cw' . (self::$cwIdx++);
+            $nameExpr = new \yii\db\Expression(
+                "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)",
+                [$p => '%' . $wNorm . '%']
+            );
+            $or = ['or', $nameExpr,
+                ['like', 'c.id_number', $w],
+                ['like', 'c.primary_phone_number', $w],
+            ];
+            if (is_numeric($w)) {
+                $or[] = ['=', 'os_follow_up_report.id', (int)$w];
+                $or[] = ['=', 'c.id', (int)$w];
+            }
+            $query->andWhere($or);
+        }
+    }
+
     // ═══════════════════════════════════════════════════
     //  البحث الرئيسي — تقرير المتابعة
     // ═══════════════════════════════════════════════════
@@ -96,17 +134,7 @@ class FollowUpReportSearch extends FollowUpReport
             $query->andWhere(['os_follow_up_report.is_can_not_contact' => (int)$this->is_can_not_contact]);
         }
 
-        // ── بحث موحّد (رقم عقد / اسم عميل / رقم وطني / هاتف / رقم عميل) ──
-        if (!empty($this->q)) {
-            $q = trim($this->q);
-            $query->andWhere(['or',
-                ['os_follow_up_report.id' => $q],
-                ['c.id' => $q],
-                ['like', 'c.name', $q],
-                ['like', 'c.id_number', $q],
-                ['like', 'c.primary_phone_number', $q],
-            ]);
-        }
+        $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
             'os_follow_up_report.id' => $this->id,
@@ -168,16 +196,7 @@ class FollowUpReportSearch extends FollowUpReport
             $query->andWhere(['os_follow_up_report.is_can_not_contact' => (int)$this->is_can_not_contact]);
         }
 
-        if (!empty($this->q)) {
-            $q = trim($this->q);
-            $query->andWhere(['or',
-                ['os_follow_up_report.id' => $q],
-                ['c.id' => $q],
-                ['like', 'c.name', $q],
-                ['like', 'c.id_number', $q],
-                ['like', 'c.primary_phone_number', $q],
-            ]);
-        }
+        $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
             'os_follow_up_report.id' => $this->id,

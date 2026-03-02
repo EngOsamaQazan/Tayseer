@@ -31,9 +31,23 @@ use yii\helpers\Url;
 .cd-action-info .cd-usage {
     margin-right: auto; font-size: 12px; color: #94A3B8; font-weight: 400;
 }
+.cd-option-group { margin-bottom: 16px; }
+.cd-option {
+    display: flex; align-items: flex-start; gap: 10px; padding: 14px 16px;
+    border: 2px solid #E2E8F0; border-radius: 10px; margin-bottom: 10px;
+    cursor: pointer; transition: all .2s;
+}
+.cd-option:hover { border-color: #93C5FD; background: #F8FAFC; }
+.cd-option.selected { border-color: #3B82F6; background: #EFF6FF; }
+.cd-option input[type="radio"] { margin-top: 3px; accent-color: #3B82F6; }
+.cd-option-body { flex: 1; }
+.cd-option-title { font-size: 14px; font-weight: 700; color: #1E293B; margin-bottom: 2px; }
+.cd-option-desc { font-size: 12px; color: #64748B; }
 .cd-migrate-section {
     padding: 16px; background: #EFF6FF; border-radius: 10px; border: 1px solid #BFDBFE;
+    display: none;
 }
+.cd-migrate-section.visible { display: block; }
 .cd-migrate-section label {
     display: block; font-size: 13px; font-weight: 700; color: #1E40AF; margin-bottom: 8px;
 }
@@ -44,6 +58,13 @@ use yii\helpers\Url;
 .cd-migrate-hint {
     margin-top: 8px; font-size: 12px; color: #3B82F6;
 }
+.cd-danger-hint {
+    display: flex; align-items: center; gap: 8px; padding: 10px 14px;
+    background: #FEF2F2; border-radius: 8px; border: 1px solid #FECACA;
+    font-size: 12px; color: #991B1B; margin-top: 12px; display: none;
+}
+.cd-danger-hint.visible { display: flex; }
+.cd-danger-hint i { font-size: 14px; color: #EF4444; }
 </style>
 
 <div class="cd-box">
@@ -64,23 +85,45 @@ use yii\helpers\Url;
             <i class="fa fa-exclamation-triangle"></i>
             <div class="cd-warning-text">
                 <h5>يوجد <?= number_format($usageCount) ?> سجل مرتبط بهذا الإجراء</h5>
-                <p>اختر الإجراء البديل لترحيل السجلات إليه قبل الحذف</p>
+                <p>اختر طريقة التعامل مع السجلات المرتبطة</p>
             </div>
         </div>
 
-        <div class="cd-migrate-section">
+        <div class="cd-option-group">
+            <label class="cd-option selected" id="cd-opt-migrate">
+                <input type="radio" name="delete_mode" value="migrate" checked>
+                <div class="cd-option-body">
+                    <div class="cd-option-title"><i class="fa fa-exchange" style="color:#3B82F6;margin-left:4px"></i> نقل السجلات لإجراء بديل</div>
+                    <div class="cd-option-desc">ترحيل <?= number_format($usageCount) ?> سجل إلى إجراء آخر قبل الحذف</div>
+                </div>
+            </label>
+            <label class="cd-option" id="cd-opt-purge">
+                <input type="radio" name="delete_mode" value="purge">
+                <div class="cd-option-body">
+                    <div class="cd-option-title"><i class="fa fa-trash" style="color:#EF4444;margin-left:4px"></i> حذف الإجراء مع جميع سجلاته</div>
+                    <div class="cd-option-desc">سيتم حذف الإجراء وجميع السجلات المرتبطة به (<?= number_format($usageCount) ?> سجل) نهائياً</div>
+                </div>
+            </label>
+        </div>
+
+        <div class="cd-migrate-section visible" id="cd-migrate-panel">
             <label><i class="fa fa-exchange"></i> ترحيل السجلات إلى:</label>
             <?= Html::dropDownList('migrate_to_id', null, $otherActions, [
                 'prompt' => '— اختر الإجراء البديل —',
                 'class' => 'cd-migrate-select',
                 'id' => 'migrate-to-select',
-                'required' => true,
             ]) ?>
             <div class="cd-migrate-hint">
                 <i class="fa fa-info-circle"></i>
                 سيتم نقل جميع السجلات (<?= number_format($usageCount) ?>) من «<?= Html::encode($model->name) ?>» إلى الإجراء المحدد
             </div>
         </div>
+
+        <div class="cd-danger-hint" id="cd-purge-warn">
+            <i class="fa fa-exclamation-circle"></i>
+            <span>تحذير: سيتم حذف <?= number_format($usageCount) ?> سجل بشكل نهائي ولا يمكن التراجع عن هذا الإجراء</span>
+        </div>
+
     <?php else: ?>
         <div class="cd-safe">
             <i class="fa fa-check-circle"></i>
@@ -89,6 +132,28 @@ use yii\helpers\Url;
                 <p>يمكن حذف هذا الإجراء بأمان بدون تأثير على بيانات العملاء</p>
             </div>
         </div>
+        <input type="hidden" name="delete_mode" value="purge">
     <?php endif; ?>
 </div>
 </form>
+
+<script>
+(function(){
+    var opts = document.querySelectorAll('.cd-option');
+    var migratePanel = document.getElementById('cd-migrate-panel');
+    var purgeWarn = document.getElementById('cd-purge-warn');
+    var migrateSelect = document.getElementById('migrate-to-select');
+
+    opts.forEach(function(opt){
+        opt.addEventListener('click', function(){
+            opts.forEach(function(o){ o.classList.remove('selected'); });
+            opt.classList.add('selected');
+            var mode = opt.querySelector('input[type="radio"]').value;
+            if (migratePanel) migratePanel.classList.toggle('visible', mode === 'migrate');
+            if (purgeWarn) purgeWarn.classList.toggle('visible', mode === 'purge');
+            if (migrateSelect && mode === 'purge') migrateSelect.removeAttribute('required');
+            if (migrateSelect && mode === 'migrate') migrateSelect.setAttribute('required', 'required');
+        });
+    });
+})();
+</script>

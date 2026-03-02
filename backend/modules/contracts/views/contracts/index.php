@@ -43,13 +43,7 @@ $allUsers   = $isManager
         'id', 'username'
     ) : [];
 
-$pre = $preloaded ?? [];
-$judByContract = [];
-foreach ($pre['judiciary'] ?? [] as $j) {
-    $judByContract[$j['contract_id']][] = $j;
-}
-$expByContract = ArrayHelper::map($pre['expenses'] ?? [], 'contract_id', 'total');
-$paidByContract = ArrayHelper::map($pre['paid'] ?? [], 'contract_id', 'total');
+$batch = $batchData ?? [];
 
 $statusLabels = [
     'active' => 'نشط', 'judiciary' => 'قضاء', 'judiciary_active' => 'قضاء فعّال',
@@ -216,32 +210,16 @@ $end   = $begin + count($models) - 1;
                 <tbody>
                     <?php foreach ($models as $m):
                         $cid = $m->id;
+                        $bd = $batch[$cid] ?? [];
+                        $remaining = (float)($bd['remaining'] ?? 0);
+                        $total = (float)($bd['totalDebt'] ?? $m->total_value);
+                        $isJudPaid = $bd['isJudiciaryPaid'] ?? false;
 
                         $calc = new ContractCalculations($cid);
                         $deserved = $calc->deservedAmount();
 
                         $customerFullNames = implode('، ', array_map(fn($c) => $c->name, $m->customers)) ?: '—';
                         $customerNames = implode('، ', array_map(fn($c) => NameHelper::short($c->name), $m->customers)) ?: '—';
-
-                        $judRows = $judByContract[$cid] ?? [];
-                        $caseCosts = (float)($expByContract[$cid] ?? 0);
-                        $paid = (float)($paidByContract[$cid] ?? 0);
-
-                        /* Total with judiciary costs */
-                        $total = (float)$m->total_value;
-                        if ($m->status === 'judiciary' && !empty($judRows)) {
-                            $total += (float)$judRows[0]['case_cost'] + (float)$judRows[0]['lawyer_cost'];
-                        }
-
-                        /* Remaining */
-                        $totalForRemain = (float)$m->total_value;
-                        if (!empty($judRows)) {
-                            $lawyerSum = 0;
-                            foreach ($judRows as $j) $lawyerSum += (float)$j['lawyer_cost'];
-                            $totalForRemain += $caseCosts + $lawyerSum;
-                        }
-                        $remaining = $totalForRemain - $paid;
-
                         $sellerName = isset($m->seller->name) ? NameHelper::short($m->seller->name) : '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
                     ?>
@@ -265,7 +243,7 @@ $end   = $begin + count($models) - 1;
                             <?= number_format($total, 0) ?>
                         </td>
                         <td class="ct-td-status" data-label="الحالة">
-                            <?php if ($m->status === 'judiciary' && $remaining <= 0): ?>
+                            <?php if ($isJudPaid): ?>
                                 <span class="ct-badge ct-st-judiciary-paid">قضاء مسدد</span>
                             <?php elseif ($m->status === 'judiciary'): ?>
                                 <span class="ct-badge ct-st-judiciary">قضاء فعّال</span>

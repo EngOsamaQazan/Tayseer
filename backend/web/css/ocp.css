@@ -281,6 +281,7 @@
 .ocp-badge--default    { background: var(--ocp-danger-bg);  color: var(--ocp-danger); }
 .ocp-badge--legal      { background: rgba(127,29,29,0.1);   color: var(--ocp-risk-critical); }
 .ocp-badge--closed     { background: rgba(107,114,128,0.1); color: var(--ocp-text-secondary); }
+.ocp-badge--settled    { background: rgba(22,163,74,0.12);  color: #166534; font-weight: 700; }
 .ocp-badge--settlement { background: var(--ocp-info-bg);    color: var(--ocp-info); }
 
 /* DPD Counter */
@@ -379,6 +380,22 @@
 
 .ocp-warning-strip--legal {
     background: linear-gradient(90deg, #7F1D1D 0%, #450A0A 100%);
+}
+
+.ocp-warning-strip--settled {
+    background: linear-gradient(90deg, #166534 0%, #14532D 100%);
+}
+
+/* Settled/Closed page state */
+.ocp-page--settled {
+    background: #F0FDF4;
+}
+.ocp-page--settled .ocp-status-bar {
+    border-bottom: 3px solid #16A34A;
+}
+.ocp-page--settled .ocp-section,
+.ocp-page--settled .ocp-card {
+    border: 1px solid #BBF7D0;
 }
 
 /* Counters Row */

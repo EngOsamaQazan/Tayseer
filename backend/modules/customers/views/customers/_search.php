@@ -31,6 +31,7 @@ $contractStatusList = [
 ?>
 
 <div class="ct-filter-wrap" id="ctFilterWrap">
+    <div class="ct-filter-backdrop" onclick="document.getElementById('ctFilterWrap').classList.remove('open')"></div>
     <div class="ct-filter-panel" id="ctFilterPanel">
         <div class="ct-filter-hdr" onclick="this.parentElement.classList.toggle('collapsed')">
             <h3><i class="fa fa-search"></i> بحث وفلترة</h3>

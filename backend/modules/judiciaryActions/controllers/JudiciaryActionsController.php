@@ -25,7 +25,7 @@ class JudiciaryActionsController extends Controller
                 'rules' => [
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'confirm-delete', 'usage-details', 'view', 'bulk-delete', 'export-excel', 'export-pdf', 'quick-relink'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'confirm-delete', 'usage-details', 'view', 'bulk-delete', 'export-excel', 'export-pdf', 'quick-relink', 'inline-update'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -39,6 +39,7 @@ class JudiciaryActionsController extends Controller
                     'usage-details' => ['get'],
                     'bulk-delete' => ['post'],
                     'quick-relink' => ['post'],
+                    'inline-update' => ['post'],
                 ],
             ],
         ];
@@ -58,6 +59,31 @@ class JudiciaryActionsController extends Controller
             'dataProvider' => $dataProvider,
             'searchCounter' => $searchCounter,
         ]);
+    }
+
+    /**
+     * Inline update — AJAX single-field update from grid
+     */
+    public function actionInlineUpdate()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $id = (int)$request->post('id');
+        $field = $request->post('field');
+        $value = $request->post('value');
+
+        $allowed = ['action_nature', 'action_type'];
+        if (!in_array($field, $allowed)) {
+            return ['success' => false, 'message' => 'حقل غير مسموح'];
+        }
+
+        $model = $this->findModel($id);
+        $model->$field = $value;
+
+        if ($model->save(false, [$field])) {
+            return ['success' => true];
+        }
+        return ['success' => false, 'message' => 'فشل الحفظ'];
     }
 
     /**
@@ -198,9 +224,10 @@ class JudiciaryActionsController extends Controller
 
         if ($request->isPost) {
             Yii::$app->response->format = Response::FORMAT_JSON;
+            $deleteMode = $request->post('delete_mode', 'migrate');
             $migrateToId = $request->post('migrate_to_id');
 
-            if ($usageCount > 0 && empty($migrateToId)) {
+            if ($usageCount > 0 && $deleteMode === 'migrate' && empty($migrateToId)) {
                 $otherActions = \yii\helpers\ArrayHelper::map(
                     JudiciaryActions::find()
                         ->where(['is_deleted' => 0])
@@ -225,15 +252,26 @@ class JudiciaryActionsController extends Controller
                 ];
             }
 
-            if ($usageCount > 0 && !empty($migrateToId) && $migrateToId != $id) {
-                Yii::$app->db->createCommand()->update(
-                    'os_judiciary_customers_actions',
-                    ['judiciary_actions_id' => (int)$migrateToId],
-                    ['and',
-                        ['judiciary_actions_id' => $id],
-                        ['or', ['is_deleted' => 0], ['is_deleted' => null]],
-                    ]
-                )->execute();
+            if ($usageCount > 0) {
+                if ($deleteMode === 'purge') {
+                    Yii::$app->db->createCommand()->update(
+                        'os_judiciary_customers_actions',
+                        ['is_deleted' => 1],
+                        ['and',
+                            ['judiciary_actions_id' => $id],
+                            ['or', ['is_deleted' => 0], ['is_deleted' => null]],
+                        ]
+                    )->execute();
+                } elseif (!empty($migrateToId) && $migrateToId != $id) {
+                    Yii::$app->db->createCommand()->update(
+                        'os_judiciary_customers_actions',
+                        ['judiciary_actions_id' => (int)$migrateToId],
+                        ['and',
+                            ['judiciary_actions_id' => $id],
+                            ['or', ['is_deleted' => 0], ['is_deleted' => null]],
+                        ]
+                    )->execute();
+                }
             }
 
             $model->is_deleted = 1;
@@ -358,59 +396,19 @@ class JudiciaryActionsController extends Controller
         $newParentId = (int)$request->post('new_parent_id');
         $oldParentId = (int)$request->post('old_parent_id', 0);
 
-        if (!$itemId || !$newParentId) {
-            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        if (!$itemId || !$newParentId || $itemId === $newParentId) {
+            return ['success' => false, 'message' => 'بيانات ناقصة أو غير صالحة'];
         }
 
         $item = $this->findModel($itemId);
 
-        if ($item->action_nature === 'document') {
-            if ($oldParentId) {
-                $oldParent = $this->findModel($oldParentId);
-                $oldDocs = array_filter(array_map('intval', explode(',', $oldParent->allowed_documents ?: '')));
-                $oldDocs = array_values(array_diff($oldDocs, [$itemId]));
-                $oldParent->allowed_documents = !empty($oldDocs) ? implode(',', $oldDocs) : null;
-                $oldParent->save(false, ['allowed_documents']);
-            }
+        $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
+        if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
+        if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
+        $item->parent_request_ids = implode(',', $parentIds) ?: null;
+        $item->save(false, ['parent_request_ids']);
 
-            $newParent = $this->findModel($newParentId);
-            $newDocs = array_filter(array_map('intval', explode(',', $newParent->allowed_documents ?: '')));
-            if (!in_array($itemId, $newDocs)) {
-                $newDocs[] = $itemId;
-            }
-            $newParent->allowed_documents = implode(',', $newDocs);
-            $newParent->save(false, ['allowed_documents']);
-
-            $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
-            if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
-            if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
-            $item->parent_request_ids = implode(',', $parentIds) ?: null;
-            $item->save(false, ['parent_request_ids']);
-
-            return ['success' => true];
-        }
-
-        if ($item->action_nature === 'doc_status') {
-            $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
-            if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
-            if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
-            $item->parent_request_ids = implode(',', $parentIds) ?: null;
-            $item->save(false, ['parent_request_ids']);
-
-            return ['success' => true];
-        }
-
-        if ($item->action_nature === 'request') {
-            $parentIds = array_filter(array_map('intval', explode(',', $item->parent_request_ids ?: '')));
-            if ($oldParentId) $parentIds = array_values(array_diff($parentIds, [$oldParentId]));
-            if (!in_array($newParentId, $parentIds)) $parentIds[] = $newParentId;
-            $item->parent_request_ids = implode(',', $parentIds) ?: null;
-            $item->save(false, ['parent_request_ids']);
-
-            return ['success' => true];
-        }
-
-        return ['success' => false, 'message' => 'طبيعة الإجراء لا تدعم النقل'];
+        return ['success' => true];
     }
 
     /**
@@ -418,36 +416,40 @@ class JudiciaryActionsController extends Controller
      */
     private function syncRelationships($model, $request)
     {
-        $nature = $model->action_nature;
+        $parentIds = $request->post('rel_parent_ids', []);
+        $model->parent_request_ids = is_array($parentIds) && !empty($parentIds) ? implode(',', array_map('intval', $parentIds)) : null;
 
-        // allowed_documents & allowed_statuses (for requests)
-        if ($nature === 'request') {
-            $docs = $request->post('rel_allowed_documents', []);
-            $model->allowed_documents = is_array($docs) && !empty($docs) ? implode(',', $docs) : null;
+        $model->allowed_documents = null;
+        $model->allowed_statuses = null;
 
-            $stats = $request->post('rel_allowed_statuses', []);
-            $model->allowed_statuses = is_array($stats) && !empty($stats) ? implode(',', $stats) : null;
+        $childIds = $request->post('rel_child_ids', []);
+        $childIds = is_array($childIds) ? array_map('intval', $childIds) : [];
 
-            $parents = $request->post('rel_parent_request_ids', []);
-            if (is_array($parents) && !empty($parents)) {
-                $model->parent_request_ids = implode(',', $parents);
+        $allActions = (new \yii\db\Query())
+            ->select(['id', 'parent_request_ids'])
+            ->from('os_judiciary_actions')
+            ->where(['or', ['is_deleted' => 0], ['is_deleted' => null]])
+            ->andWhere(['!=', 'id', $model->id])
+            ->all();
+
+        foreach ($allActions as $a) {
+            $existing = !empty($a['parent_request_ids']) ? array_map('intval', explode(',', $a['parent_request_ids'])) : [];
+            $hasThisParent = in_array($model->id, $existing);
+            $shouldHave = in_array((int)$a['id'], $childIds);
+
+            if ($shouldHave && !$hasThisParent) {
+                $existing[] = $model->id;
+                Yii::$app->db->createCommand()->update('os_judiciary_actions',
+                    ['parent_request_ids' => implode(',', $existing)],
+                    ['id' => $a['id']]
+                )->execute();
+            } elseif (!$shouldHave && $hasThisParent) {
+                $existing = array_values(array_diff($existing, [$model->id]));
+                Yii::$app->db->createCommand()->update('os_judiciary_actions',
+                    ['parent_request_ids' => !empty($existing) ? implode(',', $existing) : null],
+                    ['id' => $a['id']]
+                )->execute();
             }
-        }
-
-        // parent_request_ids (for documents and doc_statuses)
-        if ($nature === 'document' || $nature === 'doc_status') {
-            $parents = $request->post('rel_parent_request_ids', []);
-            $model->parent_request_ids = is_array($parents) && !empty($parents) ? implode(',', $parents) : null;
-
-            $model->allowed_documents = null;
-            $model->allowed_statuses = null;
-        }
-
-        // process — no relationships
-        if ($nature === 'process') {
-            $model->allowed_documents = null;
-            $model->allowed_statuses = null;
-            $model->parent_request_ids = null;
         }
     }
 

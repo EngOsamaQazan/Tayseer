@@ -23,6 +23,38 @@ class ShareholdersSearch extends Shareholders
         return Model::scenarios();
     }
 
+    private static $cwIdx = 0;
+
+    private function applyUnifiedSearch($query)
+    {
+        if (empty($this->q)) return;
+        $q = trim($this->q);
+
+        $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(os_shareholders.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $nameNormNoSpace = "REPLACE($nameNorm, ' ', '')";
+
+        foreach ($words as $w) {
+            $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+            $wNorm = str_replace('ة', 'ه', $wNorm);
+            $wNorm = str_replace('ى', 'ي', $wNorm);
+            $p = ':cw' . (self::$cwIdx++);
+            $nameExpr = new \yii\db\Expression(
+                "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)",
+                [$p => '%' . $wNorm . '%']
+            );
+            $or = ['or', $nameExpr,
+                ['like', 'os_shareholders.phone', $w],
+                ['like', 'os_shareholders.national_id', $w],
+                ['like', 'os_shareholders.email', $w],
+            ];
+            if (is_numeric($w)) {
+                $or[] = ['=', 'os_shareholders.id', (int)$w];
+            }
+            $query->andWhere($or);
+        }
+    }
+
     public function search($params)
     {
         $query = Shareholders::find();
@@ -38,15 +70,7 @@ class ShareholdersSearch extends Shareholders
             return $dataProvider;
         }
 
-        if (!empty($this->q)) {
-            $q = trim($this->q);
-            $query->andWhere(['or',
-                ['like', 'name', $q],
-                ['like', 'phone', $q],
-                ['like', 'national_id', $q],
-                ['like', 'email', $q],
-            ]);
-        }
+        $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
             'id' => $this->id,
@@ -73,15 +97,7 @@ class ShareholdersSearch extends Shareholders
             return 0;
         }
 
-        if (!empty($this->q)) {
-            $q = trim($this->q);
-            $query->andWhere(['or',
-                ['like', 'name', $q],
-                ['like', 'phone', $q],
-                ['like', 'national_id', $q],
-                ['like', 'email', $q],
-            ]);
-        }
+        $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
             'id' => $this->id,

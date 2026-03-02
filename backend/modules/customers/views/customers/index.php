@@ -66,10 +66,91 @@ $this->registerCss('
         background: #fdf0f3;
         color: #800020;
     }
+
+    /* ---- Toolbar button styles ---- */
+    .customers-index .kv-panel-before {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        padding: 8px 12px;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .customers-index .kv-panel-before .btn {
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 6px 14px;
+        transition: all 0.2s ease;
+        border: 1.5px solid transparent;
+    }
+    .customers-index .kv-panel-before .btn-success {
+        background: #800020;
+        border-color: #800020;
+        color: #fff;
+    }
+    .customers-index .kv-panel-before .btn-success:hover {
+        background: #5c0017;
+        border-color: #5c0017;
+    }
+    .customers-index .kv-panel-before .btn-default {
+        background: #fff;
+        border-color: #e2e8f0;
+        color: #64748b;
+    }
+    .customers-index .kv-panel-before .btn-default:hover {
+        background: #f1f5f9;
+        border-color: #800020;
+        color: #800020;
+    }
+    .customers-index .kv-panel-before .btn-success.btn-sm,
+    .customers-index .kv-panel-before .btn-danger.btn-sm {
+        background: #fff;
+        border-color: #e2e8f0;
+        color: #334155;
+        font-weight: 500;
+    }
+    .customers-index .kv-panel-before .btn-success.btn-sm:hover {
+        background: #ecfdf5;
+        border-color: #059669;
+        color: #059669;
+    }
+    .customers-index .kv-panel-before .btn-danger.btn-sm:hover {
+        background: #fef2f2;
+        border-color: #dc2626;
+        color: #dc2626;
+    }
+    .customers-index .panel-heading {
+        background: linear-gradient(135deg, #800020, #a0334d) !important;
+        color: #fff !important;
+        border-radius: 10px 10px 0 0;
+        padding: 10px 16px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .customers-index .panel-heading .badge {
+        background: rgba(255,255,255,0.25);
+        color: #fff;
+        font-size: 12px;
+        padding: 3px 8px;
+        border-radius: 10px;
+    }
+    .customers-index .panel {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
 ');
 ?>
 
 <div class="customers-index">
+
+    <button class="ct-btn ct-btn-outline ct-show-sm ct-filter-open-btn"
+            onclick="document.getElementById('ctFilterWrap').classList.add('open')"
+            style="margin-bottom:10px;width:100%">
+        <i class="fa fa-search"></i> بحث وفلترة
+    </button>
 
     <?= $this->render('_search', ['model' => $searchModel]) ?>
 

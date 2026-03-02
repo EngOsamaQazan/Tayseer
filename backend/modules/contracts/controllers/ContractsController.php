@@ -23,6 +23,7 @@ use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use backend\modules\contractDocumentFile\models\ContractDocumentFile;
 use backend\modules\notification\models\Notification;
+use backend\modules\followUp\helper\ContractCalculations;
 use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\companies\models\Companies;
 use backend\modules\contracts\models\PromissoryNote;
@@ -103,6 +104,20 @@ class ContractsController extends Controller
         }
 
         $db = Yii::$app->db;
+        $qNorm = str_replace(['أ', 'إ', 'آ'], 'ا', str_replace('ة', 'ه', str_replace('ى', 'ي', $q)));
+        $words = preg_split('/\s+/u', $qNorm, -1, PREG_SPLIT_NO_EMPTY);
+
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(cu.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $nameNormNoSpace = "REPLACE($nameNorm, ' ', '')";
+        $nameWhere = [];
+        $nameParams = [];
+        foreach ($words as $i => $w) {
+            $paramKey = ":w{$i}";
+            $nameWhere[] = "($nameNorm LIKE $paramKey OR $nameNormNoSpace LIKE $paramKey)";
+            $nameParams[$paramKey] = '%' . $w . '%';
+        }
+        $nameClause = implode(' AND ', $nameWhere);
+
         $rows = $db->createCommand(
             "SELECT c.id, c.status, c.total_value,
                     GROUP_CONCAT(DISTINCT cu.name SEPARATOR '، ') AS customer_name,
@@ -113,7 +128,7 @@ class ContractsController extends Controller
              WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
                AND (
                    c.id = :qInt
-                   OR cu.name LIKE :qLike
+                   OR ($nameClause)
                    OR cu.id_number LIKE :qLike
                    OR cu.primary_phone_number LIKE :qLike
                    OR cu.id = :qInt
@@ -121,10 +136,10 @@ class ContractsController extends Controller
              GROUP BY c.id
              ORDER BY c.id DESC
              LIMIT 10"
-        , [
+        , array_merge([
             ':qInt'  => (int)$q,
             ':qLike' => '%' . $q . '%',
-        ])->queryAll();
+        ], $nameParams))->queryAll();
 
         $results = [];
         foreach ($rows as $r) {
@@ -153,31 +168,9 @@ class ContractsController extends Controller
         $models = $dataProvider->getModels();
         $contractIds = ArrayHelper::getColumn($models, 'id');
 
-        $preloaded = [];
-        if (!empty($contractIds)) {
-            $db = Yii::$app->db;
-            $idList = implode(',', array_map('intval', $contractIds));
+        $batchData = ContractCalculations::batchPreload($contractIds);
 
-            $preloaded['judiciary'] = $db->createCommand(
-                "SELECT contract_id, id, case_cost, lawyer_cost
-                 FROM os_judiciary WHERE contract_id IN ($idList) AND is_deleted=0
-                 ORDER BY id DESC"
-            )->queryAll();
-
-            $preloaded['expenses'] = $db->createCommand(
-                "SELECT contract_id, COALESCE(SUM(amount),0) as total
-                 FROM os_expenses WHERE contract_id IN ($idList) AND category_id=4
-                 GROUP BY contract_id"
-            )->queryAll();
-
-            $preloaded['paid'] = $db->createCommand(
-                "SELECT contract_id, COALESCE(SUM(amount),0) as total
-                 FROM os_income WHERE contract_id IN ($idList)
-                 GROUP BY contract_id"
-            )->queryAll();
-        }
-
-        $db = Yii::$app->db ?? $db;
+        $db = Yii::$app->db;
         $statusCounts = ArrayHelper::map(
             $db->createCommand("SELECT status, COUNT(*) AS cnt FROM os_contracts WHERE is_deleted=0 OR is_deleted IS NULL GROUP BY status")->queryAll(),
             'status', 'cnt'
@@ -186,13 +179,13 @@ class ContractsController extends Controller
         $judPaidCount = (int)$db->createCommand("
             SELECT COUNT(*) FROM os_contracts c
             WHERE c.status = 'judiciary' AND (c.is_deleted=0 OR c.is_deleted IS NULL)
-            AND (
+            AND ROUND(
                 c.total_value
-                + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id AND (e.is_deleted=0 OR e.is_deleted IS NULL)), 0)
+                + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id), 0)
                 + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND (j.is_deleted=0 OR j.is_deleted IS NULL)), 0)
                 - COALESCE((SELECT SUM(ca.amount) FROM os_contract_adjustments ca WHERE ca.contract_id = c.id AND ca.is_deleted=0), 0)
                 - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
-            ) <= 0.01
+            , 2) <= 0
         ")->queryScalar();
 
         $judTotalCount = (int)($statusCounts['judiciary'] ?? 0);
@@ -203,7 +196,7 @@ class ContractsController extends Controller
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount'    => $dataCount,
-            'preloaded'    => $preloaded,
+            'batchData'    => $batchData,
             'statusCounts' => $statusCounts,
         ]);
     }

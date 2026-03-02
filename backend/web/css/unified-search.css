@@ -8,24 +8,25 @@
 
 .us-icon {
     position: absolute;
-    right: 12px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     color: #999;
-    font-size: 14px;
+    font-size: 15px;
     pointer-events: none;
     z-index: 1;
 }
 
 .us-input {
     width: 100%;
-    padding: 10px 38px 10px 36px;
+    padding: 10px 40px 10px 36px;
     border: 1.5px solid #ddd;
     border-radius: 10px;
     font-size: 14px;
     background: #fff;
     transition: border-color .2s, box-shadow .2s;
     direction: rtl;
+    box-sizing: border-box;
 }
 .us-input:focus {
     outline: none;
@@ -133,6 +134,40 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
+    .us-input {
+        font-size: 13px;
+        padding: 9px 38px 9px 34px;
+    }
+    .us-icon {
+        right: 10px;
+        font-size: 14px;
+    }
     .us-dropdown { max-height: 250px; }
     .us-item { padding: 8px 12px; }
+    .us-item-title { font-size: 12.5px; }
+    .us-item-sub { font-size: 11px; }
+}
+
+@media (max-width: 480px) {
+    .us-input {
+        font-size: 12px;
+        padding: 8px 36px 8px 30px;
+        border-radius: 8px;
+    }
+    .us-icon {
+        right: 9px;
+        font-size: 13px;
+    }
+    .us-spinner {
+        left: 8px;
+        font-size: 12px;
+    }
+    .us-dropdown {
+        max-height: 200px;
+        border-radius: 8px;
+    }
+    .us-item { padding: 7px 10px; gap: 8px; }
+    .us-item-icon { width: 28px; height: 28px; font-size: 12px; }
+    .us-item-title { font-size: 12px; }
+    .us-item-sub { font-size: 10.5px; }
 }

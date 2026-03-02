@@ -81,7 +81,6 @@ class JudiciaryActions extends \yii\db\ActiveRecord
         return [
             self::NATURE_REQUEST    => 'طلب إجرائي',
             self::NATURE_DOCUMENT   => 'كتاب / مذكرة',
-            self::NATURE_DOC_STATUS => 'حالة كتاب',
             self::NATURE_PROCESS    => 'إجراء إداري',
         ];
     }

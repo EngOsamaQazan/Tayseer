@@ -157,6 +157,16 @@ class JudiciarySearch extends Judiciary
             $query->andWhere(['ja.id' => $params['JudiciarySearch']['judiciary_actions']]);
         }
 
+        // ─── فلتر: فقط القضايا التي لديها طلبات معلّقة ───
+        if (!empty($params['pending_requests'])) {
+            $query->innerJoin(
+                '{{%judiciary_customers_actions}} jca_pending',
+                'jca_pending.judiciary_id = j.id AND jca_pending.request_status = :pstat AND (jca_pending.is_deleted = 0 OR jca_pending.is_deleted IS NULL)',
+                [':pstat' => 'pending']
+            );
+            $query->distinct();
+        }
+
         // ─── Pagination مع حد افتراضي ───
         $pageSize = !empty($params['JudiciarySearch']['number_row'])
             ? (int) $params['JudiciarySearch']['number_row']

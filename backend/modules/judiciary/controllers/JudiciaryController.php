@@ -76,7 +76,7 @@ class JudiciaryController extends Controller
                         },
                     ],
                     [
-                        'actions' => ['update'],
+                        'actions' => ['update', 'update-request-status'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -670,6 +670,48 @@ class JudiciaryController extends Controller
         } catch (\Exception $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
+    }
+
+    /**
+     * AJAX: تغيير حالة طلب قضائي (موافقة / رفض)
+     */
+    public function actionUpdateRequestStatus()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $request = Yii::$app->request;
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        $id = (int)$request->post('id');
+        $status = $request->post('status', '');
+        $decisionText = trim($request->post('decision_text', ''));
+
+        if (!$id || !in_array($status, ['approved', 'rejected'])) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $record = JudiciaryCustomersActions::findOne($id);
+        if (!$record || $record->is_deleted) {
+            return ['success' => false, 'message' => 'الإجراء غير موجود'];
+        }
+
+        $record->request_status = $status;
+        if ($decisionText) {
+            $record->decision_text = $decisionText;
+        }
+
+        if ($record->save(false)) {
+            $statusLabels = ['approved' => 'تمت الموافقة', 'rejected' => 'تم الرفض'];
+            return [
+                'success' => true,
+                'message' => $statusLabels[$status] ?? $status,
+                'new_status' => $status,
+            ];
+        }
+
+        return ['success' => false, 'message' => 'فشل في حفظ التغيير'];
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -1568,8 +1610,9 @@ class JudiciaryController extends Controller
         $cases = is_string($casesRaw) ? json_decode($casesRaw, true) : $casesRaw;
         if (!is_array($cases)) $cases = [];
         $globalActionId = (int)$request->post('action_id', 0);
-        $actionDate = $request->post('action_date', date('Y-m-d'));
+        $globalActionDate = $request->post('action_date', date('Y-m-d'));
         $note = $request->post('note', '');
+        $autoApprove = $request->post('auto_approve', '0') === '1';
 
         if (empty($cases)) {
             return ['success' => false, 'message' => 'بيانات ناقصة'];
@@ -1584,6 +1627,7 @@ class JudiciaryController extends Controller
             $judiciaryId = (int)($case['judiciary_id'] ?? 0);
             $contractId = (int)($case['contract_id'] ?? 0);
             $caseActionId = (int)($case['action_id'] ?? $globalActionId);
+            $caseDate = !empty($case['action_date']) ? $case['action_date'] : $globalActionDate;
 
             if (!$judiciaryId || !$caseActionId) {
                 $errors[] = $case['input'] ?? '?';
@@ -1609,10 +1653,10 @@ class JudiciaryController extends Controller
                 $record->judiciary_id = $judiciaryId;
                 $record->customers_id = $customerId;
                 $record->judiciary_actions_id = $caseActionId;
-                $record->action_date = $actionDate;
+                $record->action_date = $caseDate;
                 $record->note = !empty($case['note']) ? $case['note'] : $note;
                 if ($actionDef && $actionDef->action_nature === 'request') {
-                    $record->request_status = 'pending';
+                    $record->request_status = $autoApprove ? 'approved' : 'pending';
                 }
                 if ($record->save()) {
                     $caseSaved++;

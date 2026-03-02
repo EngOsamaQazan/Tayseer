@@ -795,84 +795,10 @@ class FollowUpController extends Controller
         $aiData = $aiEngine->recommend();
         $judiciaryData = $aiEngine->getJudiciaryData();
 
-        // ContractCalculations — needed for old tabs (phone_numbers, payments, settlements, judiciary)
+        // ContractCalculations — مصدر واحد لكل الحسابات المالية
         $calc = new ContractCalculations($contract_id);
-
-        // Financial Snapshot — يراعي التسويات والقضايا
-        $total = $calc->totalDebt();
-        $paid = $calc->paidAmount();
-        $remaining = $calc->remainingAmount();
-        $shouldPaid = $calc->amountShouldBePaid();
-        $overdue = $calc->deservedAmount();
-        $monthlyAmount = $calc->effectiveInstallment() ?: 1;
-        $overdueInstallments = ($monthlyAmount > 0 && $overdue > 0) ? (int)ceil($overdue / $monthlyAmount) : 0;
-        $remainingInstallments = ($monthlyAmount > 0 && $remaining > 0) ? (int)ceil($remaining / $monthlyAmount) : 0;
-        $complianceRate = ($shouldPaid > 0) ? min(100, (int)round(($paid / $shouldPaid) * 100)) : 100;
-
-        // هل العقد عليه قضية؟
-        $hasJudiciary = $calc->hasJdicary();
-        $lawyerCosts = $calc->allLawyerCosts();
-        $caseCosts = $calc->caseCost();
-        $contractOriginalValue = $calc->getContractTotal();
-
-        $totalAdjustments = $calc->totalAdjustments();
-
-        $financials = [
-            'total' => $total,
-            'paid' => $paid,
-            'remaining' => $remaining,
-            'overdue' => $overdue,
-            'should_paid' => $shouldPaid,
-            'overdue_installments' => $overdueInstallments,
-            'remaining_installments' => $remainingInstallments,
-            'compliance_rate' => $complianceRate,
-            'has_judiciary' => $hasJudiciary,
-            'lawyer_costs' => $lawyerCosts,
-            'case_costs' => $caseCosts,
-            'contract_value' => $contractOriginalValue,
-            'total_adjustments' => $totalAdjustments,
-        ];
-
-        // Settlement data for financial snapshot
-        $latestSettlement = \backend\modules\loanScheduling\models\LoanScheduling::find()
-            ->where(['contract_id' => $contract_id])
-            ->orderBy(['id' => SORT_DESC])
-            ->one();
-
-        $settlementFinancials = null;
-        if ($latestSettlement) {
-            $stlTotal = (float)($latestSettlement->total_debt ?? 0);
-            $stlFirstPayment = (float)($latestSettlement->first_payment ?? 0);
-            $stlInstallment = (float)($latestSettlement->monthly_installment ?? 0);
-            $stlCount = (int)($latestSettlement->installments_count ?? 0);
-            $stlType = $latestSettlement->settlement_type ?? 'monthly';
-
-            // حساب المدفوع بعد التسوية (من تاريخ الدفعة الأولى للتسوية)
-            $stlPaidAfter = 0;
-            if ($latestSettlement->first_installment_date) {
-                $stlPaidAfter = (float)(\backend\modules\contractInstallment\models\ContractInstallment::find()
-                    ->where(['contract_id' => $contract_id])
-                    ->andWhere(['>=', 'date', $latestSettlement->first_installment_date])
-                    ->sum('amount') ?? 0);
-            }
-
-            $stlRemaining = max(0, $stlTotal - $stlPaidAfter);
-            $stlRemainingInstallments = ($stlInstallment > 0 && $stlRemaining > 0) ? (int)ceil($stlRemaining / $stlInstallment) : 0;
-
-            $settlementFinancials = [
-                'total_debt' => $stlTotal,
-                'first_payment' => $stlFirstPayment,
-                'installment' => $stlInstallment,
-                'installments_count' => $stlCount,
-                'type' => $stlType,
-                'type_label' => $stlType === 'weekly' ? 'أسبوعي' : 'شهري',
-                'paid_after' => $stlPaidAfter,
-                'remaining' => $stlRemaining,
-                'remaining_installments' => $stlRemainingInstallments,
-                'first_date' => $latestSettlement->first_installment_date,
-                'next_date' => $latestSettlement->new_installment_date,
-            ];
-        }
+        $financials = $calc->getFinancialSnapshot();
+        $settlementFinancials = $calc->getSettlementSnapshot();
 
         // Timeline (combine follow-ups + payments + judiciary actions)
         $timeline = $this->buildTimeline($contract_id);

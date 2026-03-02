@@ -11,6 +11,7 @@ use backend\modules\contracts\models\Contracts;
 use backend\modules\contracts\models\ContractAdjustment;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\loanScheduling\models\LoanScheduling;
+use yii\helpers\ArrayHelper;
 
 class ContractCalculations
 {
@@ -125,11 +126,20 @@ class ContractCalculations
     }
 
     /**
-     * المتبقي = الإجمالي − المدفوع − الخصومات
+     * خصم الالتزام المسجل على العقد عند الإنشاء
+     * لا يُطرح من المتبقي — للعرض فقط
+     */
+    public function commitmentDiscount(): float
+    {
+        return (float)($this->original_contract->commitment_discount ?? 0);
+    }
+
+    /**
+     * المتبقي = الإجمالي − المدفوع − الخصومات (التسويات اللاحقة فقط)
      */
     public function remainingAmount(): float
     {
-        return max(0, $this->totalDebt() - $this->paidAmount() - $this->totalAdjustments());
+        return max(0, round($this->totalDebt() - $this->paidAmount() - $this->totalAdjustments(), 2));
     }
 
     /**
@@ -191,7 +201,7 @@ class ContractCalculations
     public function deservedAmount(): float
     {
         if ($this->hasJdicary() && !$this->latestSettlement) {
-            return max(0, $this->totalDebt() - $this->totalAdjustments() - $this->paidAmount());
+            return max(0, round($this->totalDebt() - $this->totalAdjustments() - $this->paidAmount(), 2));
         }
 
         $firstDate = $this->latestSettlement
@@ -201,7 +211,7 @@ class ContractCalculations
         if (empty($firstDate) || date('Y-m-d') < $firstDate) {
             return 0;
         }
-        return max(0, $this->amountShouldBePaid() - $this->paidAmount());
+        return max(0, round($this->amountShouldBePaid() - $this->paidAmount(), 2));
     }
 
     /**
@@ -216,12 +226,214 @@ class ContractCalculations
     }
 
     /* ═══════════════════════════════════════════════════
-     *  هل العقد عليه قضية؟
+     *  بيانات التسوية
+     * ═══════════════════════════════════════════════════ */
+
+    public function hasSettlement(): bool
+    {
+        return $this->latestSettlement !== null;
+    }
+
+    public function settlementTotalDebt(): float
+    {
+        return (float)($this->latestSettlement->total_debt ?? 0);
+    }
+
+    public function settlementFirstPayment(): float
+    {
+        return (float)($this->latestSettlement->first_payment ?? 0);
+    }
+
+    public function settlementInstallment(): float
+    {
+        return (float)($this->latestSettlement->monthly_installment ?? 0);
+    }
+
+    public function settlementInstallmentsCount(): int
+    {
+        return (int)($this->latestSettlement->installments_count ?? 0);
+    }
+
+    public function settlementType(): string
+    {
+        return $this->latestSettlement->settlement_type ?? 'monthly';
+    }
+
+    public function settlementPaidAfter(): float
+    {
+        if (!$this->latestSettlement || !$this->latestSettlement->first_installment_date) {
+            return 0;
+        }
+        return (float)(ContractInstallment::find()
+            ->where(['contract_id' => $this->contract_id])
+            ->andWhere(['>=', 'date', $this->latestSettlement->first_installment_date])
+            ->sum('amount') ?? 0);
+    }
+
+    public function settlementRemaining(): float
+    {
+        return max(0, $this->settlementTotalDebt() - $this->settlementPaidAfter());
+    }
+
+    public function settlementRemainingInstallments(): int
+    {
+        $inst = $this->settlementInstallment();
+        $rem = $this->settlementRemaining();
+        return ($inst > 0 && $rem > 0) ? (int)ceil($rem / $inst) : 0;
+    }
+
+    public function settlementFirstDate(): ?string
+    {
+        return $this->latestSettlement->first_installment_date ?? null;
+    }
+
+    public function settlementNextDate(): ?string
+    {
+        return $this->latestSettlement->new_installment_date ?? null;
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  مؤشرات حسابية
+     * ═══════════════════════════════════════════════════ */
+
+    public function overdueInstallments(): int
+    {
+        $monthly = $this->effectiveInstallment();
+        $overdue = $this->deservedAmount();
+        return ($monthly > 0 && $overdue > 0) ? (int)ceil($overdue / $monthly) : 0;
+    }
+
+    public function remainingInstallments(): int
+    {
+        $monthly = $this->effectiveInstallment();
+        $remaining = $this->remainingAmount();
+        return ($monthly > 0 && $remaining > 0) ? (int)ceil($remaining / $monthly) : 0;
+    }
+
+    public function complianceRate(): int
+    {
+        $shouldPaid = $this->amountShouldBePaid();
+        return ($shouldPaid > 0) ? min(100, (int)round(($this->paidAmount() / $shouldPaid) * 100)) : 100;
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  حالة العقد
      * ═══════════════════════════════════════════════════ */
 
     public function hasJdicary(): bool
     {
         return !empty($this->judicary_contract);
+    }
+
+    public function isJudiciaryPaid(): bool
+    {
+        $status = $this->original_contract->status ?? '';
+        return $status === 'judiciary' && $this->remainingAmount() <= 0;
+    }
+
+    public function isClosed(): bool
+    {
+        $status = $this->original_contract->status ?? '';
+        if (in_array($status, ['finished', 'canceled'])) return true;
+        return $this->isJudiciaryPaid();
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  اللقطات المالية
+     * ═══════════════════════════════════════════════════ */
+
+    public function getFinancialSnapshot(): array
+    {
+        return [
+            'total' => $this->totalDebt(),
+            'paid' => $this->paidAmount(),
+            'remaining' => $this->remainingAmount(),
+            'overdue' => $this->deservedAmount(),
+            'should_paid' => $this->amountShouldBePaid(),
+            'overdue_installments' => $this->overdueInstallments(),
+            'remaining_installments' => $this->remainingInstallments(),
+            'compliance_rate' => $this->complianceRate(),
+            'has_judiciary' => $this->hasJdicary(),
+            'lawyer_costs' => $this->allLawyerCosts(),
+            'case_costs' => $this->caseCost(),
+            'contract_value' => $this->getContractTotal(),
+            'total_adjustments' => $this->totalAdjustments(),
+            'commitment_discount' => $this->commitmentDiscount(),
+        ];
+    }
+
+    public function getSettlementSnapshot(): ?array
+    {
+        if (!$this->hasSettlement()) return null;
+
+        return [
+            'total_debt' => $this->settlementTotalDebt(),
+            'first_payment' => $this->settlementFirstPayment(),
+            'installment' => $this->settlementInstallment(),
+            'installments_count' => $this->settlementInstallmentsCount(),
+            'type' => $this->settlementType(),
+            'type_label' => $this->settlementType() === 'weekly' ? 'أسبوعي' : 'شهري',
+            'paid_after' => $this->settlementPaidAfter(),
+            'remaining' => $this->settlementRemaining(),
+            'remaining_installments' => $this->settlementRemainingInstallments(),
+            'first_date' => $this->settlementFirstDate(),
+            'next_date' => $this->settlementNextDate(),
+        ];
+    }
+
+    /* ═══════════════════════════════════════════════════
+     *  تحميل دفعي لصفحات القوائم
+     * ═══════════════════════════════════════════════════ */
+
+    public static function batchPreload(array $contractIds): array
+    {
+        if (empty($contractIds)) return [];
+        $db = Yii::$app->db;
+        $idList = implode(',', array_map('intval', $contractIds));
+
+        $contractMap = ArrayHelper::index(
+            $db->createCommand("SELECT id, total_value, status FROM os_contracts WHERE id IN ($idList)")->queryAll(),
+            'id'
+        );
+
+        $expMap = ArrayHelper::map(
+            $db->createCommand("SELECT contract_id, COALESCE(SUM(amount),0) as total FROM os_expenses WHERE contract_id IN ($idList) AND (is_deleted = 0 OR is_deleted IS NULL) GROUP BY contract_id")->queryAll(),
+            'contract_id', 'total'
+        );
+
+        $lawyerMap = ArrayHelper::map(
+            $db->createCommand("SELECT contract_id, COALESCE(SUM(lawyer_cost),0) as total FROM os_judiciary WHERE contract_id IN ($idList) AND (is_deleted=0 OR is_deleted IS NULL) GROUP BY contract_id")->queryAll(),
+            'contract_id', 'total'
+        );
+
+        $paidMap = ArrayHelper::map(
+            $db->createCommand("SELECT contract_id, COALESCE(SUM(amount),0) as total FROM os_income WHERE contract_id IN ($idList) GROUP BY contract_id")->queryAll(),
+            'contract_id', 'total'
+        );
+
+        $adjMap = ArrayHelper::map(
+            $db->createCommand("SELECT contract_id, COALESCE(SUM(amount),0) as total FROM os_contract_adjustments WHERE contract_id IN ($idList) AND is_deleted=0 GROUP BY contract_id")->queryAll(),
+            'contract_id', 'total'
+        );
+
+        $result = [];
+        foreach ($contractIds as $cid) {
+            $c = $contractMap[$cid] ?? null;
+            if (!$c) continue;
+            $totalDebt = (float)$c['total_value'] + (float)($expMap[$cid] ?? 0) + (float)($lawyerMap[$cid] ?? 0);
+            $paidAmt = (float)($paidMap[$cid] ?? 0);
+            $adjAmt = (float)($adjMap[$cid] ?? 0);
+            $remaining = max(0, round($totalDebt - $paidAmt - $adjAmt, 2));
+
+            $result[$cid] = [
+                'totalDebt' => $totalDebt,
+                'paid' => $paidAmt,
+                'adjustments' => $adjAmt,
+                'remaining' => $remaining,
+                'isJudiciaryPaid' => ($c['status'] === 'judiciary') && ($remaining <= 0),
+            ];
+        }
+        return $result;
     }
 
     /* ═══════════════════════════════════════════════════

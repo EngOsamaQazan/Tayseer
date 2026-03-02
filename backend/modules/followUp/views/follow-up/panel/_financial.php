@@ -27,6 +27,7 @@ $caseCosts = $financials['case_costs'] ?? 0;
 $contractValue = $financials['contract_value'] ?? 0;
 $allExpenses = $total - $contractValue - $lawyerCosts;
 $totalAdjustments = $financials['total_adjustments'] ?? 0;
+$commitmentDiscount = $financials['commitment_discount'] ?? 0;
 ?>
 
 <style>
@@ -115,7 +116,7 @@ $totalAdjustments = $financials['total_adjustments'] ?? 0;
         </div>
     </div>
 
-    <?php $showBreakdown = ($hasJudiciary && ($lawyerCosts > 0 || $caseCosts > 0 || $allExpenses > 0)) || $totalAdjustments > 0; ?>
+    <?php $showBreakdown = ($hasJudiciary && ($lawyerCosts > 0 || $caseCosts > 0 || $allExpenses > 0)) || $totalAdjustments > 0 || $commitmentDiscount > 0; ?>
     <?php if ($showBreakdown): ?>
     <div class="ocp-debt-breakdown">
         <div class="ocp-debt-row">
@@ -144,6 +145,12 @@ $totalAdjustments = $financials['total_adjustments'] ?? 0;
             <span><i class="fa fa-calculator"></i> الإجمالي</span>
             <span><?= number_format($total) ?></span>
         </div>
+        <?php if ($commitmentDiscount > 0): ?>
+        <div class="ocp-debt-row" style="color:#6d28d9">
+            <span><i class="fa fa-tag" style="color:#6d28d9"></i> خصم الالتزام</span>
+            <span style="font-weight:700"><?= number_format($commitmentDiscount) ?></span>
+        </div>
+        <?php endif ?>
         <?php if ($totalAdjustments > 0): ?>
         <div class="ocp-debt-row" style="color:#dc2626">
             <span><i class="fa fa-minus-circle" style="color:#dc2626"></i> الخصومات</span>

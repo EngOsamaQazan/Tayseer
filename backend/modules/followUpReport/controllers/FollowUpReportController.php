@@ -75,6 +75,22 @@ class FollowUpReportController extends Controller
         }
 
         $db = Yii::$app->db;
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(cu.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $nameNormNoSpace = "REPLACE($nameNorm, ' ', '')";
+
+        $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+        $nameParams = [];
+        $nameClauses = [];
+        foreach ($words as $i => $w) {
+            $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+            $wNorm = str_replace('ة', 'ه', $wNorm);
+            $wNorm = str_replace('ى', 'ي', $wNorm);
+            $p = ':nw' . $i;
+            $nameClauses[] = "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)";
+            $nameParams[$p] = '%' . $wNorm . '%';
+        }
+        $nameClause = implode(' AND ', $nameClauses);
+
         $rows = $db->createCommand(
             "SELECT c.id, c.status,
                     GROUP_CONCAT(DISTINCT cu.name SEPARATOR '، ') AS customer_name,
@@ -87,7 +103,7 @@ class FollowUpReportController extends Controller
                AND c.status NOT IN ('finished','canceled')
                AND (
                    c.id = :qInt
-                   OR cu.name LIKE :qLike
+                   OR ($nameClause)
                    OR cu.id_number LIKE :qLike
                    OR cu.primary_phone_number LIKE :qLike
                    OR cu.id = :qInt
@@ -95,10 +111,10 @@ class FollowUpReportController extends Controller
              GROUP BY c.id
              ORDER BY c.id DESC
              LIMIT 10"
-        , [
+        , array_merge([
             ':qInt'  => (int)$q,
             ':qLike' => '%' . $q . '%',
-        ])->queryAll();
+        ], $nameParams))->queryAll();
 
         $statusLabels = [
             'active' => 'نشط', 'settlement' => 'تسوية',
@@ -220,6 +236,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT contract_id, SUM(amount) AS total_expenses
     FROM os_expenses
+    WHERE (is_deleted = 0 OR is_deleted IS NULL)
     GROUP BY contract_id
 ) exp_sum ON exp_sum.contract_id = c.id
 WHERE c.is_can_not_contact = 1
@@ -685,6 +702,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT contract_id, SUM(amount) AS total_expenses
     FROM os_expenses
+    WHERE (is_deleted = 0 OR is_deleted IS NULL)
     GROUP BY contract_id
 ) exp_sum ON exp_sum.contract_id = c.id
 LEFT JOIN (
@@ -785,6 +803,7 @@ LEFT JOIN (
 LEFT JOIN (
     SELECT contract_id, SUM(amount) AS total_expenses
     FROM os_expenses
+    WHERE (is_deleted = 0 OR is_deleted IS NULL)
     GROUP BY contract_id
 ) exp_sum ON exp_sum.contract_id = c.id
 LEFT JOIN (

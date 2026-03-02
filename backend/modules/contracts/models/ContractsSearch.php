@@ -45,6 +45,45 @@ class ContractsSearch extends Contracts
     }
 
     /**
+     * Normalize Arabic text for flexible matching (ة↔ه, أإآ→ا)
+     */
+    private static function arabicNormalize(string $text): string
+    {
+        $text = str_replace(['أ', 'إ', 'آ'], 'ا', $text);
+        $text = str_replace('ة', 'ه', $text);
+        $text = str_replace('ى', 'ي', $text);
+        return $text;
+    }
+
+    /**
+     * Apply unified search (q) to query — splits words for flexible name matching
+     * Uses SQL REPLACE for Arabic normalization (ة↔ه, أإآ→ا, ى→ي)
+     */
+    private function applyUnifiedSearch($query)
+    {
+        if (empty($this->q)) return;
+        $q = trim($this->q);
+
+        $normExpr = "REPLACE(REPLACE(REPLACE(REPLACE(c.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $normNoSpace = "REPLACE($normExpr, ' ', '')";
+        $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+
+        $nameParts = [];
+        $params = [':qInt' => (int)$q, ':qLike' => '%' . $q . '%'];
+        foreach ($words as $i => $w) {
+            $p = ':nw' . $i;
+            $nameParts[] = "($normExpr LIKE $p OR $normNoSpace LIKE $p)";
+            $params[$p] = '%' . self::arabicNormalize($w) . '%';
+        }
+        $nameClause = implode(' AND ', $nameParts);
+
+        $query->andWhere(
+            "os_contracts.id = :qInt OR c.id = :qInt OR ($nameClause) OR c.id_number LIKE :qLike OR c.primary_phone_number LIKE :qLike",
+            $params
+        );
+    }
+
+    /**
      * Creates data provider instance with search query applied
      *
      * @param array $params
@@ -98,16 +137,7 @@ class ContractsSearch extends Contracts
             return $dataProvider;
         }
 
-        if (!empty($this->q)) {
-            $q = trim($this->q);
-            $query->andWhere(['or',
-                ['os_contracts.id' => $q],
-                ['c.id' => $q],
-                ['like', 'c.name', $q],
-                ['like', 'c.id_number', $q],
-                ['like', 'c.primary_phone_number', $q],
-            ]);
-        }
+        $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
             'Date_of_sale' => $this->Date_of_sale,
@@ -243,16 +273,7 @@ class ContractsSearch extends Contracts
             return $dataProvider;
         }
 
-        if (!empty($this->q)) {
-            $q = trim($this->q);
-            $query->andWhere(['or',
-                ['os_contracts.id' => $q],
-                ['c.id' => $q],
-                ['like', 'c.name', $q],
-                ['like', 'c.id_number', $q],
-                ['like', 'c.primary_phone_number', $q],
-            ]);
-        }
+        $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
             'Date_of_sale' => $this->Date_of_sale,

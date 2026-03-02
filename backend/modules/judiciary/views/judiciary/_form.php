@@ -81,6 +81,28 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 .jca-act-menu a i{width:16px;text-align:center}
 .jca-act-divider{height:1px;background:#E2E8F0;margin:4px 0}
 
+/* Approve / Reject inline */
+.jf-req-actions{display:flex;gap:6px;align-items:center;margin-top:6px}
+.jf-req-btn{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:6px;font-size:11px;
+  font-weight:600;border:1px solid;cursor:pointer;transition:all .15s;white-space:nowrap;background:none}
+.jf-req-btn.approve{background:#D1FAE5;color:#065F46;border-color:#A7F3D0}
+.jf-req-btn.approve:hover{background:#065F46;color:#fff}
+.jf-req-btn.reject{background:#FEE2E2;color:#991B1B;border-color:#FECACA}
+.jf-req-btn.reject:hover{background:#991B1B;color:#fff}
+.jf-req-btn:disabled{opacity:.5;cursor:not-allowed}
+.jf-decision-form{display:none;margin-top:8px;padding:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px}
+.jf-decision-form.open{display:block}
+.jf-decision-input{width:100%;padding:6px 10px;border:1px solid #E2E8F0;border-radius:6px;font-size:12px;
+  resize:vertical;min-height:36px;font-family:inherit;margin-bottom:6px}
+.jf-decision-input:focus{border-color:#800020;outline:none;box-shadow:0 0 0 2px rgba(128,0,32,.1)}
+.jf-decision-btns{display:flex;gap:6px;justify-content:flex-end}
+.jf-decision-confirm{padding:4px 14px;border-radius:6px;font-size:11px;font-weight:600;border:none;cursor:pointer;color:#fff}
+.jf-decision-confirm.do-approve{background:#065F46}
+.jf-decision-confirm.do-reject{background:#991B1B}
+.jf-decision-confirm:hover{opacity:.85}
+.jf-decision-cancel{padding:4px 14px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #E2E8F0;
+  background:#fff;color:#64748B;cursor:pointer}
+
 @media(max-width:992px){
     .jf-grid-3{grid-template-columns:repeat(2,1fr)}
     .jf-grid-4{grid-template-columns:repeat(2,1fr)}
@@ -252,7 +274,7 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                         <span class="jf-action-badge" style="background:<?= $ns['bg'] ?>;color:<?= $ns['color'] ?>"><?= $ns['label'] ?></span>
                         <?php if ($reqStatus): ?>
                             <?php $rc = $statusColors[$reqStatus] ?? '#6B7280'; $rl = $statusLabels[$reqStatus] ?? $reqStatus; ?>
-                            <span class="jf-action-badge" style="background:<?= $rc ?>20;color:<?= $rc ?>"><?= $rl ?></span>
+                            <span class="jf-action-badge jf-status-badge-<?= $m->id ?>" style="background:<?= $rc ?>20;color:<?= $rc ?>"><?= $rl ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="jf-action-meta">
@@ -266,8 +288,24 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                             <span><i class="fa fa-user-circle-o"></i> <?= Html::encode($m->createdBy->username) ?></span>
                         <?php endif; ?>
                     </div>
+                    <?php if (!empty($m->decision_text)): ?>
+                        <div class="jf-action-note" style="color:#1E293B;font-weight:600"><i class="fa fa-gavel" style="color:#F59E0B;margin-left:4px"></i> <?= Html::encode($m->decision_text) ?></div>
+                    <?php endif; ?>
                     <?php if (!empty($m->note)): ?>
                         <div class="jf-action-note"><?= Html::encode($m->note) ?></div>
+                    <?php endif; ?>
+                    <?php if ($reqStatus === 'pending'): ?>
+                    <div class="jf-req-actions" id="jf-ra-<?= $m->id ?>">
+                        <button type="button" class="jf-req-btn approve" data-id="<?= $m->id ?>" data-status="approved"><i class="fa fa-check"></i> موافقة</button>
+                        <button type="button" class="jf-req-btn reject" data-id="<?= $m->id ?>" data-status="rejected"><i class="fa fa-times"></i> رفض</button>
+                    </div>
+                    <div class="jf-decision-form" id="jf-df-<?= $m->id ?>">
+                        <textarea class="jf-decision-input" placeholder="نص القرار أو سبب الرفض (اختياري)..." rows="2"></textarea>
+                        <div class="jf-decision-btns">
+                            <button type="button" class="jf-decision-cancel">إلغاء</button>
+                            <button type="button" class="jf-decision-confirm" data-id="<?= $m->id ?>">تأكيد</button>
+                        </div>
+                    </div>
                     <?php endif; ?>
                 </div>
                 <div class="jf-action-tools">
@@ -325,5 +363,73 @@ $(document).on('click', function() { $('.jca-act-wrap.open').removeClass('open')
 $(document).on('click', '.jca-act-menu a', function() { $('.jca-act-wrap.open').removeClass('open'); });
 JS;
 $this->registerJs($jcaJs);
+$updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
 ?>
+
+<script>
+(function(){
+    var reqUrl = <?= json_encode($updateReqUrl) ?>;
+    var statusLabels = {approved: 'موافقة', rejected: 'مرفوض'};
+    var statusColors = {approved: '#10B981', rejected: '#EF4444'};
+    var pending = {};
+
+    $(document).on('click', '.jf-req-btn', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        var st = $(this).data('status');
+        pending = {id: id, status: st};
+        var $df = $('#jf-df-' + id);
+        $df.addClass('open');
+        $df.find('.jf-decision-confirm')
+            .removeClass('do-approve do-reject')
+            .addClass(st === 'approved' ? 'do-approve' : 'do-reject')
+            .text(st === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض');
+        $df.find('.jf-decision-input').val('').focus();
+    });
+
+    $(document).on('click', '.jf-decision-cancel', function(e) {
+        e.preventDefault();
+        $(this).closest('.jf-decision-form').removeClass('open');
+        pending = {};
+    });
+
+    $(document).on('click', '.jf-decision-confirm', function(e) {
+        e.preventDefault();
+        if (!pending.id) return;
+        var btn = $(this);
+        var $df = btn.closest('.jf-decision-form');
+        var dt = $df.find('.jf-decision-input').val().trim();
+        btn.prop('disabled', true).text('جاري الحفظ...');
+        $.post(reqUrl, {
+            id: pending.id,
+            status: pending.status,
+            decision_text: dt,
+            _csrf: yii.getCsrfToken()
+        }).done(function(res) {
+            if (res.success) {
+                var c = statusColors[res.new_status] || '#6B7280';
+                var l = statusLabels[res.new_status] || res.new_status;
+                $('.jf-status-badge-' + pending.id)
+                    .attr('style', 'background:' + c + '20;color:' + c)
+                    .text(l);
+                $('#jf-ra-' + pending.id).remove();
+                $df.remove();
+                if (dt) {
+                    var noteHtml = '<div class="jf-action-note" style="color:#1E293B;font-weight:600">' +
+                        '<i class="fa fa-gavel" style="color:#F59E0B;margin-left:4px"></i> ' +
+                        $('<span>').text(dt).html() + '</div>';
+                    $('.jf-status-badge-' + pending.id).closest('.jf-action-body')
+                        .find('.jf-action-meta').after(noteHtml);
+                }
+            } else {
+                alert(res.message || 'حدث خطأ');
+                btn.prop('disabled', false);
+            }
+        }).fail(function() {
+            alert('حدث خطأ أثناء الحفظ');
+            btn.prop('disabled', false).text('تأكيد');
+        }).always(function() { pending = {}; });
+    });
+})();
+</script>
 <?php endif ?>
