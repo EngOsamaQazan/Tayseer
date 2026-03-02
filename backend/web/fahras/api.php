@@ -53,14 +53,6 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
   exit();
 }
 
-if (!isset($_REQUEST['search']) || trim($_REQUEST['search']) === '') {
-  echo json_encode(['error' => 'no client name value']);
-  exit();
-}
-
-$search = $_REQUEST['search'];
-$search = addslashes($search);
-
 $accountLabel = $accountMap[$requestDb] ?? $requestDb;
 
 $statusMap = [
@@ -74,37 +66,77 @@ $statusMap = [
   'refused'          => 'مرفوض',
 ];
 
-// ─── استعلام رئيسي: عقد واحد = صف واحد ───
-// يجلب كل عقد مرتبط بعميل يطابق البحث مع حساب المبلغ المتبقي لكل عقد
-$db->bind = [];
-$stmt = $db->run("
-  SELECT
-    cu.id AS customer_id,
-    cu.name,
-    cu.id_number,
-    cu.primary_phone_number,
-    cu.job_title,
-    co.id AS contract_id,
-    co.status,
-    co.Date_of_sale,
-    co.created_at AS contract_created_at,
-    co.total_value,
-    COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = co.id), 0) AS expenses_sum,
-    COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = co.id AND j.is_deleted = 0), 0) AS lawyer_sum,
-    COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = co.id), 0) AS paid_sum,
-    COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = co.id AND a.is_deleted = 0), 0) AS adjustments_sum,
-    (SELECT COUNT(*) FROM os_judiciary jc WHERE jc.contract_id = co.id AND jc.is_deleted = 0) AS court_cases
-  FROM os_customers cu
-  INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id AND cc.customer_type = 'client'
-  INNER JOIN os_contracts co ON co.id = cc.contract_id
-  WHERE co.status != 'canceled'
-    AND (cu.name LIKE '%{$search}%'
-     OR cu.id_number LIKE '%{$search}%'
-     OR cu.primary_phone_number LIKE '%{$search}%')
-  ORDER BY co.created_at ASC
-  LIMIT 200
-");
-$rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
+$action = $_REQUEST['action'] ?? 'search';
+
+if ($action === 'search') {
+  if (!isset($_REQUEST['search']) || trim($_REQUEST['search']) === '') {
+    echo json_encode(['error' => 'no client name value']);
+    exit();
+  }
+  $search = addslashes($_REQUEST['search']);
+
+  $db->bind = [];
+  $stmt = $db->run("
+    SELECT
+      cu.id AS customer_id,
+      cu.name,
+      cu.id_number,
+      cu.primary_phone_number,
+      cu.job_title,
+      co.id AS contract_id,
+      co.status,
+      co.Date_of_sale,
+      co.created_at AS contract_created_at,
+      co.total_value,
+      COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = co.id), 0) AS expenses_sum,
+      COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = co.id AND j.is_deleted = 0), 0) AS lawyer_sum,
+      COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = co.id), 0) AS paid_sum,
+      COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = co.id AND a.is_deleted = 0), 0) AS adjustments_sum,
+      (SELECT COUNT(*) FROM os_judiciary jc WHERE jc.contract_id = co.id AND jc.is_deleted = 0) AS court_cases
+    FROM os_customers cu
+    INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id AND cc.customer_type = 'client'
+    INNER JOIN os_contracts co ON co.id = cc.contract_id
+    WHERE co.status != 'canceled'
+      AND (cu.name LIKE '%{$search}%'
+       OR cu.id_number LIKE '%{$search}%'
+       OR cu.primary_phone_number LIKE '%{$search}%')
+    ORDER BY co.created_at ASC
+    LIMIT 200
+  ");
+  $rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
+
+} elseif ($action === 'bulk_export') {
+  // ─── تصدير جماعي: كل العقود النشطة دفعة واحدة ───
+  $db->bind = [];
+  $stmt = $db->run("
+    SELECT
+      cu.id AS customer_id,
+      cu.name,
+      cu.id_number,
+      cu.primary_phone_number,
+      cu.job_title,
+      co.id AS contract_id,
+      co.status,
+      co.Date_of_sale,
+      co.created_at AS contract_created_at,
+      co.total_value,
+      COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = co.id), 0) AS expenses_sum,
+      COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = co.id AND j.is_deleted = 0), 0) AS lawyer_sum,
+      COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = co.id), 0) AS paid_sum,
+      COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = co.id AND a.is_deleted = 0), 0) AS adjustments_sum,
+      (SELECT COUNT(*) FROM os_judiciary jc WHERE jc.contract_id = co.id AND jc.is_deleted = 0) AS court_cases
+    FROM os_customers cu
+    INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id AND cc.customer_type = 'client'
+    INNER JOIN os_contracts co ON co.id = cc.contract_id
+    WHERE co.status != 'canceled'
+    ORDER BY co.created_at ASC
+  ");
+  $rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
+
+} else {
+  echo json_encode(['error' => 'invalid action']);
+  exit();
+}
 
 $array = [];
 
