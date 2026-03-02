@@ -101,6 +101,12 @@ if ($contractId > 0) {
   }
 }
 
+if (isset($_REQUEST['format']) && $_REQUEST['format'] === 'json') {
+  header('Content-Type: application/json; charset=utf-8');
+  echo json_encode(['data' => $parties ?: []], JSON_UNESCAPED_UNICODE);
+  exit();
+}
+
 if (empty($parties)) {
   echo '<div class="alert alert-info">لا يوجد أطراف مرتبطة بهذا العقد</div>';
   exit();
