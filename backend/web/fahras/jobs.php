@@ -51,54 +51,35 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
 }
 
 $accountLabel = $accountMap[$requestDb] ?? $requestDb;
-$action = $_REQUEST['action'] ?? 'search';
 
-if ($action === 'search') {
-  if (!isset($_REQUEST['search']) || trim($_REQUEST['search']) === '') {
-    echo json_encode(['error' => 'no search value']);
-    exit();
-  }
-  $search = addslashes(trim($_REQUEST['search']));
-
-  $db->bind = [];
-  $stmt = $db->run("
-    SELECT j.*, jt.name AS type_name
-    FROM os_jobs j
-    LEFT JOIN os_jobs_type jt ON jt.id = j.job_type
-    WHERE (j.is_deleted = 0 OR j.is_deleted IS NULL)
-      AND (
-        j.name LIKE '%{$search}%'
-        OR j.email LIKE '%{$search}%'
-        OR j.address_city LIKE '%{$search}%'
-        OR j.address_area LIKE '%{$search}%'
-        OR jt.name LIKE '%{$search}%'
-        OR j.id IN (
-          SELECT jp.job_id FROM os_jobs_phones jp
-          WHERE jp.phone_number LIKE '%{$search}%'
-             OR jp.employee_name LIKE '%{$search}%'
-        )
-      )
-    ORDER BY j.name ASC
-    LIMIT 200
-  ");
-  $rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
-
-} elseif ($action === 'bulk_export') {
-  $db->bind = [];
-  $stmt = $db->run("
-    SELECT j.*, jt.name AS type_name
-    FROM os_jobs j
-    LEFT JOIN os_jobs_type jt ON jt.id = j.job_type
-    WHERE (j.is_deleted = 0 OR j.is_deleted IS NULL)
-      AND j.status = 1
-    ORDER BY j.name ASC
-  ");
-  $rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
-
-} else {
-  echo json_encode(['error' => 'invalid action']);
+if (!isset($_REQUEST['search']) || trim($_REQUEST['search']) === '') {
+  echo json_encode(['error' => 'no search value']);
   exit();
 }
+$search = addslashes(trim($_REQUEST['search']));
+
+$db->bind = [];
+$stmt = $db->run("
+  SELECT j.*, jt.name AS type_name
+  FROM os_jobs j
+  LEFT JOIN os_jobs_type jt ON jt.id = j.job_type
+  WHERE (j.is_deleted = 0 OR j.is_deleted IS NULL)
+    AND (
+      j.name LIKE '%{$search}%'
+      OR j.email LIKE '%{$search}%'
+      OR j.address_city LIKE '%{$search}%'
+      OR j.address_area LIKE '%{$search}%'
+      OR jt.name LIKE '%{$search}%'
+      OR j.id IN (
+        SELECT jp.job_id FROM os_jobs_phones jp
+        WHERE jp.phone_number LIKE '%{$search}%'
+           OR jp.employee_name LIKE '%{$search}%'
+      )
+    )
+  ORDER BY j.name ASC
+  LIMIT 200
+");
+$rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
 
 // جلب أرقام الهواتف لكل الوظائف دفعة واحدة
 $jobIds = array_column($rows, 'id');
