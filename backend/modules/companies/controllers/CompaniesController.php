@@ -235,7 +235,7 @@ class CompaniesController extends Controller
             Yii::$app->cache->set(Yii::$app->params['key_company'], Yii::$app->db->createCommand(Yii::$app->params['company_query'])->queryAll(), Yii::$app->params['time_duration']);
             Yii::$app->cache->set(Yii::$app->params['key_company_name'], Yii::$app->db->createCommand(Yii::$app->params['company_name_query'])->queryAll(), Yii::$app->params['time_duration']);
 
-            $this->redirect('index');
+            $this->redirect(['index']);
         } else {
             return $this->render('create', [
                 'model' => $model,
@@ -324,7 +324,7 @@ class CompaniesController extends Controller
             Yii::$app->cache->set(Yii::$app->params['key_company'], Yii::$app->db->createCommand(Yii::$app->params['company_query'])->queryAll(), Yii::$app->params['time_duration']);
             Yii::$app->cache->set(Yii::$app->params['key_company_name'], Yii::$app->db->createCommand(Yii::$app->params['company_name_query'])->queryAll(), Yii::$app->params['time_duration']);
 
-            $this->redirect('index');
+            $this->redirect(['index']);
         } else {
             return $this->render('update', [
                 'model' => $model,

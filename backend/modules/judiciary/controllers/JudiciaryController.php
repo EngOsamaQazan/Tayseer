@@ -1121,7 +1121,7 @@ class JudiciaryController extends Controller
             if (Yii::$app->request->post('print') !== null) {
                 return $this->redirect(['print-case', 'id' => $model->id]);
             } else {
-                $this->redirect('index');
+                return $this->redirect(['index']);
             }
         } else {
             $queryParams = Yii::$app->request->queryParams;
@@ -1178,7 +1178,7 @@ class JudiciaryController extends Controller
             Yii::$app->cache->set(Yii::$app->params['key_judiciary_contract'], Yii::$app->db->createCommand(Yii::$app->params['judiciary_contract_query'])->queryAll(), Yii::$app->params['time_duration']);
             Yii::$app->cache->set(Yii::$app->params['key_judiciary_year'], Yii::$app->db->createCommand(Yii::$app->params['judiciary_year_query'])->queryAll(), Yii::$app->params['time_duration']);
 
-            $this->redirect('index');
+            return $this->redirect(['index']);
         }
         return $this->render('update', [
             'model' => $model,

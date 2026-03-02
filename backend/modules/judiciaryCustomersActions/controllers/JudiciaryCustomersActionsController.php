@@ -383,7 +383,7 @@ class JudiciaryCustomersActionsController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post()) && $model->save()) {
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('create-in-contract', [
                     'model' => $model,

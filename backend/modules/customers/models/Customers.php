@@ -99,12 +99,45 @@ class Customers extends \yii\db\ActiveRecord
         ];
     }
 
+    public function afterFind()
+    {
+        parent::afterFind();
+        if (!empty($this->birth_date)) {
+            $ts = strtotime($this->birth_date);
+            if ($ts === false || $ts < strtotime('1900-01-01') || $ts > time()) {
+                $this->birth_date = null;
+            }
+        }
+    }
+
     public function beforeSave($insert)
     {
         if (!parent::beforeSave($insert)) return false;
         if (!empty($this->primary_phone_number)) {
             $this->primary_phone_number = \backend\helpers\PhoneHelper::toE164($this->primary_phone_number);
         }
+
+        if (!empty($this->birth_date)) {
+            $ts = strtotime($this->birth_date);
+            if ($ts === false || $ts < strtotime('1900-01-01') || $ts > time()) {
+                $this->birth_date = null;
+            } else {
+                $this->birth_date = date('Y-m-d', $ts);
+            }
+        } else {
+            $this->birth_date = null;
+        }
+
+        $dateFields = ['last_income_query_date', 'last_job_query_date'];
+        foreach ($dateFields as $df) {
+            if (!empty($this->$df)) {
+                $ts = strtotime($this->$df);
+                if ($ts === false || $ts < strtotime('1900-01-01')) {
+                    $this->$df = null;
+                }
+            }
+        }
+
         return true;
     }
 

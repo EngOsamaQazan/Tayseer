@@ -143,7 +143,7 @@ class ExpenseCategoriesController extends Controller
             */
             if ($model->load($request->post())&&$model->save()) {
 
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('create', [
                     'model' => $model,
@@ -204,7 +204,7 @@ class ExpenseCategoriesController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post())) {
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('update', [
                     'model' => $model,

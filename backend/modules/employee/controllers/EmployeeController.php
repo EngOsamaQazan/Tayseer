@@ -188,7 +188,7 @@ class EmployeeController extends Controller
                     $model->addProfileAttachment();
                 }
                 Yii::$app->session->setFlash('success', 'تم إنشاء حساب الموظف وتفعيله بنجاح.');
-                return $this->redirect('index');
+                return $this->redirect(['index']);
             }
         }
 
@@ -228,7 +228,7 @@ class EmployeeController extends Controller
                 if (!empty($model->profile_attachment_files)) {
                     $model->addProfileAttachment();
                 }
-                return $this->redirect('index');
+                return $this->redirect(['index']);
             }
         }
 

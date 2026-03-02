@@ -373,7 +373,7 @@ class IncomeController extends Controller
             FinancialTransaction::updateAll(['is_transfer' => 0], ['id' => $financial]);
         }
 
-        $this->redirect('income-list');
+        $this->redirect(['income-list']);
 
     }
 
@@ -384,7 +384,7 @@ class IncomeController extends Controller
 
 
         if ($model->load($request->post()) && $model->save()) {
-            $this->redirect('income-list');
+            $this->redirect(['income-list']);
         } else {
             return $this->render('income_list_form', [
                 'model' => $model,

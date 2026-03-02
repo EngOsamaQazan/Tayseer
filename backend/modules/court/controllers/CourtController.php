@@ -121,7 +121,7 @@ class CourtController extends Controller {
             if ($model->load($request->post()) && $model->save()) {
                 Yii::$app->cache->set(Yii::$app->params['key_court'],Yii::$app->db->createCommand(Yii::$app->params['court_query'])->queryAll(), Yii::$app->params['time_duration']);
 
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('create', [
                             'model' => $model,
@@ -182,7 +182,7 @@ class CourtController extends Controller {
             if ($model->load($request->post()) && $model->save()) {
                 Yii::$app->cache->set(Yii::$app->params['key_court'],Yii::$app->db->createCommand(Yii::$app->params['court_query'])->queryAll(), Yii::$app->params['time_duration']);
 
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('update', [
                             'model' => $model,

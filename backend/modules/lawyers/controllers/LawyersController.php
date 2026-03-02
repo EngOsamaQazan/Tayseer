@@ -143,7 +143,7 @@ class LawyersController extends Controller
                 $model->uploadeMultipleImag($model);
                 Yii::$app->cache->set(Yii::$app->params['key_lawyer'],Yii::$app->db->createCommand(Yii::$app->params['lawyer_query']), Yii::$app->params['time_duration']);
 
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('create', [
                     'model' => $model,
@@ -211,7 +211,7 @@ class LawyersController extends Controller
                 $model->uploadeMultipleImag($model);
                 Yii::$app->cache->set(Yii::$app->params['key_lawyer'],Yii::$app->db->createCommand(Yii::$app->params['lawyer_query']), Yii::$app->params['time_duration']);
 
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('update', [
                     'model' => $model,

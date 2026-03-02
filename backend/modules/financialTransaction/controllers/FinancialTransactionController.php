@@ -173,7 +173,7 @@ class FinancialTransactionController extends Controller
             $model->date            = date('Y-m-d H:i:s');
             if ($model->save()) {
                 $this->refreshCache();
-                return $this->redirect('index');
+                return $this->redirect(['index']);
             }
         }
 
@@ -199,7 +199,7 @@ class FinancialTransactionController extends Controller
             $model->date        = date('Y-m-d H:i:s');
             if ($model->save()) {
                 $this->refreshCache();
-                return $this->redirect('index');
+                return $this->redirect(['index']);
             }
         }
 
@@ -626,7 +626,7 @@ class FinancialTransactionController extends Controller
 
         $this->refreshCache();
         Yii::$app->session->setFlash('success', 'تم ترحيل الدفعات بنجاح.');
-        return $this->redirect('index');
+        return $this->redirect(['index']);
     }
 
     /* ╔═══════════════════════════════════════════════╗
@@ -661,7 +661,7 @@ class FinancialTransactionController extends Controller
 
         $this->refreshCache();
         Yii::$app->session->setFlash('success', 'تم ترحيل المصاريف بنجاح.');
-        return $this->redirect('index');
+        return $this->redirect(['index']);
     }
 
     /* ╔═══════════════════════════════════════════════════════╗

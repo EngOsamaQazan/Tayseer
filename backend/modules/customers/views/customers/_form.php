@@ -265,13 +265,63 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
 </div>
 
 <?php
-/* جافاسكريبت: التحكم بالحقول الشرطية */
-$this->registerJs(<<<'JS'
+$jsIsNew = $isNew ? 'true' : 'false';
+$this->registerJs(<<<JS
 $(document).on('change', '#customers-is_social_security', function(){
     $('.js-social-field').toggle($(this).val() == 1);
 }).on('change', '#customers-do_have_any_property', function(){
     $('.js-real-estate-section').toggle($(this).val() == 1);
 });
+
+(function(){
+    var isNew = $jsIsNew;
+    if (isNew) return;
+
+    var warnFields = {
+        'customers-name': 'اسم العميل',
+        'customers-id_number': 'الرقم الوطني',
+        'customers-birth_date': 'تاريخ الميلاد',
+        'customers-primary_phone_number': 'الهاتف الرئيسي',
+        'customers-city': 'مدينة الولادة',
+        'customers-citizen': 'الجنسية',
+        'customers-job_title': 'المسمى الوظيفي',
+    };
+
+    var origVals = {};
+    $.each(warnFields, function(id) {
+        var el = document.getElementById(id);
+        if (el) origVals[id] = $(el).val() || '';
+    });
+
+    $('#dynamic-form').on('beforeSubmit', function(){
+        var missing = [];
+        $.each(warnFields, function(id, label) {
+            var el = document.getElementById(id);
+            if (el && !$(el).val()) missing.push(label);
+        });
+        if (missing.length) {
+            var msg = 'تنبيه: الحقول التالية فارغة ويُفضّل تعبئتها في أقرب وقت:\\n- '
+                + missing.join('\\n- ')
+                + '\\n\\nهل تريد المتابعة بالحفظ؟';
+            return confirm(msg);
+        }
+        return true;
+    });
+
+    $.each(warnFields, function(id, label) {
+        var el = document.getElementById(id);
+        if (!el) return;
+        $(el).on('change', function() {
+            var newVal = $(this).val() || '';
+            var oldVal = origVals[id] || '';
+            if (oldVal && !newVal) {
+                if (!confirm('تنبيه: أنت على وشك حذف "' + label + '"\\nالقيمة الحالية: ' + oldVal + '\\n\\nهل أنت متأكد؟')) {
+                    $(this).val(oldVal).trigger('change.select2');
+                }
+            }
+        });
+    });
+})();
 JS
 );
 ?>

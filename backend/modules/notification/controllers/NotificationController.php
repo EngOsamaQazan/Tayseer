@@ -96,7 +96,7 @@ class NotificationController extends Controller
         $model = new Notification();
         $model->sender_id = Yii::$app->user->id;
         if ($model->load($request->post()) && $model->save()) {
-            $this->redirect('index');
+            $this->redirect(['index']);
         } else {
             return $this->render('create', [
                 'model' => $model,
@@ -119,7 +119,7 @@ class NotificationController extends Controller
         $model = $this->findModel($id);
         $model->sender_id = Yii::$app->user->id;
         if ($model->load($request->post()) && $model->save()) {
-            $this->redirect('index');
+            $this->redirect(['index']);
 
         } else {
             return $this->render('update', [

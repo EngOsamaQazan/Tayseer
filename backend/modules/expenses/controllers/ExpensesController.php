@@ -149,7 +149,7 @@ class ExpensesController extends Controller
 
         if ($model->load($request->post()) && $model->save()) {
             Yii::$app->cache->set(Yii::$app->params['key_expenses_contract'],Yii::$app->db->createCommand(Yii::$app->params['expenses_contract_query'])->queryAll(), Yii::$app->params['time_duration']);
-            $this->redirect('index');
+            $this->redirect(['index']);
         } else {
 
             return $this->render('create', [
@@ -175,7 +175,7 @@ class ExpensesController extends Controller
             if ($model->load($request->post()) && $model->save()) {
                Yii::$app->cache->set(Yii::$app->params['key_expenses_contract'],Yii::$app->db->createCommand(Yii::$app->params['expenses_contract_query'])->queryAll(), Yii::$app->params['time_duration']);
 
-                $this->redirect('index');
+                $this->redirect(['index']);
             } else {
                 return $this->render('update', [
                     'model' => $model,
@@ -318,7 +318,7 @@ class ExpensesController extends Controller
             Expenses::deleteAll(['id' => $id]);
             FinancialTransaction::updateAll(['is_transfer' => 0], ['id' => $financial]);
         }
-        $this->redirect('index');
+        $this->redirect(['index']);
 
     }
 }
