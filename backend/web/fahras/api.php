@@ -33,6 +33,12 @@ $accountMap = [
   'erp'   => 'نماء',
 ];
 
+$baseUrlMap = [
+  'jadal' => 'https://jadal.aqssat.co',
+  'namaa' => 'https://namaa.aqssat.co',
+  'erp'   => 'https://namaa.aqssat.co',
+];
+
 $requestDb = $_REQUEST['db'] ?? '';
 $db_name = $dbMap[$requestDb] ?? null;
 
@@ -54,6 +60,18 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
 }
 
 $accountLabel = $accountMap[$requestDb] ?? $requestDb;
+$baseUrl = $baseUrlMap[$requestDb] ?? '';
+
+$docTypes = [
+  '0' => 'هوية وطنية',       '1' => 'جواز سفر',       '2' => 'رخصة قيادة',
+  '3' => 'شهادة ميلاد',      '4' => 'شهادة تعيين',     '5' => 'كتاب ضمان اجتماعي',
+  '6' => 'كشف راتب',         '7' => 'شهادة تعيين عسكري','8' => 'صورة شخصية',
+  '9' => 'غير محدد',
+  'coustmers'  => 'وثيقة عميل',
+  'customers'  => 'وثيقة عميل',
+  'contracts'  => 'وثيقة عقد',
+  'smart_media'=> 'وسائط ذكية',
+];
 
 $statusMap = [
   'active'           => 'نشط',
@@ -83,6 +101,7 @@ if ($action === 'search') {
       cu.id_number,
       cu.primary_phone_number,
       cu.job_title,
+      cc.customer_type,
       co.id AS contract_id,
       co.status,
       co.Date_of_sale,
@@ -94,7 +113,7 @@ if ($action === 'search') {
       COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = co.id AND a.is_deleted = 0), 0) AS adjustments_sum,
       (SELECT COUNT(*) FROM os_judiciary jc WHERE jc.contract_id = co.id AND jc.is_deleted = 0) AS court_cases
     FROM os_customers cu
-    INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id AND cc.customer_type = 'client'
+    INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id
     INNER JOIN os_contracts co ON co.id = cc.contract_id
     WHERE co.status != 'canceled'
       AND (cu.name LIKE '%{$search}%'
@@ -106,7 +125,7 @@ if ($action === 'search') {
   $rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
 
 } elseif ($action === 'bulk_export') {
-  // ─── تصدير جماعي: كل العقود النشطة دفعة واحدة ───
+  // ─── تصدير جماعي: كل العقود وكل أطرافها (عملاء + كفلاء) ───
   $db->bind = [];
   $stmt = $db->run("
     SELECT
@@ -115,6 +134,7 @@ if ($action === 'search') {
       cu.id_number,
       cu.primary_phone_number,
       cu.job_title,
+      cc.customer_type,
       co.id AS contract_id,
       co.status,
       co.Date_of_sale,
@@ -126,7 +146,7 @@ if ($action === 'search') {
       COALESCE((SELECT SUM(a.amount) FROM os_contract_adjustments a WHERE a.contract_id = co.id AND a.is_deleted = 0), 0) AS adjustments_sum,
       (SELECT COUNT(*) FROM os_judiciary jc WHERE jc.contract_id = co.id AND jc.is_deleted = 0) AS court_cases
     FROM os_customers cu
-    INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id AND cc.customer_type = 'client'
+    INNER JOIN os_contracts_customers cc ON cc.customer_id = cu.id
     INNER JOIN os_contracts co ON co.id = cc.contract_id
     WHERE co.status != 'canceled'
     ORDER BY co.created_at ASC
@@ -139,6 +159,13 @@ if ($action === 'search') {
 }
 
 $array = [];
+
+$partyTypeMap = [
+  'client'    => 'عميل',
+  'guarantor' => 'كفيل',
+  'partner'   => 'شريك',
+  'witness'   => 'شاهد',
+];
 
 foreach ($rows as $row) {
   $custId     = (int)$row['customer_id'];
@@ -175,15 +202,36 @@ foreach ($rows as $row) {
     $workAddr = ($stmtWork && is_object($stmtWork)) ? ($stmtWork->fetchColumn() ?: '') : '';
   } catch (Exception $e) {}
 
-  // المرفقات
-  $attCount = 0;
+  // المرفقات — جلب الروابط الكاملة من نظامي الرفع
+  $images = [];
   try {
-    $attCount = (int)$db->get_count('os_ImageManager', ['customer_id' => $custId]);
-  } catch (Exception $e) {
-    try {
-      $attCount = (int)$db->get_count('os_ImageManager', ['contractId' => $custId]);
-    } catch (Exception $e2) { $attCount = 0; }
-  }
+    $db->bind = [];
+    $stmtImg = $db->run("
+      SELECT id, fileName, fileHash, groupName, created
+      FROM os_ImageManager
+      WHERE customer_id = {$custId}
+         OR CAST(contractId AS UNSIGNED) = {$custId}
+      ORDER BY created DESC
+    ");
+    if ($stmtImg && is_object($stmtImg)) {
+      foreach ($stmtImg->fetchAll() as $img) {
+        $ext = pathinfo($img['fileName'] ?? '', PATHINFO_EXTENSION);
+        $imgUrl = $baseUrl . '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . '.' . $ext;
+        $gn = $img['groupName'] ?? '9';
+        $images[] = [
+          'id'   => (int)$img['id'],
+          'url'  => $imgUrl,
+          'type' => $docTypes[$gn] ?? 'أخرى',
+          'type_code' => $gn,
+          'file_name' => $img['fileName'] ?? '',
+          'date' => $img['created'] ?? '',
+        ];
+      }
+    }
+  } catch (Exception $e) {}
+
+  $rawType = $row['customer_type'] ?? 'client';
+  $partyLabel = $partyTypeMap[$rawType] ?? $rawType;
 
   $array[] = [
     'account'          => $accountLabel,
@@ -192,6 +240,7 @@ foreach ($rows as $row) {
     'name'             => $row['name'] ?? '',
     'national_id'      => $row['id_number'] ?? '',
     'phone'            => $row['primary_phone_number'] ?? '',
+    'party_type'       => $partyLabel,
     'work'             => $jobName,
     'home_address'     => $homeAddr,
     'work_address'     => $workAddr,
@@ -200,7 +249,8 @@ foreach ($rows as $row) {
     'created_on'       => $row['contract_created_at'] ?? '',
     'remaining_amount' => $remaining,
     'court_status'     => ((int)$row['court_cases'] > 0) ? 'مشتكى عليه' : 'غير مشتكى عليه',
-    'attachments'      => $attCount,
+    'attachments'      => count($images),
+    'images'           => $images,
   ];
 }
 

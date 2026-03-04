@@ -43,6 +43,24 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
   exit();
 }
 
+$baseUrlMap = [
+  'jadal' => 'https://jadal.aqssat.co',
+  'namaa' => 'https://namaa.aqssat.co',
+  'erp'   => 'https://namaa.aqssat.co',
+];
+$baseUrl = $baseUrlMap[$requestDb] ?? '';
+
+$docTypes = [
+  '0' => 'هوية وطنية',       '1' => 'جواز سفر',       '2' => 'رخصة قيادة',
+  '3' => 'شهادة ميلاد',      '4' => 'شهادة تعيين',     '5' => 'كتاب ضمان اجتماعي',
+  '6' => 'كشف راتب',         '7' => 'شهادة تعيين عسكري','8' => 'صورة شخصية',
+  '9' => 'غير محدد',
+  'coustmers'  => 'وثيقة عميل',
+  'customers'  => 'وثيقة عميل',
+  'contracts'  => 'وثيقة عقد',
+  'smart_media'=> 'وسائط ذكية',
+];
+
 $contractId = isset($_REQUEST['contract']) ? (int)$_REQUEST['contract'] : 0;
 $clientId = isset($_REQUEST['client']) ? (int)$_REQUEST['client'] : 0;
 
@@ -103,7 +121,44 @@ if ($contractId > 0) {
 
 if (isset($_REQUEST['format']) && $_REQUEST['format'] === 'json') {
   header('Content-Type: application/json; charset=utf-8');
-  echo json_encode(['data' => $parties ?: []], JSON_UNESCAPED_UNICODE);
+
+  $enriched = [];
+  foreach ($parties as $p) {
+    $cid = (int)($p['customer_id'] ?? 0);
+    $images = [];
+    if ($cid > 0) {
+      try {
+        $db->bind = [];
+        $stmtImg = $db->run("
+          SELECT id, fileName, fileHash, groupName, created
+          FROM os_ImageManager
+          WHERE customer_id = {$cid}
+             OR CAST(contractId AS UNSIGNED) = {$cid}
+          ORDER BY created DESC
+        ");
+        if ($stmtImg && is_object($stmtImg)) {
+          foreach ($stmtImg->fetchAll() as $img) {
+            $ext = pathinfo($img['fileName'] ?? '', PATHINFO_EXTENSION);
+            $imgUrl = $baseUrl . '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . '.' . $ext;
+            $gn = $img['groupName'] ?? '9';
+            $images[] = [
+              'id'   => (int)$img['id'],
+              'url'  => $imgUrl,
+              'type' => $docTypes[$gn] ?? 'أخرى',
+              'type_code' => $gn,
+              'file_name' => $img['fileName'] ?? '',
+              'date' => $img['created'] ?? '',
+            ];
+          }
+        }
+      } catch (Exception $e) {}
+    }
+    $p['images'] = $images;
+    $p['attachments'] = count($images);
+    $enriched[] = $p;
+  }
+
+  echo json_encode(['data' => $enriched ?: []], JSON_UNESCAPED_UNICODE);
   exit();
 }
 
