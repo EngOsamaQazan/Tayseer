@@ -198,9 +198,9 @@ return [
                 $menu .= '<div class="jud-act-divider"></div>';
             }
             if (Permissions::can(Permissions::JUD_UPDATE)) {
-                $menu .= '<a href="' . $editUrl . '"><i class="fa fa-pencil" style="color:#3B82F6"></i> تعديل</a>';
+                $menu .= '<a href="' . $editUrl . '" data-pjax="0"><i class="fa fa-pencil" style="color:#3B82F6"></i> تعديل</a>';
             }
-            $menu .= '<a href="' . $printUrl . '"><i class="fa fa-print" style="color:#0EA5E9"></i> طباعة</a>';
+            $menu .= '<a href="' . $printUrl . '" data-pjax="0" target="_blank"><i class="fa fa-print" style="color:#0EA5E9"></i> طباعة</a>';
             if (Permissions::can(Permissions::JUD_DELETE)) {
                 $menu .= '<div class="jud-act-divider"></div>';
                 $menu .= '<a href="' . $delUrl . '" data-method="post" data-confirm="هل أنت متأكد من حذف هذه القضية؟"><i class="fa fa-trash" style="color:#EF4444"></i> حذف</a>';
