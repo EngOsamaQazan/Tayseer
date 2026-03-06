@@ -97,9 +97,9 @@ return [
                     $jud = $m->judiciary;
                     if ($jud) $contractID = $jud->contract_id;
                 }
-                $viewUrl = Url::to(['view', 'id' => $m->id]);
-                $editUrl = Url::to(['update-followup-judicary-custamer-action', 'id' => $m->id, 'contractID' => $contractID]);
-                $delUrl  = Url::to(['delete', 'id' => $m->id]);
+                $viewUrl = Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/view', 'id' => $m->id]);
+                $editUrl = Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/update-followup-judicary-custamer-action', 'id' => $m->id, 'contractID' => $contractID]);
+                $delUrl  = Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/delete', 'id' => $m->id]);
 
                 return '<div class="jca-act-wrap">'
                     . '<button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'
