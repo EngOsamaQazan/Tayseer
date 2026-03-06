@@ -54,14 +54,14 @@ return [
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحامي',
-        'value' => fn($m) => \common\helper\FindJudicary::findLawyerJudicary($m->judiciary_id),
+        'value' => fn($m) => $m->judiciary->lawyer->name ?? '—',
     ],
 
     /* المحكمة */
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحكمة',
-        'value' => fn($m) => \common\helper\FindJudicary::findCourtJudicary($m->judiciary_id),
+        'value' => fn($m) => $m->judiciary->court->name ?? '—',
     ],
 
     /* العقد */
@@ -71,7 +71,7 @@ return [
         'label' => 'العقد',
         'format' => 'raw',
         'value' => function ($m) {
-            $cid = \common\helper\FindJudicary::findJudiciaryContract($m->judiciary_id);
+            $cid = $m->judiciary->contract_id ?? null;
             return $cid ? Html::a($cid, ['/followUp/follow-up/index', 'contract_id' => $cid], ['class' => 'text-burgundy']) : '—';
         },
     ],

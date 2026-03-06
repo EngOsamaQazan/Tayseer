@@ -551,50 +551,66 @@ class JudiciaryCustomersActionsController extends Controller
 
     public function actionExportExcel()
     {
-        $searchModel = new JudiciaryCustomersActionsSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-
-        return $this->exportData($dataProvider, $this->getExportConfig());
+        return $this->exportLightweight('excel');
     }
 
     public function actionExportPdf()
     {
+        return $this->exportLightweight('pdf');
+    }
+
+    private function exportLightweight($format)
+    {
         $searchModel = new JudiciaryCustomersActionsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
-        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
-    }
+        $query = $dataProvider->query;
+        $query->with = [];
 
-    protected function getExportConfig()
-    {
-        return [
-            'title' => 'إجراءات العملاء القضائية',
-            'filename' => 'judiciary-customers-actions',
+        $query->leftJoin('os_court _ct', '_ct.id = os_judiciary.court_id')
+              ->leftJoin('os_lawyers _lw', '_lw.id = os_judiciary.lawyer_id')
+              ->leftJoin('os_user _usr', '_usr.id = os_judiciary_customers_actions.created_by');
+
+        $query->select([
+            'os_judiciary_customers_actions.id',
+            'os_judiciary_customers_actions.judiciary_id',
+            'os_judiciary_customers_actions.note',
+            'os_judiciary_customers_actions.action_date',
+            'os_judiciary.judiciary_number', 'os_judiciary.year', 'os_judiciary.contract_id',
+            'cust_name'   => 'os_customers.name',
+            'action_name' => 'os_judiciary_actions.name',
+            'lawyer_name' => '_lw.name',
+            'court_name'  => '_ct.name',
+            'created_by_name' => '_usr.username',
+        ]);
+
+        $rows = $query->asArray()->all();
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $num  = $r['judiciary_number'] ?: '—';
+            $year = $r['year'] ?: '';
+            $exportRows[] = [
+                'case'        => $year ? "{$num}/{$year}" : $num,
+                'customer'    => $r['cust_name'] ?: '—',
+                'action'      => $r['action_name'] ?: '—',
+                'note'        => $r['note'] ?: '',
+                'created_by'  => $r['created_by_name'] ?: '—',
+                'lawyer'      => $r['lawyer_name'] ?: '—',
+                'court'       => $r['court_name'] ?: '—',
+                'contract_id' => $r['contract_id'] ?: '—',
+                'action_date' => $r['action_date'] ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'       => 'إجراءات العملاء القضائية',
+            'filename'    => 'judiciary-customers-actions',
             'orientation' => 'L',
-            'headers' => ['#', 'القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
-            'keys' => [
-                '#',
-                function ($model) {
-                    $jud = $model->judiciary;
-                    return $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $model->judiciary_id;
-                },
-                'customers.name',
-                'judiciaryActions.name',
-                'note',
-                'createdBy.username',
-                function ($model) {
-                    return \common\helper\FindJudicary::findLawyerJudicary($model->judiciary_id);
-                },
-                function ($model) {
-                    return \common\helper\FindJudicary::findCourtJudicary($model->judiciary_id);
-                },
-                function ($model) {
-                    return \common\helper\FindJudicary::findJudiciaryContract($model->judiciary_id) ?: '—';
-                },
-                'action_date',
-            ],
-            'widths' => [6, 14, 20, 20, 28, 14, 18, 18, 10, 14],
-        ];
+            'headers'     => ['#', 'القضية', 'المحكوم عليه', 'الإجراء', 'ملاحظات', 'المنشئ', 'المحامي', 'المحكمة', 'العقد', 'تاريخ الإجراء'],
+            'keys'        => ['#', 'case', 'customer', 'action', 'note', 'created_by', 'lawyer', 'court', 'contract_id', 'action_date'],
+            'widths'      => [6, 14, 20, 20, 28, 14, 18, 18, 10, 14],
+        ], $format);
     }
 
     /**

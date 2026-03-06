@@ -53,6 +53,7 @@ class JudiciaryCustomersActionsSearch extends JudiciaryCustomersActions {
         $query->innerJoinWith('judiciary');
         $query->innerJoinWith('customers');
         $query->innerJoinWith('judiciaryActions');
+        $query->with(['judiciary.lawyer', 'judiciary.court']);
         $query->innerJoin('os_contracts', 'os_judiciary.contract_id = os_contracts.id')
             ->where(['!=', 'os_contracts.status', 'finished']);
 
