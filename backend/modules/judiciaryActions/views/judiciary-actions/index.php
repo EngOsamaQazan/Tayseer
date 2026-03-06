@@ -277,6 +277,7 @@ $this->params['breadcrumbs'] = [];
                     'pjax' => true,
                     'summary' => '<div style="font-size:12px;color:#94A3B8;padding:4px 0">عرض {begin}-{end} من {totalCount} إجراء</div>',
                     'columns' => require(__DIR__ . '/_columns.php'),
+                    'toggleData' => false,
                     'toolbar' => [
                         ['content' =>
                             Html::a('<i class="fa fa-plus"></i>', ['create'], [
@@ -288,8 +289,7 @@ $this->params['breadcrumbs'] = [];
                                 'data-pjax' => 1,
                                 'class' => 'btn btn-default',
                                 'title' => 'تحديث',
-                            ]) .
-                            '{toggleData}'
+                            ])
                         ],
                     ],
                     'striped' => false,

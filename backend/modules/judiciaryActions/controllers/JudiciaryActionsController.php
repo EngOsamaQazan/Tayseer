@@ -50,7 +50,6 @@ class JudiciaryActionsController extends Controller
      */
     public function actionIndex()
     {
-        ini_set('memory_limit', '256M');
         $searchModel = new JudiciaryActionsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $searchCounter = $searchModel->searchCounter(Yii::$app->request->queryParams);
@@ -456,22 +455,23 @@ class JudiciaryActionsController extends Controller
 
     public function actionExportExcel()
     {
-        $searchModel = new JudiciaryActionsSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-
-        return $this->exportData($dataProvider, $this->getExportConfig());
+        return $this->exportActionsLightweight('excel');
     }
 
     public function actionExportPdf()
     {
+        return $this->exportActionsLightweight('pdf');
+    }
+
+    private function exportActionsLightweight($format)
+    {
         $searchModel = new JudiciaryActionsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
-        return $this->exportData($dataProvider, $this->getExportConfig(), 'pdf');
-    }
+        $query = $dataProvider->query;
+        $query->select(['id', 'name', 'action_nature', 'action_type', 'allowed_documents', 'allowed_statuses', 'parent_request_ids']);
+        $rows = $query->asArray()->all();
 
-    protected function getExportConfig()
-    {
         $natureLabels = JudiciaryActions::getNatureList();
         $stageLabels  = JudiciaryActions::getActionTypeList();
         $allNames = \yii\helpers\ArrayHelper::map(
@@ -479,50 +479,35 @@ class JudiciaryActionsController extends Controller
             'id', 'name'
         );
 
-        return [
-            'title' => 'الإجراءات القضائية',
+        $resolveIds = function ($csv) use ($allNames) {
+            if (empty($csv)) return '—';
+            $ids = array_map('intval', explode(',', $csv));
+            $names = [];
+            foreach ($ids as $id) {
+                if ($id > 0) $names[] = $allNames[$id] ?? '#' . $id;
+            }
+            return !empty($names) ? implode('، ', $names) : '—';
+        };
+
+        $exportRows = [];
+        foreach ($rows as $r) {
+            $exportRows[] = [
+                'name'         => $r['name'] ?? '—',
+                'nature'       => $natureLabels[$r['action_nature'] ?? ''] ?? ($r['action_nature'] ?? '—'),
+                'stage'        => $stageLabels[$r['action_type'] ?? ''] ?? ($r['action_type'] ?? 'عام'),
+                'docs'         => $resolveIds($r['allowed_documents'] ?? ''),
+                'statuses'     => $resolveIds($r['allowed_statuses'] ?? ''),
+                'parents'      => $resolveIds($r['parent_request_ids'] ?? ''),
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'    => 'الإجراءات القضائية',
             'filename' => 'judiciary-actions',
-            'headers' => ['#', 'اسم الإجراء', 'الطبيعة', 'المرحلة', 'الكتب المسموحة', 'الحالات المسموحة', 'يتبع لطلبات'],
-            'keys' => [
-                '#',
-                'name',
-                function ($model) use ($natureLabels) {
-                    $key = $model->action_nature ?? '';
-                    return $natureLabels[$key] ?? ($model->action_nature ?? '—');
-                },
-                function ($model) use ($stageLabels) {
-                    return $model->getActionTypeLabel();
-                },
-                function ($model) use ($allNames) {
-                    $ids = $model->getAllowedDocumentIds();
-                    if (empty($ids)) return '—';
-                    $names = [];
-                    foreach ($ids as $id) {
-                        $names[] = $allNames[$id] ?? '#' . $id;
-                    }
-                    return implode('، ', $names);
-                },
-                function ($model) use ($allNames) {
-                    $ids = $model->getAllowedStatusIds();
-                    if (empty($ids)) return '—';
-                    $names = [];
-                    foreach ($ids as $id) {
-                        $names[] = $allNames[$id] ?? '#' . $id;
-                    }
-                    return implode('، ', $names);
-                },
-                function ($model) use ($allNames) {
-                    $ids = $model->getParentRequestIdList();
-                    if (empty($ids)) return '—';
-                    $names = [];
-                    foreach ($ids as $id) {
-                        $names[] = $allNames[$id] ?? '#' . $id;
-                    }
-                    return implode('، ', $names);
-                },
-            ],
-            'widths' => [6, 30, 16, 16, 30, 30, 30],
-        ];
+            'headers'  => ['#', 'اسم الإجراء', 'الطبيعة', 'المرحلة', 'الكتب المسموحة', 'الحالات المسموحة', 'يتبع لطلبات'],
+            'keys'     => ['#', 'name', 'nature', 'stage', 'docs', 'statuses', 'parents'],
+            'widths'   => [6, 30, 16, 16, 30, 30, 30],
+        ], $format);
     }
 
     /**
