@@ -143,9 +143,10 @@ if ($contract_model->is_loan == 1) {
                 'filterModel' => $searchModel,
                 'summary' => false,
                 'rowOptions' => function ($model) {
-                    if ($model->is_made_payment == 1) {
+                    $isPaid = $model->hasAttribute('is_made_payment') ? $model->is_made_payment : 1;
+                    if ($isPaid == 1) {
                         return ['class' => 'success'];
-                    } elseif ($model->date < date('Y-m-d') && $model->is_made_payment == 0) {
+                    } elseif ($model->date < date('Y-m-d') && $isPaid == 0) {
                         return ['class' => 'warning'];
                     }
                     return [];
