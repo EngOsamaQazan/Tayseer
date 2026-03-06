@@ -907,8 +907,15 @@ class JudiciaryController extends Controller
 
     public function actionTabCases()
     {
+        $params = Yii::$app->request->queryParams;
+        foreach ($params as $k => $v) {
+            if (strpos($k, '_tog') === 0) {
+                unset($params[$k]);
+            }
+        }
+
         $searchModel = new JudiciarySearch();
-        $search = $searchModel->search(Yii::$app->request->queryParams);
+        $search = $searchModel->search($params);
         return $this->renderAjax('_tab_cases', [
             'searchModel' => $searchModel,
             'dataProvider' => $search['dataProvider'],
@@ -918,9 +925,17 @@ class JudiciaryController extends Controller
 
     public function actionTabActions()
     {
+        $params = Yii::$app->request->queryParams;
+        foreach ($params as $k => $v) {
+            if (strpos($k, '_tog') === 0) {
+                unset($params[$k]);
+            }
+        }
+
         $searchModel = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActionsSearch();
-        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $searchCounter = $searchModel->searchCounter(Yii::$app->request->queryParams);
+        $dataProvider = $searchModel->search($params);
+        $dataProvider->pagination->pageSize = $dataProvider->pagination->pageSize ?: 10;
+        $searchCounter = $searchModel->searchCounter($params);
         return $this->renderAjax('_tab_actions', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
