@@ -50,6 +50,7 @@ class JudiciaryActionsController extends Controller
      */
     public function actionIndex()
     {
+        ini_set('memory_limit', '256M');
         $searchModel = new JudiciaryActionsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $searchCounter = $searchModel->searchCounter(Yii::$app->request->queryParams);
