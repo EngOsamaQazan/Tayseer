@@ -54,6 +54,7 @@ $this->params['breadcrumbs'][] = $this->title;
         <?= GridView::widget([
             'id' => 'crud-datatable',
             'dataProvider' => $dataProvider,
+            'toggleData' => false,
             'summary' => '<span class="text-muted" style="font-size:12px">عرض {begin}-{end} من {totalCount} إجراء</span>',
             'columns' => require __DIR__ . '/_columns.php',
             'toolbar' => [
@@ -64,8 +65,7 @@ $this->params['breadcrumbs'][] = $this->title;
                         ExportButtons::widget([
                             'excelRoute' => ['export-excel'],
                             'pdfRoute' => ['export-pdf'],
-                        ]) .
-                        '{toggleData}'
+                        ])
                 ],
             ],
             'striped' => true,

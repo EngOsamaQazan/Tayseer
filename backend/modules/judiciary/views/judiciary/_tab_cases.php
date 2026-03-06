@@ -17,6 +17,7 @@ use backend\widgets\ExportButtons;
     <?= GridView::widget([
         'id' => 'crud-datatable',
         'dataProvider' => $dataProvider,
+        'toggleData' => false,
         'columns' => require __DIR__ . '/_columns.php',
         'summary' => '<span class="text-muted" style="font-size:12px">عرض {begin}-{end} من {totalCount} قضية</span>',
         'pjax' => true,
@@ -32,7 +33,6 @@ use backend\widgets\ExportButtons;
                           Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['/judiciaryCustomersActions/judiciary-customers-actions/create'], ['class' => 'btn btn-success', 'role' => 'modal-remote'])
                         : '') .
                     Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
-                    '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => '/judiciary/judiciary/export-cases-excel',
                         'pdfRoute'   => '/judiciary/judiciary/export-cases-pdf',
