@@ -86,7 +86,7 @@ class HrDashboardController extends Controller
             )->queryScalar();
 
             $fromLeaveRequest = (int) $db->createCommand(
-                "SELECT COUNT(DISTINCT user_id) FROM os_leave_request WHERE status = 1 AND :today BETWEEN start_at AND end_at",
+                "SELECT COUNT(DISTINCT created_by) FROM os_leave_request WHERE status = 'approved' AND :today BETWEEN start_at AND end_at",
                 [':today' => $today]
             )->queryScalar();
 
@@ -99,7 +99,7 @@ class HrDashboardController extends Controller
         $pendingLeaveRequests = 0;
         try {
             $pendingLeaveRequests = (int) $db->createCommand(
-                "SELECT COUNT(*) FROM os_leave_request WHERE status = 0"
+                "SELECT COUNT(*) FROM os_leave_request WHERE status = 'under review'"
             )->queryScalar();
         } catch (\Exception $e) {
             Yii::error('HR Dashboard - Pending leave requests query failed: ' . $e->getMessage());
@@ -109,11 +109,11 @@ class HrDashboardController extends Controller
         $departmentHeadcount = [];
         try {
             $departmentHeadcount = $db->createCommand(
-                "SELECT d.name AS department_name, COUNT(u.id) AS headcount
+                "SELECT d.title AS department_name, COUNT(u.id) AS headcount
                  FROM os_user u
                  LEFT JOIN os_department d ON d.id = u.department
                  WHERE u.confirmed_at IS NOT NULL
-                 GROUP BY u.department, d.name
+                 GROUP BY u.department, d.title
                  ORDER BY headcount DESC"
             )->queryAll();
         } catch (\Exception $e) {

@@ -682,7 +682,7 @@ if (!empty($user->job_title)) {
                         <?php if (!empty($extended->branch_id) && $extended->branch): ?>
                         <tr>
                             <th>الفرع</th>
-                            <td><?= Html::encode($extended->branch->name ?? '—') ?></td>
+                            <td><?= Html::encode($extended->branch->location ?? '—') ?></td>
                         </tr>
                         <?php endif ?>
                         <?php if (!empty($extended->shift_id) && $extended->shift): ?>

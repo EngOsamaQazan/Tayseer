@@ -180,6 +180,14 @@ class HrEmployeeExtended extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
+    public function getBranch()
+    {
+        return $this->hasOne(\backend\modules\location\models\Location::class, ['id' => 'branch_id']);
+    }
+
+    /**
+     * @return \yii\db\ActiveQuery
+     */
     public function getWorkZone()
     {
         return $this->hasOne(HrWorkZone::class, ['id' => 'work_zone_id']);
