@@ -360,11 +360,13 @@ var JCA = (function(){
     var pendingDecision = {};
     var refreshPending = false;
 
-    function getCsrf() {
+    function getCsrfParam() {
+        var m = document.querySelector('meta[name="csrf-param"]');
+        return m ? m.getAttribute('content') : '_csrf-backend';
+    }
+    function getCsrfToken() {
         var m = document.querySelector('meta[name="csrf-token"]');
-        if (m) return m.getAttribute('content');
-        var i = document.querySelector('input[name="_csrf"]');
-        return i ? i.value : '';
+        return m ? m.getAttribute('content') : '';
     }
 
     function ajaxHeaders() {
@@ -474,7 +476,7 @@ var JCA = (function(){
         var row = el.closest('.jf-action-row');
         if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
         var fd = new FormData();
-        fd.append('_csrf', getCsrf());
+        fd.append(getCsrfParam(), getCsrfToken());
         fetch(url, {method:'POST', body:fd, headers:ajaxHeaders()}).then(function(r){
             return r.json();
         }).then(function(){
@@ -517,7 +519,7 @@ var JCA = (function(){
         fd.append('id', pendingDecision.id);
         fd.append('status', pendingDecision.status);
         fd.append('decision_text', dt);
-        fd.append('_csrf', getCsrf());
+        fd.append(getCsrfParam(), getCsrfToken());
         fetch(reqUrl, {method:'POST', body:fd, headers:ajaxHeaders()}).then(function(r){
             return r.json();
         }).then(function(res){

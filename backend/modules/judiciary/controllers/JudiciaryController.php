@@ -1601,7 +1601,6 @@ class JudiciaryController extends Controller
             Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
             return [
                 'forceClose' => true,
-                'forceReload' => '#jf-actions-container',
             ];
         }
         return $this->redirect(['update', 'id' => $judiciary]);
