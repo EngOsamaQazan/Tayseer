@@ -231,7 +231,7 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
     $totalCount = $actionsDP->getTotalCount();
 ?>
 
-<div class="jf-actions-card">
+<div class="jf-actions-card" id="jf-actions-container">
     <div class="jf-actions-header">
         <div class="jf-section-title">
             <i class="fa fa-list-ul"></i> إجراءات الأطراف
@@ -429,6 +429,50 @@ $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
             alert('حدث خطأ أثناء الحفظ');
             btn.prop('disabled', false).text('تأكيد');
         }).always(function() { pending = {}; });
+    });
+})();
+</script>
+
+<script>
+(function(){
+    var $modal = $('#ajaxCrudModal');
+    var refreshTimer = null;
+    var refreshPending = false;
+
+    function refreshActionsList() {
+        if (refreshPending) return;
+        refreshPending = true;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', location.href);
+        xhr.onload = function() {
+            refreshPending = false;
+            if (xhr.status !== 200) return;
+            var doc = new DOMParser().parseFromString(xhr.responseText, 'text/html');
+            var newContainer = doc.getElementById('jf-actions-container');
+            var curContainer = document.getElementById('jf-actions-container');
+            if (newContainer && curContainer) {
+                curContainer.innerHTML = newContainer.innerHTML;
+            }
+        };
+        xhr.onerror = function() { refreshPending = false; };
+        xhr.send();
+    }
+
+    $(document).ajaxComplete(function(event, xhr) {
+        if (!$modal.hasClass('in') && !$modal.hasClass('show') && !$modal.is(':visible')) return;
+        var ct = xhr.getResponseHeader('Content-Type') || '';
+        if (ct.indexOf('json') === -1) return;
+        try {
+            var resp = xhr.responseJSON || JSON.parse(xhr.responseText);
+            if (!resp) return;
+            if (resp.forceReload || resp.forceClose) {
+                if (refreshTimer) clearTimeout(refreshTimer);
+                refreshTimer = setTimeout(function() {
+                    $modal.modal('hide');
+                    setTimeout(refreshActionsList, 300);
+                }, 100);
+            }
+        } catch(e) {}
     });
 })();
 </script>

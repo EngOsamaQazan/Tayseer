@@ -251,6 +251,7 @@ class JudiciaryCustomersActionsController extends Controller
                         : 'تم إضافة الإجراء القضائي لـ ' . $savedCount . ' أطراف بنجاح';
                     return [
                         'forceClose' => true,
+                        'forceReload' => '#jf-actions-container',
                         'title' => 'إضافة إجراء قضائي',
                         'content' => '<span class="text-success"><i class="fa fa-check-circle"></i> ' . $msg . '</span>',
                         'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
@@ -354,6 +355,7 @@ class JudiciaryCustomersActionsController extends Controller
                 if ($model->save()) {
                     return [
                         'forceClose' => true,
+                        'forceReload' => '#jf-actions-container',
                         'title' => "تعديل إجراء قضائي",
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
                         'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal'])

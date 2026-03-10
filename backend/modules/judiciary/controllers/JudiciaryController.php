@@ -1596,7 +1596,15 @@ class JudiciaryController extends Controller
         $request = Yii::$app->request;
         $model = JudiciaryCustomersActions::findOne($id);
         $model->delete();
-        $this->redirect(['update', 'id' => $judiciary]);
+
+        if ($request->isAjax) {
+            Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+            return [
+                'forceClose' => true,
+                'forceReload' => '#jf-actions-container',
+            ];
+        }
+        return $this->redirect(['update', 'id' => $judiciary]);
     }
 
     /* ═══════════════════════════════════════════════════════════
