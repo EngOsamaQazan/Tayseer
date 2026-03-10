@@ -314,8 +314,7 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                         <div class="jca-act-menu">
                             <a href="<?= $editUrl ?>" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>
                             <div class="jca-act-divider"></div>
-                            <a href="<?= $delUrl ?>" role="modal-remote" data-request-method="post"
-                               data-confirm-title="تأكيد الحذف" data-confirm-message="هل أنت متأكد من حذف هذا الإجراء؟">
+                            <a href="javascript:void(0)" onclick="JCA_deleteAction('<?= $delUrl ?>', this)">
                                 <i class="fa fa-trash text-danger"></i> حذف
                             </a>
                         </div>
@@ -439,7 +438,7 @@ $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
     var refreshTimer = null;
     var refreshPending = false;
 
-    function refreshActionsList() {
+    window._jfRefreshActions = function() {
         if (refreshPending) return;
         refreshPending = true;
         var xhr = new XMLHttpRequest();
@@ -456,7 +455,7 @@ $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
         };
         xhr.onerror = function() { refreshPending = false; };
         xhr.send();
-    }
+    };
 
     $(document).ajaxComplete(function(event, xhr) {
         if (!$modal.hasClass('in') && !$modal.hasClass('show') && !$modal.is(':visible')) return;
@@ -469,11 +468,31 @@ $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
                 if (refreshTimer) clearTimeout(refreshTimer);
                 refreshTimer = setTimeout(function() {
                     $modal.modal('hide');
-                    setTimeout(refreshActionsList, 300);
+                    setTimeout(window._jfRefreshActions, 300);
                 }, 100);
             }
         } catch(e) {}
     });
 })();
+
+function JCA_deleteAction(url, el) {
+    if (!confirm('هل أنت متأكد من حذف هذا الإجراء؟')) return;
+    var $row = $(el).closest('.jf-action-row');
+    $row.css({opacity: 0.4, pointerEvents: 'none'});
+    $.ajax({
+        url: url,
+        type: 'POST',
+        data: {_csrf: yii.getCsrfToken()},
+        dataType: 'json',
+        success: function() {
+            $row.slideUp(200, function() { $(this).remove(); });
+            setTimeout(window._jfRefreshActions, 400);
+        },
+        error: function() {
+            $row.css({opacity: 1, pointerEvents: ''});
+            alert('حدث خطأ أثناء الحذف');
+        }
+    });
+}
 </script>
 <?php endif ?>
