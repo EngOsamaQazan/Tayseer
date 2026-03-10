@@ -218,7 +218,6 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 <?php ActiveForm::end() ?>
 
 <?php if (!$isNew):
-    \johnitvn\ajaxcrud\CrudAsset::register($this);
 
     $contractIdForGrid = $model->contract_id;
     $actionsDP = new yii\data\ActiveDataProvider([
@@ -237,15 +236,10 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
             <i class="fa fa-list-ul"></i> إجراءات الأطراف
             <span style="background:#F1F5F9;color:#64748B;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600"><?= $totalCount ?></span>
         </div>
-        <?= Html::a(
-            '<i class="fa fa-plus"></i> إضافة إجراء',
-            ['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contractIdForGrid],
-            [
-                'role' => 'modal-remote',
-                'class' => 'btn btn-success',
-                'style' => 'border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600',
-            ]
-        ) ?>
+        <button type="button" class="btn btn-success" style="border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600"
+                onclick="JCA.openModal('<?= Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contractIdForGrid]) ?>')">
+            <i class="fa fa-plus"></i> إضافة إجراء
+        </button>
     </div>
 
     <div>
@@ -296,14 +290,14 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                     <?php endif; ?>
                     <?php if ($reqStatus === 'pending'): ?>
                     <div class="jf-req-actions" id="jf-ra-<?= $m->id ?>">
-                        <button type="button" class="jf-req-btn approve" data-id="<?= $m->id ?>" data-status="approved"><i class="fa fa-check"></i> موافقة</button>
-                        <button type="button" class="jf-req-btn reject" data-id="<?= $m->id ?>" data-status="rejected"><i class="fa fa-times"></i> رفض</button>
+                        <button type="button" class="jf-req-btn approve" onclick="JCA.startDecision(<?= $m->id ?>, 'approved')"><i class="fa fa-check"></i> موافقة</button>
+                        <button type="button" class="jf-req-btn reject" onclick="JCA.startDecision(<?= $m->id ?>, 'rejected')"><i class="fa fa-times"></i> رفض</button>
                     </div>
                     <div class="jf-decision-form" id="jf-df-<?= $m->id ?>">
-                        <textarea class="jf-decision-input" placeholder="نص القرار أو سبب الرفض (اختياري)..." rows="2"></textarea>
+                        <textarea class="jf-decision-input" id="jf-dt-<?= $m->id ?>" placeholder="نص القرار أو سبب الرفض (اختياري)..." rows="2"></textarea>
                         <div class="jf-decision-btns">
-                            <button type="button" class="jf-decision-cancel">إلغاء</button>
-                            <button type="button" class="jf-decision-confirm" data-id="<?= $m->id ?>">تأكيد</button>
+                            <button type="button" class="jf-decision-cancel" onclick="JCA.cancelDecision(<?= $m->id ?>)">إلغاء</button>
+                            <button type="button" class="jf-decision-confirm" onclick="JCA.confirmDecision(<?= $m->id ?>)">تأكيد</button>
                         </div>
                     </div>
                     <?php endif; ?>
@@ -312,9 +306,9 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                     <div class="jca-act-wrap">
                         <button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>
                         <div class="jca-act-menu">
-                            <a href="<?= $editUrl ?>" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>
+                            <a href="javascript:void(0)" onclick="JCA.openModal('<?= $editUrl ?>')"><i class="fa fa-pencil text-primary"></i> تعديل</a>
                             <div class="jca-act-divider"></div>
-                            <a href="javascript:void(0)" onclick="JCA_deleteAction('<?= $delUrl ?>', this)">
+                            <a href="javascript:void(0)" onclick="JCA.deleteAction('<?= $delUrl ?>', this)">
                                 <i class="fa fa-trash text-danger"></i> حذف
                             </a>
                         </div>
@@ -341,104 +335,58 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
     <?php endif; ?>
 </div>
 
-<?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
-<?php \yii\bootstrap\Modal::end() ?>
+<!-- Modal -->
+<div class="modal fade" id="jcaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="border-bottom:1px solid #E2E8F0;padding:14px 20px">
+                <h5 class="modal-title" id="jcaModalTitle" style="font-weight:700;font-size:15px;color:#334155"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق" onclick="JCA.hideModal()"></button>
+            </div>
+            <div class="modal-body" id="jcaModalBody" style="padding:20px">
+                <div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>
+            </div>
+            <div class="modal-footer" id="jcaModalFooter" style="border-top:1px solid #E2E8F0;padding:12px 20px"></div>
+        </div>
+    </div>
+</div>
 
-<?php
-$jcaJs = <<<'JS'
-$(document).on('click', '.jca-act-trigger', function(e) {
-    e.stopPropagation();
-    var $wrap = $(this).closest('.jca-act-wrap');
-    var $menu = $wrap.find('.jca-act-menu');
-    var wasOpen = $wrap.hasClass('open');
-    $('.jca-act-wrap.open').removeClass('open');
-    if (!wasOpen) {
-        $wrap.addClass('open');
-        var r = this.getBoundingClientRect();
-        $menu.css({ left: r.left + 'px', top: (r.bottom + 4) + 'px' });
-    }
-});
-$(document).on('click', function() { $('.jca-act-wrap.open').removeClass('open'); });
-$(document).on('click', '.jca-act-menu a', function() { $('.jca-act-wrap.open').removeClass('open'); });
-JS;
-$this->registerJs($jcaJs);
-$updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
-?>
+<?php $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']); ?>
 
 <script>
-(function(){
+var JCA = (function(){
+    var modalEl = document.getElementById('jcaModal');
+    var bsModal = null;
     var reqUrl = <?= json_encode($updateReqUrl) ?>;
-    var statusLabels = {approved: 'موافقة', rejected: 'مرفوض'};
-    var statusColors = {approved: '#10B981', rejected: '#EF4444'};
-    var pending = {};
-
-    $(document).on('click', '.jf-req-btn', function(e) {
-        e.preventDefault();
-        var id = $(this).data('id');
-        var st = $(this).data('status');
-        pending = {id: id, status: st};
-        var $df = $('#jf-df-' + id);
-        $df.addClass('open');
-        $df.find('.jf-decision-confirm')
-            .removeClass('do-approve do-reject')
-            .addClass(st === 'approved' ? 'do-approve' : 'do-reject')
-            .text(st === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض');
-        $df.find('.jf-decision-input').val('').focus();
-    });
-
-    $(document).on('click', '.jf-decision-cancel', function(e) {
-        e.preventDefault();
-        $(this).closest('.jf-decision-form').removeClass('open');
-        pending = {};
-    });
-
-    $(document).on('click', '.jf-decision-confirm', function(e) {
-        e.preventDefault();
-        if (!pending.id) return;
-        var btn = $(this);
-        var $df = btn.closest('.jf-decision-form');
-        var dt = $df.find('.jf-decision-input').val().trim();
-        btn.prop('disabled', true).text('جاري الحفظ...');
-        $.post(reqUrl, {
-            id: pending.id,
-            status: pending.status,
-            decision_text: dt,
-            _csrf: yii.getCsrfToken()
-        }).done(function(res) {
-            if (res.success) {
-                var c = statusColors[res.new_status] || '#6B7280';
-                var l = statusLabels[res.new_status] || res.new_status;
-                $('.jf-status-badge-' + pending.id)
-                    .attr('style', 'background:' + c + '20;color:' + c)
-                    .text(l);
-                $('#jf-ra-' + pending.id).remove();
-                $df.remove();
-                if (dt) {
-                    var noteHtml = '<div class="jf-action-note" style="color:#1E293B;font-weight:600">' +
-                        '<i class="fa fa-gavel" style="color:#F59E0B;margin-left:4px"></i> ' +
-                        $('<span>').text(dt).html() + '</div>';
-                    $('.jf-status-badge-' + pending.id).closest('.jf-action-body')
-                        .find('.jf-action-meta').after(noteHtml);
-                }
-            } else {
-                alert(res.message || 'حدث خطأ');
-                btn.prop('disabled', false);
-            }
-        }).fail(function() {
-            alert('حدث خطأ أثناء الحفظ');
-            btn.prop('disabled', false).text('تأكيد');
-        }).always(function() { pending = {}; });
-    });
-})();
-</script>
-
-<script>
-(function(){
-    var $modal = $('#ajaxCrudModal');
-    var refreshTimer = null;
+    var pendingDecision = {};
     var refreshPending = false;
 
-    window._jfRefreshActions = function() {
+    function getModal() {
+        if (!bsModal) {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                bsModal = new bootstrap.Modal(modalEl);
+            } else {
+                bsModal = { show: function(){ $(modalEl).modal('show'); }, hide: function(){ $(modalEl).modal('hide'); } };
+            }
+        }
+        return bsModal;
+    }
+
+    function showModal() { getModal().show(); }
+    function hideModal() {
+        try { getModal().hide(); } catch(e) {}
+        $(modalEl).removeClass('show');
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css({overflow:'', paddingRight:''});
+    }
+
+    function setLoading() {
+        $('#jcaModalTitle').text('جاري التحميل...');
+        $('#jcaModalBody').html('<div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>');
+        $('#jcaModalFooter').html('');
+    }
+
+    function refreshActions() {
         if (refreshPending) return;
         refreshPending = true;
         var xhr = new XMLHttpRequest();
@@ -447,52 +395,167 @@ $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
             refreshPending = false;
             if (xhr.status !== 200) return;
             var doc = new DOMParser().parseFromString(xhr.responseText, 'text/html');
-            var newContainer = doc.getElementById('jf-actions-container');
-            var curContainer = document.getElementById('jf-actions-container');
-            if (newContainer && curContainer) {
-                curContainer.innerHTML = newContainer.innerHTML;
-            }
+            var newC = doc.getElementById('jf-actions-container');
+            var curC = document.getElementById('jf-actions-container');
+            if (newC && curC) curC.innerHTML = newC.innerHTML;
         };
         xhr.onerror = function() { refreshPending = false; };
         xhr.send();
-    };
+    }
 
-    $(document).ajaxComplete(function(event, xhr) {
-        if (!$modal.hasClass('in') && !$modal.hasClass('show') && !$modal.is(':visible')) return;
-        var ct = xhr.getResponseHeader('Content-Type') || '';
-        if (ct.indexOf('json') === -1) return;
-        try {
-            var resp = xhr.responseJSON || JSON.parse(xhr.responseText);
-            if (!resp) return;
-            if (resp.forceReload || resp.forceClose) {
-                if (refreshTimer) clearTimeout(refreshTimer);
-                refreshTimer = setTimeout(function() {
-                    $modal.modal('hide');
-                    setTimeout(window._jfRefreshActions, 300);
-                }, 100);
+    function openModal(url) {
+        setLoading();
+        showModal();
+        $.ajax({
+            url: url,
+            type: 'GET',
+            dataType: 'json',
+            success: function(resp) {
+                if (resp.title) $('#jcaModalTitle').html(resp.title);
+                if (resp.content) $('#jcaModalBody').html(resp.content);
+                if (resp.footer) $('#jcaModalFooter').html(resp.footer);
+                if (resp.size === 'large') $(modalEl).find('.modal-dialog').addClass('modal-lg');
+                var $form = $('#jcaModalBody').find('form');
+                var $submitBtn = $('#jcaModalFooter').find('[type="submit"]');
+                if ($form.length && $submitBtn.length) {
+                    $submitBtn.off('click').on('click', function(e) {
+                        e.preventDefault();
+                        var formData = new FormData($form[0]);
+                        submitForm($form.attr('action') || url, formData);
+                    });
+                }
+            },
+            error: function(xhr) {
+                $('#jcaModalTitle').text('خطأ');
+                $('#jcaModalBody').html('<div style="color:#DC2626;padding:20px;text-align:center"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px">فشل تحميل النموذج (' + xhr.status + ')</p></div>');
+                $('#jcaModalFooter').html('<button type="button" class="btn btn-default" onclick="JCA.hideModal()">إغلاق</button>');
             }
-        } catch(e) {}
-    });
-})();
+        });
+    }
 
-function JCA_deleteAction(url, el) {
-    if (!confirm('هل أنت متأكد من حذف هذا الإجراء؟')) return;
-    var $row = $(el).closest('.jf-action-row');
-    $row.css({opacity: 0.4, pointerEvents: 'none'});
-    $.ajax({
-        url: url,
-        type: 'POST',
-        data: {_csrf: yii.getCsrfToken()},
-        dataType: 'json',
-        success: function() {
-            $row.slideUp(200, function() { $(this).remove(); });
-            setTimeout(window._jfRefreshActions, 400);
-        },
-        error: function() {
-            $row.css({opacity: 1, pointerEvents: ''});
-            alert('حدث خطأ أثناء الحذف');
+    function submitForm(url, formData) {
+        var $btn = $('#jcaModalFooter').find('[type="submit"]');
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(resp) {
+                if (resp.forceClose) {
+                    hideModal();
+                    setTimeout(refreshActions, 200);
+                    return;
+                }
+                if (resp.title) $('#jcaModalTitle').html(resp.title);
+                if (resp.content) $('#jcaModalBody').html(resp.content);
+                if (resp.footer) $('#jcaModalFooter').html(resp.footer);
+                var $form = $('#jcaModalBody').find('form');
+                var $submitBtn = $('#jcaModalFooter').find('[type="submit"]');
+                if ($form.length && $submitBtn.length) {
+                    $submitBtn.off('click').on('click', function(e) {
+                        e.preventDefault();
+                        submitForm($form.attr('action') || url, new FormData($form[0]));
+                    });
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> حفظ');
+                alert('حدث خطأ أثناء الحفظ');
+            }
+        });
+    }
+
+    function deleteAction(url, el) {
+        if (!confirm('هل أنت متأكد من حذف هذا الإجراء؟')) return;
+        var $row = $(el).closest('.jf-action-row');
+        $row.css({opacity: 0.4, pointerEvents: 'none'});
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {_csrf: yii.getCsrfToken()},
+            dataType: 'json',
+            success: function() {
+                $row.slideUp(200, function() { $(this).remove(); });
+                setTimeout(refreshActions, 400);
+            },
+            error: function() {
+                $row.css({opacity: 1, pointerEvents: ''});
+                alert('حدث خطأ أثناء الحذف');
+            }
+        });
+    }
+
+    function startDecision(id, status) {
+        pendingDecision = {id: id, status: status};
+        var $df = document.getElementById('jf-df-' + id);
+        if (!$df) return;
+        $df.classList.add('open');
+        var $confirm = $df.querySelector('.jf-decision-confirm');
+        if ($confirm) {
+            $confirm.className = 'jf-decision-confirm ' + (status === 'approved' ? 'do-approve' : 'do-reject');
+            $confirm.textContent = status === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض';
+        }
+        var $ta = document.getElementById('jf-dt-' + id);
+        if ($ta) { $ta.value = ''; $ta.focus(); }
+    }
+
+    function cancelDecision(id) {
+        var $df = document.getElementById('jf-df-' + id);
+        if ($df) $df.classList.remove('open');
+        pendingDecision = {};
+    }
+
+    function confirmDecision(id) {
+        if (!pendingDecision.id) return;
+        var $ta = document.getElementById('jf-dt-' + id);
+        var dt = $ta ? $ta.value.trim() : '';
+        var $btn = $(document.getElementById('jf-df-' + id)).find('.jf-decision-confirm');
+        $btn.prop('disabled', true).text('جاري الحفظ...');
+        $.post(reqUrl, {
+            id: pendingDecision.id,
+            status: pendingDecision.status,
+            decision_text: dt,
+            _csrf: yii.getCsrfToken()
+        }).done(function(res) {
+            if (res.success) {
+                setTimeout(refreshActions, 100);
+            } else {
+                alert(res.message || 'حدث خطأ');
+                $btn.prop('disabled', false);
+            }
+        }).fail(function() {
+            alert('حدث خطأ أثناء الحفظ');
+            $btn.prop('disabled', false).text('تأكيد');
+        }).always(function() { pendingDecision = {}; });
+    }
+
+    $(document).on('click', '.jca-act-trigger', function(e) {
+        e.stopPropagation();
+        var wrap = this.closest('.jca-act-wrap');
+        var menu = wrap.querySelector('.jca-act-menu');
+        var wasOpen = wrap.classList.contains('open');
+        document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
+        if (!wasOpen) {
+            wrap.classList.add('open');
+            var r = this.getBoundingClientRect();
+            menu.style.left = r.left + 'px';
+            menu.style.top = (r.bottom + 4) + 'px';
         }
     });
-}
+    $(document).on('click', function() { document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); }); });
+    $(document).on('click', '.jca-act-menu a', function() { document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); }); });
+
+    return {
+        openModal: openModal,
+        hideModal: hideModal,
+        deleteAction: deleteAction,
+        startDecision: startDecision,
+        cancelDecision: cancelDecision,
+        confirmDecision: confirmDecision
+    };
+})();
 </script>
 <?php endif ?>
