@@ -20,7 +20,9 @@ $incomeTypes = ArrayHelper::map(IncomeCategory::find()->asArray()->all(), 'id', 
 $contractIds = ArrayHelper::map(Contracts::find()->select(['id'])->asArray()->all(), 'id', 'id');
 ?>
 
-<div class="financial-transaction-form">
+<div class="financial-transaction-form"
+     x-data="{ txType: '<?= $model->type ?>', incomeType: '<?= $model->income_type ?>' }"
+     @income-type-change.window="incomeType = $event.detail">
     <?php $form = ActiveForm::begin() ?>
 
     <fieldset>
@@ -42,23 +44,26 @@ $contractIds = ArrayHelper::map(Contracts::find()->select(['id'])->asArray()->al
         </div>
         <div class="row">
             <div class="col-md-4">
-                <?= $form->field($model, 'type', ['inputOptions' => ['id' => 'ft-type']])->dropDownList(['' => '-- النوع --', 1 => 'دائنة (دخل)', 2 => 'مدينة (مصاريف)'])->label('النوع') ?>
+                <?= $form->field($model, 'type', ['inputOptions' => ['id' => 'ft-type', 'x-model' => 'txType']])->dropDownList(['' => '-- النوع --', 1 => 'دائنة (دخل)', 2 => 'مدينة (مصاريف)'])->label('النوع') ?>
             </div>
-            <div class="col-md-4 js-category-section" style="display:<?= $model->type == FinancialTransaction::TYPE_OUTCOME ? 'block' : 'none' ?>">
+            <div class="col-md-4 js-category-section"
+                 x-show="txType == <?= FinancialTransaction::TYPE_OUTCOME ?>" x-transition x-cloak>
                 <?= $form->field($model, 'category_id')->widget(Select2::class, [
                     'data' => $categories,
                     'options' => ['placeholder' => 'تصنيف المصاريف'],
                     'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
                 ])->label('تصنيف المصاريف') ?>
             </div>
-            <div class="col-md-4 js-income-section" style="display:<?= $model->type == FinancialTransaction::TYPE_INCOME ? 'block' : 'none' ?>">
+            <div class="col-md-4 js-income-section"
+                 x-show="txType == <?= FinancialTransaction::TYPE_INCOME ?>" x-transition x-cloak>
                 <?= $form->field($model, 'income_type', ['inputOptions' => ['id' => 'ft-income-type']])->widget(Select2::class, [
                     'data' => $incomeTypes,
                     'options' => ['placeholder' => 'نوع الدخل'],
                     'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
                 ])->label('نوع الدخل') ?>
             </div>
-            <div class="col-md-4 js-contract-section" style="display:none">
+            <div class="col-md-4 js-contract-section"
+                 x-show="txType == <?= FinancialTransaction::TYPE_INCOME ?> && incomeType == <?= FinancialTransaction::TYPE_INCOME_MONTHLY ?>" x-transition x-cloak>
                 <?= $form->field($model, 'contract_id')->widget(Select2::class, [
                     'data' => $contractIds,
                     'options' => ['placeholder' => 'رقم العقد'],
@@ -92,7 +97,7 @@ $typeOutcome = FinancialTransaction::TYPE_OUTCOME;
 $monthlyType = FinancialTransaction::TYPE_INCOME_MONTHLY;
 
 $this->registerJs(<<<JS
-/* إظهار/إخفاء الحقول حسب النوع */
+/* OLD jQuery - replaced by Alpine.js
 $(document).on('change', '#ft-type', function(){
     var val = $(this).val();
     if (val == {$typeIncome}) {
@@ -106,8 +111,6 @@ $(document).on('change', '#ft-type', function(){
         $('.js-income-section, .js-category-section, .js-contract-section').hide();
     }
 });
-
-/* إظهار حقل العقد عند اختيار دفعات شهرية */
 $(document).on('change', '#ft-income-type', function(){
     var val = $(this).val();
     if (val == {$monthlyType}) {
@@ -115,6 +118,12 @@ $(document).on('change', '#ft-income-type', function(){
     } else {
         $('.js-contract-section').hide();
     }
+});
+*/
+
+/* Bridge Select2 change event to Alpine */
+$('#ft-income-type').on('change', function(){
+    window.dispatchEvent(new CustomEvent('income-type-change', { detail: $(this).val() }));
 });
 JS
 );

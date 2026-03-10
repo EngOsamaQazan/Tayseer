@@ -229,17 +229,17 @@ $customersCount = $model->getCustomersCount();
             </div>
 
             <!-- ====== Tab: Phone Numbers ====== -->
-            <div class="tab-pane" id="tab-phones">
+            <div class="tab-pane" id="tab-phones" x-data="{ showPhoneForm: false }">
                 <div class="row" style="margin-bottom: 15px;">
                     <div class="col-md-12">
-                        <button type="button" class="btn btn-success btn-sm" id="btn-add-phone">
+                        <button type="button" class="btn btn-success btn-sm" id="btn-add-phone" @click="showPhoneForm = !showPhoneForm">
                             <i class="fa fa-plus"></i> إضافة رقم هاتف
                         </button>
                     </div>
                 </div>
 
                 <!-- Add Phone Form (hidden by default) -->
-                <div id="phone-form-container" style="display: none;">
+                <div id="phone-form-container" x-show="showPhoneForm" x-transition x-cloak>
                     <div class="box box-success">
                         <div class="box-header with-border">
                             <h4 class="box-title">إضافة رقم هاتف جديد</h4>
@@ -420,17 +420,17 @@ $customersCount = $model->getCustomersCount();
             </div>
 
             <!-- ====== Tab: Ratings ====== -->
-            <div class="tab-pane" id="tab-ratings">
+            <div class="tab-pane" id="tab-ratings" x-data="{ showRatingForm: false }">
                 <div class="row" style="margin-bottom: 15px;">
                     <div class="col-md-12">
-                        <button type="button" class="btn btn-success btn-sm" id="btn-add-rating">
+                        <button type="button" class="btn btn-success btn-sm" id="btn-add-rating" @click="showRatingForm = !showRatingForm">
                             <i class="fa fa-plus"></i> إضافة تقييم
                         </button>
                     </div>
                 </div>
 
                 <!-- Add Rating Form (hidden by default) -->
-                <div id="rating-form-container" style="display: none;">
+                <div id="rating-form-container" x-show="showRatingForm" x-transition x-cloak>
                     <div class="box box-success">
                         <div class="box-header with-border">
                             <h4 class="box-title">إضافة تقييم جديد</h4>
@@ -616,9 +616,10 @@ $js = <<<JS
 // ========================
 // Phone Number Management
 // ========================
-$('#btn-add-phone').on('click', function() {
-    $('#phone-form-container').slideToggle(300);
-});
+/* OLD jQuery - replaced by Alpine.js */
+// $('#btn-add-phone').on('click', function() {
+//     $('#phone-form-container').slideToggle(300);
+// });
 
 $('#add-phone-form').on('submit', function(e) {
     e.preventDefault();
@@ -666,9 +667,10 @@ $(document).on('click', '.btn-delete-phone', function() {
 // ========================
 // Rating Management
 // ========================
-$('#btn-add-rating').on('click', function() {
-    $('#rating-form-container').slideToggle(300);
-});
+/* OLD jQuery - replaced by Alpine.js */
+// $('#btn-add-rating').on('click', function() {
+//     $('#rating-form-container').slideToggle(300);
+// });
 
 // Star rating input
 $('.rating-star').on('click', function() {

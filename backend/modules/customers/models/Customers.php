@@ -284,6 +284,8 @@ class Customers extends \yii\db\ActiveRecord
 
     public function getSelectedImagePath()
     {
+        $webroot = \Yii::getAlias('@webroot');
+
         /* أولاً: البحث عن صورة شخصية (groupName = '8') مرتبطة بالعميل عبر customer_id */
         $personalPhoto = ImageManager::find()
             ->where(['customer_id' => (int)$this->id, 'groupName' => '8'])
@@ -292,14 +294,20 @@ class Customers extends \yii\db\ActiveRecord
 
         if ($personalPhoto) {
             $ext = pathinfo($personalPhoto->fileName, PATHINFO_EXTENSION);
-            return '/images/imagemanager/' . $personalPhoto->id . '_' . $personalPhoto->fileHash . '.' . $ext;
+            $path = '/images/imagemanager/' . $personalPhoto->id . '_' . $personalPhoto->fileHash . '.' . $ext;
+            if (is_file($webroot . $path)) {
+                return $path;
+            }
         }
 
         /* ثانياً: الرجوع للصورة المختارة القديمة (selected_image) */
         if ($this->selectedImg) {
             $file_hash = $this->selectedImg->fileHash;
             $file_extention = pathinfo($this->selectedImg->fileName, PATHINFO_EXTENSION);
-            return '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
+            $path = '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
+            if (is_file($webroot . $path)) {
+                return $path;
+            }
         }
 
         return null;

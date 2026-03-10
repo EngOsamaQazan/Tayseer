@@ -24,6 +24,8 @@ class RouteAccessBehavior extends Behavior
         'site/error',
         'site/login',
         'site/import',
+        'user/login',
+        'user/security/login',
         'dektrium/user/security/login',
         'dektrium/user/registration/register',
         'dektrium/user/recovery/request',
@@ -33,6 +35,8 @@ class RouteAccessBehavior extends Behavior
         'dektrium/user/settings/account',
         'debug',
         'gii',
+        'pin/toggle',
+        'pin/list',
     ];
 
     public function events()

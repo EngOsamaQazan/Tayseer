@@ -26,7 +26,7 @@ $documents = ArrayHelper::map($cache->getOrSet($p['key_document_number'], fn() =
 $hasAdvanced = !empty($model->created_by) || !empty($model->Restriction) || !empty($model->document_number) || !empty($model->number_row);
 ?>
 
-<section class="fin-filter" aria-label="تصفية النتائج">
+<section class="fin-filter" aria-label="تصفية النتائج" x-data="{ open: <?= $hasAdvanced ? 'true' : 'false' ?> }">
     <?php $form = ActiveForm::begin(['id' => 'fin-search', 'method' => 'get', 'action' => ['index']]) ?>
 
     <!-- الفلاتر الأساسية -->
@@ -50,7 +50,8 @@ $hasAdvanced = !empty($model->created_by) || !empty($model->Restriction) || !emp
         <div class="fin-f-btns">
             <?= Html::submitButton('<i class="fa fa-search"></i> <span>بحث</span>', ['class' => 'fin-btn fin-btn--search']) ?>
             <?= Html::a('<i class="fa fa-eraser"></i>', ['index'], ['class' => 'fin-btn fin-btn--reset', 'title' => 'إعادة تعيين الفلاتر']) ?>
-            <button type="button" class="fin-btn fin-btn--toggle" id="btnAdvanced" title="فلاتر متقدمة">
+            <button type="button" class="fin-btn fin-btn--toggle" id="btnAdvanced" title="فلاتر متقدمة"
+                    @click="open = !open" :class="{ 'active': open }">
                 <i class="fa fa-sliders"></i> <span>متقدم</span>
                 <?php if ($hasAdvanced): ?><span class="fin-dot"></span><?php endif ?>
             </button>
@@ -58,7 +59,9 @@ $hasAdvanced = !empty($model->created_by) || !empty($model->Restriction) || !emp
     </div>
 
     <!-- الفلاتر المتقدمة -->
-    <div class="fin-filter-adv" id="advPanel" style="<?= $hasAdvanced ? '' : 'display:none' ?>">
+    <div class="fin-filter-adv" id="advPanel" x-show="open" x-cloak
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2">
         <div class="fin-f-divider"><span>فلاتر متقدمة</span></div>
         <div class="fin-filter-row">
             <div class="fin-f-field fin-f--sm">
@@ -84,11 +87,12 @@ $hasAdvanced = !empty($model->created_by) || !empty($model->Restriction) || !emp
 </section>
 
 <?php
-/* تسجيل الـ JS عبر Yii لضمان تنفيذه بعد تحميل jQuery */
+/* OLD jQuery - replaced by Alpine.js
 $this->registerJs("
     $('#btnAdvanced').on('click', function(){
         $('#advPanel').slideToggle(200);
         $(this).toggleClass('active');
     });
 ", \yii\web\View::POS_READY);
+*/
 ?>

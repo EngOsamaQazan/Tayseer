@@ -27,11 +27,11 @@ DynamicFormWidget::begin([
 
 <div class="container-items">
     <?php foreach ($modelsAddress as $i => $addr): ?>
-        <div class="addrres-item panel panel-default addr-panel" data-addr-idx="<?= $i ?>">
+        <div class="addrres-item panel panel-default addr-panel" data-addr-idx="<?= $i ?>" x-data="{ showMap: true }">
             <div class="panel-heading addr-panel-hdr">
                 <span class="addr-type-badge"><?= $addr->address_type == 1 ? 'عنوان العمل' : ($addr->address_type == 2 ? 'عنوان السكن' : 'عنوان') ?></span>
                 <div class="addr-panel-actions">
-                    <button type="button" class="btn btn-xs btn-info addr-toggle-map" title="إظهار/إخفاء الخريطة"><i class="fa fa-map"></i></button>
+                    <button type="button" class="btn btn-xs btn-info addr-toggle-map" @click="showMap = !showMap" :title="showMap ? 'إخفاء الخريطة' : 'إظهار الخريطة'"><i class="fa" :class="showMap ? 'fa-map' : 'fa-map-o'"></i></button>
                     <button type="button" class="addrres-remove-item btn btn-danger btn-xs" title="حذف"><i class="fa fa-trash"></i></button>
                 </div>
             </div>
@@ -60,7 +60,7 @@ DynamicFormWidget::begin([
                         <?= $form->field($addr, "[{$i}]postal_code")->textInput(['placeholder' => 'مثل 11937', 'dir' => 'ltr', 'style' => 'font-family:monospace'])->label('الرمز البريدي') ?>
                     </div>
                     <div class="col-md-3">
-                        <?= $form->field($addr, "[{$i}]plus_code")->textInput(['placeholder' => 'مثل 8Q6G+4M', 'dir' => 'ltr', 'style' => 'font-family:monospace', 'readonly' => true, 'class' => 'form-control addr-plus-code'])->label('Plus Code') ?>
+                        <?= $form->field($addr, "[{$i}]plus_code")->textInput(['placeholder' => 'مثل 8Q6G+4M عمان', 'dir' => 'ltr', 'style' => 'font-family:monospace', 'class' => 'form-control addr-plus-code'])->label('Plus Code') ?>
                     </div>
                     <div class="col-md-3">
                         <?= $form->field($addr, "[{$i}]address")->textInput(['placeholder' => 'ملاحظات إضافية (اختياري)', 'class' => 'form-control'])->label('ملاحظات العنوان') ?>
@@ -68,7 +68,9 @@ DynamicFormWidget::begin([
                 </div>
 
                 <!-- خريطة -->
-                <div class="addr-map-section">
+                <div class="addr-map-section" x-show="showMap" x-transition.duration.300ms x-cloak
+                     x-effect="if (showMap) { $nextTick(() => { var panel = $el.closest('.addrres-item'); if (panel && typeof jQuery !== 'undefined') jQuery(panel).trigger('map:show'); }) }"
+                >
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-12">
                             <div class="addr-smart-loc">
@@ -383,18 +385,14 @@ $js = <<<JS
 
     /* ─── Event Delegation ─── */
 
-    // Toggle map section (collapse/expand)
-    $(document).on('click', '.addr-toggle-map', function() {
-        var panel = getPanel(this);
-        var section = panel.find('.addr-map-section');
-        section.slideToggle(300, function() {
-            if (section.is(':visible')) {
-                var entry = initMap(panel);
-                if (entry) {
-                    setTimeout(function(){ entry.map.invalidateSize(); }, 100);
-                }
-            }
-        });
+    // Toggle map section — Alpine.js handles visibility via x-show/showMap
+    // Re-init map when Alpine triggers map:show event
+    $(document).on('map:show', '.addrres-item', function() {
+        var panel = $(this);
+        var entry = initMap(panel);
+        if (entry) {
+            setTimeout(function(){ entry.map.invalidateSize(); }, 100);
+        }
     });
 
     // Auto-init all maps on page load
@@ -537,6 +535,37 @@ $js = <<<JS
         _fwdTimers[pid] = setTimeout(function(){ forwardGeocode(entry); }, 500);
     });
 
+    // Plus Code → map (resolve when user types/pastes a Plus Code)
+    var _plusTimers = {};
+    $(document).on('input', '.addr-plus-code', function() {
+        var panel = getPanel(this);
+        var pid = getPanelId(panel);
+        var raw = $(this).val().trim();
+        if (!raw || raw.length < 4) return;
+        var isPlusCode = /[23456789CFGHJMPQRVWX]{2,}\+/i.test(raw);
+        if (!isPlusCode) return;
+        clearTimeout(_plusTimers[pid]);
+        var _pcInput = $(this);
+        _plusTimers[pid] = setTimeout(function() {
+            _pcInput.css('border-color', '#fbbf24');
+            $.getJSON(resolveUrl, {q: raw}, function(data) {
+                if (data && data.success) {
+                    var lat = parseFloat(data.lat), lng = parseFloat(data.lng);
+                    var entry = maps[pid] || initMap(panel);
+                    if (entry) setMarker(entry, lat, lng, true);
+                    _pcInput.css('border-color', '#22c55e');
+                    setTimeout(function(){ _pcInput.css('border-color', ''); }, 2000);
+                } else {
+                    _pcInput.css('border-color', '#ef4444');
+                    setTimeout(function(){ _pcInput.css('border-color', ''); }, 2000);
+                }
+            }).fail(function() {
+                _pcInput.css('border-color', '#ef4444');
+                setTimeout(function(){ _pcInput.css('border-color', ''); }, 2000);
+            });
+        }, 600);
+    });
+
     // Update badge on type change
     $(document).on('change', '.addr-type-select', function() {
         var panel = getPanel(this);
@@ -559,6 +588,11 @@ $js = <<<JS
     $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
         var newIdx = 'new-' + Date.now();
         $(item).attr('data-addr-idx', newIdx);
+        // Clear any cloned map container content and re-init
+        $(item).find('.addr-map-container').empty();
+        $(item).find('.addr-lat, .addr-lng, .addr-plus-code').val('');
+        $(item).find('.addr-smart-paste').val('');
+        $(item).find('.addr-smart-result').removeClass('show');
         setTimeout(function() {
             var entry = initMap($(item));
             if (entry) setTimeout(function(){ entry.map.invalidateSize(); }, 200);

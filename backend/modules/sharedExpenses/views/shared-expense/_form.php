@@ -14,6 +14,7 @@ $existingLines = $isUpdate ? $model->lines : [];
 ?>
 
 <style>
+[x-cloak] { display: none !important; }
 :root {
     --se-primary: #8b5cf6;
     --se-primary-light: #ede9fe;
@@ -57,7 +58,7 @@ $existingLines = $isUpdate ? $model->lines : [];
 .se-results-empty { text-align: center; padding: 40px 20px; color: #94a3b8; }
 .se-results-empty i { font-size: 36px; margin-bottom: 8px; display: block; opacity: .5; }
 
-.se-loading { text-align: center; padding: 30px; display: none; }
+.se-loading { text-align: center; padding: 30px; }
 .se-loading i { font-size: 24px; color: var(--se-primary); animation: se-spin 1s linear infinite; }
 @keyframes se-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -137,19 +138,25 @@ $existingLines = $isUpdate ? $model->lines : [];
             <span class="se-step">3</span>
             <i class="fa fa-table"></i> نتائج التوزيع
         </div>
-        <div class="se-card-body" style="padding:0;">
-            <div class="se-loading" id="se-loading">
+        <div class="se-card-body" style="padding:0;"
+             x-data="{ state: '<?= (empty($existingLines) && $model->isNewRecord) ? 'idle' : 'results' ?>' }"
+             id="se-results-area">
+            <div class="se-loading" id="se-loading"
+                 x-show="state === 'loading'" x-cloak
+                 x-transition.opacity.duration.300ms>
                 <i class="fa fa-spinner"></i>
                 <p style="color:#64748b;margin-top:8px;font-size:13px">جاري حساب التوزيع...</p>
             </div>
             <div id="se-results-container">
-                <?php if (empty($existingLines) && $model->isNewRecord): ?>
-                    <div class="se-results-empty" id="se-results-empty">
-                        <i class="fa fa-calculator"></i>
-                        <p>اختر طريقة التوزيع وحدد المبلغ لعرض النتائج</p>
-                    </div>
-                <?php endif ?>
-                <div id="se-results-table-wrap" style="<?= (empty($existingLines) && $model->isNewRecord) ? 'display:none' : '' ?>">
+                <div class="se-results-empty" id="se-results-empty"
+                     x-show="state === 'idle' || state === 'empty'" x-cloak
+                     x-transition.opacity.duration.300ms>
+                    <i class="fa fa-calculator"></i>
+                    <p>اختر طريقة التوزيع وحدد المبلغ لعرض النتائج</p>
+                </div>
+                <div id="se-results-table-wrap"
+                     x-show="state === 'results'" x-cloak
+                     x-transition.opacity.duration.300ms>
                     <table class="se-results-table">
                         <thead>
                             <tr>
@@ -227,9 +234,14 @@ $js = <<<JS
         var totalAmount = parseFloat($('#total-amount-input').val()) || 0;
         if (!selectedMethod || totalAmount <= 0) return;
 
+        var _seData = Alpine.$data(document.getElementById('se-results-area'));
+
+        /* OLD jQuery - replaced by Alpine.js
         $('#se-loading').show();
         $('#se-results-empty').hide();
         $('#se-results-table-wrap').hide();
+        */
+        _seData.state = 'loading';
 
         $.ajax({
             url: calculateUrl,
@@ -240,17 +252,32 @@ $js = <<<JS
                 _csrf: yii.getCsrfToken()
             },
             success: function(res) {
+                /* OLD jQuery - replaced by Alpine.js
                 $('#se-loading').hide();
+                */
                 if (res.success && res.lines && res.lines.length > 0) {
                     renderResults(res.lines);
+                    /* OLD jQuery - replaced by Alpine.js
                     $('#se-results-table-wrap').show();
+                    */
+                    _seData.state = 'results';
                 } else {
-                    $('#se-results-empty').html('<i class="fa fa-exclamation-circle" style="font-size:36px;display:block;margin-bottom:8px;opacity:.5"></i><p>' + (res.message || 'لا توجد بيانات') + '</p>').show();
+                    $('#se-results-empty').html('<i class="fa fa-exclamation-circle" style="font-size:36px;display:block;margin-bottom:8px;opacity:.5"></i><p>' + (res.message || 'لا توجد بيانات') + '</p>');
+                    /* OLD jQuery - replaced by Alpine.js
+                    $('#se-results-empty').show();
+                    */
+                    _seData.state = 'empty';
                 }
             },
             error: function() {
+                /* OLD jQuery - replaced by Alpine.js
                 $('#se-loading').hide();
-                $('#se-results-empty').html('<i class="fa fa-exclamation-triangle" style="font-size:36px;display:block;margin-bottom:8px;opacity:.5"></i><p>حدث خطأ أثناء حساب التوزيع</p>').show();
+                */
+                $('#se-results-empty').html('<i class="fa fa-exclamation-triangle" style="font-size:36px;display:block;margin-bottom:8px;opacity:.5"></i><p>حدث خطأ أثناء حساب التوزيع</p>');
+                /* OLD jQuery - replaced by Alpine.js
+                $('#se-results-empty').show();
+                */
+                _seData.state = 'empty';
             }
         });
     }

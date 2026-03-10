@@ -161,7 +161,7 @@ if (!$model->isNewRecord) {
                             'pluginOptions' => [
                                 'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                                 'ajax' => [
-                                    'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                                    'url' => \yii\helpers\Url::to(['/customers/search-customers']),
                                     'dataType' => 'json', 'delay' => 250,
                                     'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                                     'processResults' => new \yii\web\JsExpression('function(d){return d}'),

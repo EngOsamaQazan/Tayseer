@@ -15,7 +15,7 @@ $this->title = 'المساهمين';
 $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
-$this->registerCss('.content-header { display: none !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; }');
 
 echo $this->render('@backend/views/_section_tabs', [
     'group' => 'investment',

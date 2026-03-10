@@ -34,10 +34,10 @@ use yii\helpers\Url;
 .sjm-empty { padding:30px;text-align:center;color:#94A3B8;font-size:13px; }
 </style>
 
-<div class="sjm">
+<div class="sjm" x-data="{ searchQuery: '' }">
     <p style="color:#64748B;margin-bottom:10px"><i class="fa fa-info-circle"></i> اضغط على القضية لفتح نموذج إضافة الإجراء</p>
 
-    <input type="text" class="sjm-search" id="sjm-search" placeholder="ابحث برقم القضية أو اسم المحكمة...">
+    <input type="text" class="sjm-search" id="sjm-search" placeholder="ابحث برقم القضية أو اسم المحكمة..." x-model="searchQuery">
 
     <div class="sjm-list" id="sjm-list">
         <?php if (empty($judiciaries)): ?>
@@ -48,7 +48,9 @@ use yii\helpers\Url;
                href="<?= Url::to(['create-followup-judicary-custamer-action', 'contractID' => $j['contract_id']]) ?>"
                role="modal-remote"
                title="إضافة إجراء للقضية <?= Html::encode($j['judiciary_number'] . '/' . $j['year']) ?>"
-               data-search="<?= Html::encode($j['judiciary_number'] . ' ' . $j['year'] . ' ' . ($j['court_name'] ?: '')) ?>">
+               data-search="<?= Html::encode($j['judiciary_number'] . ' ' . $j['year'] . ' ' . ($j['court_name'] ?: '')) ?>"
+               x-show="searchQuery === '' || '<?= Html::encode(strtolower($j['judiciary_number'] . ' ' . $j['year'] . ' ' . ($j['court_name'] ?: ''))) ?>'.includes(searchQuery.toLowerCase())"
+               x-transition>
                 <div class="sjm-item-icon"><i class="fa fa-gavel" style="color:#2563EB;font-size:15px"></i></div>
                 <div style="flex:1;min-width:0">
                     <div class="sjm-item-number"><?= Html::encode($j['judiciary_number']) ?>/<?= Html::encode($j['year']) ?></div>
@@ -61,14 +63,4 @@ use yii\helpers\Url;
     </div>
 </div>
 
-<script>
-$(function() {
-    $('#sjm-search').on('input', function() {
-        var q = $(this).val().toLowerCase();
-        $('#sjm-list .sjm-item').each(function() {
-            var text = $(this).data('search').toLowerCase();
-            $(this).toggle(text.indexOf(q) !== -1);
-        });
-    });
-});
-</script>
+<!-- Alpine.js handles filtering via x-show + x-model on searchQuery -->

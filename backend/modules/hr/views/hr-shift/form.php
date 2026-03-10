@@ -129,16 +129,16 @@ $selectedDays = is_array($model->working_days) ? $model->working_days : [0, 1, 2
         </div>
     </div>
 
-    <div class="sf-card">
+    <div class="sf-card" x-data="{ flexible: <?= $model->is_flexible ? 'true' : 'false' ?> }">
         <h3><i class="fa fa-random"></i> المرونة</h3>
         <label class="sf-check">
             <input type="hidden" name="HrWorkShift[is_flexible]" value="0">
             <input type="checkbox" name="HrWorkShift[is_flexible]" value="1"
                    id="is-flexible-check" <?= $model->is_flexible ? 'checked' : '' ?>
-                   onchange="document.getElementById('flex-row').style.display=this.checked?'flex':'none'">
+                   x-model="flexible">
             تفعيل الوردية المرنة (يمكن للموظف البدء ضمن نافذة زمنية)
         </label>
-        <div class="sf-row" id="flex-row" style="<?= $model->is_flexible ? '' : 'display:none' ?>">
+        <div class="sf-row" id="flex-row" x-show="flexible" x-transition.duration.200ms x-cloak>
             <div>
                 <label class="sf-label">نافذة المرونة (دقائق)</label>
                 <?= Html::activeTextInput($model, 'flex_window_minutes', ['class' => 'sf-input', 'type' => 'number', 'min' => 0]) ?>

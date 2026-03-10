@@ -52,6 +52,7 @@ class JudiciaryController extends Controller
                             'print-overlay',
                             'refresh-persistence-cache',
                             'tab-cases', 'tab-actions', 'tab-persistence', 'tab-legal',
+                            'tab-collection', 'tab-counts',
                             'export-cases-excel', 'export-cases-pdf',
                             'export-actions-excel', 'export-actions-pdf',
                             'export-report-excel', 'export-report-pdf',
@@ -60,7 +61,8 @@ class JudiciaryController extends Controller
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
-                            return Permissions::can(Permissions::JUD_VIEW);
+                            return Permissions::can(Permissions::JUD_VIEW)
+                                || Permissions::can(Permissions::COLL_VIEW);
                         },
                     ],
                     [
@@ -641,7 +643,7 @@ class JudiciaryController extends Controller
                     'note' => $a['note'] ?? '',
                     'request_status' => $a['request_status'] ?? '',
                     'decision_text' => $a['decision_text'] ?? '',
-                    'image' => $a['image'] ?? '',
+                    'image' => \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::resolveImageUrl($a['image'] ?? ''),
                     'created_by' => $a['created_by_name'] ?? '',
                     'created_at' => !empty($a['created_at']) ? date('Y-m-d H:i', $a['created_at']) : '',
                 ];
@@ -963,6 +965,65 @@ class JudiciaryController extends Controller
         $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchLegalDepartmentCount(Yii::$app->request->queryParams);
         return $this->renderAjax('_tab_legal', ['dataCount' => $dataCount]);
+    }
+
+    public function actionTabCounts()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $db = Yii::$app->db;
+        $tp = $db->tablePrefix;
+
+        $cases = (int)$db->createCommand("SELECT COUNT(*) FROM {$tp}judiciary WHERE (is_deleted = 0 OR is_deleted IS NULL)")->queryScalar();
+
+        $actions = (int)$db->createCommand("SELECT COUNT(*) FROM {$tp}judiciary_customers_actions WHERE (is_deleted = 0 OR is_deleted IS NULL)")->queryScalar();
+
+        $persistence = (int)$db->createCommand("SELECT COUNT(*) FROM tbl_persistence_cache")->queryScalar();
+
+        $legal = (int)(new \backend\modules\contracts\models\ContractsSearch())
+            ->searchLegalDepartmentCount([]);
+
+        $collectionModel = new \backend\modules\collection\models\Collection();
+        $collection = (int)$collectionModel->numberResolvingIssues();
+
+        $pending = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM {$tp}judiciary_customers_actions WHERE request_status = 'pending' AND (is_deleted = 0 OR is_deleted IS NULL)"
+        )->queryScalar();
+
+        $persistenceStats = $db->createCommand("
+            SELECT
+                SUM(persistence_status IN ('red_renew','red_due')) AS cnt_red,
+                SUM(persistence_status = 'orange_due') AS cnt_orange,
+                SUM(persistence_status = 'green_due' OR persistence_status LIKE 'remaining_%') AS cnt_green
+            FROM tbl_persistence_cache
+        ")->queryOne();
+
+        return [
+            'cases' => $cases,
+            'actions' => $actions,
+            'persistence' => $persistence,
+            'legal' => $legal,
+            'collection' => $collection,
+            'pending' => $pending,
+            'stats' => [
+                'red' => (int)($persistenceStats['cnt_red'] ?? 0),
+                'orange' => (int)($persistenceStats['cnt_orange'] ?? 0),
+                'green' => (int)($persistenceStats['cnt_green'] ?? 0),
+                'collectionAmount' => $collectionModel->availableToCatch(),
+            ],
+        ];
+    }
+
+    public function actionTabCollection()
+    {
+        $searchModel = new \backend\modules\collection\models\CollectionSearch();
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+        $model = new \backend\modules\collection\models\Collection();
+        return $this->renderAjax('_tab_collection', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'amount' => $model->availableToCatch(),
+            'count_contract' => $model->numberResolvingIssues(),
+        ]);
     }
 
     /**

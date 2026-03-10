@@ -561,27 +561,64 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
         }, 150);
     };
 
-    var _ocpModalDirty = false;
-
+    /* ═══ Ajax-Crud Modal Integration ═══ */
     (function(){
+        var $modal = jQuery('#ajaxCrudModal');
+        var modalEl = $modal[0];
+        if (!modalEl) return;
+
+        function hideModal() {
+            try {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                    var bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                    bsModal.hide();
+                } else {
+                    $modal.modal('hide');
+                }
+            } catch(e) {
+                $modal.removeClass('show').css('display','none');
+                jQuery('.modal-backdrop').remove();
+                jQuery('body').removeClass('modal-open').css({'overflow':'','padding-right':''});
+            }
+        }
+
+        /* Stub $.pjax.reload so ajaxcrud never hangs */
+        jQuery.pjax = jQuery.pjax || {};
         var origReload = jQuery.pjax.reload;
         jQuery.pjax.reload = function(options) {
             if (options && options.container && jQuery(options.container).length === 0) {
-                _ocpModalDirty = true;
-                jQuery('#ajaxCrudModal').modal('hide');
-                return;
+                return jQuery.Deferred().resolve();
             }
-            return origReload.apply(this, arguments);
+            if (typeof origReload === 'function') return origReload.apply(this, arguments);
+            return jQuery.Deferred().resolve();
         };
-    })();
 
-    jQuery('#ajaxCrudModal').on('hidden.bs.modal', function() {
-        var hasSuccess = jQuery(this).find('.text-success').length > 0;
-        if (hasSuccess || _ocpModalDirty) {
-            _ocpModalDirty = false;
-            window.ocpRefreshTabs();
-        }
-    });
+        /* Intercept ALL ajax-crud responses: on success → close modal + refresh */
+        jQuery(document).ajaxComplete(function(event, xhr, settings) {
+            if (!$modal.hasClass('show') && !$modal.is(':visible')) return;
+            var ct = xhr.getResponseHeader('Content-Type') || '';
+            if (ct.indexOf('json') === -1) return;
+            try {
+                var resp = typeof xhr.responseJSON !== 'undefined' ? xhr.responseJSON : JSON.parse(xhr.responseText);
+                if (!resp) return;
+                if (resp.forceReload || resp.forceClose) {
+                    setTimeout(function(){
+                        hideModal();
+                        setTimeout(function(){ window.ocpRefreshTabs(); }, 300);
+                    }, 100);
+                }
+            } catch(e) {}
+        });
+
+        /* Bootstrap 3/4 data-dismiss compatibility with Bootstrap 5 */
+        $modal.on('click', '[data-dismiss="modal"]', function() { hideModal(); });
+
+        /* Cleanup modal content after it closes */
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            $modal.find('.modal-body').html('');
+            $modal.find('.modal-footer').html('');
+        });
+    })();
 JS
     , $this::POS_READY);
     ?>

@@ -207,8 +207,13 @@ return [
             }
 
             $caseLabel = $m->judiciary_number ? ($m->judiciary_number . '/' . ($m->year ?: '')) : ('#' . $m->id);
+            $customers = $m->customersAndGuarantor ?? [];
+            $firstCustomer = !empty($customers) ? NameHelper::short(reset($customers)->name) : '';
+            $pinLabel = $caseLabel;
+            $pinExtra = $firstCustomer;
 
             return '<div style="display:flex;align-items:center;gap:4px;justify-content:center">'
+                . '<button type="button" class="pin-btn" data-item-id="' . $m->id . '" data-label="' . Html::encode($pinLabel) . '" data-extra="' . Html::encode($pinExtra) . '" title="تثبيت"><i class="fa fa-thumb-tack"></i></button>'
                 . '<button type="button" class="jud-timeline-btn" data-url="' . $timelineUrl . '" data-label="' . Html::encode($caseLabel) . '" title="متابعة القضية"><i class="fa fa-dashboard"></i> متابعة</button>'
                 . '<div class="jud-act-wrap">'
                 . '<button type="button" class="jud-act-trigger"><i class="fa fa-ellipsis-v"></i></button>'

@@ -596,7 +596,7 @@ function liveSearchCustomer() {
     customerSearchTimeout = setTimeout(() => {
         resultsDiv.innerHTML = '<div class="s2-message"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>';
         
-        fetch('<?= Url::to(['/customers/customers/search-customers']) ?>?mode=id&q=' + encodeURIComponent(query))
+        fetch('<?= Url::to(['/customers/search-customers']) ?>?mode=id&q=' + encodeURIComponent(query))
             .then(r => r.json())
             .then(data => {
                 const results = data.results || [];

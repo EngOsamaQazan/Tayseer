@@ -13,7 +13,7 @@ $this->params['breadcrumbs'][] = ['label' => 'توزيع المصاريف الم
 $this->params['breadcrumbs'][] = $model->name;
 
 $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
-$this->registerCss('.content-header { display: none !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; }');
 
 $methods = SharedExpenseAllocation::getAllocationMethods();
 $lines = $model->lines;

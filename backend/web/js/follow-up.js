@@ -67,7 +67,7 @@ var CiEdit = (function() {
         });
 
         var a = document.getElementById('cus-link');
-        a.setAttribute('href', '../../customers/customers/update?id=' + customerId);
+        a.setAttribute('href', '../../customers/update/' + customerId);
 
         $.post(customer_info_url, { customerId: customerId }, function(msg) {
             var info = JSON.parse(msg);

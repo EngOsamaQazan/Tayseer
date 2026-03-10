@@ -27,6 +27,9 @@ desktop.ini
 composer.phar
 composer.lock
 
+# Node
+node_modules/
+
 # phpunit
 phpunit.phar
 /phpunit.xml

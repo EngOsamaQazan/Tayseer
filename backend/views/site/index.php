@@ -192,9 +192,9 @@ foreach ($contractsByStatus as $st => $cnt) {
         </div>
     </div>
 
-    <!-- KPI Cards -->
+    <!-- KPI Cards (auto-animated by AOS via tayseer-modern.js) -->
     <div class="db-kpi-grid">
-        <div class="db-kpi" style="--kpi-color:#800020">
+        <div class="db-kpi" style="--kpi-color:#800020" data-tippy-content="إجمالي قيمة العقود: <?= number_format($totalContractValue, 0) ?> د.أ">
             <div class="db-kpi-icon"><i class="fa fa-file-text"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">إجمالي العقود</div>
@@ -203,7 +203,7 @@ foreach ($contractsByStatus as $st => $cnt) {
             </div>
         </div>
 
-        <div class="db-kpi" style="--kpi-color:#28a745">
+        <div class="db-kpi" style="--kpi-color:#28a745" data-tippy-content="إيرادات <?= date('F Y') ?>">
             <div class="db-kpi-icon"><i class="fa fa-money"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">إيرادات الشهر</div>
@@ -221,7 +221,7 @@ foreach ($contractsByStatus as $st => $cnt) {
             </div>
         </div>
 
-        <div class="db-kpi" style="--kpi-color:#dc3545">
+        <div class="db-kpi" style="--kpi-color:#dc3545" data-tippy-content="صافي الشهر: <?= number_format($monthlyIncome - $monthlyExpenses, 0) ?> د.أ">
             <div class="db-kpi-icon"><i class="fa fa-minus-circle"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">مصاريف الشهر</div>
@@ -263,17 +263,15 @@ foreach ($contractsByStatus as $st => $cnt) {
         </div>
     </div>
 
-    <!-- Charts Row -->
+    <!-- Charts Row (ApexCharts) -->
     <div class="db-grid-2">
-        <!-- Income Chart -->
+        <!-- Income Area Chart -->
         <div class="db-card">
             <div class="db-card-header">
                 <h3><i class="fa fa-area-chart"></i> الإيرادات — آخر 12 شهر</h3>
             </div>
             <div class="db-card-body">
-                <div class="db-chart-wrap">
-                    <canvas id="incomeChart"></canvas>
-                </div>
+                <div id="apexIncomeChart" style="height:280px"></div>
             </div>
         </div>
 
@@ -284,9 +282,7 @@ foreach ($contractsByStatus as $st => $cnt) {
                 <span class="db-badge"><?= number_format($totalContracts) ?> عقد</span>
             </div>
             <div class="db-card-body">
-                <div class="db-chart-wrap" style="height:220px">
-                    <canvas id="statusDonut"></canvas>
-                </div>
+                <div id="apexDonutChart" style="height:220px"></div>
                 <div class="db-status-grid">
                     <?php foreach ($contractsByStatus as $st => $cnt): ?>
                     <div class="db-status-item">
@@ -400,76 +396,82 @@ foreach ($contractsByStatus as $st => $cnt) {
     </div>
 </div>
 
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- ApexCharts Dashboard -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // ─── Income Line Chart ───
-    var ctx1 = document.getElementById('incomeChart');
-    if (ctx1) {
-        new Chart(ctx1.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: <?= json_encode($chartLabels) ?>,
-                datasets: [{
-                    label: 'الإيرادات (د.أ)',
-                    data: <?= json_encode($chartData) ?>,
-                    borderColor: '#800020',
-                    backgroundColor: 'rgba(128,0,32,0.08)',
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: '#800020',
-                    pointRadius: 4,
-                    pointHoverRadius: 7
-                }]
+    if (typeof ApexCharts === 'undefined') return;
+
+    // ─── Income Area Chart (ApexCharts) ───
+    var incomeEl = document.getElementById('apexIncomeChart');
+    if (incomeEl) {
+        new ApexCharts(incomeEl, {
+            chart: {
+                type: 'area', height: 280, fontFamily: 'Noto Kufi Arabic, Cairo, sans-serif',
+                toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } },
+                animations: { enabled: true, easing: 'easeinout', speed: 800, animateGradually: { enabled: true, delay: 150 } },
+                dropShadow: { enabled: true, top: 3, left: 0, blur: 6, opacity: 0.15, color: '#800020' }
             },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(ctx) { return ctx.parsed.y.toLocaleString() + ' د.أ'; }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: function(v) { return v.toLocaleString(); } }
-                    }
+            series: [{ name: 'الإيرادات (د.أ)', data: <?= json_encode($chartData) ?> }],
+            xaxis: {
+                categories: <?= json_encode($chartLabels) ?>,
+                labels: { style: { fontFamily: 'Noto Kufi Arabic', fontSize: '11px' } }
+            },
+            yaxis: {
+                labels: {
+                    formatter: function(v) { return v.toLocaleString(); },
+                    style: { fontFamily: 'Noto Kufi Arabic', fontSize: '11px' }
                 }
-            }
-        });
+            },
+            colors: ['#800020'],
+            fill: {
+                type: 'gradient',
+                gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 90, 100] }
+            },
+            stroke: { curve: 'smooth', width: 3 },
+            dataLabels: { enabled: false },
+            markers: { size: 4, colors: ['#800020'], strokeWidth: 2, hover: { size: 7 } },
+            tooltip: {
+                y: { formatter: function(v) { return v.toLocaleString() + ' د.أ'; } },
+                style: { fontFamily: 'Noto Kufi Arabic' }
+            },
+            grid: { borderColor: '#f0f0f0', strokeDashArray: 4 }
+        }).render();
     }
 
-    // ─── Donut Chart ───
-    var ctx2 = document.getElementById('statusDonut');
-    if (ctx2) {
-        new Chart(ctx2.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: <?= json_encode($donutLabels) ?>,
-                datasets: [{
-                    data: <?= json_encode($donutData) ?>,
-                    backgroundColor: <?= json_encode($donutColors) ?>,
-                    borderWidth: 2, borderColor: '#fff'
-                }]
+    // ─── Donut Chart (ApexCharts) ───
+    var donutEl = document.getElementById('apexDonutChart');
+    if (donutEl) {
+        new ApexCharts(donutEl, {
+            chart: {
+                type: 'donut', height: 220, fontFamily: 'Noto Kufi Arabic, Cairo, sans-serif',
+                animations: { enabled: true, easing: 'easeinout', speed: 1000, animateGradually: { enabled: true, delay: 100 } }
             },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                cutout: '65%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(ctx) { return ctx.label + ': ' + ctx.parsed.toLocaleString(); }
+            series: <?= json_encode($donutData) ?>,
+            labels: <?= json_encode($donutLabels) ?>,
+            colors: <?= json_encode($donutColors) ?>,
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '65%',
+                        labels: {
+                            show: true,
+                            total: {
+                                show: true, label: 'الإجمالي',
+                                formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;}, 0).toLocaleString(); },
+                                style: { fontFamily: 'Noto Kufi Arabic', fontWeight: 700 }
+                            }
                         }
                     }
                 }
+            },
+            legend: { show: false },
+            dataLabels: { enabled: false },
+            stroke: { width: 2, colors: ['#fff'] },
+            tooltip: {
+                y: { formatter: function(v) { return v.toLocaleString() + ' عقد'; } },
+                style: { fontFamily: 'Noto Kufi Arabic' }
             }
-        });
+        }).render();
     }
 });
 </script>

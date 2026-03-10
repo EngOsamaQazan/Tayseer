@@ -136,13 +136,14 @@ $statusLabels = ['pending' => ['معلق', '#F59E0B', '#FFFBEB'], 'approved' => 
         <div class="jcav-label">المرفق</div>
         <div class="jcav-val" style="margin-top:4px">
             <?php
-            $ext = strtolower(pathinfo($model->image, PATHINFO_EXTENSION));
-            if ($ext === 'pdf'): ?>
-                <a href="<?= Yii::getAlias('@web') . '/' . $model->image ?>" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#FEF2F2;border-radius:8px;color:#DC2626;text-decoration:none">
+            <?php $imgUrl = \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::resolveImageUrl($model->image); ?>
+            <?php $ext = strtolower(pathinfo($model->image, PATHINFO_EXTENSION)); ?>
+            <?php if ($ext === 'pdf'): ?>
+                <a href="<?= $imgUrl ?>" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#FEF2F2;border-radius:8px;color:#DC2626;text-decoration:none">
                     <i class="fa fa-file-pdf-o" style="font-size:18px"></i> عرض الملف
                 </a>
             <?php else: ?>
-                <img src="<?= Yii::getAlias('@web') . '/' . $model->image ?>" style="max-width:200px;border-radius:8px;border:1px solid #E2E8F0" alt="">
+                <img src="<?= $imgUrl ?>" style="max-width:200px;border-radius:8px;border:1px solid #E2E8F0" alt="">
             <?php endif; ?>
         </div>
     </div>

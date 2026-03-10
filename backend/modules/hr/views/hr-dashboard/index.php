@@ -165,7 +165,7 @@ foreach ($departmentHeadcount as $dept) {
             <div class="hr-card__body">
                 <?php if (!empty($deptData)): ?>
                 <div class="hr-chart-container" style="height: 260px;">
-                    <canvas id="hrDeptChart"></canvas>
+                    <div id="hrDeptChart"></div>
                 </div>
                 <!-- Legend under chart -->
                 <div class="hr-chart-legend">
@@ -371,57 +371,55 @@ foreach ($departmentHeadcount as $dept) {
 
 </div>
 
-<!-- ═══════════════════════════════════════
-     Chart.js CDN + Department Doughnut
-     ═══════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- ApexCharts Department Doughnut -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // ─── Department Doughnut Chart ───
-    var deptCanvas = document.getElementById('hrDeptChart');
-    if (deptCanvas) {
-        var deptLabels = <?= json_encode($deptLabels, JSON_UNESCAPED_UNICODE) ?>;
-        var deptData   = <?= json_encode($deptData) ?>;
-        var deptColors = <?= json_encode(array_slice($deptColors, 0, max(count($deptData), 1))) ?>;
+    if (typeof ApexCharts === 'undefined') return;
 
-        new Chart(deptCanvas.getContext('2d'), {
-            type: 'doughnut',
-            data: {
-                labels: deptLabels,
-                datasets: [{
-                    data: deptData,
-                    backgroundColor: deptColors,
-                    borderWidth: 2,
-                    borderColor: '#fff',
-                    hoverBorderWidth: 3,
-                    hoverOffset: 6
-                }]
+    var deptLabels = <?= json_encode($deptLabels, JSON_UNESCAPED_UNICODE) ?>;
+    var deptData   = <?= json_encode($deptData) ?>;
+    var deptColors = <?= json_encode(array_slice($deptColors, 0, max(count($deptData), 1))) ?>;
+
+    var chartEl = document.getElementById('hrDeptChart');
+    if (chartEl && deptData.length > 0) {
+        new ApexCharts(chartEl, {
+            chart: {
+                type: 'donut', height: 260,
+                fontFamily: 'Noto Kufi Arabic, Cairo, sans-serif',
+                animations: { enabled: true, easing: 'easeinout', speed: 1000, animateGradually: { enabled: true, delay: 100 } }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '62%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        rtl: true,
-                        textDirection: 'rtl',
-                        backgroundColor: 'rgba(44,62,80,0.92)',
-                        titleFont: { family: "'Noto Kufi Arabic', sans-serif", size: 13 },
-                        bodyFont:  { family: "'Noto Kufi Arabic', sans-serif", size: 12 },
-                        padding: 12,
-                        cornerRadius: 8,
-                        callbacks: {
-                            label: function (ctx) {
-                                var total = ctx.dataset.data.reduce(function (a, b) { return a + b; }, 0);
-                                var pct = total > 0 ? Math.round((ctx.parsed / total) * 100) : 0;
-                                return ctx.label + ': ' + ctx.parsed.toLocaleString() + ' (' + pct + '%)';
+            series: deptData,
+            labels: deptLabels,
+            colors: deptColors,
+            plotOptions: {
+                pie: {
+                    donut: {
+                        size: '62%',
+                        labels: {
+                            show: true,
+                            total: {
+                                show: true, label: 'الإجمالي',
+                                formatter: function(w) { return w.globals.seriesTotals.reduce(function(a,b){return a+b;}, 0).toLocaleString(); },
+                                style: { fontFamily: 'Noto Kufi Arabic', fontWeight: 700, fontSize: '16px' }
                             }
                         }
                     }
                 }
+            },
+            legend: { show: false },
+            dataLabels: { enabled: false },
+            stroke: { width: 2, colors: ['#fff'] },
+            tooltip: {
+                y: {
+                    formatter: function(v, opts) {
+                        var total = opts.globals.seriesTotals.reduce(function(a,b){return a+b;},0);
+                        var pct = total > 0 ? Math.round((v / total) * 100) : 0;
+                        return v.toLocaleString() + ' (' + pct + '%)';
+                    }
+                },
+                style: { fontFamily: 'Noto Kufi Arabic' }
             }
-        });
+        }).render();
     }
 });
 </script>

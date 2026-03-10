@@ -32,7 +32,7 @@ $contractIdsList = implode(',', ArrayHelper::getColumn($contractsData, 'id'));
 $contractsJson = json_encode($contractsData, JSON_UNESCAPED_UNICODE);
 
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
-$this->registerCss('.content-header { display: none !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; }');
 ?>
 
 <style>

@@ -12,7 +12,7 @@ $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\JqueryAsset::class]]);
 $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
-$this->registerCss('.content-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
 
 $db = Yii::$app->db;
 $cid = $model->id;

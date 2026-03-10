@@ -1,0 +1,265 @@
+/* ============================================================
+   Tayseer ERP — Modern Libraries Theme Integration
+   Styles for: SweetAlert2, Tippy.js, HTMX, SortableJS, AOS
+   ============================================================ */
+
+/* ============================================================
+   1. SweetAlert2 — RTL & Tayseer Theme
+   ============================================================ */
+.swal2-rtl .swal2-popup {
+  direction: rtl;
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif);
+}
+
+.tayseer-swal-popup {
+  direction: rtl !important;
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  border-radius: var(--radius-md, 10px) !important;
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12)) !important;
+}
+
+.tayseer-swal-title {
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  color: var(--clr-text, #2c2c2c) !important;
+}
+
+.tayseer-swal-confirm {
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  padding: 8px 24px !important;
+}
+
+.tayseer-swal-cancel {
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  padding: 8px 24px !important;
+}
+
+.swal2-popup .swal2-styled:focus {
+  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.25) !important;
+}
+
+/* ============================================================
+   2. Tippy.js — Tayseer Custom Theme
+   ============================================================ */
+.tippy-box[data-theme~='tayseer'] {
+  background-color: var(--clr-primary, #800020);
+  color: #fff;
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif);
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--radius-sm, 6px);
+  box-shadow: 0 4px 14px rgba(128, 0, 32, 0.3);
+  direction: rtl;
+  text-align: right;
+  padding: 2px 4px;
+}
+
+.tippy-box[data-theme~='tayseer'] .tippy-arrow {
+  color: var(--clr-primary, #800020);
+}
+
+.tippy-box[data-theme~='tayseer-light'] {
+  background-color: var(--clr-surface, #fff);
+  color: var(--clr-text, #2c2c2c);
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif);
+  font-size: 12px;
+  border: 1px solid var(--clr-border, #e0e0e0);
+  border-radius: var(--radius-sm, 6px);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1));
+  direction: rtl;
+  text-align: right;
+}
+
+.tippy-box[data-theme~='tayseer-light'] .tippy-arrow {
+  color: var(--clr-surface, #fff);
+}
+
+/* ============================================================
+   3. HTMX — Loading Indicators
+   ============================================================ */
+.htmx-indicator {
+  display: none;
+  opacity: 0;
+  transition: opacity 300ms ease-in;
+}
+
+.htmx-request .htmx-indicator {
+  display: inline-block;
+  opacity: 1;
+}
+
+.htmx-request.htmx-indicator {
+  display: inline-block;
+  opacity: 1;
+}
+
+.htmx-settling {
+  opacity: 0.8;
+}
+
+.htmx-swapping {
+  opacity: 0;
+  transition: opacity 100ms ease-out;
+}
+
+.htmx-added {
+  animation: tayseerFadeIn 0.4s ease-out;
+}
+
+@keyframes tayseerFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.htmx-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--clr-primary, #800020), var(--clr-accent, #c8a04a));
+  z-index: 9999;
+  animation: htmxLoadingSlide 1.5s ease-in-out infinite;
+}
+
+@keyframes htmxLoadingSlide {
+  0% { transform: translateX(100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(-100%); }
+}
+
+/* ============================================================
+   4. SortableJS — Drag & Drop States
+   ============================================================ */
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--clr-primary-50, #fdf0f3) !important;
+  border: 2px dashed var(--clr-primary, #800020) !important;
+  border-radius: var(--radius-sm, 6px);
+}
+
+.sortable-chosen {
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1));
+  cursor: grabbing !important;
+}
+
+.sortable-drag {
+  opacity: 0.9;
+  box-shadow: var(--shadow-lg, 0 8px 30px rgba(0,0,0,0.12));
+}
+
+[data-sortable] {
+  cursor: grab;
+}
+
+[data-sortable]:active {
+  cursor: grabbing;
+}
+
+/* ============================================================
+   5. Alpine.js — Transition Utilities
+   ============================================================ */
+[x-cloak] {
+  display: none !important;
+}
+
+.alpine-enter {
+  animation: alpineSlideDown 0.3s ease-out;
+}
+
+.alpine-leave {
+  animation: alpineSlideUp 0.2s ease-in;
+}
+
+@keyframes alpineSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes alpineSlideUp {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-10px); }
+}
+
+/* ============================================================
+   6. ApexCharts — RTL & Theme Integration
+   ============================================================ */
+.apexcharts-canvas {
+  direction: ltr;
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+}
+
+.apexcharts-title-text,
+.apexcharts-subtitle-text {
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  fill: var(--clr-text, #2c2c2c) !important;
+}
+
+.apexcharts-legend-text {
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  direction: rtl;
+}
+
+.apexcharts-tooltip {
+  direction: rtl !important;
+  font-family: var(--font-family, 'Noto Kufi Arabic', sans-serif) !important;
+  border-radius: var(--radius-sm, 6px) !important;
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.1)) !important;
+}
+
+/* ============================================================
+   7. Safe Entrance Animations (no AOS dependency)
+   ============================================================
+   These classes are added by tayseer-modern.js.
+   Unlike AOS, elements stay visible even if JS fails. */
+@keyframes tyEntrance {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes tyEntranceDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.ty-entrance {
+    animation: tyEntrance 0.45s ease-out both;
+}
+
+.ty-entrance-down {
+    animation: tyEntranceDown 0.35s ease-out both;
+}
+
+/* AOS failsafe: if AOS CSS loaded but JS fails, ensure elements are visible */
+[data-aos]:not(.aos-animate) {
+    transition-duration: 0s !important;
+}
+
+/* After 1.5s, force-show any AOS element that didn't animate */
+@keyframes aosFailsafe {
+    to { opacity: 1 !important; transform: none !important; }
+}
+[data-aos] {
+    animation: aosFailsafe 0s 1.5s forwards;
+}
+
+/* ============================================================
+   8. Font Awesome 6 — Fine-tuning for Tayseer
+   ============================================================ */
+.fa-check-double:before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+}
+
+.box-title i.fa,
+.box-title i.fas,
+.box-title i.far,
+.box-title i.fab {
+  margin-left: 8px;
+  color: var(--clr-primary, #800020);
+}

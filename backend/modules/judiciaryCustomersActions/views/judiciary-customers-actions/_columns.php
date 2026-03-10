@@ -1,6 +1,6 @@
 <?php
 /**
- * أعمدة جدول إجراءات العملاء القضائية - بناء من الصفر
+ * أعمدة جدول إجراءات العملاء القضائية
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
@@ -12,6 +12,8 @@ return [
         'attribute' => 'judiciary_id',
         'label' => 'القضية',
         'format' => 'raw',
+        'headerOptions' => ['style' => 'width:80px'],
+        'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap'],
         'value' => function ($m) {
             $jud = $m->judiciary;
             $label = $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $m->judiciary_id;
@@ -24,6 +26,8 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحكوم عليه',
         'value' => 'customers.name',
+        'headerOptions' => ['style' => 'width:140px'],
+        'contentOptions' => ['class' => 'jca-name-cell'],
     ],
 
     /* الإجراء */
@@ -32,6 +36,8 @@ return [
         'attribute' => 'judiciary_actions_id',
         'label' => 'الإجراء',
         'value' => 'judiciaryActions.name',
+        'headerOptions' => ['style' => 'width:110px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
     ],
 
     /* الملاحظات */
@@ -39,7 +45,9 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'note',
         'label' => 'ملاحظات',
-        'contentOptions' => ['style' => 'max-width:200px;word-wrap:break-word;direction:rtl'],
+        'format' => 'text',
+        'headerOptions' => ['style' => 'width:200px'],
+        'contentOptions' => ['class' => 'jca-notes-cell'],
     ],
 
     /* المنشئ */
@@ -48,6 +56,8 @@ return [
         'attribute' => 'created_by',
         'label' => 'المنشئ',
         'value' => 'createdBy.username',
+        'headerOptions' => ['style' => 'width:90px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
     ],
 
     /* المحامي */
@@ -55,6 +65,8 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحامي',
         'value' => fn($m) => $m->judiciary->lawyer->name ?? '—',
+        'headerOptions' => ['style' => 'width:100px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
     ],
 
     /* المحكمة */
@@ -62,6 +74,8 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحكمة',
         'value' => fn($m) => $m->judiciary->court->name ?? '—',
+        'headerOptions' => ['style' => 'width:100px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
     ],
 
     /* العقد */
@@ -70,6 +84,8 @@ return [
         'attribute' => 'contract_id',
         'label' => 'العقد',
         'format' => 'raw',
+        'headerOptions' => ['style' => 'width:70px'],
+        'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap'],
         'value' => function ($m) {
             $cid = $m->judiciary->contract_id ?? null;
             return $cid ? Html::a($cid, ['/followUp/follow-up/index', 'contract_id' => $cid], ['class' => 'text-burgundy']) : '—';
@@ -81,12 +97,14 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'action_date',
         'label' => 'تاريخ الإجراء',
-        'contentOptions' => ['style' => 'white-space:nowrap'],
+        'headerOptions' => ['style' => 'width:95px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
     ],
 
     /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',
+        'headerOptions' => ['style' => 'width:50px'],
         'contentOptions' => ['style' => 'width:50px;text-align:center;overflow:visible;position:relative'],
         'header' => '',
         'template' => '{all}',

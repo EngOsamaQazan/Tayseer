@@ -122,7 +122,7 @@ canvas{width:100%!important}
         <div class="rp-card">
             <h3><i class="fa fa-line-chart"></i> اتجاه الحضور الشهري</h3>
             <div class="chart-container">
-                <canvas id="trendChart"></canvas>
+                <div id="trendChart"></div>
             </div>
         </div>
         <div class="rp-card">
@@ -186,51 +186,35 @@ canvas{width:100%!important}
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-var trendData = <?= json_encode($monthlyTrend) ?>;
-if (trendData.length > 0) {
-    var labels = trendData.map(function(d){ return d.attendance_date.substring(5); });
-    var ctx = document.getElementById('trendChart').getContext('2d');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'حاضرون',
-                    data: trendData.map(function(d){ return parseInt(d.present); }),
-                    borderColor: '#16a34a',
-                    backgroundColor: 'rgba(22,163,74,.1)',
-                    fill: true,
-                    tension: 0.4,
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof ApexCharts === 'undefined') return;
+    var trendData = <?= json_encode($monthlyTrend) ?>;
+    if (trendData.length > 0) {
+        var labels = trendData.map(function(d){ return d.attendance_date.substring(5); });
+        var el = document.getElementById('trendChart');
+        if (el) {
+            new ApexCharts(el, {
+                chart: { type: 'area', height: 280, fontFamily: 'Noto Kufi Arabic, Cairo, sans-serif',
+                    toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } },
+                    animations: { enabled: true, easing: 'easeinout', speed: 800 }
                 },
-                {
-                    label: 'متأخرون',
-                    data: trendData.map(function(d){ return parseInt(d.late); }),
-                    borderColor: '#f59e0b',
-                    backgroundColor: 'rgba(245,158,11,.1)',
-                    fill: true,
-                    tension: 0.4,
-                },
-                {
-                    label: 'غائبون',
-                    data: trendData.map(function(d){ return parseInt(d.absent); }),
-                    borderColor: '#dc2626',
-                    backgroundColor: 'rgba(220,38,38,.1)',
-                    fill: true,
-                    tension: 0.4,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { position: 'top', rtl: true } },
-            scales: {
-                y: { beginAtZero: true, ticks: { stepSize: 1 } },
-            },
-        },
-    });
-}
+                series: [
+                    { name: 'حاضرون', data: trendData.map(function(d){ return parseInt(d.present); }) },
+                    { name: 'متأخرون', data: trendData.map(function(d){ return parseInt(d.late); }) },
+                    { name: 'غائبون', data: trendData.map(function(d){ return parseInt(d.absent); }) }
+                ],
+                xaxis: { categories: labels, labels: { style: { fontFamily: 'Noto Kufi Arabic', fontSize: '11px' } } },
+                yaxis: { labels: { style: { fontFamily: 'Noto Kufi Arabic' } } },
+                colors: ['#16a34a', '#f59e0b', '#dc2626'],
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.05, stops: [0, 90, 100] } },
+                stroke: { curve: 'smooth', width: 2.5 },
+                dataLabels: { enabled: false },
+                legend: { position: 'top', horizontalAlign: 'right', fontFamily: 'Noto Kufi Arabic', fontSize: '12px' },
+                grid: { borderColor: '#f0f0f0', strokeDashArray: 4 },
+                tooltip: { style: { fontFamily: 'Noto Kufi Arabic' } }
+            }).render();
+        }
+    }
+});
 </script>

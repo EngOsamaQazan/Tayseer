@@ -34,7 +34,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'create-followup-judicary-custamer-action', 'update-followup-judicary-custamer-action', 'export-excel', 'export-pdf'],
+                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'view', 'create-followup-judicary-custamer-action', 'update-followup-judicary-custamer-action', 'export-excel', 'export-pdf', 'quick-add-request'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -81,7 +81,7 @@ class JudiciaryCustomersActionsController extends Controller
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                     Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
@@ -117,7 +117,7 @@ class JudiciaryCustomersActionsController extends Controller
                 'content' => $this->renderAjax('_select_judiciary', [
                     'judiciaries' => $judiciaries,
                 ]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
             ];
         }
 
@@ -139,7 +139,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     'size' => 'large',
                 ];
@@ -159,7 +159,7 @@ class JudiciaryCustomersActionsController extends Controller
                             'model' => $model,
                             'contractID' => $contractID
                         ]),
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                             Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     ];
                 }
@@ -195,21 +195,13 @@ class JudiciaryCustomersActionsController extends Controller
                     }
                 }
 
-                // Governance check
+                // Auto-approve parent request when linking a document to it
                 $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($model->judiciary_actions_id);
                 if ($actionDef && $actionDef->action_nature === 'document' && $model->parent_id) {
                     $parentAction = JudiciaryCustomersActions::findOne($model->parent_id);
                     if ($parentAction && $parentAction->request_status !== 'approved') {
-                        $model->addError('parent_id', 'لا يمكن إضافة كتاب على طلب لم تتم الموافقة عليه بعد');
-                        return [
-                            'title' => 'إضافة إجراء قضائي',
-                            'content' => $this->renderAjax('create-in-contract', [
-                                'model' => $model,
-                                'contractID' => $contractID
-                            ]),
-                            'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                                Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
-                        ];
+                        $parentAction->request_status = 'approved';
+                        $parentAction->save(false);
                     }
                 }
 
@@ -261,7 +253,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'forceClose' => true,
                         'title' => 'إضافة إجراء قضائي',
                         'content' => '<span class="text-success"><i class="fa fa-check-circle"></i> ' . $msg . '</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]),
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
                     ];
                 }
 
@@ -271,7 +263,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                 ];
             }
@@ -320,7 +312,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     'size' => 'large',
                 ];
@@ -364,7 +356,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'forceClose' => true,
                         'title' => "تعديل إجراء قضائي",
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"])
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal'])
                     ];
                 } else {
                     return [
@@ -373,7 +365,7 @@ class JudiciaryCustomersActionsController extends Controller
                             'model' => $model,
                             'contractID' => $contractID
                         ]),
-                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                             Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                     ];
                 }
@@ -467,7 +459,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'forceClose' => true,
                         'title' => 'تعديل إجراء قضائي',
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
                     ];
                 }
 
@@ -611,6 +603,65 @@ class JudiciaryCustomersActionsController extends Controller
             'keys'        => ['#', 'case', 'customer', 'action', 'note', 'created_by', 'lawyer', 'court', 'contract_id', 'action_date'],
             'widths'      => [6, 14, 20, 20, 28, 14, 18, 18, 10, 14],
         ], $format);
+    }
+
+    public function actionQuickAddRequest()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        $judiciaryId = (int)$request->post('judiciary_id');
+        $contractId  = (int)$request->post('contract_id');
+        $actionId    = (int)$request->post('action_id');
+        $actionDate  = $request->post('action_date');
+        $customerIds = $request->post('customer_ids', []);
+
+        if (!$judiciaryId || !$actionId || !$actionDate || empty($customerIds)) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($actionId);
+        if (!$actionDef || $actionDef->action_nature !== 'request') {
+            return ['success' => false, 'message' => 'الإجراء المحدد ليس من نوع طلب'];
+        }
+
+        $created = [];
+        foreach ($customerIds as $custId) {
+            $record = new JudiciaryCustomersActions();
+            $record->judiciary_id = $judiciaryId;
+            $record->customers_id = (int)$custId;
+            $record->judiciary_actions_id = $actionId;
+            $record->action_date = $actionDate;
+            $record->contract_id = $contractId;
+            $record->request_status = 'approved';
+            $record->is_deleted = 0;
+
+            try {
+                if ($record->save(false)) {
+                    $custName = (new \yii\db\Query())
+                        ->select('name')->from('os_customers')
+                        ->where(['id' => (int)$custId])->scalar();
+                    $created[] = [
+                        'id' => $record->id,
+                        'label' => $actionDef->name . ' · ' . substr($actionDate, 0, 10) . ($custName ? ' — ' . $custName : ''),
+                    ];
+                } else {
+                    return ['success' => false, 'message' => 'فشل في الحفظ: ' . implode(', ', $record->getFirstErrors())];
+                }
+            } catch (\Exception $e) {
+                return ['success' => false, 'message' => 'خطأ: ' . $e->getMessage()];
+            }
+        }
+
+        if (empty($created)) {
+            return ['success' => false, 'message' => 'فشل في إنشاء الطلب'];
+        }
+
+        return [
+            'success' => true,
+            'message' => 'تم إنشاء واعتماد ' . count($created) . ' طلب بنجاح',
+            'created' => $created,
+        ];
     }
 
     /**

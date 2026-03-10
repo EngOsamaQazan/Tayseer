@@ -337,10 +337,13 @@ class Contracts extends \yii\db\ActiveRecord
     {
         if ($this->selectedImg) {
             $file_hash = $this->selectedImg->fileHash;
-            $file_extention = pathinfo($this->selectedImg->fileName, PATHINFO_EXTENSION);;
-
-            return '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
+            $file_extention = pathinfo($this->selectedImg->fileName, PATHINFO_EXTENSION);
+            $path = '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
+            if (is_file(\Yii::getAlias('@webroot') . $path)) {
+                return $path;
+            }
         }
+        return null;
     }
 
     public function unlock()

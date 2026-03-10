@@ -70,6 +70,13 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 
 <div class="inv-page">
 
+    <!-- Alpine.js: إشعار نجاح العملية -->
+    <div x-data="{ show: false }" x-show="show" x-transition x-cloak
+         @show-notif.window="show = true; setTimeout(() => show = false, 2500)"
+         style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:#166534;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.15);">
+        <i class="fa fa-check-circle"></i> تمت العملية بنجاح
+    </div>
+
     <section class="fin-actions" aria-label="إجراءات" style="margin-bottom: 14px">
         <?php if (Permissions::can(Permissions::INVITEM_CREATE)): ?>
         <div class="fin-act-group">
@@ -136,10 +143,12 @@ $(document).ajaxComplete(function(e, xhr, settings) {
     try {
         var resp = typeof xhr.responseJSON !== 'undefined' ? xhr.responseJSON : JSON.parse(xhr.responseText);
         if (resp && resp.forceClose && resp.forceReload) {
-            // عرض إشعار نجاح
-            var notif = $('<div style="position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:99999;background:#166534;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,0.15);"><i class=\"fa fa-check-circle\"></i> تمت العملية بنجاح</div>');
+            /* OLD jQuery - replaced by Alpine.js
+            var notif = $('<div style="..."><i class="fa fa-check-circle"></i> تمت العملية بنجاح</div>');
             $('body').append(notif);
             setTimeout(function(){ notif.fadeOut(400, function(){ notif.remove(); }); }, 2500);
+            */
+            window.dispatchEvent(new Event('show-notif'));
         }
     } catch(ex) {}
 });

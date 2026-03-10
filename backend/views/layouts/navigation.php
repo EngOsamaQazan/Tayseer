@@ -187,7 +187,7 @@ use app\helper\Permissions;
                                         <ion-icon name="people-circle-sharp" role="img" class="md hydrated"
                                                   aria-label="person circle sharp"></ion-icon>
                                     </div>
-                                    <div class="menu-title">'.Yii::t('app','Customers').'</div>',Url::to(['/customers/customers/index']))?>
+                                    <div class="menu-title">'.Yii::t('app','Customers').'</div>',Url::to(['/customers/index']))?>
 
                                 </li>
                             <?php } ?>

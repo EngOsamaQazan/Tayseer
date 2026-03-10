@@ -64,10 +64,12 @@ $columnClasses = [
                 </div>
             </div>
 
-            <div class="ocp-kanban__column-body" 
+            <div class="ocp-kanban__column-body"
                  data-stage="<?= $stageKey ?>"
-                 ondragover="OCP.kanbanDragOver(event)" 
-                 ondragleave="OCP.kanbanDragLeave(event)" 
+                 data-sortable="true"
+                 data-sortable-group="kanban"
+                 ondragover="OCP.kanbanDragOver(event)"
+                 ondragleave="OCP.kanbanDragLeave(event)"
                  ondrop="OCP.kanbanDrop(event)">
                 
                 <?php if (empty($column['tasks'])): ?>
@@ -126,3 +128,26 @@ $columnClasses = [
         <?php endforeach; ?>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Sortable === 'undefined') return;
+    document.querySelectorAll('.ocp-kanban__column-body[data-sortable-group="kanban"]').forEach(function(col) {
+        Sortable.create(col, {
+            group: 'kanban-board',
+            animation: 200,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            draggable: '.ocp-kanban-card',
+            filter: '.ocp-kanban__add-task',
+            onEnd: function(evt) {
+                var taskId = evt.item.dataset.taskId;
+                var newStage = evt.to.dataset.stage;
+                if (typeof OCP !== 'undefined' && OCP.moveTask) {
+                    OCP.moveTask(taskId, newStage);
+                }
+            }
+        });
+    });
+});
+</script>

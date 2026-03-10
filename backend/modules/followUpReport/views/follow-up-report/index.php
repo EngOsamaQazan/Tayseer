@@ -20,7 +20,11 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' 
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . time(), [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
-$this->registerCss('.content-header{display:none!important}');
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . time());
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . time(), [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
+$this->registerCss('.content-header,.page-header{display:none!important}');
 
 /* هل الوضع الحالي = بدون أرقام تواصل؟ */
 $isNoContact = ((int)($searchModel->is_can_not_contact ?? 0)) === 1;
@@ -74,7 +78,7 @@ foreach ($statusMap as $k => $v) $statusList[$k] = $v['label'];
 /* ═══════════════════════════════════════════════════════════
    FOLLOW-UP REPORT — Responsive Design System
    ═══════════════════════════════════════════════════════════ */
-.ct-followup-page{max-width:1800px}
+.ct-followup-page{max-width:100%}
 
 /* ── Stat cards ── */
 .fur-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
@@ -110,8 +114,7 @@ a.fur-id-link{color:var(--clr-primary,#800020);font-weight:700;text-decoration:n
 a.fur-id-link:hover{text-decoration:underline}
 
 /* ═══ RESPONSIVE — كروت الإحصائيات والفلاتر فقط ═══ */
-@media(min-width:2200px){.ct-followup-page{padding:0 40px}.fur-stat-val{font-size:26px}}
-@media(min-width:1600px) and (max-width:2199px){.ct-followup-page{padding:0 16px}}
+@media(min-width:2200px){.fur-stat-val{font-size:26px}}
 @media(max-width:1599px){.fur-stats{gap:10px}.fur-stat{padding:12px}.fur-stat-val{font-size:18px}.fur-stat-icon{width:40px;height:40px;font-size:17px}}
 @media(max-width:1366px){.fur-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){.fur-stats{grid-template-columns:1fr 1fr;gap:8px}.fur-stat{padding:10px}.fur-stat-val{font-size:16px}.fur-stat-lbl{font-size:10px}}
@@ -121,12 +124,14 @@ a.fur-id-link:hover{text-decoration:underline}
 
 <div class="ct-page ct-followup-page" role="main" aria-label="<?= $pageTitle ?>">
 
-    <!-- Flash -->
+    <!-- Flash (Alpine.js) -->
     <?php foreach (['success'=>'check-circle','error'=>'exclamation-circle','warning'=>'exclamation-triangle'] as $type=>$icon): ?>
         <?php if (Yii::$app->session->hasFlash($type)): ?>
-            <div class="ct-alert ct-alert-<?= $type==='error'?'danger':$type ?>" role="alert">
+            <div class="ct-alert ct-alert-<?= $type==='error'?'danger':$type ?>" role="alert"
+                 x-data="{ show: true }" x-show="show" x-transition x-cloak
+                 x-init="setTimeout(() => show = false, 5000)">
                 <i class="fa fa-<?= $icon ?>"></i><span><?= Yii::$app->session->getFlash($type) ?></span>
-                <button class="ct-alert-close" aria-label="إغلاق">&times;</button>
+                <button class="ct-alert-close" aria-label="إغلاق" @click="show = false">&times;</button>
             </div>
         <?php endif ?>
     <?php endforeach ?>
@@ -171,6 +176,9 @@ a.fur-id-link:hover{text-decoration:underline}
             <div><div class="fur-stat-val"><?= number_format($noContactCount) ?></div><div class="fur-stat-lbl">بدون أرقام تواصل</div></div>
         </a>
     </div>
+
+    <!-- ═══ Pinned Items Bar ═══ -->
+    <div class="pin-bar" id="pin-bar"></div>
 
     <!-- ═══ FILTER PANEL ═══ -->
     <div class="ct-filter-wrap" id="ctFilterWrap">
@@ -330,7 +338,8 @@ a.fur-id-link:hover{text-decoration:underline}
                             ]) ?>
                         <?php else: ?><?= Html::encode($followName) ?><?php endif ?>
                     </td>
-                    <td data-label="">
+                    <td data-label="" style="white-space:nowrap">
+                        <button type="button" class="pin-btn" data-item-id="<?= $m->id ?>" data-label="عقد <?= $m->id ?>" data-extra="<?= Html::encode($customerNamesShort) ?>" title="تثبيت"><i class="fa fa-thumb-tack"></i></button>
                         <a href="<?= $panelUrl ?>" class="fur-btn-follow"><i class="fa fa-dashboard"></i> متابعة</a>
                     </td>
                 </tr>
@@ -359,8 +368,22 @@ a.fur-id-link:hover{text-decoration:underline}
 
 <?php
 $this->registerJs(<<<'JS'
-$('.ct-alert-close').on('click',function(){$(this).closest('.ct-alert').fadeOut(300)});
-setTimeout(function(){$('.ct-alert').fadeOut(500)},5000);
+PinSystem.init({
+    type: 'followup_contract',
+    barSelector: '#pin-bar',
+    buildUrl: function(itemId) {
+        return '/followUp/follow-up/panel?contract_id=' + itemId;
+    }
+});
+
+$(document).on('click', '.pin-btn', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var id = $(this).data('item-id');
+    var label = $(this).data('label') || '';
+    var extra = $(this).data('extra') || '';
+    PinSystem.togglePin(id, label, extra);
+});
 JS
 );
 ?>

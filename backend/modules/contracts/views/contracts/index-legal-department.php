@@ -22,7 +22,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' 
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . time(), [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
-$this->registerCss('.content-header { display: none !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; }');
 
 $this->title = 'الدائرة القانونية';
 $this->params['breadcrumbs'][] = ['label' => 'العقود', 'url' => ['index']];
@@ -92,10 +92,12 @@ $jobTypesMap = ArrayHelper::map(
     <!-- Flash messages -->
     <?php foreach (['success' => 'check-circle', 'error' => 'exclamation-circle', 'warning' => 'exclamation-triangle'] as $type => $icon): ?>
         <?php if (Yii::$app->session->hasFlash($type)): ?>
-            <div class="ct-alert ct-alert-<?= $type === 'error' ? 'danger' : $type ?>" role="alert">
+            <div class="ct-alert ct-alert-<?= $type === 'error' ? 'danger' : $type ?>" role="alert"
+                 x-data="{ show: true }" x-show="show" x-transition x-cloak
+                 x-init="setTimeout(() => show = false, 5000)">
                 <i class="fa fa-<?= $icon ?>"></i>
                 <span><?= Yii::$app->session->getFlash($type) ?></span>
-                <button class="ct-alert-close" aria-label="إغلاق">&times;</button>
+                <button class="ct-alert-close" @click="show = false" aria-label="إغلاق">&times;</button>
             </div>
         <?php endif ?>
     <?php endforeach ?>
@@ -426,11 +428,14 @@ $jobTypesMap = ArrayHelper::map(
 <?php Modal::end() ?>
 
 <!-- ===== BATCH ACTION FLOATING BAR ===== -->
-<div id="ctBatchBar" class="ct-batch-bar" style="display:none">
+<div id="ctBatchBar" class="ct-batch-bar"
+     x-data="{ showBar: false, batchCount: 0 }"
+     @update-batch.window="showBar = $event.detail.show; batchCount = $event.detail.count"
+     x-show="showBar" x-transition x-cloak>
     <div class="ct-batch-bar-inner">
         <span class="ct-batch-bar-count">
             <i class="fa fa-check-square-o"></i>
-            تم تحديد <strong id="ctBatchCount">0</strong> عقد
+            تم تحديد <strong id="ctBatchCount" x-text="batchCount">0</strong> عقد
         </span>
         <button type="button" id="ctBatchClear" class="ct-btn ct-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;padding:6px 16px">
             <i class="fa fa-times"></i> إلغاء التحديد
@@ -478,9 +483,11 @@ $this->registerJs(<<<'JS'
     function updateBar() {
         var keys = Object.keys(selected);
         var n = keys.length;
-        $count.text(n);
+        /* OLD jQuery - replaced by Alpine.js */
+        // $count.text(n);
+        // if (n > 0) { $bar.stop(true).slideDown(300); } else { $bar.stop(true).slideUp(200); }
         $ids.val(keys.join(','));
-        if (n > 0) { $bar.stop(true).slideDown(300); } else { $bar.stop(true).slideUp(200); }
+        window.dispatchEvent(new CustomEvent('update-batch',{detail:{show:n>0,count:n}}));
     }
 
     $(document).on('change', '.ct-batch-check', function(){
@@ -533,8 +540,9 @@ $this->registerJs(<<<'JS'
     });
 })();
 
-$('.ct-alert-close').on('click', function(){ $(this).closest('.ct-alert').fadeOut(300); });
-setTimeout(function(){ $('.ct-alert').fadeOut(500); }, 5000);
+/* OLD jQuery - replaced by Alpine.js */
+// $('.ct-alert-close').on('click', function(){ $(this).closest('.ct-alert').fadeOut(300); });
+// setTimeout(function(){ $('.ct-alert').fadeOut(500); }, 5000);
 JS
 );
 

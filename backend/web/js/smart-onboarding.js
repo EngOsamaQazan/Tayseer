@@ -33,13 +33,15 @@
     function initWizard() {
         showStep(0);
 
+        var isEdit = window.soConfig && window.soConfig.isEditMode;
+
         $(document).on('click', '.so-step', function() {
             var idx = $(this).data('step');
-            if (idx <= getMaxReachedStep()) goToStep(idx);
+            if (isEdit || idx <= getMaxReachedStep()) goToStep(idx);
         });
 
         $(document).on('click', '.so-next-btn', function() {
-            if (validateCurrentStep()) goToStep(SO.currentStep + 1);
+            if (isEdit || validateCurrentStep()) goToStep(SO.currentStep + 1);
         });
         $(document).on('click', '.so-prev-btn', function() {
             goToStep(SO.currentStep - 1);
@@ -61,14 +63,20 @@
     }
 
     function showStep(idx) {
-        // في وضع التعديل كل الأقسام ظاهرة — لا نخفي شيء
-        if (window.soConfig && window.soConfig.isEditMode) return;
-
         $('.so-section').removeClass('active');
         $('.so-section[data-step="' + idx + '"]').addClass('active');
 
         $('.so-step').removeClass('active');
         $('.so-step[data-step="' + idx + '"]').addClass('active');
+
+        // In edit mode, mark all steps as completed (data already exists)
+        if (window.soConfig && window.soConfig.isEditMode) {
+            $('.so-step').each(function() {
+                if ($(this).data('step') !== idx) {
+                    $(this).addClass('completed');
+                }
+            });
+        }
 
         // Update nav buttons
         $('.so-prev-btn').toggle(idx > 0);
@@ -126,43 +134,7 @@
        EDIT MODE — Section Navigation via Steps
        ══════════════════════════════════════════ */
     function initEditModeNav() {
-        if (!window.soConfig || !window.soConfig.isEditMode) return;
-
-        $('.so-step').first().addClass('active');
-
-        $(document).on('click', '.so-steps .so-step', function() {
-            var stepIdx = $(this).data('step');
-            var $section = $('.so-section[data-step="' + stepIdx + '"]');
-            if (!$section.length) return;
-
-            var headerOffset = 80;
-            var stepsHeight = $('.so-steps').outerHeight() || 60;
-            var targetTop = $section.offset().top - headerOffset - stepsHeight;
-
-            $('html, body').animate({ scrollTop: targetTop }, 400);
-
-            $('.so-step').removeClass('active');
-            $(this).addClass('active');
-        });
-
-        var scrollTimer = null;
-        $(window).on('scroll', function() {
-            clearTimeout(scrollTimer);
-            scrollTimer = setTimeout(function() {
-                var scrollTop = $(window).scrollTop();
-                var headerOffset = 150 + ($('.so-steps').outerHeight() || 60);
-                var activeStep = 0;
-
-                $('.so-section').each(function() {
-                    if ($(this).offset().top <= scrollTop + headerOffset) {
-                        activeStep = $(this).data('step');
-                    }
-                });
-
-                $('.so-step').removeClass('active');
-                $('.so-step[data-step="' + activeStep + '"]').addClass('active');
-            }, 50);
-        });
+        // Edit mode wizard handled by initWizard (validation skipped in edit)
     }
 
     /* ══════════════════════════════════════════

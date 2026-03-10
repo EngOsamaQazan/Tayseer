@@ -83,7 +83,7 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['judiciary_id', 'customers_id', 'judiciary_actions_id'], 'required'],
+            [['judiciary_id', 'customers_id', 'judiciary_actions_id', 'action_date'], 'required'],
             [['judiciary_id', 'customers_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'court_name', 'contract_id', 'lawyer_name'], 'integer'],
             [['judiciary_actions_id'], 'integer', 'on' => 'create'],
             [['judiciary_actions_id'], 'integer', 'on' => 'update'],
@@ -213,6 +213,28 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             'rejected' => '#EF4444',
         ];
         return $map[$this->request_status] ?? '#6B7280';
+    }
+
+    /**
+     * Returns a full web-accessible URL for the image field.
+     * Handles bare filenames (old records), relative paths, and full URLs.
+     */
+    public static function resolveImageUrl($imagePath)
+    {
+        if (empty($imagePath)) {
+            return '';
+        }
+        if (strpos($imagePath, 'http://') === 0 || strpos($imagePath, 'https://') === 0) {
+            return $imagePath;
+        }
+        $clean = ltrim($imagePath, '/\\');
+        if (strpos($clean, 'uploads/') !== 0) {
+            $onDisk = Yii::getAlias('@webroot/uploads/judiciary_customers_actions/' . $clean);
+            if (file_exists($onDisk)) {
+                $clean = 'uploads/judiciary_customers_actions/' . $clean;
+            }
+        }
+        return Yii::getAlias('@web') . '/' . $clean;
     }
 
     public static function find()

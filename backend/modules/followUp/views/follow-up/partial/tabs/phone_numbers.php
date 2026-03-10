@@ -121,7 +121,7 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                         <span class="pn-contact-btn facebook empty" title="لا يوجد حساب فيسبوك"><i class="fa fa-facebook"></i></span>
                         <?php endif; ?>
                         <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($ppWa) ?>')" data-toggle="modal" data-target="#smsModal" title="إرسال رسالة"><i class="fa fa-comment"></i></button>
-                        <?= Html::a('<i class="fa fa-pencil"></i>', ['/customers/customers/update-contact', 'id' => $cust->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل بيانات الاتصال']) ?>
+                        <?= Html::a('<i class="fa fa-pencil"></i>', ['/customers/update-contact', 'id' => $cust->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل بيانات الاتصال']) ?>
                     </div>
                 </div>
                 <?php endif; ?>

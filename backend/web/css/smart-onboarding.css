@@ -503,8 +503,7 @@
 /* ═══════════════════════════════════════════
    EDIT MODE — All sections visible + step nav
    ═══════════════════════════════════════════ */
-.so-mode-edit .so-section { display: block !important; }
-.so-mode-edit .so-nav { display: none !important; }
+/* Edit mode: wizard flow (same as create) — sections shown one at a time */
 
 .so-mode-edit .so-steps {
     position: sticky; top: 0; z-index: 10;

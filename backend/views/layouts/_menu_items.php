@@ -3,8 +3,8 @@
  * القائمة الجانبية — ترتيب ستاندرد ERP
  * ─────────────────────────────────────
  * لوحة التحكم → العملاء → العقود → المتابعة → المالية
- * → القانوني → التقارير → الموظفين → المخزون → الديوان
- * → المستثمرين → الصلاحيات → الإعدادات
+ * → القانوني → التحصيل → التقارير → الموظفين → المخزون
+ * → الديوان → المستثمرين → الصلاحيات → الإعدادات
  */
 
 use yii\helpers\Url;
@@ -12,10 +12,10 @@ use common\helper\Permissions;
 
 $mainMenuItems = [
 
-    ['label' => 'العمليات', 'options' => ['class' => 'header']],
+    ['label' => 'العمليات', 'header' => true],
 
     // ─── 1. العملاء ───
-    ['label' => 'العملاء', 'icon' => 'users', 'url' => ['/customers/customers/index'], 'privilege' => [Permissions::CUSTOMERS, Permissions::CUST_VIEW]],
+    ['label' => 'العملاء', 'icon' => 'users', 'url' => ['/customers/index'], 'privilege' => [Permissions::CUSTOMERS, Permissions::CUST_VIEW]],
 
     // ─── 2. العقود ───
     ['label' => 'العقود', 'icon' => 'file-text', 'url' => ['/contracts/contracts/index'], 'privilege' => [Permissions::CONTRACTS, Permissions::CONT_VIEW]],
@@ -26,14 +26,13 @@ $mainMenuItems = [
     // ─── 4. الإدارة المالية ───
     ['label' => 'الإدارة المالية', 'icon' => 'money', 'url' => ['/financialTransaction/financial-transaction/index'], 'privilege' => [Permissions::FINANCIAL_TRANSACTION, Permissions::INCOME, Permissions::EXPENSES, Permissions::LOAN_SCHEDULING]],
 
-    // ─── 5. القسم القانوني ───
-    ['label' => 'القسم القانوني', 'icon' => 'gavel', 'url' => ['/judiciary/judiciary/index'], 'privilege' => [Permissions::JUDICIARY, Permissions::JUD_VIEW]],
-    ['label' => 'التحصيل',       'icon' => 'handshake-o', 'url' => ['/collection/collection/index'], 'privilege' => [Permissions::COLLECTION, Permissions::COLL_VIEW, Permissions::COLLECTION_MANAGER]],
+    // ─── 5. القسم القانوني (يتضمن تبويب قسم الحسم/التحصيل) ───
+    ['label' => 'القسم القانوني', 'icon' => 'gavel', 'url' => ['/judiciary/judiciary/index'], 'privilege' => [Permissions::JUDICIARY, Permissions::JUD_VIEW, Permissions::COLLECTION, Permissions::COLL_VIEW, Permissions::COLLECTION_MANAGER]],
 
     // ─── 6. التقارير ───
     ['label' => 'التقارير', 'icon' => 'bar-chart', 'url' => ['/reports/reports/index'], 'privilege' => [Permissions::REPORTS, Permissions::REP_VIEW]],
 
-    ['label' => 'الموارد', 'options' => ['class' => 'header']],
+    ['label' => 'الموارد', 'header' => true],
 
     // ─── 7. الموارد البشرية (HR) ───
     [
@@ -60,7 +59,7 @@ $mainMenuItems = [
     // ─── 10. قسم الديوان ───
     ['label' => 'قسم الديوان', 'icon' => 'archive', 'url' => ['/diwan/diwan/index'], 'privilege' => [Permissions::DIWAN, Permissions::DIWAN_REPORTS]],
 
-    ['label' => 'الإدارة والإعدادات', 'options' => ['class' => 'header']],
+    ['label' => 'الإدارة والإعدادات', 'header' => true],
 
     // ─── لوحة التحكم — ملخص أعمال الشركة (صلاحية مستقلة) ───
     ['label' => 'لوحة التحكم', 'icon' => 'tachometer', 'url' => ['/site/index'], 'privilege' => Permissions::DASHBOARD],

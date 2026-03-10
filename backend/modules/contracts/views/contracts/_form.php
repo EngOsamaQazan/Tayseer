@@ -271,8 +271,8 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contract-form.js', ['de
 
 <?php
 $this->registerJs('ContractForm.init(' . Json::encode([
-    'searchUrl'       => Url::to(['/customers/customers/search-customers']),
-    'customerDataUrl' => Url::to(['/customers/customers/customer-data']),
+    'searchUrl'       => Url::to(['/customers/search-customers']),
+    'customerDataUrl' => Url::to(['/customers/customer-data']),
     'lookupSerialUrl' => Url::to(['/contracts/contracts/lookup-serial']),
     'type'            => $model->type ?: 'normal',
     'existingCustomers'  => $existingCustomers,

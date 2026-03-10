@@ -11,6 +11,11 @@ return [
     ],
     'vendorPath' => dirname(dirname(__DIR__)) . '/vendor',
     'components' => [
+        'formatter' => [
+            'locale' => 'ar-u-nu-latn',
+            'decimalSeparator' => '.',
+            'thousandSeparator' => ',',
+        ],
         'cache' => [
             'class' => 'yii\caching\FileCache',
         ],

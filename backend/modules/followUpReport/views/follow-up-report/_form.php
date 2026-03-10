@@ -16,13 +16,18 @@ $this->registerJsFile('/js/Tafqeet.js');
 /* @var $form yii\widgets\ActiveForm */
 ?>
 
-<div class="contracts-form">
+<style>[x-cloak] { display: none !important; }</style>
+
+<div class="contracts-form"
+     x-data="{ contractType: '<?= $model->type ?? 'normal' ?>', showUpdateBtn: false }">
 
     <?php $form = ActiveForm::begin(); ?>
 
     <legend><?= Yii::t('app', 'Contracts Information') ?></legend>
     <div class="row">
-        <div class="col-sm-4 col-xs-4" id="solidarity_contract" style="display: none">
+        <div class="col-sm-4 col-xs-4" id="solidarity_contract"
+             x-show="contractType === 'solidarity'" x-cloak
+             x-transition.opacity.duration.200ms>
             <?=
             $form->field($model, 'customers_ids')->widget(kartik\select2\Select2::class, [
                 'options' => [
@@ -31,7 +36,7 @@ $this->registerJsFile('/js/Tafqeet.js');
                 'pluginOptions' => [
                     'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                     'ajax' => [
-                        'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                        'url' => \yii\helpers\Url::to(['/customers/search-customers']),
                         'dataType' => 'json', 'delay' => 250,
                         'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                         'processResults' => new \yii\web\JsExpression('function(d){return d}'),
@@ -44,7 +49,9 @@ $this->registerJsFile('/js/Tafqeet.js');
             ?>
 
         </div>
-        <div class="col-sm-4 col-xs-4"  id="normal_contract">
+        <div class="col-sm-4 col-xs-4" id="normal_contract"
+             x-show="contractType === 'normal'"
+             x-transition.opacity.duration.200ms>
             <?=
             $form->field($model, 'customer_id')->widget(kartik\select2\Select2::class, [
                 'options' => [
@@ -53,7 +60,7 @@ $this->registerJsFile('/js/Tafqeet.js');
                 'pluginOptions' => [
                     'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                     'ajax' => [
-                        'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                        'url' => \yii\helpers\Url::to(['/customers/search-customers']),
                         'dataType' => 'json', 'delay' => 250,
                         'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                         'processResults' => new \yii\web\JsExpression('function(d){return d}'),
@@ -70,7 +77,9 @@ $this->registerJsFile('/js/Tafqeet.js');
             <?php $model->isNewRecord == 1 ? $model->type = 'normal' : $model->type; ?>
             <?= $form->field($model, 'type', ['inputOptions' => ['id' => 'contract_type']])->radioList(['normal' => Yii::t('app', 'normal'), 'solidarity' => Yii::t('app', 'solidarity')])->label(Yii::t('app', 'Contract Type')); ?>
         </div>
-        <div class="col-sm-2 col-xs-2" id="updateCustomer" style="display: none">
+        <div class="col-sm-2 col-xs-2" id="updateCustomer"
+             x-show="contractType === 'normal' && showUpdateBtn" x-cloak
+             x-transition.opacity.duration.200ms>
             <button title="add customer" class="btn btn-primary" onclick="updateCustomer($('#contracts-customer_id').select2('data')[0].id)" ><?=Yii::t('app', 'Update Customer')?></button>
         </div>
 
@@ -80,7 +89,9 @@ $this->registerJsFile('/js/Tafqeet.js');
         </div>
     </div>
 
-    <div id="customer_data">
+    <div id="customer_data"
+         x-show="contractType === 'normal'"
+         x-transition.opacity.duration.200ms>
         <div class="row">
             <div class="col-sm-12 col-xs-12">
                 <?=
@@ -91,7 +102,7 @@ $this->registerJsFile('/js/Tafqeet.js');
                     'pluginOptions' => [
                         'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                         'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                            'url' => \yii\helpers\Url::to(['/customers/search-customers']),
                             'dataType' => 'json', 'delay' => 250,
                             'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                             'processResults' => new \yii\web\JsExpression('function(d){return d}'),
@@ -246,12 +257,12 @@ $this->registerJsFile('/js/Tafqeet.js');
 
         <?= $form->field($model, 'selected_image')->hiddenInput()?>
 
-        <?php if (!$model->isNewRecord && !empty($model->selected_image)) { ?>
+        <?php if (!$model->isNewRecord && !empty($model->selected_image) && $model->selectedImagePath) { ?>
             <div class="image-wrapper">
                 <img id="contracts-contract_images_image" alt="Thumbnail"
                      width="400px"
                      class="img-responsive img-preview"
-                     src="<?=  $model->selectedImagePath?>">
+                     src="<?= $model->selectedImagePath ?>">
             </div>
         <?php } ?>
 
@@ -321,7 +332,8 @@ $this->registerJsFile('/js/Tafqeet.js');
                             $("#email").val(data.model.email).blur();
                             $("#contracts_info").val(data.contracts_info.count).blur();
                             $("#user_status").val(data.contracts_info.email).blur();
-                            $('#updateCustomer').show();
+                            /* OLD jQuery - replaced by Alpine.js: $('#updateCustomer').show(); */
+                            Alpine.$data(document.querySelector('.contracts-form')).showUpdateBtn = true;
                         } else {
                             //if data wasn't found the alert.
                             alert('We\'re sorry but we couldn\'t load the the customer data!');
@@ -367,6 +379,7 @@ $this->registerJsFile('/js/Tafqeet.js');
                 }
             }
             function customers_aria(item) {
+                /* OLD jQuery - replaced by Alpine.js
                 if (item == 'normal') {
                     $('#solidarity_contract').hide();
                     $('#normal_contract').show();
@@ -378,6 +391,10 @@ $this->registerJsFile('/js/Tafqeet.js');
                     $('#customer_data').hide();
                     $('#updateCustomer').hide();
                 }
+                */
+                var _d = Alpine.$data(document.querySelector('.contracts-form'));
+                _d.contractType = item;
+                if (item === 'normal') _d.showUpdateBtn = true;
             }
         </script>
         <?php

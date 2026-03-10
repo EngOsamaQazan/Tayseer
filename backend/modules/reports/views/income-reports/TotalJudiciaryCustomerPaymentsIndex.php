@@ -51,15 +51,22 @@ CrudAsset::register($this);
     ?>
 
     <!-- فلاتر البحث -->
-    <div class="rp-filter-card">
+    <div class="rp-filter-card" x-data="{ open: true }">
         <div class="rp-filter-header">
             <i class="fa fa-filter"></i>
             <h3>فلترة النتائج</h3>
+            <!-- OLD jQuery - replaced by Alpine.js
             <button type="button" class="toggle-btn" onclick="$(this).find('i').toggleClass('fa-chevron-up fa-chevron-down'); $(this).closest('.rp-filter-card').find('.rp-filter-body').slideToggle(200);">
                 <i class="fa fa-chevron-up"></i>
             </button>
+            -->
+            <button type="button" class="toggle-btn" @click="open = !open">
+                <i class="fa" :class="open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+            </button>
         </div>
-        <div class="rp-filter-body">
+        <div class="rp-filter-body" x-show="open" x-cloak
+             x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0"
+             x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2">
             <?php
             $form = yii\widgets\ActiveForm::begin([
                 'id' => 'judiciary-income-search',

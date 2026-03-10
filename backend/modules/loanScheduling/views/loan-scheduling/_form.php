@@ -190,12 +190,12 @@ if (!empty($model->contract_id)) {
             'pluginEvents' => ['changeDate' => 'function(e){ LoanForm.validateNewDate(); }'],
             'options' => ['placeholder' => 'yyyy-mm-dd', 'class' => 'form-control'],
         ])->label('<i class="fa fa-calendar-plus-o"></i> تاريخ القسط الجديد') ?>
-        <span class="help-block" id="ls-date-error" style="display:none;color:#e74c3c;font-size:11px"></span>
+        <span class="help-block" id="ls-date-error" x-data x-show="$store.loanPreview.dateError" x-transition x-cloak style="color:#e74c3c;font-size:11px"></span>
     </div>
 </div>
 
 <!-- ═══ معاينة جدولة الدين ═══ -->
-<div class="ls-schedule-preview" id="ls-schedule-box" style="display:none">
+<div class="ls-schedule-preview" id="ls-schedule-box" x-data x-show="$store.loanPreview.visible" x-transition.duration.200ms x-cloak>
     <div class="loan-section-title" style="border-bottom:none;margin-bottom:8px">معاينة الجدولة</div>
     <div class="ls-schedule-row"><span class="label-text">إجمالي الدين</span><span class="value-text" id="ls-preview-debt">—</span></div>
     <div class="ls-schedule-row"><span class="label-text">الدفعة الأولى</span><span class="value-text" id="ls-preview-fp">—</span></div>
@@ -237,6 +237,9 @@ if (!empty($model->contract_id)) {
 </div>
 
 <script>
+document.addEventListener('alpine:init', function() {
+    Alpine.store('loanPreview', { visible: false, dateError: false });
+});
 var LoanForm = (function(){
     function setType(type) {
         document.getElementById('ls-settlement-type').value = type;
@@ -280,7 +283,7 @@ var LoanForm = (function(){
 
             document.getElementById('ls-installments-count').value = count;
             document.getElementById('ls-remaining-debt').value = Math.max(0, afterFp - count * installment);
-            box.style.display = 'block';
+            if (Alpine && Alpine.store) Alpine.store('loanPreview').visible = true;
         } else if (fp > 0 && installment <= 0) {
             document.getElementById('ls-preview-debt').textContent = debt.toLocaleString('ar-JO') + ' د.أ';
             document.getElementById('ls-preview-fp').textContent = fp.toLocaleString('ar-JO') + ' د.أ';
@@ -291,9 +294,9 @@ var LoanForm = (function(){
             document.getElementById('ls-preview-total-due').textContent = fp.toLocaleString('ar-JO') + ' د.أ';
             document.getElementById('ls-installments-count').value = 0;
             document.getElementById('ls-remaining-debt').value = afterFp;
-            box.style.display = 'block';
+            if (Alpine && Alpine.store) Alpine.store('loanPreview').visible = true;
         } else {
-            box.style.display = 'none';
+            if (Alpine && Alpine.store) Alpine.store('loanPreview').visible = false;
         }
     }
 
@@ -319,8 +322,9 @@ var LoanForm = (function(){
         var firstEl = document.querySelector('[name="LoanScheduling[first_installment_date]"]');
         var newEl = document.querySelector('[name="LoanScheduling[new_installment_date]"]');
         var errEl = document.getElementById('ls-date-error');
+        var _lsStore = (Alpine && Alpine.store) ? Alpine.store('loanPreview') : null;
         if (!firstEl || !firstEl.value || !newEl || !newEl.value) {
-            if (errEl) errEl.style.display = 'none';
+            if (_lsStore) _lsStore.dateError = false;
             return true;
         }
         var firstDate = new Date(firstEl.value);
@@ -330,17 +334,17 @@ var LoanForm = (function(){
 
         if (newDate <= firstDate) {
             errEl.textContent = 'يجب أن يكون تاريخ القسط الجديد بعد تاريخ الدفعة الأولى';
-            errEl.style.display = 'block';
+            if (_lsStore) _lsStore.dateError = true;
             newEl.style.borderColor = '#e74c3c';
             return false;
         }
         if (newDate < minDate) {
             errEl.textContent = 'يجب أن يكون تاريخ القسط الجديد بعد الدفعة الأولى بأسبوع على الأقل';
-            errEl.style.display = 'block';
+            if (_lsStore) _lsStore.dateError = true;
             newEl.style.borderColor = '#e74c3c';
             return false;
         }
-        errEl.style.display = 'none';
+        if (_lsStore) _lsStore.dateError = false;
         newEl.style.borderColor = '#ddd';
         return true;
     }

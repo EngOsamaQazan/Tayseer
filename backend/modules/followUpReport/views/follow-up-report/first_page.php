@@ -36,9 +36,12 @@
             <div class="container">
                 <div class="row">
                     <div class="col-lg-12 col-md-12 col-sm-12 col-12" >
-                        <?php foreach ($model->contractsCustomers as $contractsCustomers) { ?>
+                        <?php foreach ($model->contractsCustomers as $contractsCustomers) {
+                            $custImgPath = $contractsCustomers->customer->selectedImagePath ?? null;
+                            if (!$custImgPath) continue;
+                        ?>
                             <div class="col-lg-2 col-md-2 col-sm-2 col-2" style="float: left ; display: inline-block ;padding-right: 1px !important;padding-left: 1px !important;">
-                                <img src="<?= $contractsCustomers->customer->selectedImagePath ?>"  class="signutre-div">
+                                <img src="<?= $custImgPath ?>"  class="signutre-div">
                             </div>
                         <?php } ?>
 

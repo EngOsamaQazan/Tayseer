@@ -13,6 +13,7 @@ $csrfToken = Yii::$app->request->csrfToken;
 <?= $this->render('@app/views/layouts/_inventory-tabs', ['activeTab' => 'settings']) ?>
 
 <style>
+[x-cloak] { display: none !important; }
 .st-page {
     max-width: 1100px;
     --fin-font: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
@@ -154,13 +155,19 @@ $csrfToken = Yii::$app->request->csrfToken;
                 <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title">نقل بيانات المورد ثم الحذف</h4>
             </div>
-            <div class="modal-body modal-transfer-body">
+            <div class="modal-body modal-transfer-body"
+                 x-data="{ hiddenSupplierId: null, showNoOther: false }"
+                 id="modal-transfer-alpine">
                 <p id="transfer-msg" class="text-muted"></p>
                 <div class="form-group" id="transfer-supplier-form-group">
                     <label>نقل الفواتير والأصناف والحركات إلى المورد:</label>
                     <div id="transfer-to-supplier-list" class="transfer-supplier-list">
                         <?php foreach ($suppliers as $s): ?>
-                        <button type="button" class="btn btn-default btn-block transfer-supplier-option transfer-option-supplier" data-id="<?= (int)$s->id ?>" data-name="<?= Html::encode($s->name) ?>" style="text-align: right; margin-bottom: 6px;">
+                        <button type="button" class="btn btn-default btn-block transfer-supplier-option transfer-option-supplier"
+                                data-id="<?= (int)$s->id ?>" data-name="<?= Html::encode($s->name) ?>"
+                                style="text-align: right; margin-bottom: 6px;"
+                                x-show="hiddenSupplierId != <?= (int)$s->id ?>"
+                                x-transition.opacity.duration.200ms>
                             <?php if ($s->isSystemUser): ?>
                             <i class="fa fa-user-circle" style="margin-left:6px;color:#166534"></i><?= Html::encode($s->name) ?> <span class="st-badge st-badge-user" style="font-size:10px"><i class="fa fa-check-circle"></i> مستخدم</span>
                             <?php else: ?>
@@ -169,7 +176,9 @@ $csrfToken = Yii::$app->request->csrfToken;
                         </button>
                         <?php endforeach ?>
                     </div>
-                    <p id="transfer-no-other-supplier" class="text-warning" style="display:none; margin-top:8px;">لا يوجد موردون آخرون. أضف مورداً من الأسفل ثم أعد محاولة النقل.</p>
+                    <p id="transfer-no-other-supplier" class="text-warning" style="margin-top:8px;"
+                       x-show="showNoOther" x-cloak
+                       x-transition.opacity.duration.200ms>لا يوجد موردون آخرون. أضف مورداً من الأسفل ثم أعد محاولة النقل.</p>
                     <input type="hidden" id="transfer-to-supplier" value="">
                 </div>
             </div>
@@ -225,19 +234,28 @@ var deleteSupplierId = null;
 $(document).on('click', '.st-btn-delete-supplier', function(){
     var id = $(this).data('id');
     deleteSupplierId = id;
-    $('.transfer-supplier-option').removeClass('selected').show().css({ display: 'block', visibility: 'visible' }).prop('disabled', false);
+    var _tData = Alpine.\$data(document.getElementById('modal-transfer-alpine'));
+    $('.transfer-supplier-option').removeClass('selected').prop('disabled', false);
+    /* OLD jQuery - replaced by Alpine.js
+    $('.transfer-supplier-option').show().css({ display: 'block', visibility: 'visible' });
     $('.transfer-option-supplier[data-id="' + id + '"]').hide();
+    $('#transfer-no-other-supplier').hide();
+    */
+    _tData.hiddenSupplierId = id;
+    _tData.showNoOther = false;
     $('#transfer-to-supplier').val('');
     $('#transfer-to-user').val('');
-    $('#transfer-no-other-supplier').hide();
     $.post('$deleteSupplierUrl', { id: id, _csrf: '$csrfToken' }, function(resp){
         if (resp.success) {
             location.reload();
         } else {
             $('#transfer-msg').text(resp.message || 'لا يمكن الحذف: توجد سجلات مرتبطة.');
-            var visible = $('#transfer-to-supplier-list .transfer-supplier-option:visible').length;
-            if (visible === 0) {
+            var totalOptions = $('#transfer-to-supplier-list .transfer-supplier-option').length;
+            if (totalOptions <= 1) {
+                /* OLD jQuery - replaced by Alpine.js
                 $('#transfer-no-other-supplier').show();
+                */
+                _tData.showNoOther = true;
             }
             $('#modal-transfer-supplier').modal('show');
         }

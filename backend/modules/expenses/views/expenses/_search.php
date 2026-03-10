@@ -43,7 +43,7 @@ $advancedActive = !empty($model->created_by)
     || !empty($model->number_row);
 ?>
 
-<section class="fin-filter">
+<section class="fin-filter" x-data="{ open: <?= $advancedActive ? 'true' : 'false' ?> }">
     <?php $form = ActiveForm::begin([
         'id'     => 'exp-search',
         'method' => 'get',
@@ -84,14 +84,17 @@ $advancedActive = !empty($model->created_by)
         <div class="fin-f-btn">
             <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'fin-btn fin-btn--search']) ?>
             <?= Html::a('<i class="fa fa-refresh"></i> تعيين', ['index'], ['class' => 'fin-btn fin-btn--reset']) ?>
-            <button type="button" class="fin-btn fin-btn--toggle <?= $advancedActive ? 'fin-btn--toggle-active' : '' ?>" id="btnAdvExp" title="فلاتر متقدمة">
+            <button type="button" class="fin-btn fin-btn--toggle" id="btnAdvExp" title="فلاتر متقدمة"
+                    @click="open = !open" :class="{ 'fin-btn--toggle-active': open }">
                 <i class="fa fa-sliders"></i> متقدم
             </button>
         </div>
     </div>
 
     <!-- ═══ فلاتر متقدمة ═══ -->
-    <div class="fin-filter-advanced" id="advExpFilters" style="<?= $advancedActive ? '' : 'display:none' ?>">
+    <div class="fin-filter-advanced" id="advExpFilters" x-show="open" x-cloak
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2">
         <div class="fin-adv-grid">
             <!-- المنشئ -->
             <div class="fin-f-group">
@@ -148,7 +151,7 @@ $advancedActive = !empty($model->created_by)
 </section>
 
 <?php
-/* ═══ JavaScript — طي/عرض الفلاتر المتقدمة ═══ */
+/* OLD jQuery - replaced by Alpine.js
 $advJs = <<<'JSBLOCK'
 $("#btnAdvExp").on("click",function(){
     var panel=$("#advExpFilters");
@@ -157,4 +160,5 @@ $("#btnAdvExp").on("click",function(){
 });
 JSBLOCK;
 $this->registerJs($advJs, \yii\web\View::POS_READY);
+*/
 ?>

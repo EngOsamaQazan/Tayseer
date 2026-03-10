@@ -81,9 +81,7 @@ $typeMap = [
                         <?php endif; ?>
                     </div>
                     
-                    <?php if (mb_strlen($event['content'] ?? '') > 100): ?>
-                    <button class="ocp-timeline-event__expand" onclick="OCP.toggleEventExpand(<?= $i ?>)">عرض المزيد</button>
-                    <?php endif; ?>
+                    <button class="ocp-timeline-event__expand" style="display:none" onclick="OCP.toggleEventExpand(<?= $i ?>)">عرض المزيد</button>
 
                     <?php if ($hasAttachments): ?>
                     <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">

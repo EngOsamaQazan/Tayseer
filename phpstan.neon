@@ -1,0 +1,28 @@
+includes:
+    - vendor/yii2-extensions/phpstan/extension.neon
+
+parameters:
+    level: 3
+
+    paths:
+        - common
+        - backend
+        - frontend
+        - console
+
+    excludePaths:
+        - vendor
+        - runtime
+        - tests
+        - environments
+        - backend/web/assets
+        - frontend/web/assets
+
+    yii2:
+        config:
+            - common/config/main.php
+            - backend/config/main.php
+
+    ignoreErrors:
+        - '#Call to an undefined method yii\\web\\IdentityInterface::#'
+        - '#Access to an undefined property yii\\web\\IdentityInterface::#'

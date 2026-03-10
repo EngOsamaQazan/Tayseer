@@ -241,7 +241,8 @@ return [
             'class' => 'backend\modules\hr\Module',
         ],
         'gridview' => [
-            'class' => '\kartik\grid\Module'
+            'class' => '\kartik\grid\Module',
+            'bsVersion' => '5',
         ],
         // 'v1' => [
         //     'basePath' => '@api/modules/v1',
@@ -598,11 +599,25 @@ return [
             },
             'bundles' => [
                 'yii\web\JqueryAsset' => [
-                    'sourcePath' => null, // do not publish the bundle
+                    'sourcePath' => null,
                     'js' => [
-                        '//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js',
+                        '//ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js',
                     ]
                 ],
+                // Suppress BS3 assets (no longer used)
+                'yii\bootstrap\BootstrapAsset' => ['css' => []],
+                'yii\bootstrap\BootstrapPluginAsset' => ['js' => []],
+                // Suppress BS4 assets (migrated to BS5 via Tabler)
+                'yii\bootstrap4\BootstrapAsset' => ['css' => []],
+                'yii\bootstrap4\BootstrapPluginAsset' => ['js' => []],
+                // Suppress BS5 CSS only (already loaded via Tabler's RTL CSS in Vite bundle)
+                // BS5 JS (bootstrap.bundle.js) is NOT suppressed — it must load as a regular script
+                // so window.bootstrap is available for inline Kartik/Yii2 widget scripts
+                'yii\bootstrap5\BootstrapAsset' => ['css' => []],
+                // Suppress AdminLTE (replaced by Tabler)
+                'potime\adminlte3\assets\AdminLteAsset' => ['css' => [], 'js' => [], 'depends' => []],
+                'potime\adminlte3\assets\PluginAsset' => ['css' => [], 'depends' => []],
+                'potime\adminlte3\assets\FontAwesomeAsset' => ['css' => [], 'depends' => []],
                 'backend\assets\ImageManagerInputAsset' => [
                     'basePath' => '@webroot',
                     'baseUrl' => '@web',

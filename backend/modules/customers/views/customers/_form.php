@@ -37,7 +37,7 @@ $imgRandId = rand(100000000, 1000000000);
 if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
 ?>
 
-<div class="customers-form">
+<div class="customers-form" x-data="{ showSocial: '<?= $model->is_social_security ?>', showRealEstate: '<?= $model->do_have_any_property ?>' }">
     <?php
     $formConfig = [
         'options' => ['enctype' => 'multipart/form-data'],
@@ -152,9 +152,9 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
         <legend><i class="fa fa-shield"></i> الضمان والتقاعد</legend>
         <div class="row">
             <div class="col-md-2">
-                <?= $form->field($model, 'is_social_security')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '--'])->label('مشترك بالضمان؟') ?>
+                <?= $form->field($model, 'is_social_security')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '--', 'x-model' => 'showSocial'])->label('مشترك بالضمان؟') ?>
             </div>
-            <div class="col-md-2 js-social-field" style="display:<?= (!$isNew && $model->is_social_security == 1) ? 'block' : 'none' ?>">
+            <div class="col-md-2 js-social-field" x-show="showSocial == '1'" x-transition x-cloak style="display:<?= (!$isNew && $model->is_social_security == 1) ? 'block' : 'none' ?>">
                 <?= $form->field($model, 'social_security_number')->textInput(['placeholder' => 'رقم الضمان'])->label('رقم الضمان') ?>
             </div>
             <div class="col-md-2">
@@ -178,7 +178,7 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
                 ])->label('آخر استعلام دخل') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'do_have_any_property')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '--'])->label('يملك عقارات؟') ?>
+                <?= $form->field($model, 'do_have_any_property')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '--', 'x-model' => 'showRealEstate'])->label('يملك عقارات؟') ?>
             </div>
         </div>
         <div class="row">
@@ -191,7 +191,7 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
     <!-- ═══════════════════════════════════════════
          القسم 5: العقارات (يظهر حسب الاختيار)
          ═══════════════════════════════════════════ -->
-    <div class="js-real-estate-section" style="display:<?= (!$isNew && $model->do_have_any_property == 1) ? 'block' : 'none' ?>">
+    <div class="js-real-estate-section" x-show="showRealEstate == '1'" x-transition x-cloak style="display:<?= (!$isNew && $model->do_have_any_property == 1) ? 'block' : 'none' ?>">
         <fieldset>
             <legend><i class="fa fa-building"></i> العقارات</legend>
             <?= $this->render('partial/real_estate', ['form' => $form, 'modelRealEstate' => $modelRealEstate]) ?>
@@ -267,11 +267,7 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
 <?php
 $jsIsNew = $isNew ? 'true' : 'false';
 $this->registerJs(<<<JS
-$(document).on('change', '#customers-is_social_security', function(){
-    $('.js-social-field').toggle($(this).val() == 1);
-}).on('change', '#customers-do_have_any_property', function(){
-    $('.js-real-estate-section').toggle($(this).val() == 1);
-});
+/* Alpine.js handles show/hide for social security & real estate fields via x-show */
 
 (function(){
     var isNew = $jsIsNew;

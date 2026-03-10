@@ -20,13 +20,24 @@ use backend\modules\customers\models\ContractsCustomers;
 $judiciary = Judiciary::find()->where(['contract_id' => $contractID])->one();
 $judiciaryLabel = $judiciary ? ($judiciary->judiciary_number . '/' . ($judiciary->year ?: '-')) : '-';
 
-// ─── Load contract parties directly ───
+// ─── Load contract parties with photos ───
 $partyRows = (new \yii\db\Query())
     ->select(['cc.customer_id', 'c.name', 'cc.customer_type'])
     ->from('os_contracts_customers cc')
     ->innerJoin('os_customers c', 'c.id = cc.customer_id')
     ->where(['cc.contract_id' => $contractID])
     ->all();
+
+$partyPhotos = [];
+foreach ($partyRows as $p) {
+    $custModel = Customers::findOne($p['customer_id']);
+    $photoPath = $custModel ? $custModel->getSelectedImagePath() : null;
+    if ($photoPath && is_file(Yii::getAlias('@webroot') . $photoPath)) {
+        $partyPhotos[$p['customer_id']] = $photoPath;
+    } else {
+        $partyPhotos[$p['customer_id']] = null;
+    }
+}
 
 // ─── Load all active actions grouped by nature ───
 $allActions = JudiciaryActions::find()
@@ -61,19 +72,29 @@ foreach ($allActions as $a) {
     $groupedById[$a->id] = ['name' => $a->name, 'nature' => $n];
 }
 
-// ─── Approved requests + existing documents for linking ───
+// ─── Request-type actions for quick-add ───
+$requestActions = [];
+foreach ($allActions as $a) {
+    if (($a->action_nature ?: 'process') === 'request') {
+        $requestActions[$a->id] = $a->name;
+    }
+}
+
+// ─── All requests (approved + pending) + existing documents for linking ───
 $approvedRequests = [];
 $existingDocuments = [];
 if ($judiciary) {
     $reqRows = (new \yii\db\Query())
-        ->select(['jca.id', 'jca.action_date', 'jca.customers_id', 'ja.name as aname', 'c.name as cname'])
+        ->select(['jca.id', 'jca.action_date', 'jca.customers_id', 'jca.request_status', 'ja.name as aname', 'c.name as cname'])
         ->from('os_judiciary_customers_actions jca')
         ->innerJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
         ->leftJoin('os_customers c', 'c.id = jca.customers_id')
-        ->where(['jca.judiciary_id' => $judiciary->id, 'jca.is_deleted' => 0, 'ja.action_nature' => 'request', 'jca.request_status' => 'approved'])
+        ->where(['jca.judiciary_id' => $judiciary->id, 'jca.is_deleted' => 0, 'ja.action_nature' => 'request'])
+        ->andWhere(['in', 'jca.request_status', ['approved', 'pending']])
         ->all();
     foreach ($reqRows as $r) {
-        $approvedRequests[$r['id']] = $r['aname'] . ($r['action_date'] ? ' · ' . substr($r['action_date'], 0, 10) : '') . ($r['cname'] ? ' — ' . $r['cname'] : '');
+        $statusBadge = ($r['request_status'] === 'pending') ? ' [قيد الانتظار]' : '';
+        $approvedRequests[$r['id']] = $r['aname'] . ($r['action_date'] ? ' · ' . substr($r['action_date'], 0, 10) : '') . ($r['cname'] ? ' — ' . $r['cname'] : '') . $statusBadge;
     }
 
     $docRows = (new \yii\db\Query())
@@ -94,6 +115,7 @@ $existingCustomerId = $model->customers_id ?: '';
 
 <style>
 /* ══════ Judiciary Action Form — OCP Design ══════ */
+[x-cloak] { display: none !important; }
 .jaf { font-family:var(--ocp-font-family,'Tajawal',sans-serif);direction:rtl;font-size:13px;color:#1E293B; }
 .jaf *,.jaf *:before,.jaf *:after { box-sizing:border-box; }
 
@@ -147,8 +169,8 @@ $existingCustomerId = $model->customers_id ?: '';
 .jaf-action-item .bullet { width:8px;height:8px;border-radius:50%;flex-shrink:0; }
 
 /* Contextual sections */
-.jaf-ctx { display:none;margin-bottom:14px;padding:12px 14px;border-radius:10px;border:1px solid #E2E8F0;background:#FAFAFA; }
-.jaf-ctx.active { display:block; }
+/* OLD jQuery - replaced by Alpine.js: .jaf-ctx display toggling now uses x-show */
+.jaf-ctx { margin-bottom:14px;padding:12px 14px;border-radius:10px;border:1px solid #E2E8F0;background:#FAFAFA; }
 .jaf-ctx-title { font-size:12px;font-weight:700;color:#475569;margin-bottom:8px;display:flex;align-items:center;gap:6px; }
 
 /* Date field */
@@ -219,7 +241,16 @@ $existingCustomerId = $model->customers_id ?: '';
 .jaf-select-all.all-selected i { color:#DC2626!important; }
 </style>
 
-<div class="jaf">
+<?php
+$existingNature = '';
+if ($model->judiciary_actions_id && isset($actionNatureMap[$model->judiciary_actions_id])) {
+    $existingNature = $actionNatureMap[$model->judiciary_actions_id];
+}
+$showReqTarget = (!$isNew && (int)$model->judiciary_actions_id === 55) ? 'true' : 'false';
+?>
+<div class="jaf"
+     x-data="{ activeContext: '<?= $existingNature ?>', showPartyError: false, showRequestTarget: <?= $showReqTarget ?> }"
+     id="jaf-alpine-root">
 
 <?php $form = ActiveForm::begin([
     'id' => 'jaf-form',
@@ -269,8 +300,14 @@ $existingCustomerId = $model->customers_id ?: '';
             <?php if ($isNew): ?>
             <div class="jaf-party-check"><i class="fa fa-square-o"></i></div>
             <?php endif; ?>
-            <div class="jaf-party-avatar" style="background:<?= $isClient ? '#DBEAFE' : '#FEF3C7' ?>">
+            <?php $photoUrl = $partyPhotos[$p['customer_id']] ?? null; ?>
+            <div class="jaf-party-avatar" style="background:<?= $isClient ? '#DBEAFE' : '#FEF3C7' ?>;border:2px solid <?= $isClient ? '#93C5FD' : '#FCD34D' ?>">
+                <?php if ($photoUrl): ?>
+                <img src="<?= Html::encode($photoUrl) ?>" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.nextElementSibling.style.display=''">
+                <i class="fa <?= $isClient ? 'fa-user' : 'fa-user-o' ?>" style="color:<?= $isClient ? '#2563EB' : '#D97706' ?>;display:none"></i>
+                <?php else: ?>
                 <i class="fa <?= $isClient ? 'fa-user' : 'fa-user-o' ?>" style="color:<?= $isClient ? '#2563EB' : '#D97706' ?>"></i>
+                <?php endif; ?>
             </div>
             <div>
                 <div class="jaf-party-name"><?= Html::encode($p['name']) ?></div>
@@ -279,7 +316,9 @@ $existingCustomerId = $model->customers_id ?: '';
         </div>
         <?php endforeach; ?>
     </div>
-    <div id="jaf-party-error" style="display:none;color:#DC2626;font-size:11px;margin-top:4px;font-weight:600">
+    <div id="jaf-party-error" style="color:#DC2626;font-size:11px;margin-top:4px;font-weight:600"
+         x-show="showPartyError" x-cloak
+         x-transition.opacity.duration.200ms>
         <i class="fa fa-exclamation-triangle"></i> يجب اختيار طرف واحد على الأقل
     </div>
 </div>
@@ -324,7 +363,9 @@ $existingCustomerId = $model->customers_id ?: '';
 </div>
 
 <!-- ═══ 4. Contextual: Request Status (for editing existing requests) ═══ -->
-<div class="jaf-ctx" id="ctx-request">
+<div class="jaf-ctx" id="ctx-request"
+     x-show="activeContext === 'request'" x-cloak
+     x-transition.opacity.duration.200ms>
     <div class="jaf-ctx-title"><i class="fa fa-clock-o" style="color:#F59E0B"></i> حالة الطلب</div>
     <?php if ($isNew): ?>
         <div class="jaf-status-hint" style="background:#FFFBEB;color:#B45309">
@@ -351,7 +392,9 @@ $existingCustomerId = $model->customers_id ?: '';
         </div>
     <?php endif; ?>
     <!-- request_target section (for specific requests like refund) -->
-    <div id="ctx-request-target" style="display:none;margin-top:8px">
+    <div id="ctx-request-target" style="margin-top:8px"
+         x-show="showRequestTarget" x-cloak
+         x-transition.opacity.duration.200ms>
         <div style="display:flex;gap:8px">
             <div style="flex:1">
                 <label class="jaf-label">جهة الطلب</label>
@@ -371,24 +414,59 @@ $existingCustomerId = $model->customers_id ?: '';
 </div>
 
 <!-- ═══ 5. Contextual: Link to Parent (for documents) ═══ -->
-<div class="jaf-ctx" id="ctx-document">
-    <div class="jaf-ctx-title"><i class="fa fa-link" style="color:#8B5CF6"></i> ربط بالطلب المعتمد</div>
-    <?php if (empty($approvedRequests)): ?>
-        <div style="font-size:12px;color:#DC2626;padding:6px 0">
-            <i class="fa fa-exclamation-triangle"></i> لا توجد طلبات معتمدة — اعتمد الطلب أولاً
-        </div>
-    <?php else: ?>
+<div class="jaf-ctx" id="ctx-document"
+     x-show="activeContext === 'document'" x-cloak
+     x-transition.opacity.duration.200ms>
+    <div class="jaf-ctx-title"><i class="fa fa-link" style="color:#8B5CF6"></i> ربط بالطلب</div>
+    <div id="jaf-approved-req-wrap">
+    <?php if (!empty($approvedRequests)): ?>
         <select class="jaf-select" id="jaf-parent-req-select" onchange="$('#jaf-parent-id').val(this.value)">
-            <option value="">— اختر الطلب الأصلي —</option>
+            <option value="">— اختر الطلب —</option>
             <?php foreach ($approvedRequests as $rid => $rl): ?>
             <option value="<?= $rid ?>" <?= $model->parent_id == $rid ? 'selected' : '' ?>><?= Html::encode($rl) ?></option>
             <?php endforeach; ?>
         </select>
+    <?php else: ?>
+        <div id="jaf-no-requests-msg" style="font-size:12px;color:#9CA3AF;padding:6px 0">
+            <i class="fa fa-info-circle"></i> لا توجد طلبات سابقة — أضف طلباً من الأسفل
+        </div>
     <?php endif; ?>
+    </div>
+
+    <!-- Quick-add request inline -->
+    <div id="jaf-quick-req" style="margin-top:8px">
+        <button type="button" id="jaf-quick-req-toggle" class="btn btn-sm" style="background:#EFF6FF;color:#2563EB;border:1px dashed #93C5FD;border-radius:6px;font-size:12px;padding:4px 12px" onclick="$('#jaf-quick-req-form').slideToggle(200)">
+            <i class="fa fa-plus-circle"></i> إضافة طلب سريع واعتماده
+        </button>
+        <div id="jaf-quick-req-form" style="display:none;margin-top:8px;padding:10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px">
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <div style="flex:2;min-width:140px">
+                    <label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:3px">نوع الطلب</label>
+                    <select id="jaf-quick-req-action" class="jaf-select" style="font-size:12px;padding:6px 8px">
+                        <?php foreach ($requestActions as $raId => $raName): ?>
+                        <option value="<?= $raId ?>"><?= Html::encode($raName) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div style="flex:1;min-width:120px">
+                    <label style="font-size:11px;font-weight:600;color:#64748B;display:block;margin-bottom:3px">تاريخ الطلب</label>
+                    <input type="date" id="jaf-quick-req-date" class="jaf-input" style="font-size:12px;padding:6px 8px" value="<?= date('Y-m-d') ?>">
+                </div>
+                <div>
+                    <button type="button" id="jaf-quick-req-save" class="btn btn-sm btn-primary" style="border-radius:6px;font-size:12px;padding:6px 14px" onclick="JAF.quickAddRequest()">
+                        <i class="fa fa-check"></i> إضافة واعتماد
+                    </button>
+                </div>
+            </div>
+            <div id="jaf-quick-req-status" style="margin-top:6px;font-size:11px;display:none"></div>
+        </div>
+    </div>
 </div>
 
 <!-- ═══ 6. Contextual: Link to Document (for statuses) ═══ -->
-<div class="jaf-ctx" id="ctx-doc-status">
+<div class="jaf-ctx" id="ctx-doc-status"
+     x-show="activeContext === 'doc_status'" x-cloak
+     x-transition.opacity.duration.200ms>
     <div class="jaf-ctx-title"><i class="fa fa-exchange" style="color:#EA580C"></i> ربط بالكتاب</div>
     <?php if (empty($existingDocuments)): ?>
         <div style="font-size:12px;color:#DC2626;padding:6px 0">
@@ -420,8 +498,17 @@ $existingCustomerId = $model->customers_id ?: '';
 
 <!-- ═══ 7. Date ═══ -->
 <div class="jaf-date-wrap">
-    <label class="jaf-label"><i class="fa fa-calendar"></i> تاريخ الإجراء</label>
-    <?= Html::activeInput('date', $model, 'action_date', ['class' => 'jaf-input', 'id' => 'jaf-action-date', 'style' => 'max-width:200px']) ?>
+    <label class="jaf-label"><i class="fa fa-calendar"></i> تاريخ الإجراء <span style="color:#DC2626">*</span></label>
+    <?= Html::activeInput('date', $model, 'action_date', [
+        'class' => 'jaf-input',
+        'id' => 'jaf-action-date',
+        'style' => 'max-width:200px',
+        'required' => true,
+        'value' => $model->action_date ? substr($model->action_date, 0, 10) : '',
+    ]) ?>
+    <div id="jaf-date-error" style="color:#DC2626;font-size:11px;margin-top:4px;font-weight:600;display:none">
+        <i class="fa fa-exclamation-triangle"></i> يجب تحديد تاريخ الإجراء
+    </div>
 </div>
 
 <!-- ═══ 8. Note ═══ -->
@@ -445,11 +532,12 @@ $existingCustomerId = $model->customers_id ?: '';
             <?php
             $ext = strtolower(pathinfo($model->image, PATHINFO_EXTENSION));
             $isPdf = ($ext === 'pdf');
+            $imgUrl = \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::resolveImageUrl($model->image);
             ?>
             <?php if ($isPdf): ?>
                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#FEF2F2"><i class="fa fa-file-pdf-o" style="font-size:28px;color:#DC2626"></i></div>
             <?php else: ?>
-                <img src="<?= Yii::getAlias('@web') . '/' . $model->image ?>" alt="">
+                <img src="<?= $imgUrl ?>" alt="">
             <?php endif; ?>
             <button type="button" class="remove" onclick="JAF.removeExisting()">&times;</button>
         </div>
@@ -481,7 +569,8 @@ var JAF = (function() {
             $('#jaf-parties-container .jaf-party').on('click', function() {
                 $(this).toggleClass('selected');
                 syncMultiCustomers();
-                $('#jaf-party-error').hide();
+                /* OLD jQuery - replaced by Alpine.js: $('#jaf-party-error').hide(); */
+                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = false;
             });
 
             // Select All toggle
@@ -498,7 +587,8 @@ var JAF = (function() {
                     $(this).find('span').text('إلغاء تحديد الكل');
                 }
                 syncMultiCustomers();
-                $('#jaf-party-error').hide();
+                /* OLD jQuery - replaced by Alpine.js: $('#jaf-party-error').hide(); */
+                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = false;
             });
         } else {
             // Single-select mode for editing
@@ -506,12 +596,26 @@ var JAF = (function() {
                 $('#jaf-parties-container .jaf-party').removeClass('selected');
                 $(this).addClass('selected');
                 $('#jaf-customer-id').val($(this).data('customer-id'));
-                $('#jaf-party-error').hide();
+                /* OLD jQuery - replaced by Alpine.js: $('#jaf-party-error').hide(); */
+                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = false;
             });
         }
 
-        // No client-side submit interception needed — ajaxcrud handles submission natively
-        // Server-side validation handles party selection requirement
+        $('#jaf-form').on('beforeSubmit', function() {
+            var valid = true;
+            if (!$('#jaf-action-date').val()) {
+                $('#jaf-date-error').show();
+                valid = false;
+            } else {
+                $('#jaf-date-error').hide();
+            }
+            if (isNewRecord && $('#jaf-parties-container .jaf-party.selected').length === 0) {
+                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = true;
+                valid = false;
+            }
+            return valid;
+        });
+        $('#jaf-action-date').on('change', function() { if (this.value) $('#jaf-date-error').hide(); });
 
         // Drop zone
         var $zone = $('#jaf-drop-zone');
@@ -535,7 +639,7 @@ var JAF = (function() {
             var $header = $('.jaf-nature-header[data-nature="' + n + '"]');
             $header.removeClass('collapsed');
             $('#nature-list-' + n).removeClass('collapsed');
-            showContext(n);
+            setTimeout(function() { showContext(n); }, 50);
         }
 
         // Action search filter
@@ -627,24 +731,34 @@ var JAF = (function() {
         var nature = $el.data('nature');
         $('#jaf-action-id').val(actionId);
 
-        // Reset parent_id when changing action
         $('#jaf-parent-id').val('');
 
-        showContext(nature);
+        var _jafData = Alpine.$data(document.getElementById('jaf-alpine-root'));
 
-        // Special: refund request shows target
+        /* OLD jQuery - replaced by Alpine.js
+        showContext(nature);
+        */
+        _jafData.activeContext = nature;
+
+        /* OLD jQuery - replaced by Alpine.js
         if (parseInt(actionId) === REFUND_ID) {
             $('#ctx-request-target').show();
         } else {
             $('#ctx-request-target').hide();
         }
+        */
+        _jafData.showRequestTarget = (parseInt(actionId) === REFUND_ID);
     }
 
     function showContext(nature) {
-        $('.jaf-ctx').removeClass('active');
-        if (nature === 'request')    $('#ctx-request').addClass('active');
-        if (nature === 'document')   $('#ctx-document').addClass('active');
-        if (nature === 'doc_status') $('#ctx-doc-status').addClass('active');
+        var el = document.getElementById('jaf-alpine-root');
+        if (el && typeof Alpine !== 'undefined' && Alpine.$data) {
+            try {
+                Alpine.$data(el).activeContext = nature;
+            } catch(e) {
+                el.setAttribute('x-data', el.getAttribute('x-data').replace(/activeContext:\s*'[^']*'/, "activeContext: '" + nature + "'"));
+            }
+        }
     }
 
     function setRequestStatus(status) {
@@ -664,6 +778,71 @@ var JAF = (function() {
         $('<input type="hidden" name="remove_image" value="1">').insertAfter('#jaf-file-input');
     }
 
+    function quickAddRequest() {
+        var actionId = $('#jaf-quick-req-action').val();
+        var actionDate = $('#jaf-quick-req-date').val();
+        var $status = $('#jaf-quick-req-status');
+        var $btn = $('#jaf-quick-req-save');
+
+        if (!actionId || !actionDate) {
+            $status.show().html('<span style="color:#DC2626"><i class="fa fa-exclamation-triangle"></i> يرجى تعبئة جميع الحقول</span>');
+            return;
+        }
+
+        var selectedParties = [];
+        $('#jaf-parties-container .jaf-party.selected').each(function() {
+            selectedParties.push($(this).data('customer-id'));
+        });
+        if (selectedParties.length === 0) {
+            $status.show().html('<span style="color:#DC2626"><i class="fa fa-exclamation-triangle"></i> يجب اختيار طرف واحد على الأقل</span>');
+            return;
+        }
+
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإضافة...');
+        $status.show().html('<span style="color:#6B7280"><i class="fa fa-spinner fa-spin"></i> جاري إنشاء واعتماد الطلب...</span>');
+
+        $.ajax({
+            url: '<?= Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/quick-add-request']) ?>',
+            type: 'POST',
+            data: {
+                judiciary_id: <?= $judiciary ? $judiciary->id : 0 ?>,
+                contract_id: <?= (int)$contractID ?>,
+                action_id: actionId,
+                action_date: actionDate,
+                customer_ids: selectedParties,
+                _csrf: $('meta[name="csrf-token"]').attr('content') || $('input[name="_csrf"]').val()
+            },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    $status.html('<span style="color:#059669"><i class="fa fa-check-circle"></i> ' + res.message + '</span>');
+                    var $wrap = $('#jaf-approved-req-wrap');
+                    var $sel = $wrap.find('#jaf-parent-req-select');
+                    if ($sel.length === 0) {
+                        $wrap.find('#jaf-no-requests-msg').remove();
+                        $wrap.html('<select class="jaf-select" id="jaf-parent-req-select" onchange="$(\'#jaf-parent-id\').val(this.value)"><option value="">— اختر الطلب الأصلي —</option></select>');
+                        $sel = $wrap.find('#jaf-parent-req-select');
+                    }
+                    $.each(res.created, function(i, item) {
+                        $sel.append('<option value="' + item.id + '">' + item.label + '</option>');
+                    });
+                    if (res.created.length === 1) {
+                        $sel.val(res.created[0].id).trigger('change');
+                    }
+                    $('#jaf-quick-req-form').slideUp(200);
+                    $btn.prop('disabled', false).html('<i class="fa fa-check"></i> إضافة واعتماد');
+                } else {
+                    $status.html('<span style="color:#DC2626"><i class="fa fa-exclamation-triangle"></i> ' + (res.message || 'حدث خطأ') + '</span>');
+                    $btn.prop('disabled', false).html('<i class="fa fa-check"></i> إضافة واعتماد');
+                }
+            },
+            error: function() {
+                $status.html('<span style="color:#DC2626"><i class="fa fa-exclamation-triangle"></i> حدث خطأ في الاتصال</span>');
+                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> إضافة واعتماد');
+            }
+        });
+    }
+
     // Call init immediately (AJAX modal: document.ready already fired)
     init();
 
@@ -672,7 +851,8 @@ var JAF = (function() {
         selectAction: selectAction,
         setRequestStatus: setRequestStatus,
         clearFile: clearFile,
-        removeExisting: removeExisting
+        removeExisting: removeExisting,
+        quickAddRequest: quickAddRequest
     };
 })();
 </script>

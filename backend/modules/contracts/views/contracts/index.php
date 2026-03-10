@@ -21,8 +21,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' 
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . time(), [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
-/* Hide the AdminLTE content-header to avoid duplicate title */
-$this->registerCss('.content-header { display: none !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; }');
 
 $this->title = 'العقود';
 $this->params['breadcrumbs'][] = $this->title;
@@ -87,13 +86,15 @@ $end   = $begin + count($models) - 1;
 
 <div class="ct-page" role="main" aria-label="صفحة العقود">
 
-    <!-- Flash messages -->
+    <!-- Flash messages (Alpine.js) -->
     <?php foreach (['success' => 'check-circle', 'error' => 'exclamation-circle', 'warning' => 'exclamation-triangle'] as $type => $icon): ?>
         <?php if (Yii::$app->session->hasFlash($type)): ?>
-            <div class="ct-alert ct-alert-<?= $type === 'error' ? 'danger' : $type ?>" role="alert">
+            <div class="ct-alert ct-alert-<?= $type === 'error' ? 'danger' : $type ?>" role="alert"
+                 x-data="{ show: true }" x-show="show" x-transition x-cloak
+                 x-init="setTimeout(() => show = false, 5000)">
                 <i class="fa fa-<?= $icon ?>"></i>
                 <span><?= Yii::$app->session->getFlash($type) ?></span>
-                <button class="ct-alert-close" aria-label="إغلاق">&times;</button>
+                <button class="ct-alert-close" aria-label="إغلاق" @click="show = false">&times;</button>
             </div>
         <?php endif ?>
     <?php endforeach ?>
@@ -362,10 +363,12 @@ $end   = $begin + count($models) - 1;
 <?php Modal::end() ?>
 
 <?php
+/* OLD jQuery - replaced by Alpine.js
 $this->registerJs(<<<'JS'
 // Auto-dismiss flash alerts
 $('.ct-alert-close').on('click', function(){ $(this).closest('.ct-alert').fadeOut(300); });
 setTimeout(function(){ $('.ct-alert').fadeOut(500); }, 5000);
 JS
 );
+*/
 ?>

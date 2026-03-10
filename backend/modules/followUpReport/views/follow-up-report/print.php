@@ -15,7 +15,10 @@ $this->registerJsFile('/js/Tafqeet.js');
 /* @var $form yii\widgets\ActiveForm */
 ?>
 
-<div class="contracts-form" style="direction: rtl">
+<style>[x-cloak] { display: none !important; }</style>
+
+<div class="contracts-form" style="direction: rtl"
+     x-data="{ contractType: '<?= $model->type ?? 'normal' ?>', showUpdateBtn: false }">
 
     <?php $form = ActiveForm::begin(); ?>
 
@@ -73,7 +76,9 @@ $this->registerJsFile('/js/Tafqeet.js');
     }
     ?>
 
-    <div id="customer_data">
+    <div id="customer_data"
+         x-show="contractType === 'normal'"
+         x-transition.opacity.duration.200ms>
         <div class="row">
             <div class="col-sm-12 col-xs-12">
                 <?=
@@ -84,7 +89,7 @@ $this->registerJsFile('/js/Tafqeet.js');
                     'pluginOptions' => [
                         'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                         'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                            'url' => \yii\helpers\Url::to(['/customers/search-customers']),
                             'dataType' => 'json', 'delay' => 250,
                             'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                             'processResults' => new \yii\web\JsExpression('function(d){return d}'),
@@ -280,17 +285,18 @@ $this->registerJsFile('/js/Tafqeet.js');
                         //get the JSON data from the action
                         //var data = $.parseJSON(data);
                         //check if the system found any data
-                        if (data !== null) {
-                            $("#name").val(data.model.name).blur();
-                            $("#city").val(data.model.city).blur();
-                            $("#bank_info").val(data.model.bank_info).blur();
-                            $("#job_title").val(data.model.job_title).blur();
-                            $("#id_number").val(data.model.id_number).blur();
-                            $("#birth_date").val(data.model.birth_date).blur();
-                            $("#email").val(data.model.email).blur();
-                            $("#contracts_info").val(data.contracts_info.count).blur();
-                            $("#user_status").val(data.contracts_info.email).blur();
-                            $('#updateCustomer').show();
+                    if (data !== null) {
+                        $("#name").val(data.model.name).blur();
+                        $("#city").val(data.model.city).blur();
+                        $("#bank_info").val(data.model.bank_info).blur();
+                        $("#job_title").val(data.model.job_title).blur();
+                        $("#id_number").val(data.model.id_number).blur();
+                        $("#birth_date").val(data.model.birth_date).blur();
+                        $("#email").val(data.model.email).blur();
+                        $("#contracts_info").val(data.contracts_info.count).blur();
+                        $("#user_status").val(data.contracts_info.email).blur();
+                        /* OLD jQuery - replaced by Alpine.js: $('#updateCustomer').show(); */
+                        Alpine.$data(document.querySelector('.contracts-form')).showUpdateBtn = true;
                         } else {
                             //if data wasn't found the alert.
                             alert('We\'re sorry but we couldn\'t load the the customer data!');
@@ -336,6 +342,7 @@ $this->registerJsFile('/js/Tafqeet.js');
                 }
             }
             function customers_aria(item) {
+                /* OLD jQuery - replaced by Alpine.js
                 if (item == 'normal') {
                     $('#solidarity_contract').hide();
                     $('#normal_contract').show();
@@ -347,6 +354,10 @@ $this->registerJsFile('/js/Tafqeet.js');
                     $('#customer_data').hide();
                     $('#updateCustomer').hide();
                 }
+                */
+                var _d = Alpine.$data(document.querySelector('.contracts-form'));
+                _d.contractType = item;
+                if (item === 'normal') _d.showUpdateBtn = true;
             }
         </script>
         <?php

@@ -167,12 +167,14 @@ $hasDateFilter = !empty($searchModel->date_from);
     <!-- ╔═══════════════════════════════════════════════╗
          ║  4. جدول البيانات                              ║
          ╚═══════════════════════════════════════════════╝ -->
-    <section class="fin-data-section">
+    <section class="fin-data-section"
+             x-data="{ showBulk: false, bulkCount: 0 }"
+             @update-bulk.window="showBulk = $event.detail.show; bulkCount = $event.detail.count">
         <div class="fin-data-bar">
             <span class="fin-data-count"><i class="fa fa-table"></i> عرض <b><?= $dataProvider->getCount() ?></b> من <b><?= $dataProvider->getTotalCount() ?></b> مصروف</span>
             <?php if ($canDelete): ?>
-            <div class="fin-bulk-bar" id="bulkBar" style="display:none">
-                <span class="fin-bulk-count"><i class="fa fa-check-square-o"></i> تم تحديد <b id="bulkCount">0</b> مصروف</span>
+            <div class="fin-bulk-bar" id="bulkBar" x-show="showBulk" x-transition x-cloak>
+                <span class="fin-bulk-count"><i class="fa fa-check-square-o"></i> تم تحديد <b id="bulkCount" x-text="bulkCount">0</b> مصروف</span>
                 <button type="button" class="fin-btn fin-btn--del fin-btn--sm" id="bulkDeleteBtn">
                     <i class="fa fa-trash-o"></i> حذف المحدد
                 </button>
@@ -311,8 +313,10 @@ $(".fin-act[title], .fin-btn[title]").tooltip({placement:"bottom",container:"bod
 /* ═══ تحديد الصفوف والحذف الجماعي ═══ */
 function updateBulkBar(){
     var c=$(".js-row-chk:checked").length;
-    $("#bulkCount").text(c);
-    if(c>0){$("#bulkBar").stop().slideDown(200);}else{$("#bulkBar").stop().slideUp(200);}
+    /* OLD jQuery - replaced by Alpine.js */
+    // $("#bulkCount").text(c);
+    // if(c>0){$("#bulkBar").stop().slideDown(200);}else{$("#bulkBar").stop().slideUp(200);}
+    window.dispatchEvent(new CustomEvent('update-bulk',{detail:{show:c>0,count:c}}));
     var total=$(".js-row-chk").length;
     var chkAll=document.getElementById("chkAll");
     if(chkAll){

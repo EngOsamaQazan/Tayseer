@@ -1,7 +1,7 @@
 <?php
 /**
  * القسم القانوني — شاشة موحدة بتبويبات
- * 4 تبويبات: القضايا | إجراءات الأطراف | كشف المثابرة | المحولين للشكوى
+ * 5 تبويبات: القضايا | إجراءات الأطراف | كشف المثابرة | المحولين للشكوى | قسم الحسم
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
@@ -11,6 +11,11 @@ use johnitvn\ajaxcrud\CrudAsset;
 CrudAsset::register($this);
 $this->title = 'القسم القانوني';
 $this->params['breadcrumbs'][] = $this->title;
+
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . time());
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . time(), [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 $activeTab = Yii::$app->request->get('tab', 'cases');
 
@@ -231,9 +236,54 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
     .lh-tab { padding:10px 14px; font-size:12px; }
     .lh-tab span.lh-tab-label { display:none; }
 }
+
+/* ═══ Stats Cards ═══ */
+.lh-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.lh-stat{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px 16px;transition:box-shadow .2s,transform .15s}
+.lh-stat:hover{box-shadow:0 4px 16px rgba(0,0,0,.07);transform:translateY(-1px)}
+.lh-stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.lh-stat-val{font-size:20px;font-weight:700;line-height:1.2}
+.lh-stat-lbl{font-size:11px;color:#64748B;margin-top:1px}
+@media(max-width:1200px){.lh-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.lh-stats{grid-template-columns:1fr 1fr;gap:8px}.lh-stat{padding:10px 12px}.lh-stat-val{font-size:16px}.lh-stat-icon{width:36px;height:36px;font-size:15px}}
 </style>
 
 <div class="lh-wrap">
+    <!-- ═══ Pinned Items Bar ═══ -->
+    <div class="pin-bar" id="pin-bar"></div>
+
+    <!-- ═══ Stats Cards ═══ -->
+    <div class="lh-stats" id="lh-stats">
+        <div class="lh-stat">
+            <div class="lh-stat-icon" style="background:#FDF2F4;color:#800020"><i class="fa fa-balance-scale"></i></div>
+            <div>
+                <div class="lh-stat-val" id="lh-stat-cases" style="color:#800020">—</div>
+                <div class="lh-stat-lbl">إجمالي القضايا</div>
+            </div>
+        </div>
+        <div class="lh-stat">
+            <div class="lh-stat-icon" style="background:#FEF3C7;color:#D97706"><i class="fa fa-exclamation-triangle"></i></div>
+            <div>
+                <div class="lh-stat-val" id="lh-stat-red" style="color:#DC2626">—</div>
+                <div class="lh-stat-lbl">متأخرات (أحمر)</div>
+            </div>
+        </div>
+        <div class="lh-stat">
+            <div class="lh-stat-icon" style="background:#ECFDF5;color:#059669"><i class="fa fa-handshake-o"></i></div>
+            <div>
+                <div class="lh-stat-val" id="lh-stat-collection" style="color:#059669">—</div>
+                <div class="lh-stat-lbl">قضايا الحسم</div>
+            </div>
+        </div>
+        <div class="lh-stat">
+            <div class="lh-stat-icon" style="background:#EFF6FF;color:#2563EB"><i class="fa fa-money"></i></div>
+            <div>
+                <div class="lh-stat-val" id="lh-stat-amount" style="color:#2563EB">—</div>
+                <div class="lh-stat-lbl">المتاح للقبض</div>
+            </div>
+        </div>
+    </div>
+
     <!-- ═══ Tabs ═══ -->
     <div class="lh-tabs">
         <button class="lh-tab <?= $activeTab === 'cases' ? 'active' : '' ?>" data-tab="cases">
@@ -255,6 +305,11 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
             <i class="fa fa-exchange"></i>
             <span class="lh-tab-label">المحولين للشكوى</span>
             <span class="lh-badge" id="lh-badge-legal">—</span>
+        </button>
+        <button class="lh-tab <?= $activeTab === 'collection' ? 'active' : '' ?>" data-tab="collection">
+            <i class="fa fa-handshake-o"></i>
+            <span class="lh-tab-label">قسم الحسم</span>
+            <span class="lh-badge" id="lh-badge-collection">—</span>
         </button>
         <?php if ($pendingReqCount > 0): ?>
         <a href="<?= Url::to(['index', 'tab' => 'cases', 'pending_requests' => 1]) ?>" class="lh-pending-queue">
@@ -282,6 +337,9 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 
         <!-- Tab: Legal Department (lazy) -->
         <div class="lh-panel <?= $activeTab === 'legal' ? 'active' : '' ?>" id="lh-panel-legal" data-loaded="0"></div>
+
+        <!-- Tab: Collection / قسم الحسم (lazy) -->
+        <div class="lh-panel <?= $activeTab === 'collection' ? 'active' : '' ?>" id="lh-panel-collection" data-loaded="0"></div>
     </div>
 </div>
 
@@ -314,6 +372,8 @@ $casesUrl       = Url::to(['tab-cases']);
 $actionsUrl     = Url::to(['tab-actions']);
 $persistenceUrl = Url::to(['tab-persistence']);
 $legalUrl       = Url::to(['tab-legal']);
+$collectionUrl  = Url::to(['tab-collection']);
+$tabCountsUrl   = Url::to(['tab-counts']);
 $updateReqStatusUrl = Url::to(['update-request-status']);
 
 $js = <<<JS
@@ -323,8 +383,25 @@ $js = <<<JS
         actions:     '{$actionsUrl}',
         persistence: '{$persistenceUrl}',
         legal:       '{$legalUrl}',
+        collection:  '{$collectionUrl}',
+        tabCounts:   '{$tabCountsUrl}',
         updateReqStatus: '{$updateReqStatusUrl}'
     };
+
+    /* Load all tab badge counts + stats cards on page load */
+    $.getJSON(urls.tabCounts, function(d) {
+        $('#lh-badge-cases').text(d.cases);
+        $('#lh-badge-actions').text(d.actions);
+        $('#lh-badge-persistence').text(d.persistence);
+        $('#lh-badge-legal').text(d.legal);
+        $('#lh-badge-collection').text(d.collection);
+        /* Stats cards */
+        $('#lh-stat-cases').text(d.cases.toLocaleString('en'));
+        $('#lh-stat-red').text(d.stats.red.toLocaleString('en'));
+        $('#lh-stat-collection').text(d.collection.toLocaleString('en'));
+        var amt = parseFloat(d.stats.collectionAmount) || 0;
+        $('#lh-stat-amount').text(amt.toLocaleString('en', {minimumFractionDigits:2, maximumFractionDigits:2}));
+    });
 
     function loadTab(tab) {
         var \$panel = $('#lh-panel-' + tab);
@@ -559,6 +636,24 @@ $js = <<<JS
             alert('حدث خطأ أثناء الحفظ');
             \$btn.prop('disabled', false).text('تأكيد');
         }).always(function() { pendingDecision = {}; });
+    });
+
+    // ═══ Pin System Init ═══
+    PinSystem.init({
+        type: 'judiciary_case',
+        barSelector: '#pin-bar',
+        buildUrl: function(itemId) {
+            return '/judiciary/judiciary/view?id=' + itemId;
+        }
+    });
+
+    $(document).on('click', '.pin-btn', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var id = $(this).data('item-id');
+        var label = $(this).data('label') || '';
+        var extra = $(this).data('extra') || '';
+        PinSystem.togglePin(id, label, extra);
     });
 
 })();

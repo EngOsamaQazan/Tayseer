@@ -171,7 +171,9 @@ use backend\widgets\ExportButtons;
 
 <?php if ($model->isNewRecord) {
     ?>
-    <div class="questions-bank box box-primary div-t1" style="display: none">
+    <div class="questions-bank box box-primary div-t1"
+         x-data="{ show: false }" @show-details.window="show = true"
+         x-show="show" x-transition x-cloak>
         <table class="table t1">
             <thead>
             <tr>
@@ -257,7 +259,8 @@ SCRIPT
 if ($model->isNewRecord) {
 
     $document_tabel = "
-$('.div-t1').css('display','block');
+/* OLD jQuery - replaced by Alpine.js: \$('.div-t1').css('display','block'); */
+window.dispatchEvent(new Event('show-details'));
 let amount = parseInt($('#collection-amount').val());
 let totle_value_price = " . $totle_value_price . ";
 let total_month = Math.ceil( parseInt((totle_value_price/ amount)));

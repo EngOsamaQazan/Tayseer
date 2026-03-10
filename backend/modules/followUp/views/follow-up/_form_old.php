@@ -821,7 +821,7 @@ CrudAsset::register($this);
                                 'class' => '\kartik\grid\DataColumn',
                                 'attribute' => 'primary_phone_number',
                                 'value' => function ($model) {
-                                    return Html::a($model->primary_phone_number, Url::to(['/customers/customers/update', 'id' => $model->id]), ['data-pjax' => 0]);
+                                    return Html::a($model->primary_phone_number, Url::to(['/customers/update', 'id' => $model->id]), ['data-pjax' => 0]);
                                 },
                                 'format' => 'raw',
                             ],
@@ -887,7 +887,7 @@ CrudAsset::register($this);
                                 'urlCreator' => function ($action, $model, $key, $index) {
                                     if ($action == "update") {
 
-                                        return Url::to(['/customers/customers/update-contact', 'id' => $model->id]);
+                                        return Url::to(['/customers/update-contact', 'id' => $model->id]);
                                     }
                                 },
                                 'updateOptions' => ['role' => 'modal-remote', 'title' => 'Update', 'data-toggle' => 'tooltip'],
@@ -1562,7 +1562,7 @@ alert(val1);
 $(document).on('click','.custmer-popup',function(){
 let customerId = $(this).attr('customer-id');
 var  a = document.getElementById('cus-link'); 
-a.setAttribute("href", "../../customers/customers/update?id="+ customerId);
+a.setAttribute("href", "../../customers/update/"+ customerId);
 
 $.post('$url',{customerId:customerId },function(msg){
  let info = JSON.parse(msg);

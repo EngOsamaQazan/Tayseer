@@ -475,16 +475,17 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
             </div>
 
             <!-- محتوى المجموعات -->
-            <div class="perm-modal-body" id="permGroupsContainer">
-                <div class="perm-loading" id="permLoading">
+            <div class="perm-modal-body" id="permGroupsContainer" x-data="{ loading: true }">
+                <div class="perm-loading" id="permLoading" x-show="loading" x-transition>
                     <div class="perm-spinner"></div>
                     <span>جارٍ تحميل الصلاحيات...</span>
                 </div>
 
-                <div class="perm-groups-grid" id="permGroupsGrid" style="display:none">
+                <div class="perm-groups-grid" id="permGroupsGrid" x-show="!loading" x-transition.duration.200ms x-cloak>
                     <?php foreach ($groups as $gKey => $g): ?>
-                        <div class="perm-group-card" data-group="<?= $gKey ?>">
-                            <div class="perm-group-header" data-toggle-group="<?= $gKey ?>">
+                        <div class="perm-group-card" data-group="<?= $gKey ?>" x-data="{ open: false }">
+                            <div class="perm-group-header" data-toggle-group="<?= $gKey ?>"
+                                 @click="if (!$event.target.closest('.perm-group-toggle')) open = !open">
                                 <div class="perm-group-icon" style="background:<?= $g['color'] ?>15;color:<?= $g['color'] ?>">
                                     <i class="fa <?= $g['icon'] ?>"></i>
                                 </div>
@@ -496,9 +497,9 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                                     </p>
                                 </div>
                                 <button class="perm-group-toggle" data-group-toggle="<?= $gKey ?>" type="button" title="تفعيل/تعطيل الكل"></button>
-                                <i class="fa fa-chevron-down perm-group-chevron" style="margin-right:auto;color:#94a3b8;font-size:12px;transition:transform .2s;transform:rotate(90deg)"></i>
+                                <i class="fa fa-chevron-down perm-group-chevron" :style="{ transform: open ? 'rotate(0deg)' : 'rotate(90deg)' }" style="margin-right:auto;color:#94a3b8;font-size:12px;transition:transform .2s"></i>
                             </div>
-                            <div class="perm-group-body collapsed" data-group-body="<?= $gKey ?>" style="display:none">
+                            <div class="perm-group-body" data-group-body="<?= $gKey ?>" x-show="open" x-transition.duration.200ms x-cloak>
                                 <?php foreach ($g['permissions'] as $perm):
                                     $isSub = (strpos($perm, ':') !== false);
                                     $subClass = $isSub ? 'perm-item--sub' : 'perm-item--parent';
@@ -585,9 +586,9 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
 
                     <div id="rolePermGroups" style="max-height:350px;overflow-y:auto">
                         <?php foreach ($groups as $gKey => $g): ?>
-                            <div style="margin-bottom:12px;border:1px solid var(--perm-border);border-radius:var(--perm-r-sm);overflow:hidden">
+                            <div style="margin-bottom:12px;border:1px solid var(--perm-border);border-radius:var(--perm-r-sm);overflow:hidden" x-data="{ open: true }">
                                 <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--perm-neutral-bg);cursor:pointer"
-                                     onclick="$(this).next().slideToggle(200)">
+                                     @click="if (!$event.target.closest('label,input')) open = !open">
                                     <i class="fa <?= $g['icon'] ?>" style="color:<?= $g['color'] ?>"></i>
                                     <strong style="font-size:13px;flex:1"><?= Html::encode($g['label']) ?></strong>
                                     <label style="font-size:12px;color:var(--perm-text3);cursor:pointer;margin:0" onclick="event.stopPropagation()">
@@ -595,7 +596,7 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                                                style="margin-left:4px"> الكل
                                     </label>
                                 </div>
-                                <div style="padding:8px 14px">
+                                <div style="padding:8px 14px" x-show="open" x-transition.duration.200ms x-cloak>
                                     <?php foreach ($g['permissions'] as $perm):
                                         $isSub = (strpos($perm, ':') !== false);
                                     ?>
@@ -729,8 +730,8 @@ $js = <<<'JSBLOCK'
         $('.perm-item').removeClass('checked');
         $('.perm-group-toggle').removeClass('active partial');
         $('.perm-group-card').removeClass('perm-group-card--all-selected');
-        $('#permLoading').show();
-        $('#permGroupsGrid').hide();
+        var _pcData = Alpine.$data(document.getElementById('permGroupsContainer'));
+        _pcData.loading = true;
 
         /* ملء قائمة النسخ */
         var cloneHtml = '';
@@ -759,8 +760,7 @@ $js = <<<'JSBLOCK'
                 updateAllGroupToggles();
                 updateSelectedCount();
             }
-            $('#permLoading').hide();
-            $('#permGroupsGrid').show();
+            _pcData.loading = false;
         }).fail(function(){
             $('#permLoading').html('<div style="color:red;text-align:center">خطأ في تحميل البيانات</div>');
         });
@@ -822,15 +822,7 @@ $js = <<<'JSBLOCK'
         updateSelectedCount();
     });
 
-    /* طي/فتح مجموعة */
-    $(document).on('click', '[data-toggle-group]', function(e){
-        if ($(e.target).closest('.perm-group-toggle').length) return;
-        var gKey = $(this).data('toggle-group');
-        var $body = $('[data-group-body="' + gKey + '"]');
-        var $chevron = $(this).find('.perm-group-chevron');
-        $body.slideToggle(200);
-        $chevron.toggleClass('open');
-    });
+    /* طي/فتح مجموعة — Alpine.js handles this now via x-data/x-show */
 
     /* تحديد الكل / إلغاء الكل */
     $('#btnSelectAll').on('click', function(){

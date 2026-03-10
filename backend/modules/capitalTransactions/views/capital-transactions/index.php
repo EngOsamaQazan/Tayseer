@@ -21,7 +21,7 @@ if ($company) {
 $this->params['breadcrumbs'][] = 'حركات رأس المال';
 
 $this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
-$this->registerCss('.content-header { display: none !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; }');
 
 echo $this->render('@backend/views/_section_tabs', [
     'group' => 'investment',
@@ -55,7 +55,7 @@ $companyId = $company ? $company->id : null;
     --ct-r: 12px;
     --ct-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
 }
-.ct-page { padding: 24px; max-width: 1400px; margin: 0 auto; font-family: 'Segoe UI', Tahoma, sans-serif; }
+.ct-page { padding: 24px; max-width: 100%; margin: 0; font-family: 'Segoe UI', Tahoma, sans-serif; }
 
 .ct-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .ct-header h1 { font-size: 22px; font-weight: 700; color: #1e293b; margin: 0; display: flex; align-items: center; gap: 10px; }

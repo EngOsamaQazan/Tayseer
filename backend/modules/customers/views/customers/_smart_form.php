@@ -35,7 +35,7 @@ $this->registerJs("window.smConfig = " . json_encode([
 $isNew = $model->isNewRecord;
 
 /* Hide AdminLTE content header */
-$this->registerCss('.content-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
+$this->registerCss('.content-header,.page-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
 
 /* Edit mode styles are in smart-onboarding.css */
 
@@ -620,12 +620,22 @@ if (!$isNew) {
                     </div>
                 </div>
                 <!-- معلومات الإنشاء -->
+                <?php
+                $lastUpdatedByName = '';
+                if (!empty($model->last_updated_by)) {
+                    $updater = \common\models\User::findOne($model->last_updated_by);
+                    $lastUpdatedByName = $updater ? (trim(($updater->name ?? '') . ' ' . ($updater->last_name ?? '')) ?: $updater->username) : '';
+                }
+                ?>
                 <div style="margin-top:12px; padding:12px 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; color:#64748b; display:flex; gap:20px; flex-wrap:wrap">
                     <?php if (!empty($model->created_at)): ?>
-                        <span><i class="fa fa-calendar-plus-o"></i> تاريخ الإنشاء: <b><?= $model->created_at ?></b></span>
+                        <span><i class="fa fa-calendar-plus-o"></i> تاريخ الإنشاء: <b><?= Yii::$app->formatter->asDatetime($model->created_at, 'yyyy-MM-dd hh:mm a') ?></b></span>
                     <?php endif ?>
                     <?php if (!empty($model->updated_at)): ?>
-                        <span><i class="fa fa-clock-o"></i> آخر تعديل: <b><?= $model->updated_at ?></b></span>
+                        <span><i class="fa fa-clock-o"></i> آخر تعديل: <b><?= Yii::$app->formatter->asDatetime($model->updated_at, 'yyyy-MM-dd hh:mm a') ?></b></span>
+                    <?php endif ?>
+                    <?php if (!empty($lastUpdatedByName)): ?>
+                        <span><i class="fa fa-user-o"></i> تم التعديل بواسطة: <b><?= Html::encode($lastUpdatedByName) ?></b></span>
                     <?php endif ?>
                     <span><i class="fa fa-hashtag"></i> رقم العميل: <b>#<?= $model->id ?></b></span>
                 </div>

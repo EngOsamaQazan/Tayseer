@@ -37,7 +37,7 @@ class IncomeController extends Controller
                     ['actions' => ['login', 'error'], 'allow' => true],
                     /* ═══ عرض ═══ */
                     [
-                        'actions' => ['income-list', 'index', 'view', 'export-excel', 'export-pdf'],
+                        'actions' => ['income-list', 'index', 'view', 'export-excel', 'export-pdf', 'export-income-list-excel', 'export-income-list-pdf'],
                         'allow'   => true,
                         'roles'   => [Permissions::INC_VIEW],
                     ],
@@ -391,6 +391,46 @@ class IncomeController extends Controller
             ]);
         }
         
+    }
+
+    public function actionExportIncomeListExcel()
+    {
+        return $this->exportIncomeListData('excel');
+    }
+
+    public function actionExportIncomeListPdf()
+    {
+        return $this->exportIncomeListData('pdf');
+    }
+
+    private function exportIncomeListData(string $format)
+    {
+        $searchModel  = new IncomeSearch();
+        $dataProvider = $searchModel->incomeListSearch(Yii::$app->request->queryParams);
+        $dataProvider->query->with(['contract', 'incomeCategory', 'paymentType']);
+        $dataProvider->pagination = false;
+
+        $exportRows = [];
+        foreach ($dataProvider->getModels() as $m) {
+            $exportRows[] = [
+                'date'     => $m->date ?: '—',
+                '_by'      => $m->_by ?: '—',
+                'amount'   => $m->amount ?: 0,
+                'pay_type' => $m->paymentType ? $m->paymentType->name : '—',
+                'type'     => $m->incomeCategory ? $m->incomeCategory->name : '—',
+                'contract' => $m->contract_id ?: '—',
+                'doc_num'  => $m->document_number ?: '—',
+                'notes'    => $m->notes ?: '—',
+            ];
+        }
+
+        return $this->exportArrayData($exportRows, [
+            'title'    => 'الدفعات',
+            'filename' => 'income-list',
+            'headers'  => ['#', 'التاريخ', 'الدافع', 'المبلغ', 'نوع الدفع', 'التصنيف', 'العقد', 'رقم المستند', 'ملاحظات'],
+            'keys'     => ['#', 'date', '_by', 'amount', 'pay_type', 'type', 'contract', 'doc_num', 'notes'],
+            'widths'   => [6, 14, 22, 14, 14, 14, 10, 12, 22],
+        ], $format);
     }
 
 }

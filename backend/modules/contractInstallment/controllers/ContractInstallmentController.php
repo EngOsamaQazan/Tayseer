@@ -24,7 +24,7 @@ class  ContractInstallmentController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['login', 'error'],
+                        'actions' => ['login', 'error', 'verify-receipt'],
                         'allow' => true,
                     ],
                     [
@@ -157,6 +157,48 @@ class  ContractInstallmentController extends Controller
             ]);
         }
 
+    }
+
+    /**
+     * Verifies a receipt via signed URL (QR code).
+     * Public action — no login required.
+     */
+    public function actionVerifyReceipt($rid, $d, $s)
+    {
+        $this->layout = '/print-template-1';
+
+        $secret = Yii::$app->params['statementVerifySecret'] ?? 'jadal-statement-verify-default';
+        $payload = $rid . '|' . $d;
+        $expectedSig = hash_hmac('sha256', $payload, $secret);
+
+        if (!hash_equals($expectedSig, $s)) {
+            return $this->render('verify-receipt', [
+                'status'  => 'invalid',
+                'label'   => 'غير صحيح',
+                'message' => 'رمز التحقق غير صالح أو تم التلاعب به.',
+            ]);
+        }
+
+        $receiptId = (int) $rid;
+        $model = ContractInstallment::findOne($receiptId);
+
+        if (!$model) {
+            return $this->render('verify-receipt', [
+                'status'  => 'invalid',
+                'label'   => 'غير موجود',
+                'message' => 'الإيصال المطلوب غير موجود في النظام.',
+            ]);
+        }
+
+        return $this->render('verify-receipt', [
+            'status'      => 'valid',
+            'label'       => 'إيصال صحيح',
+            'message'     => 'هذا الإيصال صادر من النظام وموثق إلكترونياً.',
+            'receipt_id'  => $receiptId,
+            'amount'      => $model->amount,
+            'date'        => $model->date,
+            'contract_id' => $model->contract_id,
+        ]);
     }
 
     /**

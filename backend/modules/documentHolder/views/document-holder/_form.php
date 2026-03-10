@@ -8,7 +8,9 @@ use yii\widgets\ActiveForm;
 /* @var $form yii\widgets\ActiveForm */
 ?>
 
-    <div class="document-holder-form">
+    <div class="document-holder-form" x-data="{ warMsg: '', war2Msg: '' }"
+         @war-update.window="warMsg = $event.detail"
+         @war2-update.window="war2Msg = $event.detail">
 
 <?php $form = ActiveForm::begin(); ?>
     <div class="questions-bank box box-primary">
@@ -33,10 +35,11 @@ use yii\widgets\ActiveForm;
             <?= $form->field($model, 'type')->dropDownList(['contract file','judiciary file'],['class'=>'type'])?>
         </div>
     </div>
-    <div class="alert alert-warning war" role="alert" style="display: none">
-
+    <div class="alert alert-warning war" role="alert"
+         x-show="warMsg !== ''" x-text="warMsg" x-transition x-cloak>
     </div>
-    <div class="alert alert-warning war2" role="alert" style="display: none">
+    <div class="alert alert-warning war2" role="alert"
+         x-show="war2Msg !== ''" x-text="war2Msg" x-transition x-cloak>
     </div>
     <div class="row">
 
@@ -63,13 +66,13 @@ use yii\widgets\ActiveForm;
 
     </div>
 <?php
+/* OLD jQuery - replaced by Alpine.js
 $this->registerJs(<<<SCRIPT
 $(document).on('change','.contract',function(){
 let contract = $('.contract').val();
 $.post('find-list-user',{contract:contract},function(response){
 $('.war').css('display','block');
 $('.war').text(response);
-
 });
 $.post('find-type',{contract:contract},function(response){
 response = JSON.parse(response);
@@ -81,6 +84,24 @@ $('.war2').css('display','none');
 $('.war2').text('');
 }
 })
+});
+SCRIPT
+)
+*/
+$this->registerJs(<<<SCRIPT
+$(document).on('change','.contract',function(){
+let contract = $('.contract').val();
+$.post('find-list-user',{contract:contract},function(response){
+    window.dispatchEvent(new CustomEvent('war-update', { detail: response }));
+});
+$.post('find-type',{contract:contract},function(response){
+    response = JSON.parse(response);
+    if(response.length === 0){
+        window.dispatchEvent(new CustomEvent('war2-update', { detail: 'هذا الملف لا يحتوي على ملف للقضيه' }));
+    } else {
+        window.dispatchEvent(new CustomEvent('war2-update', { detail: '' }));
+    }
+});
 });
 SCRIPT
 )

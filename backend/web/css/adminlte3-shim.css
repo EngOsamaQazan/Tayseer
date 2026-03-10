@@ -1,0 +1,397 @@
+/* ============================================================
+   Tayseer ERP — Tabler Theme Overrides
+   ============================================================
+   Custom branding, RTL fixes, sidebar & header theming.
+   Tabler uses Bootstrap 5 RTL natively via tabler.rtl.min.css.
+   ============================================================ */
+
+:root {
+  --clr-primary: #800020;
+  --clr-primary-800: #600018;
+  --clr-primary-900: #4a0012;
+  --clr-accent: #c8a04a;
+  --clr-accent-light: #dbc07a;
+  --font-family: 'Cairo', sans-serif;
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+  --tblr-font-sans-serif: 'Cairo', var(--tblr-font-sans-serif-base, sans-serif);
+}
+
+body {
+  font-family: var(--font-family) !important;
+  direction: rtl;
+}
+
+/* ============================================================
+   1. SIDEBAR THEMING
+   ============================================================ */
+.tayseer-sidebar {
+  background: linear-gradient(180deg, var(--clr-primary-900) 0%, var(--clr-primary-800) 100%) !important;
+  border-left: 3px solid var(--clr-accent) !important;
+  border-right: none !important;
+}
+
+/* Default: hide desktop-only sidebar controls (overridden at lg+ breakpoint) */
+#sidebarShowBtn,
+#sidebarMiniToggle {
+  display: none !important;
+}
+
+@media (min-width: 992px) {
+  .tayseer-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 16rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1030;
+    transition: width .3s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    flex-direction: column;
+  }
+  .tayseer-sidebar > .container-fluid {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0 !important;
+  }
+  .tayseer-sidebar .navbar-collapse {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .page-wrapper {
+    margin-right: 16rem;
+    transition: margin-right .3s cubic-bezier(.4,0,.2,1);
+  }
+  .tayseer-header {
+    transition: margin-right .3s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── Sidebar Hidden (full collapse) ── */
+  .sidebar-hidden .tayseer-sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    border: none !important;
+    visibility: hidden;
+  }
+  .sidebar-hidden .page-wrapper {
+    margin-right: 0 !important;
+  }
+  .sidebar-hidden .tayseer-header {
+    margin-right: 0 !important;
+  }
+  .sidebar-hidden .sidebar-mini-icon {
+    transform: rotate(180deg);
+  }
+
+  /* Desktop: show the hide-sidebar button */
+  #sidebarMiniToggle {
+    display: flex !important;
+  }
+
+  /* Floating show-sidebar button (only visible when sidebar is hidden) */
+  .sidebar-hidden #sidebarShowBtn {
+    display: flex !important;
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 1040;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--clr-primary);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    transition: all .2s;
+    font-size: 14px;
+  }
+  .sidebar-hidden #sidebarShowBtn:hover {
+    background: var(--clr-primary-800);
+    box-shadow: 0 4px 16px rgba(0,0,0,.3);
+    transform: scale(1.05);
+  }
+
+  #sidebarMiniToggle:hover {
+    background: rgba(255,255,255,.12) !important;
+    color: #fff !important;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .tayseer-sidebar .navbar-collapse {
+    background: linear-gradient(180deg, var(--clr-primary-900) 0%, var(--clr-primary-800) 100%);
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 8px 0;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+}
+
+.tayseer-sidebar .navbar-toggler {
+  border-color: rgba(255,255,255,.3) !important;
+}
+
+.tayseer-sidebar .navbar-toggler-icon {
+  filter: invert(1) grayscale(100%) brightness(200%);
+}
+
+.tayseer-sidebar .navbar-brand {
+  color: #fff !important;
+}
+
+.tayseer-sidebar .nav-link {
+  color: rgba(255,255,255,.75) !important;
+  border-radius: 8px;
+  margin: 1px 8px;
+  padding: 8px 12px !important;
+  transition: all .2s ease;
+  font-size: 13.5px;
+}
+
+.tayseer-sidebar .nav-link:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,.1) !important;
+}
+
+.tayseer-sidebar .nav-link.active,
+.tayseer-sidebar .nav-item.active > .nav-link {
+  color: #fff !important;
+  background: rgba(255,255,255,.15) !important;
+  font-weight: 600;
+}
+
+.tayseer-sidebar .nav-link-icon {
+  color: var(--clr-accent) !important;
+  width: 24px;
+  text-align: center;
+  opacity: .85;
+}
+
+.tayseer-sidebar .dropdown-menu {
+  background: rgba(0,0,0,.15) !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  position: static !important;
+  float: none !important;
+  transform: none !important;
+}
+
+.tayseer-sidebar .dropdown-item {
+  color: rgba(255,255,255,.65) !important;
+  font-size: 12.5px;
+  padding: 6px 16px 6px 36px !important;
+  border-radius: 6px;
+  margin: 1px 8px;
+}
+
+.tayseer-sidebar .dropdown-item:hover {
+  color: #fff !important;
+  background: rgba(255,255,255,.08) !important;
+}
+
+.tayseer-sidebar .dropdown-item.active {
+  color: var(--clr-accent-light) !important;
+  background: rgba(255,255,255,.1) !important;
+  font-weight: 600;
+}
+
+/* Section headers */
+.tayseer-sidebar .nav-item-header .nav-link {
+  background: transparent !important;
+  cursor: default !important;
+  padding: 4px 12px !important;
+  margin-top: 8px;
+  font-size: 10.5px;
+}
+
+.tayseer-sidebar .nav-item-header .nav-link:hover {
+  background: transparent !important;
+}
+
+/* ============================================================
+   2. TOP HEADER / NAVBAR
+   ============================================================ */
+.tayseer-header {
+  background: linear-gradient(135deg, var(--clr-primary) 0%, var(--clr-primary-800) 100%) !important;
+  border-bottom: 3px solid var(--clr-accent) !important;
+  box-shadow: var(--shadow-md);
+}
+
+.tayseer-header .nav-link,
+.tayseer-header .navbar-text {
+  color: rgba(255,255,255,.85) !important;
+}
+
+.tayseer-header .nav-link:hover {
+  color: #fff !important;
+}
+
+.tayseer-header .navbar-toggler {
+  border-color: rgba(255,255,255,.3);
+}
+
+.tayseer-header .navbar-toggler-icon {
+  filter: invert(1);
+}
+
+.tayseer-header .dropdown-menu {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Notification badge */
+.badge-notification {
+  position: absolute !important;
+  top: 2px;
+  left: 0;
+  font-size: 10px !important;
+  min-width: 17px;
+  padding: 2px 5px !important;
+  border-radius: 10px;
+}
+
+/* ============================================================
+   3. PAGE WRAPPER
+   ============================================================ */
+.page-wrapper {
+  min-height: calc(100vh - 56px);
+}
+
+.page-header {
+  padding: 16px 0 8px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.page-title {
+  color: var(--clr-primary) !important;
+}
+
+.breadcrumb-item a {
+  color: var(--clr-primary);
+}
+
+.footer {
+  padding: 10px 0 !important;
+  border-top: 1px solid #e9ecef;
+}
+
+/* ============================================================
+   4. CARDS AND COMPONENTS
+   ============================================================ */
+.card {
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  border: 1px solid rgba(0,0,0,.08);
+}
+
+.card-header {
+  background: transparent;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+/* ============================================================
+   5. BUTTONS
+   ============================================================ */
+.btn-primary {
+  background-color: var(--clr-primary) !important;
+  border-color: var(--clr-primary) !important;
+}
+
+.btn-primary:hover {
+  background-color: var(--clr-primary-800) !important;
+  border-color: var(--clr-primary-800) !important;
+}
+
+/* ============================================================
+   6. TABLES
+   ============================================================ */
+.table thead th {
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #f8f9fa;
+}
+
+/* ============================================================
+   7. FORMS
+   ============================================================ */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--clr-accent) !important;
+  box-shadow: 0 0 0 .25rem rgba(200,160,74,.25) !important;
+}
+
+/* ============================================================
+   8. RTL ADJUSTMENTS
+   ============================================================ */
+.breadcrumb-item + .breadcrumb-item::before {
+  content: "\00ab" !important;
+}
+
+/* ============================================================
+   9. PRINT
+   ============================================================ */
+@media print {
+  .tayseer-sidebar,
+  .tayseer-header,
+  .footer,
+  .no-print {
+    display: none !important;
+  }
+  .page-wrapper {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* ============================================================
+   10. ENTRANCE ANIMATIONS
+   ============================================================ */
+.ty-entrance {
+  opacity: 0;
+  animation: tyFadeUp 0.5s ease forwards;
+}
+.ty-entrance-down {
+  opacity: 0;
+  animation: tyFadeDown 0.4s ease forwards;
+}
+@keyframes tyFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tyFadeDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   CONTAINER — Wider layout for ERP data screens
+   Bootstrap 5's container-xl caps at 1320px, too narrow
+   for data-heavy ERP views.
+   ============================================================ */
+.page-body > .container-xl,
+.page-header > .container-xl,
+.footer > .container-xl {
+  max-width: 100% !important;
+}
+
+body:has(.ocp-page) .page-header {
+  display: none !important;
+}

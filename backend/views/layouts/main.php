@@ -1,21 +1,12 @@
 <?php
 
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 
 /* @var $this \yii\web\View */
 /* @var $content string */
 
-
 if (Yii::$app->controller->action->id === 'login') {
-    /**
-     * Do not use this code in your template. Remove it.
-     * Instead, use the code  $this->layout = '//main-login'; in your controllers.
-     */
-    echo $this->render(
-        'main-login',
-        ['content' => $content]
-    );
+    echo $this->render('main-login', ['content' => $content]);
 } else {
 
     if (class_exists('backend\assets\AppAsset')) {
@@ -24,9 +15,6 @@ if (Yii::$app->controller->action->id === 'login') {
         app\assets\AppAsset::register($this);
     }
 
-    dmstr\web\AdminLteAsset::register($this);
-
-    $directoryAsset = Yii::$app->assetManager->getPublishedUrl('@vendor/almasaeed2010/adminlte/dist');
     ?>
     <?php $this->beginPage() ?>
     <!DOCTYPE html>
@@ -42,37 +30,48 @@ if (Yii::$app->controller->action->id === 'login') {
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+        <!-- Font Awesome 6 + v4 Shims -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/v4-shims.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/bs4-to-bs5-shim.css?v=<?= time() ?>">
         <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/jadal-theme.css?v=<?= time() ?>">
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/adminlte3-shim.css?v=<?= time() ?>">
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/tayseer-modern-libs.css?v=<?= time() ?>">
         <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/fin-transactions.css?v=<?= time() ?>">
+
+        <!-- Vite Bundle (Tabler + Tailwind + Alpine, SweetAlert2, ApexCharts, Tippy, HTMX, AOS, SortableJS) -->
+        <?= \backend\helpers\ViteHelper::tags() ?>
     </head>
-    <body class="hold-transition skin-blue sidebar-mini" dir="rtl">
+    <body dir="rtl">
     <?php $this->beginBody() ?>
+
     <?php
-    Modal::begin([
+    yii\bootstrap5\Modal::begin([
         'id' => 'gModal',
-        'header' => '<h3 id="modalTitle"></h3>',
+        'title' => '<h3 id="modalTitle"></h3>',
     ]);
-
-    Modal::end();
+    yii\bootstrap5\Modal::end();
     ?>
-    <div class="wrapper">
 
-        <?= $this->render(
-            'header.php',
-            ['directoryAsset' => $directoryAsset]
-        ) ?>
+    <div class="page" id="tayseerPage">
+        <script>
+        localStorage.removeItem('tayseer-sidebar-mini');
+        if(localStorage.getItem('tayseer-sidebar-hidden')==='1')document.getElementById('tayseerPage').classList.add('sidebar-hidden');
+        </script>
 
-        <?= $this->render(
-            'left.php',
-            ['directoryAsset' => $directoryAsset]
-        )
-        ?>
+        <!-- Floating button to re-show sidebar (only visible when sidebar is hidden) -->
+        <button type="button" id="sidebarShowBtn" title="إظهار القائمة">
+            <i class="fa-solid fa-bars"></i>
+        </button>
 
-        <?= $this->render(
-            'content.php',
-            ['content' => $content, 'directoryAsset' => $directoryAsset]
-        ) ?>
+        <?= $this->render('left.php') ?>
 
+        <div class="page-wrapper">
+            <?= $this->render('header.php') ?>
+            <?= $this->render('content.php', ['content' => $content]) ?>
+        </div>
     </div>
 
     <?php $this->endBody() ?>
@@ -80,46 +79,3 @@ if (Yii::$app->controller->action->id === 'login') {
     </html>
     <?php $this->endPage() ?>
 <?php } ?>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

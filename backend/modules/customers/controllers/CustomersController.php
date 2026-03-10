@@ -238,7 +238,7 @@ class CustomersController extends Controller
                             }
                         }
 
-                        Yii::$app->notifications->sendByRule(['Manager'], 'customers/customers/update?id=' . $model->id, Notification::GENERAL, Yii::t('app', ' اضافة عميل  ') . $model->name . Yii::t('app', '       الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::t('app', 'اضافة  ') . $model->name . Yii::t('app', '  الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::$app->user->id);
+                        Yii::$app->notifications->sendByRule(['Manager'], 'customers/update/' . $model->id, Notification::GENERAL, Yii::t('app', ' اضافة عميل  ') . $model->name . Yii::t('app', '       الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::t('app', 'اضافة  ') . $model->name . Yii::t('app', '  الى العملاء من قبل') . Yii::$app->user->identity['username'], Yii::$app->user->id);
                         Yii::$app->cache->set(Yii::$app->params['key_customers'],Yii::$app->db->createCommand(Yii::$app->params['customers_query'])->queryAll(), Yii::$app->params['time_duration']);
                         Yii::$app->cache->set(Yii::$app->params['key_customers_name'],Yii::$app->db->createCommand(Yii::$app->params['customers_name_query'])->queryAll(), Yii::$app->params['time_duration']);
                         return $this->redirect(['create-summary', 'id' => $model->id]);

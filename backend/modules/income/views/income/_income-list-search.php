@@ -31,13 +31,16 @@ $payTypes = ArrayHelper::map(
 $incTypes = ArrayHelper::map(
     $cache->getOrSet($p['key_income_category'], fn() => $db->createCommand($p['income_category_query'])->queryAll(), $d), 'id', 'name');
 $byNames = ArrayHelper::map(
-    $cache->getOrSet($p['key_income_by'], fn() => $db->createCommand($p['income_by_query'])->queryAll(), $d), '_by', '_by');
+    array_filter(
+        $cache->getOrSet($p['key_income_by'], fn() => $db->createCommand($p['income_by_query'])->queryAll(), $d),
+        fn($row) => $row['_by'] !== null && $row['_by'] !== ''
+    ), '_by', '_by');
 
 /* هل هناك فلاتر متقدمة مفعّلة ═══ */
 $hasAdv = !empty($model->_by) || !empty($model->type) || !empty($model->number_row);
 ?>
 
-<section class="fin-filter" aria-label="فلاتر البحث">
+<section class="fin-filter" aria-label="فلاتر البحث" x-data="{ open: <?= $hasAdv ? 'true' : 'false' ?> }">
     <?php $form = ActiveForm::begin([
         'id'      => 'inc-search',
         'method'  => 'get',
@@ -77,14 +80,17 @@ $hasAdv = !empty($model->_by) || !empty($model->type) || !empty($model->number_r
         <div class="fin-f-btn">
             <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'fin-btn fin-btn--search']) ?>
             <?= Html::a('<i class="fa fa-refresh"></i> تعيين', ['income-list'], ['class' => 'fin-btn fin-btn--reset']) ?>
-            <button type="button" class="fin-btn fin-btn--toggle <?= $hasAdv ? 'fin-btn--active' : '' ?>" id="incBtnAdvanced" title="فلاتر متقدمة">
+            <button type="button" class="fin-btn fin-btn--toggle" id="incBtnAdvanced" title="فلاتر متقدمة"
+                    @click="open = !open" :class="{ 'fin-btn--active': open }">
                 متقدم <?= $hasAdv ? '<span class="fin-badge-active">●</span>' : '' ?>
             </button>
         </div>
     </div>
 
     <!-- ══ فلاتر متقدمة (قابلة للطي) ══ -->
-    <div class="fin-filter-adv" id="incFilterAdv" style="<?= $hasAdv ? '' : 'display:none' ?>">
+    <div class="fin-filter-adv" id="incFilterAdv" x-show="open" x-cloak
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform -translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 transform translate-y-0" x-transition:leave-end="opacity-0 transform -translate-y-2">
         <div class="fin-f-group">
             <label class="fin-f-label">الدافع</label>
             <?= Html::activeDropDownList($model, '_by', $byNames, ['class' => 'form-control fin-sel', 'prompt' => '— الكل —']) ?>
@@ -103,7 +109,7 @@ $hasAdv = !empty($model->_by) || !empty($model->type) || !empty($model->number_r
 </section>
 
 <?php
-/* ═══ Toggle JS ═══ */
+/* OLD jQuery - replaced by Alpine.js
 $advJs = <<<'JSINC'
 $("#incBtnAdvanced").on("click",function(){
     var adv=$("#incFilterAdv");
@@ -112,4 +118,5 @@ $("#incBtnAdvanced").on("click",function(){
 });
 JSINC;
 $this->registerJs($advJs, \yii\web\View::POS_READY);
+*/
 ?>

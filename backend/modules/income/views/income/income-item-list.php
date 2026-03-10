@@ -14,6 +14,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 
 $this->title = 'الإدارة المالية';
 $this->params['breadcrumbs'][] = $this->title;
@@ -138,6 +139,16 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
             ]) ?>
         </div>
         <?php endif ?>
+        <?php if ($hasDateFilter): ?>
+        <div class="fin-act-group">
+            <?= ExportButtons::widget([
+                'excelRoute'   => ['export-income-list-excel'],
+                'pdfRoute'     => ['export-income-list-pdf'],
+                'excelBtnClass' => 'fin-btn fin-btn--export',
+                'pdfBtnClass'   => 'fin-btn fin-btn--export-pdf',
+            ]) ?>
+        </div>
+        <?php endif ?>
     </section>
 
     <!-- ╔═══════════════════════════════════════════════╗
@@ -159,8 +170,10 @@ $hasDateFilter = !empty($searchModel->date_from) || !empty($searchModel->_by);
         <div class="fin-data-bar">
             <span class="fin-data-count"><i class="fa fa-table"></i> عرض <b><?= $dataProvider->getCount() ?></b> من <b><?= $dataProvider->getTotalCount() ?></b> دفعة</span>
             <?php if ($canIncDelete): ?>
-            <div class="fin-bulk-bar" id="bulkBar" style="display:none">
-                <span class="fin-bulk-count"><i class="fa fa-check-square-o"></i> تم تحديد <b id="bulkCount">0</b> دفعة</span>
+            <div class="fin-bulk-bar" id="bulkBar"
+                 x-data="{ selectedCount: 0 }" @bulk-update.window="selectedCount = $event.detail"
+                 x-show="selectedCount > 0" x-transition x-cloak>
+                <span class="fin-bulk-count"><i class="fa fa-check-square-o"></i> تم تحديد <b id="bulkCount" x-text="selectedCount">0</b> دفعة</span>
                 <button type="button" class="fin-btn fin-btn--del fin-btn--sm" id="bulkDeleteBtn">
                     <i class="fa fa-trash-o"></i> حذف المحدد
                 </button>
@@ -295,8 +308,11 @@ $(".fin-act[title], .fin-btn[title]").tooltip({placement:"bottom",container:"bod
 /* ═══ تحديد الصفوف والحذف الجماعي ═══ */
 function updateBulkBar(){
     var c=$(".js-row-chk:checked").length;
+    /* OLD jQuery - replaced by Alpine.js
     $("#bulkCount").text(c);
     if(c>0){$("#bulkBar").stop().slideDown(200);}else{$("#bulkBar").stop().slideUp(200);}
+    */
+    window.dispatchEvent(new CustomEvent('bulk-update', { detail: c }));
     var total=$(".js-row-chk").length;
     var chkAll=document.getElementById("chkAll");
     if(chkAll){

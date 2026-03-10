@@ -58,7 +58,7 @@ $legalContracts = ArrayHelper::map(
                     'dir' => 'rtl',
                     'minimumInputLength' => 1,
                     'ajax' => [
-                        'url' => Url::to(['/customers/customers/search-customers', 'mode' => 'name']),
+                        'url' => Url::to(['/customers/search-customers', 'mode' => 'name']),
                         'dataType' => 'json',
                         'delay' => 250,
                         'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),

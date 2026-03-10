@@ -78,11 +78,9 @@
         // TIMELINE
         // ═══════════════════════════════════════
         filterTimeline: function (type) {
-            // Toggle filter buttons
             document.querySelectorAll('.ocp-timeline__filter-btn').forEach(function (b) {
                 b.classList.toggle('active', b.dataset.filter === type);
             });
-            // Filter events
             document.querySelectorAll('.ocp-timeline-event').forEach(function (e) {
                 if (type === 'all') {
                     e.style.display = '';
@@ -90,6 +88,7 @@
                     e.style.display = e.dataset.eventType === type ? '' : 'none';
                 }
             });
+            this.checkTimelineOverflow();
         },
 
         toggleEventExpand: function (index) {
@@ -106,8 +105,17 @@
         scrollTimelineToBottom: function () {
             var list = document.getElementById('ocp-timeline-list');
             if (list) {
-                list.scrollTop = 0; // Most recent is at top (DESC order)
+                list.scrollTop = 0;
             }
+        },
+
+        checkTimelineOverflow: function () {
+            document.querySelectorAll('.ocp-timeline-event__content--collapsed').forEach(function (el) {
+                var btn = el.nextElementSibling;
+                if (btn && btn.classList.contains('ocp-timeline-event__expand')) {
+                    btn.style.display = (el.scrollHeight > el.clientHeight) ? '' : 'none';
+                }
+            });
         },
 
         // ═══════════════════════════════════════
@@ -475,10 +483,10 @@
                 var container = document.getElementById('tab-timeline');
                 if (container) {
                     container.innerHTML = html;
-                    // Update count
                     var events = container.querySelectorAll('.ocp-timeline-event');
                     var countBadge = document.querySelector('.ocp-tab[data-tab="timeline"] .ocp-tab__count');
                     if (countBadge) countBadge.textContent = events.length;
+                    OCP.checkTimelineOverflow();
                 }
             });
         },
@@ -630,8 +638,8 @@
         init: function () {
             this._initKeyboardShortcuts();
             this._initMobileAccordion();
-            // Auto-scroll timeline to most recent
             this.scrollTimelineToBottom();
+            this.checkTimelineOverflow();
         }
     };
 

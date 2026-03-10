@@ -57,7 +57,7 @@ $legalContracts = ArrayHelper::map(
                     'options' => ['placeholder' => 'ابحث بالاسم أو الرقم الوطني...'],
                     'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                         'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/customers/search-customers', 'mode' => 'name']),
+                            'url' => \yii\helpers\Url::to(['/customers/search-customers', 'mode' => 'name']),
                             'dataType' => 'json', 'delay' => 250,
                             'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                             'processResults' => new \yii\web\JsExpression('function(d){return d}'),

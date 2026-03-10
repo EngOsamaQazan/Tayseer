@@ -284,11 +284,13 @@ $selectOpts = function($items, $cls, $field) {
                             if ($isNamaa) {
                                 $path = \yii\helpers\Url::to(['/followUp/follow-up/customer-image', 'id' => $ei->id]);
                             } else {
+                                $ext = pathinfo((string) $ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+                                $relPath = '/images/imagemanager/' . (int) $ei->id . '_' . $ei->fileHash . '.' . $ext;
+                                if (!is_file(Yii::getAlias('@webroot') . $relPath)) continue;
                                 $imagesBase = (isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== '')
                                     ? rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/')
                                     : (Yii::$app->request->baseUrl ?: '');
-                                $ext = pathinfo((string) $ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
-                                $path = $imagesBase . '/images/imagemanager/' . (int) $ei->id . '_' . $ei->fileHash . '.' . $ext;
+                                $path = $imagesBase . $relPath;
                             }
                             ?>
                             <div class="col-md-3 text-center" style="margin-bottom:12px">

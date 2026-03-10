@@ -17,16 +17,16 @@ $typeColors = [
 ];
 ?>
 
-<div class="ca-panel" id="contractAdjustmentsPanel">
+<div class="ca-panel" id="contractAdjustmentsPanel" x-data="{ showForm: false, hasItems: false }">
     <div class="ca-header">
         <h4><i class="fa fa-tags"></i> الخصومات والتسويات</h4>
-        <button type="button" class="btn btn-sm btn-success" id="caAddBtn">
+        <button type="button" class="btn btn-sm btn-success" id="caAddBtn" @click="showForm = true">
             <i class="fa fa-plus"></i> إضافة خصم
         </button>
     </div>
 
-    <!-- Add form (hidden by default) -->
-    <div class="ca-form" id="caForm" style="display:none">
+    <!-- Add form (Alpine.js controlled) -->
+    <div class="ca-form" id="caForm" x-show="showForm" x-transition:enter="alpine-enter" x-cloak>
         <div class="row">
             <div class="col-md-4">
                 <div class="form-group">
@@ -55,7 +55,7 @@ $typeColors = [
             <button type="button" class="btn btn-primary btn-sm" id="caSaveBtn">
                 <i class="fa fa-check"></i> حفظ
             </button>
-            <button type="button" class="btn btn-default btn-sm" id="caCancelBtn">
+            <button type="button" class="btn btn-default btn-sm" id="caCancelBtn" @click="showForm = false">
                 <i class="fa fa-times"></i> إلغاء
             </button>
         </div>
@@ -68,7 +68,7 @@ $typeColors = [
         </div>
     </div>
 
-    <div class="ca-total" id="caTotal" style="display:none">
+    <div class="ca-total" id="caTotal" x-show="hasItems" x-transition x-cloak>
         إجمالي الخصومات: <strong id="caTotalAmount">0</strong>
     </div>
 </div>
@@ -120,9 +120,10 @@ $js = <<<JS
         $.getJSON(listUrl, {contract_id: contractId}, function(data) {
             var html = '';
             var total = 0;
+            var _caData = Alpine.$data(document.getElementById('contractAdjustmentsPanel'));
             if (!data || data.length === 0) {
                 html = '<div class="ca-empty"><i class="fa fa-info-circle"></i> لا توجد خصومات مسجلة</div>';
-                $('#caTotal').hide();
+                _caData.hasItems = false;
             } else {
                 for (var i = 0; i < data.length; i++) {
                     var d = data[i];
@@ -137,15 +138,14 @@ $js = <<<JS
                     html += '<i class="fa fa-trash ca-item-del" data-id="' + d.id + '" title="حذف"></i>';
                     html += '</div>';
                 }
-                $('#caTotal').show();
+                _caData.hasItems = true;
                 $('#caTotalAmount').text(total.toLocaleString('en', {minimumFractionDigits:2}));
             }
             $('#caList').html(html);
         });
     }
 
-    $('#caAddBtn').on('click', function(){ $('#caForm').slideDown(200); });
-    $('#caCancelBtn').on('click', function(){ $('#caForm').slideUp(200); });
+    /* Alpine.js handles show/hide via x-show on #caForm */
 
     $('#caSaveBtn').on('click', function(){
         var amount = parseFloat($('#caAmount').val());
@@ -157,7 +157,7 @@ $js = <<<JS
             reason: $('#caReason').val()
         }, function(res) {
             if (res.success) {
-                $('#caForm').slideUp(200);
+                document.getElementById('caCancelBtn').click();
                 $('#caAmount').val('');
                 $('#caReason').val('');
                 loadAdjustments();

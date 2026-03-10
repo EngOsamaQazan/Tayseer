@@ -4,17 +4,18 @@
    ============================================================ */
 
 /* ---- 1. PAGE LAYOUT ---- */
-/* Hide AdminLTE content header when on contracts page to avoid duplicate */
+/* Hide layout page-header when ct-page has its own header */
 .contracts-index .content-header,
 .ct-page ~ .content-header,
-body:has(.ct-page) .content-header {
+body:has(.ct-page) .content-header,
+body:has(.ct-page) .page-header {
   display: none !important;
 }
 
 .ct-page {
-  padding: 0 4px;
-  max-width: 1600px;
-  margin: 0 auto;
+  padding: 0;
+  max-width: 100%;
+  margin: 0;
 }
 
 /* ---- 2. PAGE HEADER ---- */

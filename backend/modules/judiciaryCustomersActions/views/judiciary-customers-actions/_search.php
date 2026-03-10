@@ -22,7 +22,10 @@ $users = ArrayHelper::map(
 $actions = ArrayHelper::map(\backend\modules\judiciaryActions\models\JudiciaryActions::find()->asArray()->all(), 'id', 'name');
 $courts = ArrayHelper::map(\backend\modules\court\models\Court::find()->asArray()->all(), 'id', 'name');
 $lawyers = ArrayHelper::map(\backend\modules\lawyers\models\Lawyers::find()->asArray()->all(), 'id', 'name');
-$years = ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->select('year')->distinct()->asArray()->all(), 'year', 'year');
+$years = ArrayHelper::map(
+    \backend\modules\judiciary\models\Judiciary::find()->select('year')->where(['not', ['year' => null]])->distinct()->asArray()->all(),
+    'year', 'year'
+);
 ?>
 
 <div class="box box-primary jadal-search-box">
@@ -50,7 +53,7 @@ $years = ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->s
                     'options' => ['placeholder' => 'ابحث بالاسم أو الرقم الوطني...'],
                     'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
                         'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/customers/search-customers']),
+                            'url' => \yii\helpers\Url::to(['/customers/search-customers']),
                             'dataType' => 'json', 'delay' => 250,
                             'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
                             'processResults' => new \yii\web\JsExpression('function(d){return d}'),

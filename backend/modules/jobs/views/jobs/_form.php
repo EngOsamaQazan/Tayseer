@@ -39,7 +39,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 .job-section-hdr .toggle-icon { margin-right:auto; transition:transform .2s; }
 .job-section-hdr.collapsed .toggle-icon { transform:rotate(-90deg); }
 .job-section-body { padding:20px; }
-.job-section-body.collapsed { display:none; }
+[x-cloak] { display: none !important; }
 
 /* Duplicate detection */
 .job-similar-wrap { position:relative; }
@@ -107,12 +107,12 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
     <?php $form = ActiveForm::begin(['id' => 'jobs-form']); ?>
 
     <!-- ═══ 1. البيانات الأساسية ═══ -->
-    <div class="job-section">
-        <div class="job-section-hdr" onclick="$(this).toggleClass('collapsed').next().toggleClass('collapsed')">
+    <div class="job-section" x-data="{ open: true }">
+        <div class="job-section-hdr" :class="{ 'collapsed': !open }" @click="open = !open">
             <i class="fa fa-building"></i> البيانات الأساسية
             <i class="fa fa-chevron-down toggle-icon"></i>
         </div>
-        <div class="job-section-body">
+        <div class="job-section-body" x-show="open" x-transition.duration.200ms x-cloak>
             <div class="row">
                 <div class="col-md-5">
                     <div class="job-similar-wrap">
@@ -151,13 +151,13 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
     </div>
 
     <!-- ═══ 2. أرقام الهواتف ═══ -->
-    <div class="job-section">
-        <div class="job-section-hdr" onclick="$(this).toggleClass('collapsed').next().toggleClass('collapsed')">
+    <div class="job-section" x-data="{ open: true }">
+        <div class="job-section-hdr" :class="{ 'collapsed': !open }" @click="open = !open">
             <i class="fa fa-phone"></i> أرقام الهواتف وجهات الاتصال
             <span id="phone-count-badge" style="background:#e0e7ff;color:#4338ca;padding:2px 10px;border-radius:12px;font-size:12px;margin-right:6px">0</span>
             <i class="fa fa-chevron-down toggle-icon"></i>
         </div>
-        <div class="job-section-body">
+        <div class="job-section-body" x-show="open" x-transition.duration.200ms x-cloak>
             <div id="phones-container">
                 <?php if (!empty($existingPhones)): ?>
                     <p class="text-muted" style="font-size:12px"><i class="fa fa-info-circle"></i> الأرقام المحفوظة سابقاً تُدار من صفحة العرض. أضف أرقاماً جديدة هنا.</p>
@@ -180,12 +180,12 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
     </div>
 
     <!-- ═══ 3. العنوان والموقع الجغرافي ═══ -->
-    <div class="job-section">
-        <div class="job-section-hdr" onclick="$(this).toggleClass('collapsed').next().toggleClass('collapsed')">
+    <div class="job-section" x-data="{ open: true }">
+        <div class="job-section-hdr" :class="{ 'collapsed': !open }" @click="open = !open">
             <i class="fa fa-map-marker"></i> العنوان والموقع الجغرافي
             <i class="fa fa-chevron-down toggle-icon"></i>
         </div>
-        <div class="job-section-body">
+        <div class="job-section-body" x-show="open" x-transition.duration.200ms x-cloak>
             <div class="row">
                 <div class="col-md-3">
                     <?= $form->field($model, 'address_city')->textInput(['placeholder' => 'المدينة', 'id' => 'jobs-address_city', 'class' => 'form-control addr-field', 'data-addr' => 'city']) ?>
@@ -205,7 +205,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
                     <?= $form->field($model, 'postal_code')->textInput(['placeholder' => 'مثل 11937', 'id' => 'jobs-postal_code', 'dir' => 'ltr', 'style' => 'font-family:monospace']) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'plus_code')->textInput(['placeholder' => 'مثل 8Q6G+4M', 'id' => 'jobs-plus_code', 'dir' => 'ltr', 'style' => 'font-family:monospace', 'readonly' => true]) ?>
+                    <?= $form->field($model, 'plus_code')->textInput(['placeholder' => 'مثل 8Q6G+4M عمان', 'id' => 'jobs-plus_code', 'dir' => 'ltr', 'style' => 'font-family:monospace', 'class' => 'form-control']) ?>
                 </div>
             </div>
 
@@ -259,12 +259,12 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
     </div>
 
     <!-- ═══ 4. أوقات العمل ═══ -->
-    <div class="job-section">
-        <div class="job-section-hdr collapsed" onclick="$(this).toggleClass('collapsed').next().toggleClass('collapsed')">
+    <div class="job-section" x-data="{ open: false }">
+        <div class="job-section-hdr" :class="{ 'collapsed': !open }" @click="open = !open">
             <i class="fa fa-clock-o"></i> أوقات العمل
             <i class="fa fa-chevron-down toggle-icon"></i>
         </div>
-        <div class="job-section-body collapsed">
+        <div class="job-section-body" x-show="open" x-transition.duration.200ms x-cloak>
             <table class="wh-table">
                 <thead><tr><th style="width:120px">اليوم</th><th style="width:140px">البداية</th><th style="width:140px">النهاية</th><th style="width:70px;text-align:center">مغلق</th><th>ملاحظات</th></tr></thead>
                 <tbody>
@@ -817,6 +817,33 @@ $('.addr-field').on('change', function() {
             }
         });
     }, 500);
+});
+
+/* ─── Plus Code → map (resolve when user types/pastes a Plus Code) ─── */
+var _plusCodeTimer = null;
+$('#jobs-plus_code').on('input', function() {
+    var raw = $(this).val().trim();
+    if (!raw || raw.length < 4) return;
+    var isPlusCode = /[23456789CFGHJMPQRVWX]{2,}\+/i.test(raw);
+    if (!isPlusCode) return;
+    var $input = $(this);
+    clearTimeout(_plusCodeTimer);
+    _plusCodeTimer = setTimeout(function() {
+        $input.css('border-color', '#fbbf24');
+        $.getJSON('$resolveLocationUrl', {q: raw}, function(data) {
+            if (data && data.success) {
+                setMapMarker(parseFloat(data.lat), parseFloat(data.lng), true);
+                $input.css('border-color', '#22c55e');
+                setTimeout(function(){ $input.css('border-color', ''); }, 2000);
+            } else {
+                $input.css('border-color', '#ef4444');
+                setTimeout(function(){ $input.css('border-color', ''); }, 2000);
+            }
+        }).fail(function() {
+            $input.css('border-color', '#ef4444');
+            setTimeout(function(){ $input.css('border-color', ''); }, 2000);
+        });
+    }, 600);
 });
 
 /* ─── Google Places autocomplete on address text fields ─── */
