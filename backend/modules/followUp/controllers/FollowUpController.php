@@ -755,8 +755,13 @@ class FollowUpController extends Controller
     /**
      * OCP Panel — Main operational control panel for a single contract
      */
-    public function actionPanel($contract_id, $notificationID = 0)
+    public function actionPanel($contract_id = null, $id = null, $notificationID = 0)
     {
+        $contract_id = $contract_id ?: $id;
+        if (!$contract_id) {
+            throw new \yii\web\BadRequestHttpException('رقم العقد مطلوب');
+        }
+
         if ($notificationID != 0) {
             Yii::$app->notifications->setReaded($notificationID);
         }
