@@ -575,6 +575,8 @@ class Permissions
             /* مدير الصور / ImageManager */
             'imagemanager' => [self::MANAGER],
             'imagemanager/imagemanager' => [self::MANAGER],
+            /* تثبيت العناصر — متاح لجميع المستخدمين المسجّلين */
+            'pin' => [],
         ];
     }
 
