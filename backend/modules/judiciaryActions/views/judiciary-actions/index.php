@@ -424,7 +424,6 @@ $this->params['breadcrumbs'] = [];
             }
 
             $html .= '</div>';
-            unset($visitedNodes[$id]);
             return $html;
         };
 
