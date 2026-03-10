@@ -356,197 +356,205 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 <script>
 var JCA = (function(){
     var modalEl = document.getElementById('jcaModal');
-    var bsModal = null;
     var reqUrl = <?= json_encode($updateReqUrl) ?>;
     var pendingDecision = {};
     var refreshPending = false;
 
-    function getModal() {
-        if (!bsModal) {
-            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                bsModal = new bootstrap.Modal(modalEl);
-            } else {
-                bsModal = { show: function(){ $(modalEl).modal('show'); }, hide: function(){ $(modalEl).modal('hide'); } };
-            }
-        }
-        return bsModal;
+    function getCsrf() {
+        var m = document.querySelector('meta[name="csrf-token"]');
+        if (m) return m.getAttribute('content');
+        var i = document.querySelector('input[name="_csrf"]');
+        return i ? i.value : '';
     }
 
-    function showModal() { getModal().show(); }
+    function ajaxHeaders() {
+        return { 'X-Requested-With': 'XMLHttpRequest' };
+    }
+
+    function showModal() {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            inst.show();
+        } else {
+            modalEl.classList.add('show');
+            modalEl.style.display = 'block';
+            var bd = document.createElement('div');
+            bd.className = 'modal-backdrop fade show';
+            document.body.appendChild(bd);
+            document.body.classList.add('modal-open');
+        }
+    }
+
     function hideModal() {
-        try { getModal().hide(); } catch(e) {}
-        $(modalEl).removeClass('show');
-        $('.modal-backdrop').remove();
-        $('body').removeClass('modal-open').css({overflow:'', paddingRight:''});
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            var inst = bootstrap.Modal.getInstance(modalEl);
+            if (inst) try { inst.hide(); } catch(e) {}
+        }
+        modalEl.classList.remove('show');
+        modalEl.style.display = 'none';
+        document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
     }
 
     function setLoading() {
-        $('#jcaModalTitle').text('جاري التحميل...');
-        $('#jcaModalBody').html('<div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>');
-        $('#jcaModalFooter').html('');
+        document.getElementById('jcaModalTitle').textContent = 'جاري التحميل...';
+        document.getElementById('jcaModalBody').innerHTML = '<div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>';
+        document.getElementById('jcaModalFooter').innerHTML = '';
     }
 
     function refreshActions() {
         if (refreshPending) return;
         refreshPending = true;
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', location.href);
-        xhr.onload = function() {
+        fetch(location.href).then(function(r){
+            if (!r.ok) throw new Error(r.status);
+            return r.text();
+        }).then(function(html){
             refreshPending = false;
-            if (xhr.status !== 200) return;
-            var doc = new DOMParser().parseFromString(xhr.responseText, 'text/html');
+            var doc = new DOMParser().parseFromString(html, 'text/html');
             var newC = doc.getElementById('jf-actions-container');
             var curC = document.getElementById('jf-actions-container');
             if (newC && curC) curC.innerHTML = newC.innerHTML;
-        };
-        xhr.onerror = function() { refreshPending = false; };
-        xhr.send();
+        }).catch(function(){ refreshPending = false; });
     }
 
     function openModal(url) {
         setLoading();
         showModal();
-        $.ajax({
-            url: url,
-            type: 'GET',
-            dataType: 'json',
-            success: function(resp) {
-                if (resp.title) $('#jcaModalTitle').html(resp.title);
-                if (resp.content) $('#jcaModalBody').html(resp.content);
-                if (resp.footer) $('#jcaModalFooter').html(resp.footer);
-                if (resp.size === 'large') $(modalEl).find('.modal-dialog').addClass('modal-lg');
-                var $form = $('#jcaModalBody').find('form');
-                var $submitBtn = $('#jcaModalFooter').find('[type="submit"]');
-                if ($form.length && $submitBtn.length) {
-                    $submitBtn.off('click').on('click', function(e) {
-                        e.preventDefault();
-                        var formData = new FormData($form[0]);
-                        submitForm($form.attr('action') || url, formData);
-                    });
-                }
-            },
-            error: function(xhr) {
-                $('#jcaModalTitle').text('خطأ');
-                $('#jcaModalBody').html('<div style="color:#DC2626;padding:20px;text-align:center"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px">فشل تحميل النموذج (' + xhr.status + ')</p></div>');
-                $('#jcaModalFooter').html('<button type="button" class="btn btn-default" onclick="JCA.hideModal()">إغلاق</button>');
-            }
+        fetch(url, {headers: ajaxHeaders()}).then(function(r){
+            return r.json();
+        }).then(function(resp){
+            if (resp.title) document.getElementById('jcaModalTitle').innerHTML = resp.title;
+            if (resp.content) document.getElementById('jcaModalBody').innerHTML = resp.content;
+            if (resp.footer) document.getElementById('jcaModalFooter').innerHTML = resp.footer;
+            bindFormSubmit(url);
+        }).catch(function(err){
+            document.getElementById('jcaModalTitle').textContent = 'خطأ';
+            document.getElementById('jcaModalBody').innerHTML = '<div style="color:#DC2626;padding:20px;text-align:center"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px">فشل تحميل النموذج</p></div>';
+            document.getElementById('jcaModalFooter').innerHTML = '<button type="button" class="btn btn-default" onclick="JCA.hideModal()">إغلاق</button>';
+        });
+    }
+
+    function bindFormSubmit(fallbackUrl) {
+        var form = document.querySelector('#jcaModalBody form');
+        var btn = document.querySelector('#jcaModalFooter [type="submit"]');
+        if (!form || !btn) return;
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            submitForm(form.getAttribute('action') || fallbackUrl, new FormData(form));
         });
     }
 
     function submitForm(url, formData) {
-        var $btn = $('#jcaModalFooter').find('[type="submit"]');
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
-        $.ajax({
-            url: url,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            dataType: 'json',
-            success: function(resp) {
-                if (resp.forceClose) {
-                    hideModal();
-                    setTimeout(refreshActions, 200);
-                    return;
-                }
-                if (resp.title) $('#jcaModalTitle').html(resp.title);
-                if (resp.content) $('#jcaModalBody').html(resp.content);
-                if (resp.footer) $('#jcaModalFooter').html(resp.footer);
-                var $form = $('#jcaModalBody').find('form');
-                var $submitBtn = $('#jcaModalFooter').find('[type="submit"]');
-                if ($form.length && $submitBtn.length) {
-                    $submitBtn.off('click').on('click', function(e) {
-                        e.preventDefault();
-                        submitForm($form.attr('action') || url, new FormData($form[0]));
-                    });
-                }
-            },
-            error: function() {
-                $btn.prop('disabled', false).html('<i class="fa fa-save"></i> حفظ');
-                alert('حدث خطأ أثناء الحفظ');
+        var btn = document.querySelector('#jcaModalFooter [type="submit"]');
+        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...'; }
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: ajaxHeaders()
+        }).then(function(r){ return r.json(); }).then(function(resp){
+            if (resp.forceClose) {
+                hideModal();
+                setTimeout(refreshActions, 200);
+                return;
             }
+            if (resp.title) document.getElementById('jcaModalTitle').innerHTML = resp.title;
+            if (resp.content) document.getElementById('jcaModalBody').innerHTML = resp.content;
+            if (resp.footer) document.getElementById('jcaModalFooter').innerHTML = resp.footer;
+            bindFormSubmit(url);
+        }).catch(function(){
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> حفظ'; }
+            alert('حدث خطأ أثناء الحفظ');
         });
     }
 
     function deleteAction(url, el) {
         if (!confirm('هل أنت متأكد من حذف هذا الإجراء؟')) return;
-        var $row = $(el).closest('.jf-action-row');
-        $row.css({opacity: 0.4, pointerEvents: 'none'});
-        $.ajax({
-            url: url,
-            type: 'POST',
-            data: {_csrf: yii.getCsrfToken()},
-            dataType: 'json',
-            success: function() {
-                $row.slideUp(200, function() { $(this).remove(); });
-                setTimeout(refreshActions, 400);
-            },
-            error: function() {
-                $row.css({opacity: 1, pointerEvents: ''});
-                alert('حدث خطأ أثناء الحذف');
-            }
+        var row = el.closest('.jf-action-row');
+        if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
+        var fd = new FormData();
+        fd.append('_csrf', getCsrf());
+        fetch(url, {method:'POST', body:fd, headers:ajaxHeaders()}).then(function(r){
+            return r.json();
+        }).then(function(){
+            if (row) { row.style.transition = 'all .2s'; row.style.maxHeight = '0'; row.style.overflow = 'hidden'; row.style.opacity = '0'; }
+            setTimeout(refreshActions, 400);
+        }).catch(function(){
+            if (row) { row.style.opacity = '1'; row.style.pointerEvents = ''; }
+            alert('حدث خطأ أثناء الحذف');
         });
     }
 
     function startDecision(id, status) {
         pendingDecision = {id: id, status: status};
-        var $df = document.getElementById('jf-df-' + id);
-        if (!$df) return;
-        $df.classList.add('open');
-        var $confirm = $df.querySelector('.jf-decision-confirm');
-        if ($confirm) {
-            $confirm.className = 'jf-decision-confirm ' + (status === 'approved' ? 'do-approve' : 'do-reject');
-            $confirm.textContent = status === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض';
+        var df = document.getElementById('jf-df-' + id);
+        if (!df) return;
+        df.classList.add('open');
+        var cfm = df.querySelector('.jf-decision-confirm');
+        if (cfm) {
+            cfm.className = 'jf-decision-confirm ' + (status === 'approved' ? 'do-approve' : 'do-reject');
+            cfm.textContent = status === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض';
         }
-        var $ta = document.getElementById('jf-dt-' + id);
-        if ($ta) { $ta.value = ''; $ta.focus(); }
+        var ta = document.getElementById('jf-dt-' + id);
+        if (ta) { ta.value = ''; ta.focus(); }
     }
 
     function cancelDecision(id) {
-        var $df = document.getElementById('jf-df-' + id);
-        if ($df) $df.classList.remove('open');
+        var df = document.getElementById('jf-df-' + id);
+        if (df) df.classList.remove('open');
         pendingDecision = {};
     }
 
     function confirmDecision(id) {
         if (!pendingDecision.id) return;
-        var $ta = document.getElementById('jf-dt-' + id);
-        var dt = $ta ? $ta.value.trim() : '';
-        var $btn = $(document.getElementById('jf-df-' + id)).find('.jf-decision-confirm');
-        $btn.prop('disabled', true).text('جاري الحفظ...');
-        $.post(reqUrl, {
-            id: pendingDecision.id,
-            status: pendingDecision.status,
-            decision_text: dt,
-            _csrf: yii.getCsrfToken()
-        }).done(function(res) {
+        var ta = document.getElementById('jf-dt-' + id);
+        var dt = ta ? ta.value.trim() : '';
+        var df = document.getElementById('jf-df-' + id);
+        var btn = df ? df.querySelector('.jf-decision-confirm') : null;
+        if (btn) { btn.disabled = true; btn.textContent = 'جاري الحفظ...'; }
+        var fd = new FormData();
+        fd.append('id', pendingDecision.id);
+        fd.append('status', pendingDecision.status);
+        fd.append('decision_text', dt);
+        fd.append('_csrf', getCsrf());
+        fetch(reqUrl, {method:'POST', body:fd, headers:ajaxHeaders()}).then(function(r){
+            return r.json();
+        }).then(function(res){
             if (res.success) {
                 setTimeout(refreshActions, 100);
             } else {
                 alert(res.message || 'حدث خطأ');
-                $btn.prop('disabled', false);
+                if (btn) btn.disabled = false;
             }
-        }).fail(function() {
+        }).catch(function(){
             alert('حدث خطأ أثناء الحفظ');
-            $btn.prop('disabled', false).text('تأكيد');
-        }).always(function() { pendingDecision = {}; });
+            if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
+        }).finally(function(){ pendingDecision = {}; });
     }
 
-    $(document).on('click', '.jca-act-trigger', function(e) {
-        e.stopPropagation();
-        var wrap = this.closest('.jca-act-wrap');
-        var menu = wrap.querySelector('.jca-act-menu');
-        var wasOpen = wrap.classList.contains('open');
-        document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
-        if (!wasOpen) {
-            wrap.classList.add('open');
-            var r = this.getBoundingClientRect();
-            menu.style.left = r.left + 'px';
-            menu.style.top = (r.bottom + 4) + 'px';
+    document.addEventListener('click', function(e) {
+        var trigger = e.target.closest('.jca-act-trigger');
+        if (trigger) {
+            e.stopPropagation();
+            var wrap = trigger.closest('.jca-act-wrap');
+            var menu = wrap.querySelector('.jca-act-menu');
+            var wasOpen = wrap.classList.contains('open');
+            document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
+            if (!wasOpen) {
+                wrap.classList.add('open');
+                var r = trigger.getBoundingClientRect();
+                menu.style.left = r.left + 'px';
+                menu.style.top = (r.bottom + 4) + 'px';
+            }
+            return;
         }
+        if (e.target.closest('.jca-act-menu a')) {
+            document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
+            return;
+        }
+        document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
     });
-    $(document).on('click', function() { document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); }); });
-    $(document).on('click', '.jca-act-menu a', function() { document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); }); });
 
     return {
         openModal: openModal,
