@@ -381,8 +381,14 @@ $this->params['breadcrumbs'] = [];
                 . '</div>';
         };
 
-        $renderTree = function($action, $parentId = 0, $depth = 0) use (&$renderTree, &$childrenOf, $natureIcons, $stageLabels, $usageCounts, $renderUsageBadge, $renderNodeActions) {
+        $visitedNodes = [];
+        $renderTree = function($action, $parentId = 0, $depth = 0) use (&$renderTree, &$childrenOf, &$visitedNodes, $natureIcons, $stageLabels, $usageCounts, $renderUsageBadge, $renderNodeActions) {
             $id = $action['id'];
+
+            // Prevent infinite recursion from circular references
+            if (isset($visitedNodes[$id]) || $depth > 20) return '';
+            $visitedNodes[$id] = true;
+
             $n = $action['action_nature'] ?: 'process';
             $style = $natureIcons[$n] ?? $natureIcons['process'];
             $children = $childrenOf[$id] ?? [];
@@ -418,13 +424,17 @@ $this->params['breadcrumbs'] = [];
             }
 
             $html .= '</div>';
+            unset($visitedNodes[$id]);
             return $html;
         };
 
         $hasUsageFunc = function($id) use ($usageCounts) {
             return ((int)($usageCounts[$id] ?? 0)) > 0;
         };
-        $subtreeUsed = function($id) use (&$subtreeUsed, &$childrenOf, $hasUsageFunc) {
+        $subtreeChecked = [];
+        $subtreeUsed = function($id) use (&$subtreeUsed, &$subtreeChecked, &$childrenOf, $hasUsageFunc) {
+            if (isset($subtreeChecked[$id])) return false;
+            $subtreeChecked[$id] = true;
             if ($hasUsageFunc($id)) return true;
             foreach ($childrenOf[$id] ?? [] as $child) {
                 if ($subtreeUsed($child['id'])) return true;
