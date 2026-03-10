@@ -806,7 +806,30 @@
    Improves Kartik GridView tables on mobile.
    ============================================================ */
 
+/* Force horizontal scroll on ALL table containers */
+.kv-grid-container,
+.table-responsive,
+.grid-view .table-responsive,
+.grid-view > table,
+.card-body > .table,
+.card-body > .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Panel header responsive */
+@media (max-width: 991.98px) {
+  .kv-grid-table th {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    padding: 10px 8px;
+  }
+  .kv-grid-table td {
+    font-size: 0.85rem;
+    padding: 10px 8px;
+  }
+}
+
 @media (max-width: 767.98px) {
   .kv-panel-before {
     flex-direction: column;
@@ -822,7 +845,6 @@
     gap: 4px;
   }
 
-  /* GridView column header sort icons */
   .kv-grid-table th {
     white-space: nowrap;
     font-size: 0.78rem;
@@ -833,7 +855,6 @@
     padding: 8px 6px;
   }
 
-  /* Pagination compact */
   .kv-panel-after .pagination {
     flex-wrap: wrap;
     justify-content: center;
@@ -844,24 +865,82 @@
     font-size: 0.8rem;
   }
 
-  /* Summary text */
   .kv-panel-after .summary,
   .kv-panel-pager .kv-summary {
     text-align: center;
     font-size: 0.78rem;
   }
+
+  /* Force all wide tables to scroll */
+  .kv-grid-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kv-grid-table {
+    min-width: 700px;
+  }
 }
 
 @media (max-width: 575.98px) {
-  /* Make GridView toolbar buttons icon-only */
   .kv-panel-before .btn .ty-btn-text {
     display: none;
   }
-
-  /* Export dropdown fullwidth */
   .kv-panel-before .dropdown-menu {
     width: 100%;
     min-width: unset;
+  }
+  .kv-grid-table {
+    min-width: 600px;
+  }
+}
+
+/* ============================================================
+   18b. GLOBAL TABLE MOBILE SAFETY
+   ============================================================
+   Any table inside the content area that could overflow
+   gets wrapped with horizontal scroll automatically.
+   ============================================================ */
+
+.content-wrapper .table,
+.content-wrapper table.table {
+  width: 100%;
+}
+
+@media (max-width: 767.98px) {
+  .content-wrapper .card-body,
+  .content-wrapper .panel-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .content-wrapper .table:not(.ct-table),
+  .content-wrapper table.table:not(.ct-table) {
+    min-width: 600px;
+  }
+
+  .content-wrapper .table th,
+  .content-wrapper table.table th {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    padding: 8px 6px;
+  }
+  .content-wrapper .table td,
+  .content-wrapper table.table td {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .content-wrapper .table th,
+  .content-wrapper table.table th {
+    font-size: 0.72rem;
+    padding: 6px 4px;
+  }
+  .content-wrapper .table td,
+  .content-wrapper table.table td {
+    font-size: 0.78rem;
+    padding: 6px 4px;
   }
 }
 
@@ -1064,6 +1143,84 @@ html body .layout-page .container-fluid {
 
 .layout-page {
   transition: padding-inline-start 0.3s ease;
+}
+
+/* ============================================================
+   24b. MOBILE LAYOUT FIXES (≤767px)
+   ============================================================
+   Fixes the content area on tablet and mobile when the
+   sidebar is hidden by Vuexy's responsive behavior.
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+  .layout-page {
+    padding-inline-start: 0 !important;
+    width: 100% !important;
+  }
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 3rem) !important;
+    inline-size: calc(100% - 3rem) !important;
+    margin-inline: auto !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 2rem) !important;
+    inline-size: calc(100% - 2rem) !important;
+  }
+  .container-xxl.container-p-y {
+    padding-inline: 1rem !important;
+  }
+  .content-wrapper {
+    padding-top: 0.5rem;
+  }
+
+  /* Page title & breadcrumb */
+  .page-header h1,
+  .content-header h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Follow-up report stats */
+  .fur-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .fur-stats .fur-stat {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 140px;
+  }
+
+  /* Customer search filter */
+  .ct-filter-grid,
+  .fur-filter-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 1.5rem) !important;
+    inline-size: calc(100% - 1.5rem) !important;
+  }
+  .container-xxl.container-p-y {
+    padding-inline: 0.75rem !important;
+  }
+  .card-body {
+    padding: 12px 10px;
+  }
+}
+
+@media (max-width: 379.98px) {
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 1rem) !important;
+    inline-size: calc(100% - 1rem) !important;
+  }
+  .container-xxl.container-p-y {
+    padding-inline: 0.5rem !important;
+  }
 }
 
 /* ============================================================

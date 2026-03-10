@@ -102,6 +102,7 @@ fix-configs.py
 # Deploy scripts (contain server credentials)
 /scripts/deploy_vite_tar.py
 /scripts/deploy_vite_subdomains.py
+/scripts/deploy_git.py
 /scripts/_*.py
 
 # Temp debug/fix scripts (contain credentials)
