@@ -258,23 +258,6 @@ class HrEmployeeController extends Controller
             $increments = [];
         }
 
-        $request = Yii::$app->request;
-        if ($request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-            return [
-                'title' => 'ملف الموظف — ' . ($user->name ?: $user->username),
-                'content' => $this->renderAjax('view', [
-                    'user' => $user,
-                    'extended' => $extended,
-                    'documents' => $documents,
-                    'emergencyContacts' => $emergencyContacts,
-                    'attendanceSummary' => $attendanceSummary,
-                    'salaryComponents' => $salaryComponents,
-                    'increments' => $increments,
-                ]),
-            ];
-        }
-
         return $this->render('view', [
             'user' => $user,
             'extended' => $extended,
@@ -519,14 +502,6 @@ class HrEmployeeController extends Controller
             }
         }
 
-        if ($request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-            return [
-                'title' => 'إنشاء مستخدم',
-                'content' => $this->renderAjax('create', ['model' => $model, 'userList' => $userList]),
-            ];
-        }
-
         return $this->render('create', ['model' => $model, 'userList' => $userList]);
     }
 
@@ -624,16 +599,6 @@ class HrEmployeeController extends Controller
                 $transaction->rollBack();
                 Yii::$app->session->setFlash('error', $e->getMessage());
             }
-        }
-
-        if ($request->isAjax) {
-            Yii::$app->response->format = Response::FORMAT_JSON;
-            return [
-                'title' => 'تعديل بيانات الموظف',
-                'content' => $this->renderAjax('update', [
-                    'model' => $model,
-                ]),
-            ];
         }
 
         return $this->render('update', [
