@@ -1,6 +1,6 @@
 <?php
 /**
- * Tabler — Vertical Sidebar
+ * Sidebar — Vuexy vertical menu layout
  */
 
 use yii\helpers\Html;
@@ -17,8 +17,9 @@ if ($primary_company == '') {
     $companyName = !empty($primary_company->name) ? $primary_company->name : 'تيسير';
 }
 
-$menuItems = require '_menu_items.php';
+Yii::$app->view->registerJsVar('base_url', Yii::$app->request->hostInfo . Yii::$app->getUrlManager()->getBaseUrl());
 
+$menuItems = require '_menu_items.php';
 $currentUrl = '/' . ltrim(Yii::$app->request->getPathInfo(), '/');
 
 $faMap = [
@@ -30,102 +31,94 @@ $faMap = [
     'shield' => 'fa-shield-halved', 'user-circle' => 'fa-circle-user', 'cogs' => 'fa-gears',
 ];
 
-function renderIcon($icon, $faMap) {
+function renderMenuIcon($icon, $faMap) {
     $class = isset($faMap[$icon]) ? $faMap[$icon] : 'fa-' . $icon;
-    return '<span class="nav-link-icon d-md-none d-lg-inline-block"><i class="fa-solid ' . $class . '"></i></span>';
+    return '<i class="menu-icon fa-solid ' . $class . '"></i>';
 }
 
-function isActive($item, $currentUrl) {
+function isMenuActive($item, $currentUrl) {
     if (isset($item['url']) && is_array($item['url'])) {
         $url = Url::to($item['url']);
         if ($currentUrl === $url || strpos($currentUrl, $url) === 0) return true;
     }
     if (!empty($item['items'])) {
         foreach ($item['items'] as $sub) {
-            if (isActive($sub, $currentUrl)) return true;
+            if (isMenuActive($sub, $currentUrl)) return true;
         }
     }
     return false;
 }
 ?>
 
-<aside class="navbar navbar-vertical navbar-expand-lg tayseer-sidebar" data-bs-theme="dark">
-    <div class="container-fluid">
-        <!-- Brand -->
-        <a class="navbar-brand" href="<?= Yii::$app->homeUrl ?>" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            <?php if (!empty($logo) && $logo !== Yii::$app->params['companies_logo']): ?>
-                <img src="/<?= Html::encode($logo) ?>" alt="<?= Html::encode($companyName) ?>"
-                     class="navbar-brand-image rounded-circle"
-                     style="width:32px;height:32px;object-fit:cover;flex-shrink:0">
-            <?php else: ?>
-                <span class="sidebar-brand-icon" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#fff2,#fff1);color:#fff;font-weight:900;font-size:16px;font-family:'Cairo',sans-serif;flex-shrink:0"><?= mb_substr($companyName, 0, 1) ?></span>
-            <?php endif ?>
-            <span class="sidebar-brand-text" style="margin-right:8px;font-weight:700;font-size:14px;font-family:'Cairo',sans-serif;overflow:hidden;text-overflow:ellipsis"><?= Html::encode($companyName) ?></span>
+<aside id="layout-menu" class="layout-menu menu-vertical menu" data-bs-theme="dark">
+
+    <!-- Brand -->
+    <div class="app-brand demo">
+        <a href="<?= Yii::$app->homeUrl ?>" class="app-brand-link">
+            <span class="app-brand-logo demo">
+                <?php if (!empty($logo) && $logo !== Yii::$app->params['companies_logo']): ?>
+                    <img src="/<?= Html::encode($logo) ?>" alt="<?= Html::encode($companyName) ?>" style="max-height:32px;max-width:32px;object-fit:contain">
+                <?php else: ?>
+                    <span class="d-flex align-items-center justify-content-center rounded bg-primary text-white fw-bold" style="width:32px;height:32px;font-size:16px"><?= mb_substr($companyName, 0, 1) ?></span>
+                <?php endif ?>
+            </span>
+            <span class="app-brand-text demo menu-text fw-bold ms-3"><?= Html::encode($companyName) ?></span>
         </a>
 
-        <!-- Desktop: Hide sidebar toggle (visibility controlled by CSS media query) -->
-        <a href="#" id="sidebarMiniToggle" title="إخفاء القائمة"
-           style="align-items:center;justify-content:center;width:28px;height:28px;border-radius:6px;color:rgba(255,255,255,.5);transition:all .2s;flex-shrink:0;text-decoration:none">
-            <i class="fa-solid fa-xmark" style="font-size:14px"></i>
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="fa-solid fa-angles-left d-none d-xl-block" style="font-size:14px"></i>
+            <i class="fa-solid fa-xmark d-block d-xl-none" style="font-size:16px"></i>
         </a>
-
-        <!-- Mobile toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebar-menu"
-                aria-controls="sidebar-menu" aria-expanded="false" aria-label="القائمة">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <!-- Sidebar menu -->
-        <div class="collapse navbar-collapse" id="sidebar-menu">
-            <ul class="navbar-nav pt-lg-3">
-                <?php foreach ($menuItems as $item): ?>
-                    <?php if (!empty($item['header'])): ?>
-                        <li class="nav-item nav-item-header pt-3 pb-1">
-                            <span class="nav-link text-uppercase text-muted" style="font-size:11px;font-weight:700;letter-spacing:.5px;opacity:.6;cursor:default">
-                                <?= Html::encode($item['label']) ?>
-                            </span>
-                        </li>
-                    <?php elseif (!empty($item['items'])): ?>
-                        <?php $subActive = isActive($item, $currentUrl); ?>
-                        <li class="nav-item dropdown<?= $subActive ? ' active' : '' ?>">
-                            <a class="nav-link dropdown-toggle<?= $subActive ? ' show' : '' ?>" href="#navbar-<?= md5($item['label']) ?>"
-                               data-bs-toggle="dropdown" data-bs-auto-close="false"
-                               role="button" aria-expanded="<?= $subActive ? 'true' : 'false' ?>">
-                                <?= renderIcon($item['icon'] ?? 'circle', $faMap) ?>
-                                <span class="nav-link-title"><?= Html::encode($item['label']) ?></span>
-                            </a>
-                            <div class="dropdown-menu<?= $subActive ? ' show' : '' ?>">
-                                <?php foreach ($item['items'] as $sub): ?>
-                                    <?php
-                                    $subUrl = isset($sub['url']) ? Url::to($sub['url']) : '#';
-                                    $isSubActive = isset($sub['url']) && ($currentUrl === $subUrl || strpos($currentUrl, $subUrl) === 0);
-                                    ?>
-                                    <a class="dropdown-item<?= $isSubActive ? ' active' : '' ?>" href="<?= $subUrl ?>">
-                                        <?php if (!empty($sub['icon'])): ?>
-                                            <span class="nav-link-icon d-md-none d-lg-inline-block">
-                                                <i class="fa-solid <?= isset($faMap[$sub['icon']]) ? $faMap[$sub['icon']] : 'fa-' . $sub['icon'] ?>"></i>
-                                            </span>
-                                        <?php endif ?>
-                                        <?= Html::encode($sub['label']) ?>
-                                    </a>
-                                <?php endforeach ?>
-                            </div>
-                        </li>
-                    <?php else: ?>
-                        <?php
-                        $url = isset($item['url']) ? Url::to($item['url']) : '#';
-                        $active = isActive($item, $currentUrl);
-                        ?>
-                        <li class="nav-item<?= $active ? ' active' : '' ?>">
-                            <a class="nav-link<?= $active ? ' active' : '' ?>" href="<?= $url ?>">
-                                <?= renderIcon($item['icon'] ?? 'circle', $faMap) ?>
-                                <span class="nav-link-title"><?= Html::encode($item['label']) ?></span>
-                            </a>
-                        </li>
-                    <?php endif ?>
-                <?php endforeach ?>
-            </ul>
-
-        </div>
     </div>
+
+    <div class="menu-inner-shadow"></div>
+
+    <!-- Menu -->
+    <ul class="menu-inner py-1">
+        <?php foreach ($menuItems as $item): ?>
+            <?php if (isset($item['visible']) && !$item['visible']) continue; ?>
+
+            <?php if (!empty($item['header'])): ?>
+                <li class="menu-header small text-uppercase">
+                    <span class="menu-header-text"><?= Html::encode($item['label']) ?></span>
+                </li>
+
+            <?php elseif (!empty($item['items'])): ?>
+                <?php $subActive = isMenuActive($item, $currentUrl); ?>
+                <li class="menu-item<?= $subActive ? ' active open' : '' ?>">
+                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                        <?= renderMenuIcon($item['icon'] ?? 'circle', $faMap) ?>
+                        <div><?= Html::encode($item['label']) ?></div>
+                    </a>
+                    <ul class="menu-sub">
+                        <?php foreach ($item['items'] as $sub): ?>
+                            <?php
+                            if (isset($sub['visible']) && !$sub['visible']) continue;
+                            $subUrl = isset($sub['url']) ? Url::to($sub['url']) : '#';
+                            $isSubActive = isset($sub['url']) && ($currentUrl === $subUrl || strpos($currentUrl, $subUrl) === 0);
+                            ?>
+                            <li class="menu-item<?= $isSubActive ? ' active' : '' ?>">
+                                <a href="<?= $subUrl ?>" class="menu-link">
+                                    <div><?= Html::encode($sub['label']) ?></div>
+                                </a>
+                            </li>
+                        <?php endforeach ?>
+                    </ul>
+                </li>
+
+            <?php else: ?>
+                <?php
+                $url = isset($item['url']) ? Url::to($item['url']) : '#';
+                $active = isMenuActive($item, $currentUrl);
+                ?>
+                <li class="menu-item<?= $active ? ' active' : '' ?>">
+                    <a href="<?= $url ?>" class="menu-link">
+                        <?= renderMenuIcon($item['icon'] ?? 'circle', $faMap) ?>
+                        <div><?= Html::encode($item['label']) ?></div>
+                    </a>
+                </li>
+            <?php endif ?>
+
+        <?php endforeach ?>
+    </ul>
 </aside>

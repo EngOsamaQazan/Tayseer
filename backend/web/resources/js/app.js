@@ -1,15 +1,12 @@
 /**
  * Tayseer ERP — Vite Entry Point
  * ===============================
- * Bundles all modern libraries + init code into a single optimized file.
- * Tabler (Bootstrap 5) + Tailwind CSS (tw- prefix) + modern libs.
+ * Bundles modern libraries + init code into a single optimized file.
+ * Bootstrap 5 CSS is provided by Vuexy core.css (loaded in layout).
+ * Tailwind CSS (tw- prefix) + modern libs bundled here.
  */
 
-// ═══ Tabler CSS + Tailwind CSS ═══
-// Bootstrap 5 JS loaded by Yii2 asset manager (bootstrap.bundle.js) as a regular script,
-// ensuring window.bootstrap is available before inline Kartik widget scripts run.
-// Tabler JS is NOT imported here to avoid bundling a duplicate Bootstrap 5 copy.
-import '@tabler/core/dist/css/tabler.rtl.min.css';
+// ═══ Tailwind CSS ═══
 import '@/css/tailwind.css';
 
 // ═══ Library Imports ═══
@@ -277,43 +274,11 @@ new MutationObserver(function(mutations) {
     });
 }).observe(document.body, { attributes: true, attributeFilter: ['aria-hidden'], subtree: true });
 
-// ═══ 11. Sidebar Toggle (full hide/show on desktop) ═══
-(function() {
-    const page = document.getElementById('tayseerPage');
-    if (!page) return;
-
-    const KEY = 'tayseer-sidebar-hidden';
-
-    function hideSidebar() {
-        page.classList.add('sidebar-hidden');
-        localStorage.setItem(KEY, '1');
-    }
-    function showSidebar() {
-        page.classList.remove('sidebar-hidden');
-        localStorage.setItem(KEY, '0');
-    }
-
-    const hideBtn = document.getElementById('sidebarMiniToggle');
-    if (hideBtn) {
-        hideBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            hideSidebar();
-        });
-    }
-
-    const showBtn = document.getElementById('sidebarShowBtn');
-    if (showBtn) {
-        showBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            showSidebar();
-        });
-    }
-})();
+// ═══ 11. Sidebar Mini Toggle ═══
+// Handled inline in left.php via toggleSidebarMini() — no Vite-side handler needed.
 
 // ═══ 12. Alpine.js — Start (must be last) ═══
 window.Alpine = Alpine;
 Alpine.start();
 
-console.log('[Tayseer] Vite bundle loaded — Tabler + Tailwind + all libraries initialized.');
+console.log('[Tayseer] Vite bundle loaded — Vuexy + Tailwind + all libraries initialized.');

@@ -16,32 +16,20 @@ use backend\widgets\ExportButtons;
 $this->title = Yii::t('app', 'Collections');
 $this->params['breadcrumbs'][] = $this->title;
 
-
 CrudAsset::register($this);
-
 ?>
-<div class="questions-bank box box-primary">
-    <div class="row">
-        <div class="col-lg-3">
 
-        </div>
-        <div class="col-lg-3">
-
-        </div>
-       <div class="col-lg-3">
-           <h3 style="color: brown">
-               عدد قضايا الحسم : <?=$count_contract?>
-           </h3>
-
-       </div>
-<div class="col-lg-3">
-    <h3 style="color: brown">
-        المتاح للقبض :<?=$amount?>
-    </h3>
-
-</div>
+<div class="ty-stats-grid" style="margin-bottom:20px">
+    <div class="ty-stat-card">
+        <div class="ty-stat-value" style="color:var(--bs-primary)"><?= $count_contract ?></div>
+        <div class="ty-stat-label">عدد قضايا الحسم</div>
+    </div>
+    <div class="ty-stat-card">
+        <div class="ty-stat-value" style="color:var(--bs-success)"><?= $amount ?></div>
+        <div class="ty-stat-label">المتاح للقبض</div>
     </div>
 </div>
+
 <div class="collection-index">
     <div id="ajaxCrudDatatable">
         <?= GridView::widget([
@@ -51,8 +39,8 @@ CrudAsset::register($this);
             'columns' => require(__DIR__ . '/_columns.php'),
             'toolbar' => [
                 ['content' =>
-                    Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
-                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
+                    Html::a('<i class="fa fa-sync"></i>', [''],
+                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => ['export-excel'],
@@ -71,6 +59,6 @@ CrudAsset::register($this);
 </div>
 <?php Modal::begin([
     "id" => "ajaxCrudModal",
-    "footer" => "",// always need it for jquery plugin
+    "footer" => "",
 ]) ?>
 <?php Modal::end(); ?>

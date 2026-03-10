@@ -180,6 +180,28 @@ foreach ($contractsByStatus as $st => $cnt) {
 }
 .db-status-item-label { font-size: 12px; color: var(--clr-text-muted); }
 .db-status-item-val { font-size: 16px; font-weight: 800; color: var(--clr-text); margin-right: auto; }
+
+/* ── Mobile Responsive ── */
+@media (max-width: 575.98px) {
+    .db-page { padding: 10px 0; }
+    .db-header h1 { font-size: 17px; }
+    .db-kpi { padding: 14px; gap: 10px; }
+    .db-kpi-icon { width: 38px; height: 38px; font-size: 16px; border-radius: 10px; }
+    .db-kpi-value { font-size: 18px; }
+    .db-kpi-label { font-size: 11px; }
+    .db-card-header { padding: 10px 14px; }
+    .db-card-body { padding: 12px 14px; }
+    .db-chart-wrap { height: 200px; }
+    .db-table th { font-size: 10px; padding: 6px 8px; }
+    .db-table td { font-size: 12px; padding: 8px; }
+    .db-collector-name { min-width: 80px; font-size: 11px; }
+    .db-collector-bar-wrap { height: 20px; }
+    .db-collector-amount { font-size: 11px; min-width: 60px; }
+}
+@media (max-width: 379.98px) {
+    .db-kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+    .db-status-grid { grid-template-columns: repeat(2, 1fr); }
+}
 </style>
 
 <div class="db-page">

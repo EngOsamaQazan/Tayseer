@@ -2188,3 +2188,32 @@ select.form-control.border-no {
 .follow-up-info-box {
     border: 1px solid #e5e5e5;
 }
+
+/* ============================================================
+   VUEXY COMPATIBILITY OVERRIDES
+   Neutralize global rules that conflict with Vuexy layout.
+   These rules were written for AdminLTE and override Vuexy's
+   nav, tabs, and button colors incorrectly.
+   ============================================================ */
+.layout-wrapper .nav > li > a:hover,
+.layout-wrapper .nav > li > a:active,
+.layout-wrapper .nav > li > a:focus {
+  color: inherit !important;
+  background: inherit !important;
+}
+.layout-wrapper .nav-tabs > li > a:hover {
+  border-color: transparent !important;
+}
+.layout-wrapper .navbar-inverse {
+  background-color: transparent;
+  border-color: transparent;
+  margin: 0;
+}
+.layout-wrapper .navbar-inverse > .active > a,
+.layout-wrapper .navbar-inverse > .active > a:hover {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+.layout-wrapper .blue-btn {
+  background: var(--bs-primary, #800020) !important;
+}

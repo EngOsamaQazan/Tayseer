@@ -116,7 +116,7 @@ a.fur-id-link:hover{text-decoration:underline}
 /* ═══ RESPONSIVE — كروت الإحصائيات والفلاتر فقط ═══ */
 @media(min-width:2200px){.fur-stat-val{font-size:26px}}
 @media(max-width:1599px){.fur-stats{gap:10px}.fur-stat{padding:12px}.fur-stat-val{font-size:18px}.fur-stat-icon{width:40px;height:40px;font-size:17px}}
-@media(max-width:1366px){.fur-stats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:991px){.fur-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:768px){.fur-stats{grid-template-columns:1fr 1fr;gap:8px}.fur-stat{padding:10px}.fur-stat-val{font-size:16px}.fur-stat-lbl{font-size:10px}}
 @media(max-width:480px){.fur-stats{grid-template-columns:1fr 1fr}.fur-stat{padding:8px;gap:8px}.fur-stat-icon{width:34px;height:34px;font-size:15px}.fur-stat-val{font-size:16px}.ct-page-hdr{flex-direction:column;align-items:flex-start;gap:8px}.ct-title-area h1{font-size:18px}}
 @media(max-width:380px){.fur-stats{grid-template-columns:1fr}.fur-stat-val{font-size:18px}}

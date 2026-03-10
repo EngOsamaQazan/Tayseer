@@ -607,14 +607,14 @@ return [
                 // Suppress BS3 assets (no longer used)
                 'yii\bootstrap\BootstrapAsset' => ['css' => []],
                 'yii\bootstrap\BootstrapPluginAsset' => ['js' => []],
-                // Suppress BS4 assets (migrated to BS5 via Tabler)
+                // Suppress BS4 assets (migrated to BS5 via Vuexy)
                 'yii\bootstrap4\BootstrapAsset' => ['css' => []],
                 'yii\bootstrap4\BootstrapPluginAsset' => ['js' => []],
-                // Suppress BS5 CSS only (already loaded via Tabler's RTL CSS in Vite bundle)
+                // Suppress BS5 CSS only (already loaded via Vuexy core.css)
                 // BS5 JS (bootstrap.bundle.js) is NOT suppressed — it must load as a regular script
                 // so window.bootstrap is available for inline Kartik/Yii2 widget scripts
                 'yii\bootstrap5\BootstrapAsset' => ['css' => []],
-                // Suppress AdminLTE (replaced by Tabler)
+                // Suppress AdminLTE (replaced by Vuexy)
                 'potime\adminlte3\assets\AdminLteAsset' => ['css' => [], 'js' => [], 'depends' => []],
                 'potime\adminlte3\assets\PluginAsset' => ['css' => [], 'depends' => []],
                 'potime\adminlte3\assets\FontAwesomeAsset' => ['css' => [], 'depends' => []],

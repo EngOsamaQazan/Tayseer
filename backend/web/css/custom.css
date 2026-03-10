@@ -93,19 +93,7 @@ a, a:hover{
 
 	color:#EDF1F2 !important;
 }
-.btn-info{
-    background: #37a9e1 !important;
-    color: #ffffff !important;
-    border: none;
-}
-.btn-primary{
-	background-color: #02b9bf !important;
-    color: white;
-}
-.btn-success{
-    background-color: #02b9bf !important;
-    color: white;
-}
+/* Removed: legacy color overrides that conflict with Vuexy/Tayseer branding */
 
 .bank-trans-det-moadl .modal-header {
     border-bottom: none;

@@ -47,7 +47,7 @@ class LoginForm extends Model
         if (!$this->hasErrors()) {
             $user = $this->getUser();
 
-            if (!$user || !$user->validatePassword($this->password, $user->password_hash)) {
+            if (!$user || !Yii::$app->security->validatePassword($this->password, $user->password_hash)) {
                 $this->addError($attribute, 'اسم المستخدم أو البريد الإلكتروني أو كلمة المرور غير صحيحة');
             }
         }

@@ -70,8 +70,8 @@
     direction: rtl;
     font-family: 'Noto Kufi Arabic', 'Segoe UI', Tahoma, sans-serif;
     color: var(--hr-text);
-    max-width: 1440px;
-    margin: 0 auto;
+    max-width: 100%;
+    margin: 0;
 }
 
 

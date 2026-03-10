@@ -98,3 +98,25 @@ check_cols.php
 check_companies.php
 test_api.php
 fix-configs.py
+
+# Deploy scripts (contain server credentials)
+/scripts/deploy_vite_tar.py
+/scripts/deploy_vite_subdomains.py
+/scripts/_*.py
+
+# Temp debug/fix scripts (contain credentials)
+/scripts/debug_*.py
+/scripts/fix_*
+/scripts/check_*.py
+/scripts/get_error.py
+/scripts/whats_wrong.py
+/scripts/deep_debug.py
+/scripts/restore_prod.py
+/scripts/upload_fix_ext.py
+/scripts/run_fix_*.py
+
+# Debug diagnostic files
+/backend/web/test-width.html
+
+# Internal notes
+/notes.md
