@@ -318,10 +318,14 @@ class HrEmployeeController extends Controller
 
         // Determine categories and employee flag from POST regardless of model load
         $selectedCategories = $request->post('user_categories', []);
+        $employeeSlugs = ['employee', 'sales_employee', 'branch_manager', 'court_agent', 'manager'];
         $isEmployee = false;
         if (!empty($selectedCategories)) {
-            $empCat = \backend\models\UserCategory::find()->where(['slug' => 'employee', 'is_active' => 1])->one();
-            $isEmployee = $empCat && in_array($empCat->id, $selectedCategories);
+            $empCats = \backend\models\UserCategory::find()
+                ->where(['slug' => $employeeSlugs, 'is_active' => 1])
+                ->select('id')
+                ->column();
+            $isEmployee = !empty(array_intersect($empCats, $selectedCategories));
         }
 
         $createNewUser = (int)$request->post('create_new_user', 0);
@@ -950,8 +954,7 @@ class HrEmployeeController extends Controller
         return [
             'vendor'         => 'مورّد أجهزة',
             'investor'       => 'مستثمر',
-            // court_agent = موظف بدوام كامل وعمل ميداني، يُنشأ كموظف مع فئة مندوب محكمة
-            // الصلاحيات تُسند من المسمى الوظيفي "مندوب محكمة" وليس من الفئة
+            'manager'        => 'مدير النظام',
         ];
     }
 

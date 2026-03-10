@@ -137,15 +137,15 @@ if (!empty(Yii::$app->request->post('user_categories'))) {
     $selectedCatIds = Yii::$app->request->post('user_categories');
 }
 
-/* ─── فحص وجود فئة "موظف" محددة ─── */
-$employeeCat = null;
+/* ─── فحص وجود فئة موظف محددة (أي فئة تتطلب بيانات HR) ─── */
+$hrSlugs = ['employee', 'sales_employee', 'branch_manager', 'court_agent', 'manager'];
+$isEmployeeSelected = false;
 foreach ($userCategories as $cat) {
-    if ($cat->slug === 'employee') {
-        $employeeCat = $cat;
+    if (in_array($cat->slug, $hrSlugs) && in_array($cat->id, $selectedCatIds)) {
+        $isEmployeeSelected = true;
         break;
     }
 }
-$isEmployeeSelected = $employeeCat && in_array($employeeCat->id, $selectedCatIds);
 
 /* فرع الموظف (لموظف مبيعات فقط) — من os_user.location */
 $currentUserLocation = null;
@@ -836,12 +836,14 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
         });
     });
 
+    var employeeSlugs = ['employee', 'sales_employee', 'branch_manager', 'court_agent', 'manager'];
+
     function toggleHrSections() {
         var hasEmployee = false;
         var hasBranchRole = false;
         document.querySelectorAll('.hr-cat-check:checked').forEach(function(cb) {
             var slug = cb.closest('.hr-cat-card').dataset.slug;
-            if (slug === 'employee') hasEmployee = true;
+            if (employeeSlugs.indexOf(slug) !== -1) hasEmployee = true;
             if (slug === 'sales_employee') hasBranchRole = true;
         });
         document.querySelectorAll('.hr-employee-only').forEach(function(s) {

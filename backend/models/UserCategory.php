@@ -81,6 +81,7 @@ class UserCategory extends ActiveRecord
             ['slug' => 'investor',       'name_ar' => 'مستثمر (شريك)',       'name_en' => 'Investor',      'icon' => 'fa-briefcase', 'color' => '#8B5CF6', 'sort_order' => 4, 'is_system' => 1],
             ['slug' => 'court_agent',    'name_ar' => 'مندوب محكمة',         'name_en' => 'Court Agent',   'icon' => 'fa-gavel',     'color' => '#800020', 'sort_order' => 5, 'is_system' => 1],
             ['slug' => 'branch_manager', 'name_ar' => 'مدير فرع',            'name_en' => 'Branch Manager','icon' => 'fa-building',  'color' => '#059669', 'sort_order' => 6, 'is_system' => 1],
+            ['slug' => 'manager',        'name_ar' => 'مدير',                'name_en' => 'Manager',       'icon' => 'fa-star',      'color' => '#D97706', 'sort_order' => 0, 'is_system' => 1],
         ];
     }
 
