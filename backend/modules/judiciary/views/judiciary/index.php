@@ -11,6 +11,7 @@ use johnitvn\ajaxcrud\CrudAsset;
 CrudAsset::register($this);
 $this->title = 'القسم القانوني';
 $this->params['breadcrumbs'][] = $this->title;
+$this->registerCss('.content-header,.page-header{display:none!important}');
 
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . time());
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . time(), [
@@ -26,7 +27,8 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 
 <style>
 /* ═══ Legal Hub — Tab System ═══ */
-.lh-wrap { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; }
+.lh-wrap { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; padding:0; max-width:100%; margin:0; box-sizing:border-box; }
+.lh-wrap *, .lh-wrap *::before, .lh-wrap *::after { box-sizing:border-box; }
 
 .lh-tabs {
     display:flex; gap:0; background:#fff; border-radius:12px 12px 0 0;
@@ -271,50 +273,44 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 .lh-stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
 .lh-stat-val{font-size:20px;font-weight:700;line-height:1.2}
 .lh-stat-lbl{font-size:11px;color:#64748B;margin-top:1px}
-@media(max-width:1200px){.lh-stats{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:480px){.lh-stats{grid-template-columns:1fr 1fr;gap:8px}.lh-stat{padding:10px 12px}.lh-stat-val{font-size:16px}.lh-stat-icon{width:36px;height:36px;font-size:15px}}
+/* ═══ FULL RESPONSIVE — Same approach as Contracts V2 ═══ */
 
-/* ═══ FULL RESPONSIVE — Skill Applied ═══ */
-
-/* Global overflow safety */
-.lh-wrap { width:100%; max-width:100%; overflow-x:hidden; box-sizing:border-box; }
-.lh-wrap img, .lh-wrap iframe { max-width:100%; }
-.lh-wrap *, .lh-wrap *::before, .lh-wrap *::after { box-sizing:border-box; }
+/* ── Wide desktop (≤1279px) ── */
+@media (max-width:1279px) {
+    .lh-stats { grid-template-columns:repeat(2,1fr); }
+}
 
 /* ── Tablet (≤992px) ── */
 @media (max-width:992px) {
-    .container-xxl, .container-p-y { padding-left:12px !important; padding-right:12px !important; }
     .lh-panel { padding:10px; }
     .lh-panel .panel-heading .pull-right { display:flex; flex-wrap:wrap; gap:4px; }
     .lh-panel .panel-heading .pull-right .btn { font-size:11px; padding:3px 6px !important; }
     .lh-panel .kv-grid-container { overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
-    .lh-panel .kv-grid-table { min-width:600px; overflow:visible !important; }
+    .lh-panel .kv-grid-table { min-width:600px; }
     .pra-wrap { max-height:120px; }
 }
 
 /* ── Mobile (≤767px) ── */
 @media (max-width:767px) {
-    .container-xxl, .container-p-y { padding-left:8px !important; padding-right:8px !important; }
-    .lh-wrap { font-size:13px; width:100%; }
+    .lh-wrap { font-size:13px; padding:0; }
 
     /* Tabs: icon-only + scrollable */
-    .lh-tabs { gap:0; border-radius:8px 8px 0 0; flex-wrap:nowrap; overflow-x:auto; }
-    .lh-tab { padding:10px 12px; font-size:12px; gap:5px; flex-shrink:0; }
+    .lh-tabs { gap:0; border-radius:8px 8px 0 0; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .lh-tab { padding:10px 10px; font-size:12px; gap:5px; flex-shrink:0; }
     .lh-tab span.lh-tab-label { display:none; }
     .lh-tab .lh-badge { min-width:18px; height:18px; font-size:9px; padding:0 4px; }
     .lh-pending-queue { padding:6px 10px; font-size:11px; border-radius:6px; flex-shrink:0; }
     .lh-pending-queue span:not(.lh-pending-count) { display:none; }
 
     /* Content area */
-    .lh-content { border-radius:0 0 8px 8px; overflow:hidden; }
-    .lh-panel { padding:8px; }
+    .lh-content { border-radius:0 0 8px 8px; border:none; }
+    .lh-panel { padding:6px; }
 
     /* Stats cards — stack vertically */
-    .lh-stats { grid-template-columns:1fr !important; gap:8px; margin-bottom:12px; }
-    .lh-stat { width:100%; }
+    .lh-stats { grid-template-columns:1fr; gap:8px; margin-bottom:12px; }
 
     /* GridView tables → card layout */
-    .lh-panel .panel { border-radius:8px !important; overflow:hidden; }
+    .lh-panel .panel { border-radius:8px !important; border:none !important; box-shadow:none !important; }
     .lh-panel .panel-heading { padding:8px 10px !important; font-size:12px; border-radius:8px 8px 0 0 !important; }
     .lh-panel .kv-grid-container { overflow:visible !important; }
     .lh-panel .kv-grid-table { min-width:0 !important; width:100% !important; table-layout:auto !important; }
@@ -326,8 +322,8 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
     .lh-panel .kv-grid-table tbody tr:hover { background:#FFFBEB; }
     .lh-panel .kv-grid-table tbody td {
         display:flex !important; justify-content:space-between; align-items:center;
-        padding:3px 0 !important; border:none !important; font-size:12px;
-        width:100% !important; max-width:100% !important;
+        padding:4px 0 !important; border:none !important; font-size:12px;
+        width:100% !important; max-width:none !important;
         white-space:normal !important; overflow:visible !important;
     }
     .lh-panel .kv-grid-table tbody td::before {
@@ -380,12 +376,10 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 
 /* ── Small Mobile (≤480px) ── */
 @media (max-width:480px) {
-    .container-xxl, .container-p-y { padding-left:6px !important; padding-right:6px !important; }
     .lh-wrap { font-size:12px; }
-    .lh-tabs { border-radius:0; }
+    .lh-tabs { border-radius:0; border:none; }
     .lh-tab { padding:8px 8px; font-size:11px; }
     .lh-content { border-radius:0; }
-    .lh-stats { grid-template-columns:1fr !important; }
     .lh-stat { padding:10px 12px; }
     .lh-stat-val { font-size:16px; }
     .lh-stat-icon { width:34px; height:34px; font-size:14px; }
