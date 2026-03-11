@@ -5,10 +5,7 @@
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
-use johnitvn\ajaxcrud\CrudAsset;
-
-CrudAsset::register($this);
+/* Bootstrap 3 Modal/CrudAsset removed — conflicts with Vuexy Bootstrap 5 sidebar on mobile */
 $this->title = 'القسم القانوني';
 $this->params['breadcrumbs'][] = $this->title;
 $this->registerCss('.content-header,.page-header{display:none!important}');
@@ -26,18 +23,12 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 ?>
 
 <style>
-/* ═══ Force layout on mobile — match contracts approach ═══ */
-@media (max-width:1199.98px) {
-    body:has(.lh-wrap) .layout-page { padding-inline-start:0 !important; width:100% !important; }
-    body:has(.lh-wrap) .content-wrapper { overflow-x:hidden !important; }
-    body:has(.lh-wrap) .container-xxl.flex-grow-1 { max-width:100% !important; padding-inline:10px !important; overflow:hidden !important; }
-}
-@media (max-width:767px) {
-    body:has(.lh-wrap) .container-xxl.flex-grow-1 { padding-inline:6px !important; }
-}
-
 /* ═══ Legal Hub — Tab System ═══ */
-.lh-wrap { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; padding:0; max-width:100%; margin:0; box-sizing:border-box; overflow:hidden; }
+.lh-wrap {
+    font-family:'Tajawal','Cairo',sans-serif; direction:rtl;
+    padding:0; margin:0; width:100%; max-width:100%;
+    box-sizing:border-box; overflow-x:hidden;
+}
 .lh-wrap *, .lh-wrap *::before, .lh-wrap *::after { box-sizing:border-box; }
 
 .lh-tabs {
@@ -499,8 +490,17 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
     </div>
 </div>
 
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => Modal::SIZE_LARGE]) ?>
-<?php Modal::end() ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+</div>
 
 <!-- ═══ Case Timeline Side Panel ═══ -->
 <div class="ctl-overlay" id="ctlOverlay"></div>
