@@ -26,8 +26,18 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 ?>
 
 <style>
+/* ═══ Force layout on mobile — match contracts approach ═══ */
+@media (max-width:1199.98px) {
+    body:has(.lh-wrap) .layout-page { padding-inline-start:0 !important; width:100% !important; }
+    body:has(.lh-wrap) .content-wrapper { overflow-x:hidden !important; }
+    body:has(.lh-wrap) .container-xxl.flex-grow-1 { max-width:100% !important; padding-inline:10px !important; overflow:hidden !important; }
+}
+@media (max-width:767px) {
+    body:has(.lh-wrap) .container-xxl.flex-grow-1 { padding-inline:6px !important; }
+}
+
 /* ═══ Legal Hub — Tab System ═══ */
-.lh-wrap { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; padding:0; max-width:100%; margin:0; box-sizing:border-box; }
+.lh-wrap { font-family:'Tajawal','Cairo',sans-serif; direction:rtl; padding:0; max-width:100%; margin:0; box-sizing:border-box; overflow:hidden; }
 .lh-wrap *, .lh-wrap *::before, .lh-wrap *::after { box-sizing:border-box; }
 
 .lh-tabs {
