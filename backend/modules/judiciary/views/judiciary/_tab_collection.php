@@ -45,10 +45,57 @@ use backend\widgets\ExportButtons;
 #crud-datatable-collection .coll-amount-neg { color: #DC2626; }
 #crud-datatable-collection .coll-amount-pos { color: #059669; }
 
-@media (max-width: 768px) {
-    .coll-stats { gap: 10px; }
-    .coll-stat { padding: 8px 12px; flex: 1; min-width: 140px; }
-    .coll-stat-val { font-size: 15px; }
+/* ═══ Responsive ═══ */
+@media (max-width:992px) {
+    #crud-datatable-collection .kv-grid-container { overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
+    #crud-datatable-collection .kv-grid-table { min-width:550px; }
+}
+@media (max-width:767px) {
+    .coll-stats { gap:8px; padding:10px 12px; }
+    .coll-stat { padding:8px 12px; flex:1; min-width:120px; }
+    .coll-stat-val { font-size:15px; }
+    .coll-stat-icon { width:30px; height:30px; font-size:13px; }
+    .coll-stat-lbl { font-size:10px; }
+
+    #crud-datatable-collection .kv-grid-container { overflow:visible !important; }
+    #crud-datatable-collection .kv-grid-table { min-width:0; table-layout:auto !important; }
+    #crud-datatable-collection .kv-grid-table thead { display:none; }
+    #crud-datatable-collection .kv-grid-table tbody tr {
+        display:block; background:#fff; border:1px solid #E2E8F0;
+        border-radius:10px; margin-bottom:8px; padding:10px 12px;
+        box-shadow:0 1px 3px rgba(0,0,0,.04);
+    }
+    #crud-datatable-collection .kv-grid-table tbody tr:hover { background:#FFFBEB; }
+    #crud-datatable-collection .kv-grid-table tbody td {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:3px 0 !important; border:none !important; font-size:12px;
+        white-space:normal !important; max-width:none !important;
+    }
+    #crud-datatable-collection .kv-grid-table tbody td::before {
+        content:attr(data-label); font-weight:600; color:#64748B;
+        font-size:11px; min-width:70px; flex-shrink:0;
+    }
+    #crud-datatable-collection .kv-grid-table tbody td:last-child {
+        justify-content:flex-end; padding-top:6px !important;
+        margin-top:4px; border-top:1px solid #F1F5F9 !important;
+    }
+    #crud-datatable-collection .kv-grid-table .filters { display:none; }
+    #crud-datatable-collection .panel-heading { font-size:12px; padding:8px 10px !important; }
+    #crud-datatable-collection .panel-heading .pull-right {
+        float:none !important; margin-top:6px; display:flex; flex-wrap:wrap; gap:3px;
+    }
+    #crud-datatable-collection .pagination { flex-wrap:wrap; justify-content:center; gap:2px; }
+    #crud-datatable-collection .pagination>li>a,
+    #crud-datatable-collection .pagination>li>span {
+        padding:3px 6px; font-size:10px; min-width:28px; min-height:28px;
+        display:inline-flex; align-items:center; justify-content:center;
+    }
+}
+@media (max-width:480px) {
+    .coll-stats { flex-direction:column; }
+    .coll-stat { min-width:0; width:100%; }
+    #crud-datatable-collection .kv-grid-table tbody td { font-size:11px; }
+    #crud-datatable-collection .kv-grid-table tbody td::before { font-size:10px; min-width:60px; }
 }
 </style>
 
@@ -86,21 +133,21 @@ use backend\widgets\ExportButtons;
                     'attribute' => 'contract_id',
                     'label' => 'رقم العقد',
                     'headerOptions' => ['style' => 'width:80px'],
-                    'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap'],
+                    'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap', 'data-label' => 'رقم العقد'],
                 ],
                 [
                     'class' => '\kartik\grid\DataColumn',
                     'attribute' => 'date',
                     'label' => 'التاريخ',
                     'headerOptions' => ['style' => 'width:100px'],
-                    'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+                    'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'التاريخ'],
                 ],
                 [
                     'class' => '\kartik\grid\DataColumn',
                     'attribute' => 'amount',
                     'label' => 'المبلغ',
                     'headerOptions' => ['style' => 'width:80px'],
-                    'contentOptions' => ['style' => 'font-weight:600;white-space:nowrap'],
+                    'contentOptions' => ['style' => 'font-weight:600;white-space:nowrap', 'data-label' => 'المبلغ'],
                     'format' => ['decimal', 2],
                 ],
                 [
@@ -108,7 +155,7 @@ use backend\widgets\ExportButtons;
                     'attribute' => 'notes',
                     'label' => 'ملاحظات',
                     'headerOptions' => ['style' => 'width:220px'],
-                    'contentOptions' => ['class' => 'coll-notes-cell'],
+                    'contentOptions' => ['class' => 'coll-notes-cell', 'data-label' => 'ملاحظات'],
                     'format' => 'text',
                 ],
                 [
@@ -117,7 +164,7 @@ use backend\widgets\ExportButtons;
                     'label' => 'اسم الموظف',
                     'value' => 'createdBy.username',
                     'headerOptions' => ['style' => 'width:100px'],
-                    'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+                    'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'الموظف'],
                 ],
                 [
                     'class' => '\kartik\grid\DataColumn',
@@ -135,7 +182,7 @@ use backend\widgets\ExportButtons;
                         foreach ($revares_courts as $r) $revares += $r->amount;
                         $value = ($diffInMonths * $model->amount) - $revares;
                         $cls = $value < 0 ? 'coll-amount-cell coll-amount-neg' : 'coll-amount-cell coll-amount-pos';
-                        return ['class' => $cls];
+                        return ['class' => $cls, 'data-label' => 'المتاح للقبض'];
                     },
                     'value' => function ($model) {
                         $d1 = new DateTime($model->date);
@@ -156,7 +203,7 @@ use backend\widgets\ExportButtons;
                     'dropdown' => false,
                     'vAlign' => 'middle',
                     'headerOptions' => ['style' => 'width:90px'],
-                    'contentOptions' => ['style' => 'white-space:nowrap'],
+                    'contentOptions' => ['style' => 'white-space:nowrap', 'data-label' => ''],
                     'template' => (Permissions::can(Permissions::COLL_VIEW) ? '{view}' : '')
                         . (Permissions::can(Permissions::COLL_UPDATE) ? '{update}' : '')
                         . (Permissions::can(Permissions::COLL_DELETE) ? '{delete}' : ''),

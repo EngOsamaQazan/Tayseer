@@ -273,6 +273,115 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 .lh-stat-lbl{font-size:11px;color:#64748B;margin-top:1px}
 @media(max-width:1200px){.lh-stats{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:480px){.lh-stats{grid-template-columns:1fr 1fr;gap:8px}.lh-stat{padding:10px 12px}.lh-stat-val{font-size:16px}.lh-stat-icon{width:36px;height:36px;font-size:15px}}
+
+/* ═══ FULL RESPONSIVE — Skill Applied ═══ */
+
+/* Global overflow safety */
+.lh-wrap { max-width:100vw; overflow-x:hidden; }
+.lh-wrap img, .lh-wrap iframe { max-width:100%; }
+
+/* ── Tablet (≤992px) ── */
+@media (max-width:992px) {
+    .lh-panel { padding:10px; }
+    .lh-panel .panel-heading .pull-right { display:flex; flex-wrap:wrap; gap:4px; }
+    .lh-panel .panel-heading .pull-right .btn { font-size:11px; padding:3px 6px !important; }
+    .lh-panel .kv-grid-container { overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
+    .lh-panel .kv-grid-table { min-width:600px; overflow:visible !important; }
+    .pra-wrap { max-height:120px; }
+}
+
+/* ── Mobile (≤767px) ── */
+@media (max-width:767px) {
+    .lh-wrap { font-size:13px; }
+
+    /* Tabs: icon-only + scrollable */
+    .lh-tabs { gap:0; border-radius:8px 8px 0 0; }
+    .lh-tab { padding:10px 12px; font-size:12px; gap:5px; }
+    .lh-tab span.lh-tab-label { display:none; }
+    .lh-tab .lh-badge { min-width:18px; height:18px; font-size:9px; padding:0 4px; }
+    .lh-pending-queue { padding:6px 10px; font-size:11px; border-radius:6px; }
+    .lh-pending-queue span:not(.lh-pending-count) { display:none; }
+
+    /* Content area */
+    .lh-content { border-radius:0 0 8px 8px; }
+    .lh-panel { padding:8px; }
+
+    /* Stats cards */
+    .lh-stats { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+
+    /* GridView tables → card layout */
+    .lh-panel .panel { border-radius:8px !important; }
+    .lh-panel .panel-heading { padding:8px 10px !important; font-size:12px; border-radius:8px 8px 0 0 !important; }
+    .lh-panel .kv-grid-container { overflow:visible !important; }
+    .lh-panel .kv-grid-table { min-width:0; }
+    .lh-panel .kv-grid-table thead { display:none; }
+    .lh-panel .kv-grid-table tbody tr {
+        display:block; background:#fff; border:1px solid #E2E8F0; border-radius:10px;
+        margin-bottom:8px; padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,.04);
+    }
+    .lh-panel .kv-grid-table tbody tr:hover { background:#FFFBEB; }
+    .lh-panel .kv-grid-table tbody td {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:3px 0 !important; border:none !important; font-size:12px;
+    }
+    .lh-panel .kv-grid-table tbody td::before {
+        content:attr(data-label); font-weight:600; color:#64748B; font-size:11px;
+        min-width:70px; flex-shrink:0;
+    }
+    .lh-panel .kv-grid-table tbody td:last-child {
+        justify-content:flex-end; padding-top:6px !important;
+        margin-top:4px; border-top:1px solid #F1F5F9 !important;
+    }
+    .lh-panel .kv-grid-table .filters { display:none; }
+
+    /* Toolbar buttons stack */
+    .lh-panel .panel-heading .pull-right {
+        display:flex; flex-wrap:wrap; gap:3px; float:none !important; margin-top:6px;
+    }
+
+    /* Pagination compact */
+    .lh-panel .pagination { flex-wrap:wrap; justify-content:center; gap:2px; }
+    .lh-panel .pagination>li>a, .lh-panel .pagination>li>span {
+        padding:3px 6px; font-size:10px; min-width:28px; min-height:28px;
+        display:inline-flex; align-items:center; justify-content:center;
+    }
+
+    /* PRA items */
+    .pra-wrap { max-height:none; }
+    .pra-btn { width:32px; height:32px; font-size:13px; }
+    .pra-name { font-size:12px; }
+
+    /* Dropdown menus */
+    .lh-panel .jud-act-menu, .lh-panel .jca-act-menu { min-width:140px; }
+    .lh-panel .jud-act-menu a, .lh-panel .jca-act-menu a { padding:10px 14px; font-size:13px; min-height:44px; }
+
+    /* Modal full-width */
+    #ajaxCrudModal .modal-dialog { margin:8px; max-width:calc(100vw - 16px); }
+    #ajaxCrudModal .modal-body { max-height:70vh; overflow-y:auto; }
+
+    /* Touch targets */
+    .lh-tab { min-height:44px; }
+    .jud-timeline-btn { min-height:36px; padding:6px 12px; }
+    .lh-panel .panel-heading .pull-right .btn { min-height:36px; }
+}
+
+/* ── Small Mobile (≤480px) ── */
+@media (max-width:480px) {
+    .lh-wrap { font-size:12px; }
+    .lh-tabs { border-radius:0; }
+    .lh-tab { padding:8px 10px; font-size:11px; }
+    .lh-content { border-radius:0; }
+    .lh-stats { grid-template-columns:1fr; }
+    .lh-stat { padding:10px 12px; }
+
+    .lh-panel .kv-grid-table tbody td { font-size:11px; }
+    .lh-panel .kv-grid-table tbody td::before { font-size:10px; min-width:60px; }
+
+    .pra-item { padding:4px 6px; }
+    .pra-row { gap:4px; }
+
+    .lh-pending-queue { padding:5px 8px; font-size:10px; }
+}
 </style>
 
 <div class="lh-wrap">

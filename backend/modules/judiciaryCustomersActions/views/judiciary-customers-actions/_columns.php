@@ -13,7 +13,7 @@ return [
         'label' => 'القضية',
         'format' => 'raw',
         'headerOptions' => ['style' => 'width:80px'],
-        'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap'],
+        'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap', 'data-label' => 'القضية'],
         'value' => function ($m) {
             $jud = $m->judiciary;
             $label = $jud ? ($jud->judiciary_number . '/' . $jud->year) : '#' . $m->judiciary_id;
@@ -27,7 +27,7 @@ return [
         'label' => 'المحكوم عليه',
         'value' => 'customers.name',
         'headerOptions' => ['style' => 'width:140px'],
-        'contentOptions' => ['class' => 'jca-name-cell'],
+        'contentOptions' => ['class' => 'jca-name-cell', 'data-label' => 'المحكوم عليه'],
     ],
 
     /* الإجراء */
@@ -37,7 +37,7 @@ return [
         'label' => 'الإجراء',
         'value' => 'judiciaryActions.name',
         'headerOptions' => ['style' => 'width:110px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'الإجراء'],
     ],
 
     /* الملاحظات */
@@ -47,7 +47,7 @@ return [
         'label' => 'ملاحظات',
         'format' => 'text',
         'headerOptions' => ['style' => 'width:200px'],
-        'contentOptions' => ['class' => 'jca-notes-cell'],
+        'contentOptions' => ['class' => 'jca-notes-cell', 'data-label' => 'ملاحظات'],
     ],
 
     /* المنشئ */
@@ -57,7 +57,7 @@ return [
         'label' => 'المنشئ',
         'value' => 'createdBy.username',
         'headerOptions' => ['style' => 'width:90px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'المنشئ'],
     ],
 
     /* المحامي */
@@ -66,7 +66,7 @@ return [
         'label' => 'المحامي',
         'value' => fn($m) => $m->judiciary->lawyer->name ?? '—',
         'headerOptions' => ['style' => 'width:100px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'المحامي'],
     ],
 
     /* المحكمة */
@@ -75,7 +75,7 @@ return [
         'label' => 'المحكمة',
         'value' => fn($m) => $m->judiciary->court->name ?? '—',
         'headerOptions' => ['style' => 'width:100px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'المحكمة'],
     ],
 
     /* العقد */
@@ -85,7 +85,7 @@ return [
         'label' => 'العقد',
         'format' => 'raw',
         'headerOptions' => ['style' => 'width:70px'],
-        'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap'],
+        'contentOptions' => ['style' => 'font-weight:700;white-space:nowrap', 'data-label' => 'العقد'],
         'value' => function ($m) {
             $cid = $m->judiciary->contract_id ?? null;
             return $cid ? Html::a($cid, ['/followUp/follow-up/index', 'contract_id' => $cid], ['class' => 'text-burgundy']) : '—';
@@ -98,14 +98,14 @@ return [
         'attribute' => 'action_date',
         'label' => 'تاريخ الإجراء',
         'headerOptions' => ['style' => 'width:95px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'التاريخ'],
     ],
 
     /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',
         'headerOptions' => ['style' => 'width:50px'],
-        'contentOptions' => ['style' => 'width:50px;text-align:center;overflow:visible;position:relative'],
+        'contentOptions' => ['style' => 'width:50px;text-align:center;overflow:visible;position:relative', 'data-label' => ''],
         'header' => '',
         'template' => '{all}',
         'buttons' => [

@@ -63,6 +63,58 @@ $refreshUrl = Url::to(['/judiciary/judiciary/refresh-persistence-cache']);
 .cr-loading i { font-size:20px; animation: cr-spin 1s linear infinite; color:#800020; }
 .cr-empty { text-align:center; padding:40px; color:#94a3b8; font-size:15px; }
 .cr-empty i { font-size:28px; display:block; margin-bottom:10px; }
+
+/* ═══ Responsive ═══ */
+@media (max-width:992px) {
+    .cr-header { flex-direction:column; align-items:stretch; }
+    .cr-header > div { justify-content:flex-start; flex-wrap:wrap; }
+    .cr-stats { flex-wrap:wrap; }
+    .cr-stat { flex:1; min-width:140px; }
+    .cr-search { min-width:0; width:100%; }
+    .cr-tools { flex-direction:column; }
+}
+@media (max-width:767px) {
+    .cr-page { font-size:13px; }
+    .cr-header h2 { font-size:17px; }
+    .cr-header > div { gap:6px; }
+    .cr-btn { padding:8px 14px; font-size:12px; min-height:40px; }
+    .cr-stats { gap:8px; }
+    .cr-stat { padding:10px 12px; min-width:120px; }
+    .cr-stat-val { font-size:16px; }
+    .cr-stat-icon { width:34px; height:34px; font-size:15px; }
+    .cr-stat-lbl { font-size:11px; }
+    .cr-filter-btn { padding:8px 12px; font-size:11px; min-height:36px; }
+    .cr-table-wrap { border-radius:8px; }
+    .cr-table thead { display:none; }
+    .cr-table tbody tr {
+        display:block; border:1px solid #E2E8F0; border-radius:10px;
+        margin-bottom:8px; padding:10px 12px; background:#fff;
+        box-shadow:0 1px 3px rgba(0,0,0,.04);
+    }
+    .cr-table tbody tr:hover td { background:transparent; }
+    .cr-table tbody tr.cr-row-red { border-right:3px solid #b91c1c; }
+    .cr-table tbody tr.cr-row-orange { border-right:3px solid #b45309; }
+    .cr-table tbody tr.cr-row-red td,
+    .cr-table tbody tr.cr-row-orange td { border-right:none; }
+    .cr-table tbody td {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:3px 0; border:none; font-size:12px; white-space:normal;
+    }
+    .cr-table tbody td::before {
+        content:attr(data-label); font-weight:600; color:#64748B;
+        font-size:11px; min-width:80px; flex-shrink:0;
+    }
+    .cr-pager { gap:4px; }
+    .cr-pager-btn { min-width:32px; height:32px; font-size:12px; }
+    .cr-pager-info { font-size:11px; }
+}
+@media (max-width:480px) {
+    .cr-page { font-size:12px; }
+    .cr-header h2 { font-size:15px; }
+    .cr-stat { min-width:0; flex:1 1 45%; }
+    .cr-table tbody td { font-size:11px; }
+    .cr-table tbody td::before { font-size:10px; min-width:65px; }
+}
 </style>
 
 <div class="cr-page">
@@ -105,7 +157,7 @@ $('#lh-badge-persistence').text('<?= (int)$stats['total'] ?>');
     function fetchData(){if(loading){if(xhr)xhr.abort();}loading=true;showLoading();xhr=$.getJSON(DATA_URL,{page:currentPage,per_page:PER_PAGE,filter:activeFilter,search:searchQuery,show_all:showAll?'1':'0'},function(d){renderRows(d.rows,d.total,d.page,d.total_pages);updateStats(d.stats);buildPager(d.total,d.total_pages,d.page);loading=false;hideLoading();}).fail(function(j,t){if(t!=='abort'){$('#crBody').html('<tr><td colspan="14" class="cr-empty"><i class="fa fa-exclamation-circle"></i>خطأ</td></tr>');loading=false;hideLoading();}});}
     function showLoading(){if(!$('#crLoading').length)$('#crTableWrap').append('<div class="cr-loading" id="crLoading"><i class="fa fa-spinner"></i> جارٍ التحميل...</div>');}
     function hideLoading(){$('#crLoading').remove();}
-    function renderRows(rows,total,page,tp){if(!rows||!rows.length){$('#crBody').html('<tr><td colspan="14" class="cr-empty"><i class="fa fa-inbox"></i>لا توجد قضايا مطابقة</td></tr>');return;}var h='',si=showAll?0:((page-1)*PER_PAGE);for(var i=0;i<rows.length;i++){var r=rows[i],c=r.persistence_color||'gray';h+='<tr class="cr-row cr-row-'+c+'"><td>'+(si+i+1)+'</td><td><strong>'+esc(r.judiciary_number)+'</strong></td><td>'+esc(r.case_year)+'</td><td>'+esc(r.court_name)+'</td><td>'+esc(r.contract_id)+'</td><td title="'+esc(r.customer_name_full||r.customer_name)+'">'+esc(r.customer_name)+'</td><td>'+esc(r.last_action_name)+'</td><td>'+esc(r.last_action_date)+'</td><td><span class="cr-badge cr-badge-'+c+'">'+(r.persistence_icon||'')+' '+esc(r.persistence_label)+'</span></td><td>'+esc(r.last_followup_date)+'</td><td>'+esc(r.last_job_check_date)+'</td><td title="'+esc(r.lawyer_name_full||r.lawyer_name)+'">'+esc(r.lawyer_name)+'</td><td>'+esc(r.job_title)+'</td><td>'+esc(r.job_type)+'</td></tr>';}$('#crBody').html(h);}
+    function renderRows(rows,total,page,tp){if(!rows||!rows.length){$('#crBody').html('<tr><td colspan="14" class="cr-empty"><i class="fa fa-inbox"></i>لا توجد قضايا مطابقة</td></tr>');return;}var h='',si=showAll?0:((page-1)*PER_PAGE);for(var i=0;i<rows.length;i++){var r=rows[i],c=r.persistence_color||'gray';h+='<tr class="cr-row cr-row-'+c+'">'+'<td data-label="#">'+(si+i+1)+'</td>'+'<td data-label="رقم القضية"><strong>'+esc(r.judiciary_number)+'</strong></td>'+'<td data-label="السنة">'+esc(r.case_year)+'</td>'+'<td data-label="المحكمة">'+esc(r.court_name)+'</td>'+'<td data-label="رقم العقد">'+esc(r.contract_id)+'</td>'+'<td data-label="العميل" title="'+esc(r.customer_name_full||r.customer_name)+'">'+esc(r.customer_name)+'</td>'+'<td data-label="الإجراء الأخير">'+esc(r.last_action_name)+'</td>'+'<td data-label="تاريخ آخر إجراء">'+esc(r.last_action_date)+'</td>'+'<td data-label="المثابرة"><span class="cr-badge cr-badge-'+c+'">'+(r.persistence_icon||'')+' '+esc(r.persistence_label)+'</span></td>'+'<td data-label="آخر متابعة">'+esc(r.last_followup_date)+'</td>'+'<td data-label="آخر تشييك وظيفة">'+esc(r.last_job_check_date)+'</td>'+'<td data-label="المحامي" title="'+esc(r.lawyer_name_full||r.lawyer_name)+'">'+esc(r.lawyer_name)+'</td>'+'<td data-label="الوظيفة">'+esc(r.job_title)+'</td>'+'<td data-label="نوع الوظيفة">'+esc(r.job_type)+'</td>'+'</tr>';}$('#crBody').html(h);}
     function updateStats(s){if(!s)return;$('#statTotal').text(parseInt(s.total)||0);$('#statRed').text(parseInt(s.cnt_red)||0);$('#statOrange').text(parseInt(s.cnt_orange)||0);$('#statGreen').text(parseInt(s.cnt_green)||0);$('.cr-filter-btn').eq(0).find('.filter-count').text(parseInt(s.total)||0);$('.cr-filter-btn').eq(1).find('.filter-count').text(parseInt(s.cnt_red)||0);$('.cr-filter-btn').eq(2).find('.filter-count').text(parseInt(s.cnt_orange)||0);$('.cr-filter-btn').eq(3).find('.filter-count').text(parseInt(s.cnt_green)||0);}
     function buildPager(total,tp,page){if(!total){$('#crPager').html('');return;}var h='';if(!showAll){h+='<button class="cr-pager-btn" data-action="prev"'+(page<=1?' disabled':'')+'><i class="fa fa-chevron-right"></i></button>';if(tp>1){var s=Math.max(1,page-3),e=Math.min(tp,page+3);if(s>1){h+='<button class="cr-pager-btn" data-page="1">1</button>';if(s>2)h+='<span class="cr-pager-info">...</span>';}for(var p=s;p<=e;p++)h+='<button class="cr-pager-btn'+(p===page?' active':'')+'" data-page="'+p+'">'+p+'</button>';if(e<tp){if(e<tp-1)h+='<span class="cr-pager-info">...</span>';h+='<button class="cr-pager-btn" data-page="'+tp+'">'+tp+'</button>';}}h+='<button class="cr-pager-btn" data-action="next"'+(page>=tp?' disabled':'')+'><i class="fa fa-chevron-left"></i></button>';h+='<span class="cr-pager-info">عرض '+((page-1)*PER_PAGE+1)+'-'+Math.min(page*PER_PAGE,total)+' من '+total+'</span>';}else{h+='<span class="cr-pager-info">عرض الكل: '+total+' سجل</span>';}h+='<button class="cr-pager-btn cr-pager-all'+(showAll?' active':'')+'" data-action="toggle-all">'+(showAll?'<i class="fa fa-list"></i> تصفح':'<i class="fa fa-th-list"></i> الكل')+'</button>';$('#crPager').html(h);}
     $(document).on('click','#crPager .cr-pager-btn',function(){var b=$(this);if(b.prop('disabled'))return;var a=b.data('action'),p=b.data('page');if(a==='prev')currentPage--;else if(a==='next')currentPage++;else if(a==='toggle-all'){showAll=!showAll;currentPage=1;}else if(p)currentPage=p;fetchData();});

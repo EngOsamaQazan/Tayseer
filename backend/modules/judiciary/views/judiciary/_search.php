@@ -54,6 +54,21 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
 .jud-search-actions .btn { height:32px; font-size:12px; padding:0 16px; border-radius:6px; display:flex; align-items:center; gap:5px; font-weight:600; white-space:nowrap; }
 .jud-search-actions .btn-primary { background:#800020; border-color:#800020; }
 .jud-search-actions .btn-primary:hover { background:#650019; border-color:#650019; }
+
+/* ═══ Responsive ═══ */
+@media (max-width:767px) {
+    .jud-search { margin-bottom:10px; border-radius:8px; }
+    .jud-search-header { padding:8px 12px; }
+    .jud-search-header h4 { font-size:12px; }
+    .jud-filter-row { gap:6px; }
+    .jud-filter-col, .jud-filter-col-wide { flex:1 1 100%; min-width:0; max-width:none; }
+    .jud-search-actions { width:100%; justify-content:stretch; }
+    .jud-search-actions .btn { flex:1; justify-content:center; min-height:40px; }
+}
+@media (max-width:480px) {
+    .jud-filter-col label, .jud-filter-col-wide label { font-size:9px; }
+    .jud-search-actions .btn { font-size:11px; }
+}
 </style>
 
 <div class="jud-search <?= $hasFilters ? '' : '' ?>">

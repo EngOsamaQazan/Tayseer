@@ -17,7 +17,7 @@ $columns = [
         'attribute' => 'id',
         'label' => '#',
         'headerOptions' => ['style' => 'width:5%;text-align:center'],
-        'contentOptions' => ['style' => 'text-align:center;font-weight:600;color:#94A3B8;font-size:11px'],
+        'contentOptions' => ['style' => 'text-align:center;font-weight:600;color:#94A3B8;font-size:11px', 'data-label' => '#'],
     ],
 
     /* رقم العقد */
@@ -28,7 +28,7 @@ $columns = [
         'format' => 'raw',
         'value' => fn($m) => '<a href="' . Url::to(['/followUp/follow-up/index', 'contract_id' => $m->contract_id]) . '" style="font-weight:700;color:#800020;text-decoration:none">' . $m->contract_id . '</a>',
         'headerOptions' => ['style' => 'width:7%;text-align:center'],
-        'contentOptions' => ['style' => 'text-align:center'],
+        'contentOptions' => ['style' => 'text-align:center', 'data-label' => 'العقد'],
     ],
 
     /* الأطراف (عميل + وظيفة) */
@@ -63,7 +63,7 @@ $columns = [
             return '<div style="display:flex;flex-direction:column;gap:2px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . implode('', array_map(fn($r) => '<div style="white-space:nowrap">' . $r . '</div>', $rows)) . '</div>';
         },
         'headerOptions' => ['style' => 'width:22%'],
-        'contentOptions' => ['style' => 'max-width:220px;padding:4px 6px'],
+        'contentOptions' => ['style' => 'max-width:220px;padding:4px 6px', 'data-label' => 'الأطراف'],
     ],
 
     /* المحكمة */
@@ -77,7 +77,7 @@ $columns = [
             return '<span style="font-size:11px;color:#475569">' . Html::encode($name) . '</span>';
         },
         'headerOptions' => ['style' => 'width:14%'],
-        'contentOptions' => ['style' => 'max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'],
+        'contentOptions' => ['style' => 'max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap', 'data-label' => 'المحكمة'],
     ],
 
     /* المحامي */
@@ -93,7 +93,7 @@ $columns = [
             return '<span style="font-size:11px;color:#475569" title="' . Html::encode($full) . '">' . Html::encode($short) . '</span>';
         },
         'headerOptions' => ['style' => 'width:10%'],
-        'contentOptions' => ['style' => 'white-space:nowrap'],
+        'contentOptions' => ['style' => 'white-space:nowrap', 'data-label' => 'المحامي'],
     ],
 
     /* رقم القضية - السنة */
@@ -113,7 +113,7 @@ $columns = [
             return '<span style="font-family:\'Courier New\',monospace;color:#64748B">' . $num . '</span>';
         },
         'headerOptions' => ['style' => 'width:10%;text-align:center'],
-        'contentOptions' => ['style' => 'text-align:center;white-space:nowrap'],
+        'contentOptions' => ['style' => 'text-align:center;white-space:nowrap', 'data-label' => 'رقم القضية'],
     ],
 
     /* آخر إجراء لكل طرف */
@@ -174,7 +174,7 @@ $columns = [
             return '<div style="display:flex;flex-direction:column;gap:2px;max-width:220px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . $html . '</div>';
         },
         'headerOptions' => ['style' => 'width:16%'],
-        'contentOptions' => ['style' => 'padding:4px 6px'],
+        'contentOptions' => ['style' => 'padding:4px 6px', 'data-label' => 'آخر إجراء'],
     ],
 
     /* الإجراءات */
@@ -230,7 +230,7 @@ $columns = [
             return '<div class="pra-wrap">' . $html . '</div>';
         },
         'headerOptions' => ['style' => 'width:22%;text-align:center'],
-        'contentOptions' => ['style' => 'padding:4px 6px;overflow:visible'],
+        'contentOptions' => ['style' => 'padding:4px 6px;overflow:visible', 'data-label' => 'طلبات معلقة'],
     ] : false,
 
     [
@@ -279,7 +279,7 @@ $columns = [
                 . '</div>';
         },
         'headerOptions' => ['style' => 'width:12%;text-align:center'],
-        'contentOptions' => ['style' => 'text-align:center;overflow:visible;position:relative;white-space:nowrap'],
+        'contentOptions' => ['style' => 'text-align:center;overflow:visible;position:relative;white-space:nowrap', 'data-label' => ''],
     ],
 ];
 
