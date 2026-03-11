@@ -57,11 +57,16 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
 
 /* ═══ Responsive ═══ */
 @media (max-width:767px) {
-    .jud-search { margin-bottom:10px; border-radius:8px; }
+    .jud-search { margin-bottom:10px; border-radius:8px; overflow:hidden; }
     .jud-search-header { padding:8px 12px; }
     .jud-search-header h4 { font-size:12px; }
-    .jud-filter-row { gap:6px; }
-    .jud-filter-col, .jud-filter-col-wide { flex:1 1 100%; min-width:0; max-width:none; }
+    .jud-search-body { padding:0 10px 10px; }
+    .jud-filter-row { flex-direction:column; gap:6px; }
+    .jud-filter-col, .jud-filter-col-wide { flex:none; width:100%; min-width:0; max-width:none; }
+    .jud-filter-col .form-control,
+    .jud-filter-col-wide .form-control { width:100% !important; }
+    .jud-filter-col .select2-container,
+    .jud-filter-col-wide .select2-container { width:100% !important; }
     .jud-search-actions { width:100%; justify-content:stretch; }
     .jud-search-actions .btn { flex:1; justify-content:center; min-height:40px; }
 }

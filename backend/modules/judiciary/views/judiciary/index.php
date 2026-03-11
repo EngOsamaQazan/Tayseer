@@ -277,11 +277,13 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 /* ═══ FULL RESPONSIVE — Skill Applied ═══ */
 
 /* Global overflow safety */
-.lh-wrap { max-width:100vw; overflow-x:hidden; }
+.lh-wrap { width:100%; max-width:100%; overflow-x:hidden; box-sizing:border-box; }
 .lh-wrap img, .lh-wrap iframe { max-width:100%; }
+.lh-wrap *, .lh-wrap *::before, .lh-wrap *::after { box-sizing:border-box; }
 
 /* ── Tablet (≤992px) ── */
 @media (max-width:992px) {
+    .container-xxl, .container-p-y { padding-left:12px !important; padding-right:12px !important; }
     .lh-panel { padding:10px; }
     .lh-panel .panel-heading .pull-right { display:flex; flex-wrap:wrap; gap:4px; }
     .lh-panel .panel-heading .pull-right .btn { font-size:11px; padding:3px 6px !important; }
@@ -292,28 +294,30 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 
 /* ── Mobile (≤767px) ── */
 @media (max-width:767px) {
-    .lh-wrap { font-size:13px; }
+    .container-xxl, .container-p-y { padding-left:8px !important; padding-right:8px !important; }
+    .lh-wrap { font-size:13px; width:100%; }
 
     /* Tabs: icon-only + scrollable */
-    .lh-tabs { gap:0; border-radius:8px 8px 0 0; }
-    .lh-tab { padding:10px 12px; font-size:12px; gap:5px; }
+    .lh-tabs { gap:0; border-radius:8px 8px 0 0; flex-wrap:nowrap; overflow-x:auto; }
+    .lh-tab { padding:10px 12px; font-size:12px; gap:5px; flex-shrink:0; }
     .lh-tab span.lh-tab-label { display:none; }
     .lh-tab .lh-badge { min-width:18px; height:18px; font-size:9px; padding:0 4px; }
-    .lh-pending-queue { padding:6px 10px; font-size:11px; border-radius:6px; }
+    .lh-pending-queue { padding:6px 10px; font-size:11px; border-radius:6px; flex-shrink:0; }
     .lh-pending-queue span:not(.lh-pending-count) { display:none; }
 
     /* Content area */
-    .lh-content { border-radius:0 0 8px 8px; }
+    .lh-content { border-radius:0 0 8px 8px; overflow:hidden; }
     .lh-panel { padding:8px; }
 
-    /* Stats cards */
-    .lh-stats { grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+    /* Stats cards — stack vertically */
+    .lh-stats { grid-template-columns:1fr !important; gap:8px; margin-bottom:12px; }
+    .lh-stat { width:100%; }
 
     /* GridView tables → card layout */
-    .lh-panel .panel { border-radius:8px !important; }
+    .lh-panel .panel { border-radius:8px !important; overflow:hidden; }
     .lh-panel .panel-heading { padding:8px 10px !important; font-size:12px; border-radius:8px 8px 0 0 !important; }
     .lh-panel .kv-grid-container { overflow:visible !important; }
-    .lh-panel .kv-grid-table { min-width:0; }
+    .lh-panel .kv-grid-table { min-width:0 !important; width:100% !important; table-layout:auto !important; }
     .lh-panel .kv-grid-table thead { display:none; }
     .lh-panel .kv-grid-table tbody tr {
         display:block; background:#fff; border:1px solid #E2E8F0; border-radius:10px;
@@ -321,18 +325,24 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
     }
     .lh-panel .kv-grid-table tbody tr:hover { background:#FFFBEB; }
     .lh-panel .kv-grid-table tbody td {
-        display:flex; justify-content:space-between; align-items:center;
+        display:flex !important; justify-content:space-between; align-items:center;
         padding:3px 0 !important; border:none !important; font-size:12px;
+        width:100% !important; max-width:100% !important;
+        white-space:normal !important; overflow:visible !important;
     }
     .lh-panel .kv-grid-table tbody td::before {
         content:attr(data-label); font-weight:600; color:#64748B; font-size:11px;
-        min-width:70px; flex-shrink:0;
+        min-width:70px; flex-shrink:0; margin-left:8px;
     }
     .lh-panel .kv-grid-table tbody td:last-child {
         justify-content:flex-end; padding-top:6px !important;
         margin-top:4px; border-top:1px solid #F1F5F9 !important;
     }
     .lh-panel .kv-grid-table .filters { display:none; }
+
+    /* Summary text */
+    .lh-panel .kv-panel-after, .lh-panel .kv-panel-before { padding:6px 8px !important; }
+    .lh-panel .summary { font-size:11px !important; }
 
     /* Toolbar buttons stack */
     .lh-panel .panel-heading .pull-right {
@@ -356,23 +366,29 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
     .lh-panel .jud-act-menu a, .lh-panel .jca-act-menu a { padding:10px 14px; font-size:13px; min-height:44px; }
 
     /* Modal full-width */
-    #ajaxCrudModal .modal-dialog { margin:8px; max-width:calc(100vw - 16px); }
+    #ajaxCrudModal .modal-dialog { margin:8px !important; max-width:calc(100vw - 16px) !important; width:auto !important; }
     #ajaxCrudModal .modal-body { max-height:70vh; overflow-y:auto; }
 
     /* Touch targets */
     .lh-tab { min-height:44px; }
-    .jud-timeline-btn { min-height:36px; padding:6px 12px; }
+    .jud-timeline-btn { min-height:36px; padding:6px 12px; font-size:11px; }
     .lh-panel .panel-heading .pull-right .btn { min-height:36px; }
+
+    /* Pin bar */
+    .pin-bar { overflow-x:auto !important; -webkit-overflow-scrolling:touch; }
 }
 
 /* ── Small Mobile (≤480px) ── */
 @media (max-width:480px) {
+    .container-xxl, .container-p-y { padding-left:6px !important; padding-right:6px !important; }
     .lh-wrap { font-size:12px; }
     .lh-tabs { border-radius:0; }
-    .lh-tab { padding:8px 10px; font-size:11px; }
+    .lh-tab { padding:8px 8px; font-size:11px; }
     .lh-content { border-radius:0; }
-    .lh-stats { grid-template-columns:1fr; }
+    .lh-stats { grid-template-columns:1fr !important; }
     .lh-stat { padding:10px 12px; }
+    .lh-stat-val { font-size:16px; }
+    .lh-stat-icon { width:34px; height:34px; font-size:14px; }
 
     .lh-panel .kv-grid-table tbody td { font-size:11px; }
     .lh-panel .kv-grid-table tbody td::before { font-size:10px; min-width:60px; }
