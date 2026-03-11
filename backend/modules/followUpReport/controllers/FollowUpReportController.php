@@ -151,6 +151,14 @@ class FollowUpReportController extends Controller
         $dataProvider = $searchModel->search($params);
         $dataCount = $searchModel->searchCounter($params);
 
+        // Save filtered contract IDs in session for panel navigation
+        // Uses DataProvider's getModels() which correctly handles sorting + JOIN deduplication
+        $idSearchModel = new FollowUpReportSearch();
+        $idDP = $idSearchModel->search($params);
+        $idDP->pagination = false;
+        $filteredIds = array_map(function($m) { return (int)$m->id; }, $idDP->getModels());
+        Yii::$app->session->set('followup_report_ids', $filteredIds);
+
         // ═══ إحصائيات البطاقات ═══
         $db = Yii::$app->db;
         // إجمالي العقود للمتابعة (باستثناء المؤجلين لبعد اليوم + باستثناء بدون تواصل)

@@ -20,6 +20,7 @@
         initDropZone();
         initWebcam();
         initGalleryActions();
+        initLightbox();
         loadUsageStats();
     });
 
@@ -559,6 +560,43 @@
             loadGoogleStats();
         }
     });
+
+    /* ══════════════════════════════════════════
+       LIGHTBOX — Full-size image preview
+       ══════════════════════════════════════════ */
+    function initLightbox() {
+        $('body').append(
+            '<div id="smLightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;cursor:zoom-out">' +
+                '<button id="smLbClose" style="position:absolute;top:16px;right:16px;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;z-index:1">&times;</button>' +
+                '<img id="smLbImg" src="" style="max-width:92vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5);transition:transform .2s" alt="">' +
+            '</div>'
+        );
+
+        $(document).on('click', '.sm-card-img', function(e) {
+            e.stopPropagation();
+            var src = $(this).attr('src');
+            if (!src || src.indexOf('pdf') !== -1) return;
+            var fullSrc = src.replace(/_thumb/, '');
+            $('#smLbImg').attr('src', fullSrc);
+            $('#smLightbox').css('display', 'flex');
+        });
+
+        $(document).on('click', '#smLightbox, #smLbClose', function() {
+            $('#smLightbox').css('display', 'none');
+            $('#smLbImg').attr('src', '');
+        });
+
+        $(document).on('click', '#smLbImg', function(e) {
+            e.stopPropagation();
+        });
+
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $('#smLightbox').is(':visible')) {
+                $('#smLightbox').css('display', 'none');
+                $('#smLbImg').attr('src', '');
+            }
+        });
+    }
 
     /* ══════════════════════════════════════════
        HELPERS

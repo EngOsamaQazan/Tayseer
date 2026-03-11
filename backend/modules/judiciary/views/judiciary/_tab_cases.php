@@ -18,7 +18,7 @@ use backend\widgets\ExportButtons;
         'id' => 'crud-datatable',
         'dataProvider' => $dataProvider,
         'toggleData' => false,
-        'columns' => require __DIR__ . '/_columns.php',
+        'columns' => (require __DIR__ . '/_columns.php'),
         'summary' => '<span class="text-muted" style="font-size:12px">عرض {begin}-{end} من {totalCount} قضية</span>',
         'pjax' => true,
         'pjaxSettings' => [

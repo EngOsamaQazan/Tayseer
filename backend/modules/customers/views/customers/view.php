@@ -353,11 +353,16 @@ $statusLabels = [
 
             <h3 class="rp-title"><i class="fa fa-user-circle"></i> ملخص سريع</h3>
 
-            <?php if (!empty($model->selected_image)): ?>
+            <?php $avatarPath = $model->selectedImagePath; ?>
             <div style="text-align:center;margin-bottom:14px">
-                <img src="<?= $model->selectedImagePath ?>" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0" alt="">
+                <?php if ($avatarPath): ?>
+                <img src="<?= $avatarPath ?>" style="width:100px;height:100px;border-radius:50%;object-fit:cover;border:3px solid #e2e8f0" alt="<?= Html::encode($model->name) ?>">
+                <?php else: ?>
+                <div style="width:100px;height:100px;border-radius:50%;border:3px solid #e2e8f0;background:#f1f5f9;display:inline-flex;align-items:center;justify-content:center">
+                    <i class="fa fa-user" style="font-size:40px;color:#94a3b8"></i>
+                </div>
+                <?php endif ?>
             </div>
-            <?php endif ?>
 
             <div style="text-align:center;margin-bottom:16px">
                 <div style="font-size:18px;font-weight:700;color:#1e293b"><?= Html::encode($model->name) ?></div>

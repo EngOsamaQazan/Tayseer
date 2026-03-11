@@ -74,6 +74,15 @@ return [
         'contentOptions' => ['style' => 'white-space:nowrap'],
     ],
 
+    /* الدفعة الأولى */
+    [
+        'class' => '\kartik\grid\DataColumn',
+        'attribute' => 'first_installment_value',
+        'label' => 'الدفعة الأولى',
+        'format' => ['decimal', 0],
+        'contentOptions' => ['style' => 'white-space:nowrap'],
+    ],
+
     /* القيمة الإجمالية */
     [
         'class' => '\kartik\grid\DataColumn',

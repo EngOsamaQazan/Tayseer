@@ -41,7 +41,7 @@ class EmployeeSearch extends Employee
      */
     public function search($params)
     {
-        $query = Employee::find();
+        $query = Employee::find()->with('profileAvatar');
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,

@@ -826,22 +826,22 @@ $('#jobs-plus_code').on('input', function() {
     if (!raw || raw.length < 4) return;
     var isPlusCode = /[23456789CFGHJMPQRVWX]{2,}\+/i.test(raw);
     if (!isPlusCode) return;
-    var $input = $(this);
+    var pcInput = $(this);
     clearTimeout(_plusCodeTimer);
     _plusCodeTimer = setTimeout(function() {
-        $input.css('border-color', '#fbbf24');
+        pcInput.css('border-color', '#fbbf24');
         $.getJSON('$resolveLocationUrl', {q: raw}, function(data) {
             if (data && data.success) {
                 setMapMarker(parseFloat(data.lat), parseFloat(data.lng), true);
-                $input.css('border-color', '#22c55e');
-                setTimeout(function(){ $input.css('border-color', ''); }, 2000);
+                pcInput.css('border-color', '#22c55e');
+                setTimeout(function(){ pcInput.css('border-color', ''); }, 2000);
             } else {
-                $input.css('border-color', '#ef4444');
-                setTimeout(function(){ $input.css('border-color', ''); }, 2000);
+                pcInput.css('border-color', '#ef4444');
+                setTimeout(function(){ pcInput.css('border-color', ''); }, 2000);
             }
         }).fail(function() {
-            $input.css('border-color', '#ef4444');
-            setTimeout(function(){ $input.css('border-color', ''); }, 2000);
+            pcInput.css('border-color', '#ef4444');
+            setTimeout(function(){ pcInput.css('border-color', ''); }, 2000);
         });
     }, 600);
 });

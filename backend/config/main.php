@@ -250,11 +250,9 @@ return [
         // ],
         'imagemanager' => [
             'class' => 'noam148\imagemanager\Module',
-            // 'class' => 'backend\modules\imagemanager\ImageManagerModule',
-            //set accces rules ()
-            'canUploadImage' => true,
+            'canUploadImage' => false,
             'canRemoveImage' => function () {
-                return true;
+                return false;
             },
             'deleteOriginalAfterEdit' => false, // false: keep original image after edit. true: delete original image after edit
             // Set if blameable behavior is used, if it is, callable function can also be used

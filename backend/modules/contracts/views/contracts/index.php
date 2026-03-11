@@ -201,6 +201,7 @@ $end   = $begin + count($models) - 1;
                         <th>العميل</th>
                         <th>المستحق</th>
                         <th><?= $sortLink('Date_of_sale', 'التاريخ') ?></th>
+                        <th>الدفعة الأولى</th>
                         <th><?= $sortLink('total_value', 'الإجمالي') ?></th>
                         <th><?= $sortLink('status', 'الحالة') ?></th>
                         <th>المتبقي</th>
@@ -239,6 +240,9 @@ $end   = $begin + count($models) - 1;
                         </td>
                         <td class="ct-td-date" data-label="التاريخ">
                             <?= $m->Date_of_sale ?>
+                        </td>
+                        <td class="ct-td-money" data-label="الدفعة الأولى">
+                            <?= $m->first_installment_value ? number_format($m->first_installment_value, 0) : '—' ?>
                         </td>
                         <td class="ct-td-money" data-label="الإجمالي">
                             <?= number_format($total, 0) ?>

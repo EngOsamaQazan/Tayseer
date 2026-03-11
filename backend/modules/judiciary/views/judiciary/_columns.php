@@ -8,7 +8,9 @@ use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
 use backend\helpers\NameHelper;
 
-return [
+$isPendingFilter = (bool) Yii::$app->request->get('pending_requests');
+
+$columns = [
     /* # */
     [
         'class' => '\kartik\grid\DataColumn',
@@ -176,6 +178,61 @@ return [
     ],
 
     /* الإجراءات */
+    $isPendingFilter ? [
+        'class' => '\kartik\grid\DataColumn',
+        'label' => 'الطلبات المعلّقة',
+        'format' => 'raw',
+        'value' => function ($m) {
+            static $pendingCache = null;
+            if ($pendingCache === null) {
+                $pendingCache = [];
+                $rows = Yii::$app->db->createCommand(
+                    "SELECT jca.id, jca.judiciary_id, ja.name AS action_name, cu.name AS customer_name, jca.action_date
+                     FROM {{%judiciary_customers_actions}} jca
+                     INNER JOIN {{%judiciary_actions}} ja ON ja.id = jca.judiciary_actions_id
+                     INNER JOIN {{%customers}} cu ON cu.id = jca.customers_id
+                     WHERE jca.request_status = 'pending'
+                       AND (jca.is_deleted = 0 OR jca.is_deleted IS NULL)"
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $jid = (int)$r['judiciary_id'];
+                    if (!isset($pendingCache[$jid])) $pendingCache[$jid] = [];
+                    $pendingCache[$jid][] = $r;
+                }
+            }
+            $items = $pendingCache[$m->id] ?? [];
+            if (empty($items)) return '<span style="color:#CBD5E1">—</span>';
+
+            $html = '';
+            foreach ($items as $a) {
+                $id = $a['id'];
+                $custShort = NameHelper::short($a['customer_name']);
+                $date = $a['action_date'] ? date('m-d', strtotime($a['action_date'])) : '';
+                $html .= '<div class="pra-item" id="pra-' . $id . '">'
+                    . '<div class="pra-row">'
+                    . '<div class="pra-info">'
+                    . '<span class="pra-name">' . Html::encode($a['action_name']) . '</span>'
+                    . '<span class="pra-meta">' . Html::encode($custShort) . ($date ? ' · ' . $date : '') . '</span>'
+                    . '</div>'
+                    . '<div class="pra-btns" id="pra-btns-' . $id . '">'
+                    . '<button type="button" class="pra-btn pra-approve" data-id="' . $id . '" title="موافقة"><i class="fa fa-check"></i></button>'
+                    . '<button type="button" class="pra-btn pra-reject" data-id="' . $id . '" title="رفض"><i class="fa fa-times"></i></button>'
+                    . '</div>'
+                    . '</div>'
+                    . '<div class="pra-df" id="pra-df-' . $id . '">'
+                    . '<textarea class="pra-input" placeholder="نص القرار (اختياري)..." rows="1"></textarea>'
+                    . '<div class="pra-df-actions">'
+                    . '<button type="button" class="pra-submit" data-id="' . $id . '">تأكيد</button>'
+                    . '<button type="button" class="pra-df-cancel">إلغاء</button>'
+                    . '</div></div>'
+                    . '</div>';
+            }
+            return '<div class="pra-wrap">' . $html . '</div>';
+        },
+        'headerOptions' => ['style' => 'width:22%;text-align:center'],
+        'contentOptions' => ['style' => 'padding:4px 6px;overflow:visible'],
+    ] : false,
+
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => '',
@@ -225,3 +282,5 @@ return [
         'contentOptions' => ['style' => 'text-align:center;overflow:visible;position:relative;white-space:nowrap'],
     ],
 ];
+
+return array_values(array_filter($columns));

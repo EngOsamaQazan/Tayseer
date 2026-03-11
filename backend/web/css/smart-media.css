@@ -145,7 +145,10 @@
     object-fit: cover;
     display: block;
     background: #f0f0f0;
+    cursor: zoom-in;
+    transition: opacity .15s;
 }
+.sm-card-img:hover { opacity: .85; }
 .sm-card-body { padding: 10px 12px; }
 .sm-card-name {
     font-size: 12px;

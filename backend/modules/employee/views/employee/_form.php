@@ -114,7 +114,7 @@ $maritalLabel = $model->marital_status === 'married' ? 'متزوج' : ($model->m
         <div class="emp-avatar-section">
             <div class="emp-avatar-frame" id="emp-avatar-preview">
                 <?php if (!empty($avatarSrc)): ?>
-                    <?= Html::img(Url::to([$avatarSrc]), ['class' => 'emp-avatar-img', 'alt' => Html::encode($fullName)]) ?>
+                    <?= Html::img(Url::to([$avatarSrc]), ['class' => 'emp-avatar-img t-zoomable', 'alt' => Html::encode($fullName), 'style' => 'cursor:zoom-in']) ?>
                 <?php else: ?>
                     <div class="emp-avatar-placeholder">
                         <i class="fa fa-user"></i>
@@ -353,7 +353,7 @@ document.getElementById('emp-avatar-input').addEventListener('change', function(
         var reader = new FileReader();
         reader.onload = function(ev) {
             var frame = document.getElementById('emp-avatar-preview');
-            frame.innerHTML = '<img src="' + ev.target.result + '" class="emp-avatar-img" alt="Preview">';
+            frame.innerHTML = '<img src="' + ev.target.result + '" class="emp-avatar-img t-zoomable" style="cursor:zoom-in" alt="Preview">';
         };
         reader.readAsDataURL(file);
     }

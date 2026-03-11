@@ -237,6 +237,33 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
     .lh-tab span.lh-tab-label { display:none; }
 }
 
+/* ═══ Pending Request Approval (inline GridView) ═══ */
+.pra-wrap{display:flex;flex-direction:column;gap:6px;max-height:140px;overflow-y:auto;scrollbar-width:thin}
+.pra-item{border:1px solid #E2E8F0;border-radius:8px;padding:6px 8px;background:#FAFBFC;transition:all .2s}
+.pra-item.pra-done{opacity:.5;pointer-events:none}
+.pra-row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.pra-info{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.pra-name{font-size:11px;font-weight:600;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pra-meta{font-size:9px;color:#94A3B8}
+.pra-btns{display:flex;gap:4px;align-items:center;flex-shrink:0}
+.pra-btn{width:26px;height:26px;border-radius:6px;border:1px solid;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-size:11px;transition:all .15s;padding:0}
+.pra-approve{background:#D1FAE5;color:#065F46;border-color:#A7F3D0}
+.pra-approve:hover{background:#065F46;color:#fff}
+.pra-reject{background:#FEE2E2;color:#991B1B;border-color:#FECACA}
+.pra-reject:hover{background:#991B1B;color:#fff}
+.pra-btn:disabled{opacity:.5;cursor:not-allowed}
+.pra-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.pra-df{display:none;margin-top:6px;padding:6px;background:#fff;border:1px solid #E2E8F0;border-radius:6px}
+.pra-input{width:100%;padding:4px 8px;border:1px solid #E2E8F0;border-radius:4px;font-size:11px;resize:none;font-family:inherit;margin-bottom:4px;direction:rtl}
+.pra-input:focus{border-color:#800020;outline:none;box-shadow:0 0 0 2px rgba(128,0,32,.1)}
+.pra-df-actions{display:flex;gap:4px;justify-content:flex-end}
+.pra-submit{padding:3px 10px;border-radius:4px;font-size:10px;font-weight:600;border:none;cursor:pointer;transition:all .15s;color:#fff;background:#800020}
+.pra-submit.pra-submit-approve{background:#065F46}
+.pra-submit.pra-submit-reject{background:#991B1B}
+.pra-submit:hover{opacity:.85}
+.pra-submit:disabled{opacity:.5;cursor:not-allowed}
+.pra-df-cancel{padding:3px 10px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #E2E8F0;background:#fff;color:#64748B;cursor:pointer}
+
 /* ═══ Stats Cards ═══ */
 .lh-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
 .lh-stat{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2E8F0;border-radius:12px;padding:14px 16px;transition:box-shadow .2s,transform .15s}
@@ -636,6 +663,69 @@ $js = <<<JS
             alert('حدث خطأ أثناء الحفظ');
             \$btn.prop('disabled', false).text('تأكيد');
         }).always(function() { pendingDecision = {}; });
+    });
+
+    // ═══ Pending Request Approval (inline GridView) ═══
+    var praPending = {};
+
+    $(document).on('click', '.pra-approve, .pra-reject', function(e) {
+        e.stopPropagation();
+        var id = $(this).data('id');
+        var st = $(this).hasClass('pra-approve') ? 'approved' : 'rejected';
+        praPending = {id: id, status: st};
+        $('.pra-df').slideUp(100);
+        var \$df = $('#pra-df-' + id);
+        \$df.slideDown(150);
+        \$df.find('.pra-submit')
+            .removeClass('pra-submit-approve pra-submit-reject')
+            .addClass(st === 'approved' ? 'pra-submit-approve' : 'pra-submit-reject')
+            .text(st === 'approved' ? 'تأكيد الموافقة' : 'تأكيد الرفض')
+            .prop('disabled', false);
+        \$df.find('.pra-input').val('').focus();
+    });
+
+    $(document).on('click', '.pra-df-cancel', function(e) {
+        e.stopPropagation();
+        $(this).closest('.pra-df').slideUp(150);
+        praPending = {};
+    });
+
+    $(document).on('click', '.pra-submit', function(e) {
+        e.stopPropagation();
+        if (!praPending.id) return;
+        var savedPending = {id: praPending.id, status: praPending.status};
+        var \$btn = $(this);
+        var \$df = \$btn.closest('.pra-df');
+        var \$item = \$df.closest('.pra-item');
+        var decisionText = \$df.find('.pra-input').val().trim();
+        \$btn.prop('disabled', true).text('جاري الحفظ...');
+
+        $.post(urls.updateReqStatus, {
+            id: savedPending.id,
+            status: savedPending.status,
+            decision_text: decisionText,
+            _csrf: yii.getCsrfToken()
+        }).done(function(res) {
+            if (res.success) {
+                var sLabels = {approved: 'تمت الموافقة', rejected: 'تم الرفض'};
+                var sColors = {approved: '#065F46', rejected: '#991B1B'};
+                var sBgs = {approved: '#D1FAE5', rejected: '#FEE2E2'};
+                \$item.find('.pra-btns').html(
+                    '<span class="pra-status" style="background:' + sBgs[savedPending.status] + ';color:' + sColors[savedPending.status] + '">' + sLabels[savedPending.status] + '</span>'
+                );
+                \$df.slideUp(150);
+                \$item.addClass('pra-done');
+                var \$badge = $('.lh-pending-count');
+                if (\$badge.length) {
+                    var c = parseInt(\$badge.text()) - 1;
+                    \$badge.text(c > 0 ? c : 0);
+                    if (c <= 0) \$badge.closest('.lh-pending-queue').fadeOut(300);
+                }
+            }
+        }).fail(function() {
+            alert('حدث خطأ أثناء الحفظ');
+            \$btn.prop('disabled', false).text('تأكيد');
+        }).always(function() { praPending = {}; });
     });
 
     // ═══ Pin System Init ═══

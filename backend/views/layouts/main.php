@@ -187,21 +187,6 @@ if (Yii::$app->controller->action->id === 'login') {
                                 </a>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>
-                                        <a class="dropdown-item" href="javascript:void(0);">
-                                            <div class="d-flex">
-                                                <div class="flex-shrink-0 me-3">
-                                                    <div class="avatar avatar-online">
-                                                        <img src="<?= Html::encode($avatarSrc) ?>" onerror="<?= $onError ?>" class="w-px-40 h-auto rounded-circle" alt="<?= Html::encode($userName) ?>">
-                                                    </div>
-                                                </div>
-                                                <div class="flex-grow-1">
-                                                    <span class="fw-medium d-block"><?= Html::encode($userName) ?></span>
-                                                </div>
-                                            </div>
-                                        </a>
-                                    </li>
-                                    <li><div class="dropdown-divider"></div></li>
-                                    <li>
                                         <?= Html::a(
                                             '<i class="fa fa-user me-2"></i> الملف الشخصي',
                                             Url::to(['/employee/update', 'id' => $userId]),
@@ -241,6 +226,19 @@ if (Yii::$app->controller->action->id === 'login') {
 
     <!-- Tayseer Responsive -->
     <script src="<?= $baseUrl ?>/js/tayseer-responsive.js?v=<?= time() ?>"></script>
+
+    <!-- Global Image Lightbox -->
+    <div id="tLightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;cursor:zoom-out">
+        <button onclick="tLightboxClose()" style="position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:50%;border:none;background:rgba(255,255,255,.15);color:#fff;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:1">&times;</button>
+        <img id="tLbImg" src="" style="max-width:92vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)" alt="">
+    </div>
+    <script>
+    function tLightboxOpen(src){if(!src)return;document.getElementById('tLbImg').src=src;document.getElementById('tLightbox').style.display='flex';}
+    function tLightboxClose(){document.getElementById('tLightbox').style.display='none';document.getElementById('tLbImg').src='';}
+    document.getElementById('tLightbox').addEventListener('click',function(e){if(e.target.id!=='tLbImg')tLightboxClose();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&document.getElementById('tLightbox').style.display==='flex')tLightboxClose();});
+    document.addEventListener('click',function(e){var t=e.target;if(t.classList&&t.classList.contains('t-zoomable')){e.preventDefault();e.stopPropagation();tLightboxOpen(t.getAttribute('data-full')||t.src);}},true);
+    </script>
 
     <?php
     $notifJs = <<<JSBLOCK
@@ -283,9 +281,11 @@ if (Yii::$app->controller->action->id === 'login') {
 
         function enterFullscreen() {
             var el = document.documentElement;
-            if (el.requestFullscreen) el.requestFullscreen();
-            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-            else if (el.msRequestFullscreen) el.msRequestFullscreen();
+            var p;
+            if (el.requestFullscreen) p = el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) p = el.webkitRequestFullscreen();
+            else if (el.msRequestFullscreen) p = el.msRequestFullscreen();
+            return p;
         }
 
         function exitFullscreen() {
@@ -311,40 +311,32 @@ if (Yii::$app->controller->action->id === 'login') {
             }
         };
 
-        document.addEventListener('fullscreenchange', function(){
-            updateIcon();
-            if (!isFullscreen() && sessionStorage.getItem(FS_KEY)) {
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && isFullscreen()) {
                 sessionStorage.removeItem(FS_KEY);
             }
-        });
-        document.addEventListener('webkitfullscreenchange', function(){
-            updateIcon();
-            if (!isFullscreen() && sessionStorage.getItem(FS_KEY)) {
-                sessionStorage.removeItem(FS_KEY);
-            }
-        });
+        }, true);
+
+        function onFSChange() { updateIcon(); }
+        document.addEventListener('fullscreenchange', onFSChange);
+        document.addEventListener('webkitfullscreenchange', onFSChange);
 
         if (sessionStorage.getItem(FS_KEY) && !isFullscreen()) {
+            updateIcon();
             var restored = false;
-            document.addEventListener('click', function restoreFS() {
+            function restoreFS() {
                 if (restored) return;
                 restored = true;
                 document.removeEventListener('click', restoreFS, true);
+                document.removeEventListener('keydown', restoreFS, true);
+                document.removeEventListener('mousedown', restoreFS, true);
                 if (sessionStorage.getItem(FS_KEY) && !isFullscreen()) {
                     enterFullscreen();
                 }
-            }, true);
-
-            document.addEventListener('keydown', function restoreFSKey(e) {
-                if (restored) return;
-                restored = true;
-                document.removeEventListener('keydown', restoreFSKey, true);
-                if (sessionStorage.getItem(FS_KEY) && !isFullscreen()) {
-                    enterFullscreen();
-                }
-            }, true);
-
-            updateIcon();
+            }
+            document.addEventListener('click', restoreFS, true);
+            document.addEventListener('keydown', restoreFS, true);
+            document.addEventListener('mousedown', restoreFS, true);
         }
     })();
     </script>

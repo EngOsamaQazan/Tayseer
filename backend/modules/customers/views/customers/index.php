@@ -141,6 +141,112 @@ $this->registerCss('
         border-radius: 10px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
+
+    /* ─── Base table improvements ─── */
+    .customers-index .kv-grid-table thead th {
+        background: #f8fafc;
+        color: #475569;
+        font-weight: 600;
+        font-size: 12px;
+        white-space: nowrap;
+        padding: 10px 12px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .customers-index .kv-grid-table tbody td {
+        padding: 10px 12px;
+        vertical-align: middle;
+        font-size: 13px;
+        color: #334155;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .customers-index .kv-grid-table tbody tr:hover {
+        background: #fefce8;
+    }
+
+    /* ─── Tablet: horizontal scroll ─── */
+    @media (max-width: 1024px) {
+        .customers-index .kv-grid-container {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        .customers-index .kv-grid-table {
+            min-width: 700px;
+        }
+    }
+
+    /* ─── Mobile: card layout ─── */
+    @media (max-width: 767px) {
+        .customers-index .panel {
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            box-shadow: none;
+        }
+        .customers-index .panel-heading {
+            border-radius: 0 !important;
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        .customers-index .kv-panel-before {
+            padding: 6px 8px;
+            gap: 4px;
+        }
+        .customers-index .kv-panel-before .btn {
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+        .customers-index .kv-grid-container {
+            overflow: visible !important;
+        }
+        .customers-index .kv-grid-table {
+            min-width: 0;
+        }
+        .customers-index .kv-grid-table thead {
+            display: none;
+        }
+        .customers-index .kv-grid-table tbody tr {
+            display: block;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            padding: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        }
+        .customers-index .kv-grid-table tbody tr:hover {
+            background: #fffbeb;
+        }
+        .customers-index .kv-grid-table tbody td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border: none;
+            font-size: 13px;
+        }
+        .customers-index .kv-grid-table tbody td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            color: #64748b;
+            font-size: 11px;
+            min-width: 80px;
+            flex-shrink: 0;
+        }
+        .customers-index .kv-grid-table tbody td:last-child {
+            justify-content: flex-end;
+            padding-top: 8px;
+            margin-top: 4px;
+            border-top: 1px solid #f1f5f9;
+        }
+    }
+
+    /* ─── Small mobile ─── */
+    @media (max-width: 380px) {
+        .customers-index .kv-panel-before .btn-success {
+            font-size: 11px;
+            padding: 4px 8px;
+        }
+    }
 ');
 ?>
 

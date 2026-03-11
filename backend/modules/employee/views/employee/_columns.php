@@ -1,5 +1,6 @@
 <?php
 use yii\helpers\Url;
+use yii\helpers\Html;
 use common\helper\Permissions;
 
 return [
@@ -7,10 +8,24 @@ return [
         'class' => 'kartik\grid\SerialColumn',
         'width' => '30px',
     ],
-        // [
-        // 'class'=>'\kartik\grid\DataColumn',
-        // 'attribute'=>'id',
-    // ],
+    [
+        'class' => '\kartik\grid\DataColumn',
+        'label' => 'الصورة',
+        'format' => 'raw',
+        'value' => function ($model) {
+            $avatar = $model->profileAvatar;
+            if ($avatar && !empty($avatar->path)) {
+                return Html::img($avatar->path, [
+                    'style' => 'width:40px;height:40px;border-radius:50%;object-fit:cover;cursor:zoom-in',
+                    'class' => 't-zoomable',
+                    'alt' => Html::encode($model->username),
+                ]);
+            }
+            return '<div style="width:40px;height:40px;border-radius:50%;background:#f1f5f9;display:inline-flex;align-items:center;justify-content:center"><i class="fa fa-user" style="font-size:16px;color:#94a3b8"></i></div>';
+        },
+        'headerOptions' => ['style' => 'text-align:center;width:60px'],
+        'contentOptions' => ['style' => 'text-align:center'],
+    ],
     [
         'class'=>'\kartik\grid\DataColumn',
         'attribute'=>'username',

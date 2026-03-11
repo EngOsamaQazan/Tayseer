@@ -177,7 +177,8 @@ $employmentTypeMap = [
                 'value' => function ($model) use ($defaultAvatar) {
                     $avatar = !empty($model['avatar']) ? $model['avatar'] : $defaultAvatar;
                     return Html::img($avatar, [
-                        'class' => 'hr-grid-avatar',
+                        'class' => 'hr-grid-avatar t-zoomable',
+                        'style' => 'cursor:zoom-in',
                         'onerror' => "this.src='" . $defaultAvatar . "'",
                         'alt' => '',
                     ]);

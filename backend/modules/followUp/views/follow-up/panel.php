@@ -234,14 +234,49 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
             <div class="ocp-status-bar__divider"></div>
 
-            <?php // Next Contract Button ?>
+            <?php // Next Contract Buttons ?>
             <?php
             $nextID = $model->getNextContractID($contract_id);
             $nextIDForManager = $model->getNextContractIDForManager($contract_id);
             $targetNextId = Yii::$app->user->can('Manger') ? $nextIDForManager : $nextID;
+
+            $reportIds = Yii::$app->session->get('followup_report_ids', []);
+            $reportNextId = null;
+            $reportPrevId = null;
+            $currentIndex = false;
+            if (!empty($reportIds)) {
+                $currentIndex = array_search((int)$contract_id, array_map('intval', $reportIds));
+                if ($currentIndex !== false) {
+                    if (isset($reportIds[$currentIndex + 1])) {
+                        $reportNextId = $reportIds[$currentIndex + 1];
+                    }
+                    if ($currentIndex > 0) {
+                        $reportPrevId = $reportIds[$currentIndex - 1];
+                    }
+                }
+            }
             ?>
+            <?php
+            $reportTotal = count($reportIds);
+            $reportPos = ($currentIndex !== false && $currentIndex !== null) ? $currentIndex + 1 : null;
+            ?>
+            <?php if ($reportPos !== null): ?>
+            <div style="display:flex;gap:4px;align-items:center">
+                <?php if ($reportPrevId): ?>
+                <a href="<?= Url::to(['panel', 'contract_id' => $reportPrevId]) ?>" class="ocp-next-contract-btn" title="العقد السابق حسب التقرير" style="background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;padding:4px 8px">
+                    <i class="fa fa-arrow-right"></i>
+                </a>
+                <?php endif; ?>
+                <span style="font-size:10px;color:#64748B;white-space:nowrap;font-weight:600" title="موقعك في تقرير المتابعة"><?= $reportPos ?>/<?= $reportTotal ?></span>
+                <?php if ($reportNextId): ?>
+                <a href="<?= Url::to(['panel', 'contract_id' => $reportNextId]) ?>" class="ocp-next-contract-btn" title="العقد التالي حسب التقرير" style="background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;padding:4px 8px">
+                    <i class="fa fa-arrow-left"></i>
+                </a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
             <?php if ($targetNextId > 0): ?>
-            <a href="<?= Url::to(['panel', 'contract_id' => $targetNextId]) ?>" class="ocp-next-contract-btn" title="الانتقال للعقد التالي">
+            <a href="<?= Url::to(['panel', 'contract_id' => $targetNextId]) ?>" class="ocp-next-contract-btn" title="الانتقال للعقد التالي تسلسلياً">
                 <i class="fa fa-arrow-left"></i> العقد التالي
             </a>
             <?php endif; ?>
@@ -561,62 +596,132 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
         }, 150);
     };
 
-    /* ═══ Ajax-Crud Modal Integration ═══ */
+    /* ═══ Vanilla JS Modal (replaces ajaxcrud ModalRemote) ═══ */
     (function(){
-        var $modal = jQuery('#ajaxCrudModal');
-        var modalEl = $modal[0];
+        var modalEl = document.getElementById('ajaxCrudModal');
         if (!modalEl) return;
+        var modalBody = modalEl.querySelector('.modal-body');
+        var modalFooter = modalEl.querySelector('.modal-footer');
+        var bsModal = null;
 
-        function hideModal() {
-            try {
-                if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                    var bsModal = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                    bsModal.hide();
-                } else {
-                    $modal.modal('hide');
-                }
-            } catch(e) {
-                $modal.removeClass('show').css('display','none');
-                jQuery('.modal-backdrop').remove();
-                jQuery('body').removeClass('modal-open').css({'overflow':'','padding-right':''});
+        function getModal() {
+            if (!bsModal && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
             }
+            return bsModal;
+        }
+        function showModal() { var m = getModal(); if (m) m.show(); }
+        function hideModal() {
+            var m = getModal();
+            if (m) { try { m.hide(); } catch(e) {} }
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+        function getCsrf() {
+            var m = document.querySelector('meta[name="csrf-token"]');
+            var p = document.querySelector('meta[name="csrf-param"]');
+            return { param: p ? p.content : '_csrf-backend', token: m ? m.content : '' };
         }
 
-        /* Stub $.pjax.reload so ajaxcrud never hangs */
-        jQuery.pjax = jQuery.pjax || {};
-        var origReload = jQuery.pjax.reload;
-        jQuery.pjax.reload = function(options) {
-            if (options && options.container && jQuery(options.container).length === 0) {
-                return jQuery.Deferred().resolve();
-            }
-            if (typeof origReload === 'function') return origReload.apply(this, arguments);
-            return jQuery.Deferred().resolve();
-        };
+        function loadUrl(url) {
+            if (modalBody) modalBody.innerHTML = '<div style="text-align:center;padding:40px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>';
+            if (modalFooter) modalFooter.innerHTML = '';
+            showModal();
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    if (modalBody) modalBody.innerHTML = html;
+                    bindModalForms();
+                })
+                .catch(function() {
+                    if (modalBody) modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ في التحميل</div>';
+                });
+        }
 
-        /* Intercept ALL ajax-crud responses: on success → close modal + refresh */
-        jQuery(document).ajaxComplete(function(event, xhr, settings) {
-            if (!$modal.hasClass('show') && !$modal.is(':visible')) return;
-            var ct = xhr.getResponseHeader('Content-Type') || '';
-            if (ct.indexOf('json') === -1) return;
-            try {
-                var resp = typeof xhr.responseJSON !== 'undefined' ? xhr.responseJSON : JSON.parse(xhr.responseText);
-                if (!resp) return;
-                if (resp.forceReload || resp.forceClose) {
-                    setTimeout(function(){
-                        hideModal();
-                        setTimeout(function(){ window.ocpRefreshTabs(); }, 300);
-                    }, 100);
+        function submitForm(form) {
+            var csrf = getCsrf();
+            var fd = new FormData(form);
+            if (!fd.has(csrf.param)) fd.append(csrf.param, csrf.token);
+            var url = form.action || location.href;
+            var method = (form.method || 'POST').toUpperCase();
+            fetch(url, {
+                method: method,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd
+            }).then(function(r) {
+                var ct = r.headers.get('Content-Type') || '';
+                if (ct.indexOf('json') !== -1) {
+                    return r.json().then(function(data) {
+                        if (data.forceClose || data.forceReload) {
+                            hideModal();
+                            setTimeout(function(){ window.ocpRefreshTabs(); }, 300);
+                        } else if (data.message) {
+                            if (modalBody) modalBody.innerHTML = '<div class="alert alert-info">' + data.message + '</div>';
+                        }
+                    });
                 }
-            } catch(e) {}
+                return r.text().then(function(html) {
+                    if (modalBody) modalBody.innerHTML = html;
+                    bindModalForms();
+                });
+            }).catch(function() {
+                if (modalBody) modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ في الإرسال</div>';
+            });
+        }
+
+        function bindModalForms() {
+            if (!modalBody) return;
+            var forms = modalBody.querySelectorAll('form');
+            forms.forEach(function(f) {
+                f.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitForm(f);
+                });
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('[role="modal-remote"]');
+            if (!link) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var url = link.getAttribute('href');
+            if (!url || url === '#') return;
+
+            var method = link.getAttribute('data-request-method');
+            if (method && method.toLowerCase() === 'post') {
+                var csrf = getCsrf();
+                var fd = new FormData();
+                fd.append(csrf.param, csrf.token);
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                }).then(function(r) { return r.json(); })
+                  .then(function(data) {
+                      if (data.forceClose || data.forceReload) {
+                          setTimeout(function(){ window.ocpRefreshTabs(); }, 200);
+                      }
+                  }).catch(function(){});
+                return;
+            }
+
+            loadUrl(url);
+        }, true);
+
+        modalEl.addEventListener('click', function(e) {
+            if (e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss="modal"]')) {
+                hideModal();
+            }
         });
 
-        /* Bootstrap 3/4 data-dismiss compatibility with Bootstrap 5 */
-        $modal.on('click', '[data-dismiss="modal"]', function() { hideModal(); });
-
-        /* Cleanup modal content after it closes */
         modalEl.addEventListener('hidden.bs.modal', function() {
-            $modal.find('.modal-body').html('');
-            $modal.find('.modal-footer').html('');
+            if (modalBody) modalBody.innerHTML = '';
+            if (modalFooter) modalFooter.innerHTML = '';
         });
     })();
 JS

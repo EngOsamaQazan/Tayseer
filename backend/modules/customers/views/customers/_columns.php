@@ -15,7 +15,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'id',
         'label' => '#',
-        'contentOptions' => ['style' => 'width:50px'],
+        'contentOptions' => ['style' => 'width:50px', 'data-label' => '#'],
     ],
 
     /* الاسم */
@@ -27,7 +27,7 @@ return [
         'value' => fn($m) => Permissions::can(Permissions::CUST_UPDATE)
             ? Html::a(Html::encode(NameHelper::short($m->name)), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600', 'title' => $m->name])
             : Html::encode(NameHelper::short($m->name)),
-        'contentOptions' => fn($m) => ['title' => $m->name],
+        'contentOptions' => fn($m) => ['title' => $m->name, 'data-label' => 'الاسم'],
     ],
 
     /* الهاتف */
@@ -39,7 +39,7 @@ return [
         'value' => function ($model) {
             return '<span dir="ltr">' . \yii\helpers\Html::encode(\backend\helpers\PhoneHelper::toLocal($model->primary_phone_number)) . '</span>';
         },
-        'contentOptions' => ['style' => 'direction:ltr;text-align:right;font-family:monospace'],
+        'contentOptions' => ['style' => 'direction:ltr;text-align:right;font-family:monospace', 'data-label' => 'الهاتف'],
     ],
 
     /* الرقم الوطني */
@@ -47,7 +47,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'id_number',
         'label' => 'الرقم الوطني',
-        'contentOptions' => ['style' => 'font-family:monospace'],
+        'contentOptions' => ['style' => 'font-family:monospace', 'data-label' => 'الوطني'],
     ],
 
     /* مشتكى عليه - استعلام EXISTS للأداء */
@@ -67,7 +67,7 @@ return [
                 ? '<span class="label label-danger">نعم</span>'
                 : '<span class="label label-success">لا</span>';
         },
-        'contentOptions' => ['style' => 'text-align:center;width:70px'],
+        'contentOptions' => ['style' => 'text-align:center;width:70px', 'data-label' => 'مشتكى عليه'],
     ],
 
     /* العقود */
@@ -91,6 +91,7 @@ return [
             }
             return implode(' ', $links);
         },
+        'contentOptions' => ['data-label' => 'العقود'],
     ],
 
     /* الوظيفة */
@@ -99,12 +100,13 @@ return [
         'attribute' => 'job_title',
         'label' => 'الوظيفة',
         'value' => 'jobs.name',
+        'contentOptions' => ['data-label' => 'الوظيفة'],
     ],
 
     /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',
-        'contentOptions' => ['style' => 'width:100px;text-align:center'],
+        'contentOptions' => ['style' => 'width:100px;text-align:center', 'data-label' => ''],
         'header' => 'إجراءات',
         'template' => '{all}',
         'buttons' => [
