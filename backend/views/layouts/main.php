@@ -121,6 +121,13 @@ if (Yii::$app->controller->action->id === 'login') {
                     <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
                         <ul class="navbar-nav flex-row align-items-center ms-md-auto">
 
+                            <!-- Fullscreen Toggle -->
+                            <li class="nav-item me-2">
+                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="btnFullscreen" title="وضع ملء الشاشة" onclick="toggleFullScreen()">
+                                    <i class="fa-solid fa-expand fa-lg" id="fullscreenIcon"></i>
+                                </a>
+                            </li>
+
                             <!-- Notifications -->
                             <li class="nav-item dropdown-notifications navbar-dropdown dropdown me-3 me-xl-2" id="notifDropdown">
                                 <a class="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
@@ -265,6 +272,82 @@ if (Yii::$app->controller->action->id === 'login') {
     JSBLOCK;
     $this->registerJs($notifJs, \yii\web\View::POS_READY);
     ?>
+
+    <script>
+    (function(){
+        var FS_KEY = 'tayseer_fullscreen';
+
+        function isFullscreen() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+        }
+
+        function enterFullscreen() {
+            var el = document.documentElement;
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            else if (el.msRequestFullscreen) el.msRequestFullscreen();
+        }
+
+        function exitFullscreen() {
+            if (document.exitFullscreen) document.exitFullscreen();
+            else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            else if (document.msExitFullscreen) document.msExitFullscreen();
+        }
+
+        function updateIcon() {
+            var icon = document.getElementById('fullscreenIcon');
+            if (!icon) return;
+            if (isFullscreen()) { icon.classList.remove('fa-expand'); icon.classList.add('fa-compress'); }
+            else { icon.classList.remove('fa-compress'); icon.classList.add('fa-expand'); }
+        }
+
+        window.toggleFullScreen = function() {
+            if (isFullscreen()) {
+                sessionStorage.removeItem(FS_KEY);
+                exitFullscreen();
+            } else {
+                sessionStorage.setItem(FS_KEY, '1');
+                enterFullscreen();
+            }
+        };
+
+        document.addEventListener('fullscreenchange', function(){
+            updateIcon();
+            if (!isFullscreen() && sessionStorage.getItem(FS_KEY)) {
+                sessionStorage.removeItem(FS_KEY);
+            }
+        });
+        document.addEventListener('webkitfullscreenchange', function(){
+            updateIcon();
+            if (!isFullscreen() && sessionStorage.getItem(FS_KEY)) {
+                sessionStorage.removeItem(FS_KEY);
+            }
+        });
+
+        if (sessionStorage.getItem(FS_KEY) && !isFullscreen()) {
+            var restored = false;
+            document.addEventListener('click', function restoreFS() {
+                if (restored) return;
+                restored = true;
+                document.removeEventListener('click', restoreFS, true);
+                if (sessionStorage.getItem(FS_KEY) && !isFullscreen()) {
+                    enterFullscreen();
+                }
+            }, true);
+
+            document.addEventListener('keydown', function restoreFSKey(e) {
+                if (restored) return;
+                restored = true;
+                document.removeEventListener('keydown', restoreFSKey, true);
+                if (sessionStorage.getItem(FS_KEY) && !isFullscreen()) {
+                    enterFullscreen();
+                }
+            }, true);
+
+            updateIcon();
+        }
+    })();
+    </script>
 
     <?php $this->endBody() ?>
     </body>
