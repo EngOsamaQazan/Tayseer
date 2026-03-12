@@ -274,7 +274,20 @@ $pendingReqCount = (int)Yii::$app->db->createCommand(
 .lh-stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
 .lh-stat-val{font-size:20px;font-weight:700;line-height:1.2}
 .lh-stat-lbl{font-size:11px;color:#64748B;margin-top:1px}
-/* ═══ FULL RESPONSIVE — Same approach as Contracts V2 ═══ */
+/* ═══ FULL RESPONSIVE ═══ */
+
+/* Force sidebar closed on mobile — override Vuexy inline styles */
+@media (max-width:1199.98px) {
+    html:not(.layout-menu-expanded) #layout-menu,
+    html:not(.layout-menu-expanded) .layout-menu {
+        transform:translate3d(100%,0,0) !important;
+    }
+    .layout-page {
+        padding-inline-start:0 !important;
+        padding-right:0 !important;
+        width:100% !important;
+    }
+}
 
 /* ── Wide desktop (≤1279px) ── */
 @media (max-width:1279px) {
@@ -964,5 +977,17 @@ $this->registerJs($js);
     } else {
         setTimeout(initResize, 300);
     }
+})();
+</script>
+
+<script>
+(function(){
+    if(window.innerWidth >= 1200) return;
+    var html = document.documentElement;
+    html.classList.remove('layout-menu-expanded');
+    var lp = document.querySelector('.layout-page');
+    if(lp) { lp.style.paddingInlineStart = '0px'; lp.style.paddingRight = '0px'; }
+    var lm = document.getElementById('layout-menu') || document.querySelector('.layout-menu');
+    if(lm) lm.style.transform = 'translate3d(100%,0,0)';
 })();
 </script>
