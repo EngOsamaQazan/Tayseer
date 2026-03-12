@@ -1,0 +1,387 @@
+/* ============================================================
+   CUSTOMERS V2 — Modern Responsive Customers List
+   Scoped to .cust-page to avoid AdminLTE/Vuexy conflicts
+   NO Bootstrap 3, NO CrudAsset, NO inline styles
+   ============================================================ */
+
+/* ---- 1. CSS VARIABLES ---- */
+.cust-page {
+  --clr-primary: #800020;
+  --clr-primary-dark: #650019;
+  --clr-primary-light: #FDF2F4;
+  --clr-surface: #fff;
+  --clr-bg: #F8FAFC;
+  --clr-border: #E2E8F0;
+  --clr-border-light: #F1F5F9;
+  --clr-text: #1E293B;
+  --clr-text-muted: #64748B;
+  --clr-text-light: #94A3B8;
+  --clr-success: #059669;
+  --clr-danger: #DC2626;
+  --clr-warning: #D97706;
+  --clr-info: #2563EB;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 16px rgba(0,0,0,.07);
+  --font-family: 'Tajawal','Cairo',sans-serif;
+}
+
+/* ---- 2. PAGE LAYOUT ---- */
+.cust-page {
+  font-family: var(--font-family);
+  direction: rtl;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.cust-page *, .cust-page *::before, .cust-page *::after { box-sizing: border-box; }
+
+/* ---- 3. STATS CARDS ---- */
+.cust-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.cust-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  transition: box-shadow .2s, transform .15s;
+}
+.cust-stat:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.cust-stat-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.cust-stat-val { font-size: 20px; font-weight: 700; line-height: 1.2; }
+.cust-stat-lbl { font-size: 11px; color: var(--clr-text-muted); margin-top: 1px; }
+
+/* ---- 4. KARTIK GRIDVIEW PANEL (same as judiciary) ---- */
+.cust-page .panel-body, .cust-page .kv-grid-container,
+.cust-page .table-responsive, .cust-page .kv-grid-table { overflow: visible !important; }
+.cust-page .table-bordered { border: none !important; }
+.cust-page .table-bordered > thead > tr > th,
+.cust-page .table-bordered > tbody > tr > td { border-right: none !important; border-left: none !important; }
+.cust-page .panel {
+  margin: 0 !important;
+  border: 1px solid var(--clr-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: none !important;
+}
+.cust-page .panel-heading {
+  background: var(--clr-bg) !important;
+  border-bottom: 1px solid var(--clr-border) !important;
+  padding: 8px 12px !important;
+  border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--clr-text);
+}
+.cust-page .panel-heading .badge {
+  background: var(--clr-primary);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.cust-page .panel-body { border: none !important; padding: 0 !important; }
+.cust-page .panel-footer {
+  background: var(--clr-bg) !important;
+  border-top: 1px solid var(--clr-border) !important;
+  padding: 6px 10px !important;
+  border-radius: 0 0 var(--radius-md) var(--radius-md) !important;
+}
+
+/* ---- 5. TOOLBAR (.kv-panel-before) ---- */
+.cust-page .kv-panel-before {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--clr-bg);
+  border-bottom: 1px solid var(--clr-border);
+}
+.cust-page .kv-panel-before .btn {
+  border-radius: var(--radius-sm) !important;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cust-page .kv-panel-before .btn-default {
+  border: 1px solid var(--clr-border) !important;
+  background: var(--clr-surface) !important;
+  color: var(--clr-text-muted) !important;
+}
+.cust-page .kv-panel-before .btn-default:hover {
+  background: var(--clr-border-light) !important;
+  color: var(--clr-text) !important;
+}
+
+/* ---- 6. TABLE STYLING ---- */
+.cust-page .kv-grid-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.cust-page .kv-grid-table thead th {
+  background: var(--clr-bg);
+  color: #475569;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--clr-border);
+}
+.cust-page .kv-grid-table tbody td {
+  padding: 10px 12px;
+  vertical-align: middle;
+  font-size: 13px;
+  color: var(--clr-text);
+  border-bottom: 1px solid var(--clr-border-light);
+}
+.cust-page .kv-grid-table tbody tr:hover {
+  background: #fffbeb;
+}
+.cust-page .kv-grid-table .filters td {
+  padding: 6px 8px;
+}
+.cust-page .kv-grid-table .filters .form-control {
+  font-size: 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--clr-border);
+  padding: 4px 8px;
+  height: 32px;
+}
+
+/* Summary & Pagination */
+.cust-page .kv-panel-pager {
+  padding: 10px 16px;
+  border-top: 1px solid var(--clr-border-light);
+}
+.cust-page .summary {
+  font-size: 12px;
+  color: var(--clr-text-muted);
+}
+.cust-page .pagination > li > a,
+.cust-page .pagination > li > span {
+  border-radius: var(--radius-sm) !important;
+  margin: 0 1px;
+  border: 1px solid var(--clr-border);
+  color: var(--clr-text-muted);
+  font-size: 11px;
+  padding: 4px 8px;
+}
+.cust-page .pagination > .active > a,
+.cust-page .pagination > .active > span {
+  background: var(--clr-primary) !important;
+  border-color: var(--clr-primary) !important;
+  color: #fff !important;
+}
+.cust-page .pagination > li > a:hover {
+  background: var(--clr-border-light);
+  border-color: #CBD5E1;
+}
+
+/* ---- 7. ROW ACTION DROPDOWN ---- */
+.cust-act-wrap {
+  position: relative;
+  display: inline-block;
+}
+.cust-act-trigger {
+  background: var(--clr-primary-light);
+  border: 1px solid #f0c0cc;
+  color: var(--clr-primary);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all .2s;
+}
+.cust-act-trigger:hover {
+  background: var(--clr-primary);
+  color: #fff;
+  border-color: var(--clr-primary);
+}
+.cust-act-menu {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 100%;
+  z-index: 9999;
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  min-width: 180px;
+  padding: 6px 0;
+  margin-top: 4px;
+}
+.cust-act-menu.show { display: block; }
+.cust-act-menu a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--clr-text);
+  text-decoration: none;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.cust-act-menu a:hover {
+  background: var(--clr-primary-light);
+  color: var(--clr-primary);
+}
+.cust-act-menu a i { width: 16px; text-align: center; }
+.cust-act-sep {
+  height: 1px;
+  background: var(--clr-border-light);
+  margin: 4px 0;
+}
+
+/* ---- 8. TEXT HELPERS ---- */
+.text-burgundy { color: var(--clr-primary) !important; }
+
+/* ---- 9. RESPONSIVE — TABLET ---- */
+@media (max-width: 1024px) {
+  .cust-stats { grid-template-columns: repeat(2, 1fr); }
+  .cust-page .panel-heading .pull-right { display: flex; flex-wrap: wrap; gap: 4px; }
+  .cust-page .panel-heading .pull-right .btn { font-size: 11px; padding: 3px 6px !important; }
+  .cust-page .kv-grid-container { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+  .cust-page .kv-grid-table { min-width: 700px; }
+}
+
+/* ---- 10. RESPONSIVE — MOBILE CARD ---- */
+@media (max-width: 767px) {
+  .cust-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cust-stat { padding: 10px 12px; }
+  .cust-stat-val { font-size: 16px; }
+
+  .cust-page .panel { border-radius: 8px !important; border: none !important; box-shadow: none !important; }
+  .cust-page .panel-heading { padding: 8px 10px !important; font-size: 12px; border-radius: 8px 8px 0 0 !important; }
+  .cust-page .panel-heading .pull-right { display: flex; flex-wrap: wrap; gap: 3px; float: none !important; margin-top: 6px; }
+  .cust-page .kv-panel-before { padding: 6px 8px !important; flex-wrap: wrap; gap: 4px; }
+  .cust-page .kv-panel-before .btn { font-size: 12px !important; padding: 5px 10px !important; }
+
+  .cust-page .kv-grid-container { overflow: visible !important; }
+  .cust-page .kv-grid-table { min-width: 0; }
+  .cust-page .kv-grid-table thead { display: none; }
+  .cust-page .kv-grid-table tbody tr {
+    display: block;
+    background: #fff;
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-md);
+    margin-bottom: 8px;
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .cust-page .kv-grid-table tbody tr:hover { background: #fffbeb; }
+  .cust-page .kv-grid-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    border: none;
+    font-size: 13px;
+  }
+  .cust-page .kv-grid-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--clr-text-muted);
+    font-size: 11px;
+    min-width: 80px;
+    flex-shrink: 0;
+  }
+  .cust-page .kv-grid-table tbody td:last-child {
+    justify-content: flex-end;
+    padding-top: 8px;
+    margin-top: 4px;
+    border-top: 1px solid var(--clr-border-light);
+  }
+  .cust-page .kv-grid-table tbody td:last-child::before { display: none; }
+
+  .cust-page .kv-grid-table .filters { display: none; }
+  .cust-page .summary { font-size: 11px !important; }
+  .cust-act-menu { left: auto; right: 0; }
+
+  .cust-page .panel-heading .pull-right .btn { min-height: 36px; }
+  .cust-page .pagination { flex-wrap: wrap; justify-content: center; gap: 2px; }
+  .cust-page .pagination > li > a, .cust-page .pagination > li > span { padding: 3px 6px; font-size: 10px; min-width: 28px; min-height: 28px; display: inline-flex; align-items: center; justify-content: center; }
+}
+
+/* ---- 11. SMALL MOBILE ---- */
+@media (max-width: 480px) {
+  .cust-stats { grid-template-columns: 1fr; }
+  .cust-page .kv-panel-before .btn { font-size: 11px !important; padding: 4px 8px !important; }
+}
+
+/* ---- 12. VIEW PAGE STYLES ---- */
+.cv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cv-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--clr-text-muted, #6c757d);
+}
+.cv-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  padding: 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm, 6px);
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+}
+.cv-value a { color: #0891b2; text-decoration: none; }
+.cv-money { font-feature-settings: "tnum"; letter-spacing: 0.3px; }
+
+@media (max-width: 767px) {
+  .so-grid-3, .so-grid-4 { grid-template-columns: 1fr !important; }
+  .so-body { flex-direction: column; }
+  .so-risk-panel { width: 100% !important; min-width: 100% !important; height: auto !important; position: static !important; }
+  .so-header { flex-direction: column; gap: 10px; text-align: center; }
+  .so-header h1 { font-size: 18px; }
+  div[style*="grid-template-columns:repeat(4"] { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ---- 13. PRINT ---- */
+@media print {
+  .cust-stats, .cust-act-wrap,
+  .ct-filter-wrap, .ct-filter-open-btn,
+  .kv-panel-before, .kv-panel-pager, .filters,
+  .panel-heading .pull-right,
+  #ajaxCrudModal { display: none !important; }
+  .cust-page .panel { border: none !important; box-shadow: none !important; }
+  .cust-page .kv-grid-table { font-size: 10px; }
+}

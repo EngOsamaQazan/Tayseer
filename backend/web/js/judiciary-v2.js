@@ -336,40 +336,180 @@
 
   /* ═══════════════════════════════════════════════
      7. MODAL HANDLER (role="modal-remote")
-        Uses Bootstrap 5 Modal API + fetch
+        Uses Bootstrap 5 Modal API + JSON-aware AJAX
      ═══════════════════════════════════════════════ */
   var $modal = $('#ajaxCrudModal');
   var modalEl = $modal[0];
+  var $mTitle = $modal.find('.modal-title');
+  var $mBody = $modal.find('.modal-body');
+  var $mFooter = $modal.find('.modal-footer');
+  var $mDialog = $modal.find('.modal-dialog');
+  var bsModalInstance = null;
+
+  if (!$mFooter.length) {
+    $modal.find('.modal-content').append('<div class="modal-footer"></div>');
+    $mFooter = $modal.find('.modal-footer');
+  }
+
+  var SPINNER = '<div style="text-align:center;padding:40px">'
+    + '<i class="fa fa-spinner fa-spin" style="font-size:28px;color:#800020"></i>'
+    + '<div style="margin-top:10px;color:#64748B;font-size:13px">جاري التحميل...</div></div>';
 
   function getBsModal() {
     if (!modalEl || typeof bootstrap === 'undefined') return null;
-    return bootstrap.Modal.getOrCreateInstance
-      ? bootstrap.Modal.getOrCreateInstance(modalEl)
-      : new bootstrap.Modal(modalEl);
+    if (!bsModalInstance) {
+      bsModalInstance = bootstrap.Modal.getOrCreateInstance
+        ? bootstrap.Modal.getOrCreateInstance(modalEl)
+        : new bootstrap.Modal(modalEl);
+    }
+    return bsModalInstance;
+  }
+
+  function showModal() { var m = getBsModal(); if (m) m.show(); }
+  function hideModal() { var m = getBsModal(); if (m) m.hide(); }
+
+  function setModalSize(size) {
+    $mDialog.removeClass('modal-sm modal-lg modal-xl');
+    if (size === 'large' || size === 'lg') $mDialog.addClass('modal-lg');
+    else if (size === 'xl') $mDialog.addClass('modal-xl');
+    else if (size === 'small' || size === 'sm') $mDialog.addClass('modal-sm');
+  }
+
+  function renderModalResponse(data) {
+    if (typeof data === 'string') {
+      $mTitle.text('');
+      $mBody.html(data);
+      $mFooter.html('');
+      return;
+    }
+    if (data.forceClose) {
+      hideModal();
+      refreshActiveTab();
+      return;
+    }
+    if (data.title)   $mTitle.html(data.title);
+    if (data.content) $mBody.html(data.content);
+    if (data.footer)  $mFooter.html(data.footer);
+    if (data.size)    setModalSize(data.size);
+    $mBody.find('script').each(function () {
+      try { $.globalEval(this.text || this.textContent || this.innerHTML || ''); } catch (ex) {}
+    });
+  }
+
+  function refreshActiveTab() {
+    var tab = $('.lh-tab.active').data('tab');
+    if (tab) {
+      var $panel = $('#lh-panel-' + tab);
+      $panel.data('loaded', '0');
+      loadTab(tab);
+    }
+  }
+
+  function loadRemoteModal(href) {
+    $mTitle.html('');
+    $mBody.html(SPINNER);
+    $mFooter.html('');
+    setModalSize('');
+    showModal();
+    $.ajax({
+      url: href, type: 'GET', dataType: 'json',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).done(function (data) {
+      renderModalResponse(data);
+    }).fail(function (xhr) {
+      var fb = xhr.responseText || '';
+      if (fb && fb.charAt(0) === '{') {
+        try { renderModalResponse(JSON.parse(fb)); return; } catch (ex) {}
+      }
+      if (fb) { $mBody.html(fb); $mFooter.html(''); }
+      else {
+        $mBody.html('<div style="text-align:center;padding:30px;color:#DC2626">'
+          + '<i class="fa fa-exclamation-triangle" style="font-size:28px;display:block;margin-bottom:8px"></i>'
+          + 'حدث خطأ في تحميل المحتوى</div>');
+      }
+    });
+  }
+
+  function submitModalForm($form) {
+    var action = $form.attr('action');
+    var hasFile = $form.find('input[type="file"]').length > 0;
+    var formData = hasFile ? new FormData($form[0]) : $form.serialize();
+    var ajaxOpts = {
+      url: action, type: 'POST', dataType: 'json',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    };
+    if (hasFile) {
+      ajaxOpts.data = formData;
+      ajaxOpts.processData = false;
+      ajaxOpts.contentType = false;
+    } else {
+      ajaxOpts.data = formData;
+    }
+    $mFooter.find('[type="submit"]').prop('disabled', true)
+      .html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
+
+    $.ajax(ajaxOpts).done(function (data) {
+      renderModalResponse(data);
+    }).fail(function (xhr) {
+      var fb = xhr.responseText || '';
+      try { renderModalResponse(JSON.parse(fb)); return; } catch (ex) {}
+      $mBody.html(fb || '<div class="text-danger text-center" style="padding:20px">حدث خطأ أثناء الحفظ</div>');
+      $mFooter.find('[type="submit"]').prop('disabled', false).html('<i class="fa fa-save"></i> حفظ');
+    });
   }
 
   $(document).on('click', '[role="modal-remote"]', function (e) {
+    if ($(this).data('request-method') === 'post') return;
     e.preventDefault();
+    e.stopPropagation();
     var href = $(this).attr('href') || $(this).data('url');
-    if (!href) return;
+    if (!href || href === '#') return;
+    loadRemoteModal(href);
+  });
 
-    $modal.find('.modal-title').text('');
-    $modal.find('.modal-body').html('<div style="text-align:center;padding:40px"><i class="fa fa-spinner fa-spin" style="font-size:24px;color:#800020"></i></div>');
-    var bsModal = getBsModal();
-    if (bsModal) bsModal.show();
-
-    $.get(href, function (html) {
-      $modal.find('.modal-body').html(html);
-      var title = $modal.find('.modal-body').find('h1,h2,h3,.modal-title-text').first().text();
-      if (title) $modal.find('.modal-title').text(title);
-    }).fail(function () {
-      $modal.find('.modal-body').html('<div style="text-align:center;padding:40px;color:#EF4444"><i class="fa fa-exclamation-triangle"></i> حدث خطأ في التحميل</div>');
+  $(document).on('click', '[role="modal-remote"][data-request-method="post"]', function (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var href = $(this).attr('href');
+    var msg = $(this).data('confirm-message') || $(this).data('confirm') || 'هل أنت متأكد من الحذف؟';
+    $mTitle.html('<i class="fa fa-exclamation-triangle" style="color:#DC2626"></i> تأكيد');
+    $mBody.html('<div style="text-align:center;padding:20px;font-size:14px">' + msg + '</div>');
+    $mFooter.html(
+      '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>'
+      + '<button type="button" class="btn btn-danger" id="lh-confirm-delete"><i class="fa fa-trash"></i> حذف</button>'
+    );
+    showModal();
+    $mFooter.off('click', '#lh-confirm-delete').on('click', '#lh-confirm-delete', function () {
+      $(this).prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+      $.post(href).done(function () { hideModal(); refreshActiveTab(); })
+        .fail(function () { hideModal(); refreshActiveTab(); });
     });
   });
 
+  $modal.on('click', '[type="submit"]', function (e) {
+    e.preventDefault();
+    var $form = $mBody.find('form');
+    if (!$form.length) return;
+    var evt = $.Event('beforeSubmit');
+    $form.trigger(evt);
+    if (evt.isDefaultPrevented()) return;
+    submitModalForm($form);
+  });
+
+  $modal.on('submit', 'form', function (e) {
+    e.preventDefault();
+    var $form = $(this);
+    var evt = $.Event('beforeSubmit');
+    $form.trigger(evt);
+    if (evt.isDefaultPrevented()) return;
+    submitModalForm($form);
+  });
+
   $modal.on('hidden.bs.modal', function () {
-    $modal.find('.modal-body').html('');
-    $modal.find('.modal-title').text('');
+    $mBody.html('');
+    $mTitle.text('');
+    $mFooter.html('');
+    setModalSize('');
   });
 
   /* ═══════════════════════════════════════════════

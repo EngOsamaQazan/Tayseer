@@ -131,13 +131,14 @@ $this->registerJs("window.LH_CONFIG = {$lhConfig};", \yii\web\View::POS_HEAD);
 
 <!-- Modal (Bootstrap 5) -->
 <div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title"></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body"></div>
+            <div class="modal-footer"></div>
         </div>
     </div>
 </div>

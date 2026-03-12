@@ -171,15 +171,116 @@ The CSS in `tayseer-gridview-responsive.css` does this at `≤767px`:
 - [ ] Register `tayseer-gridview-responsive.css`
 - [ ] Register `tayseer-gridview-modal.js`
 - [ ] Replace `Modal::begin/end` with Bootstrap 5 HTML
+- [ ] Modal HTML includes `<div class="modal-footer"></div>` (not just header + body)
+- [ ] Modal dialog has `modal-dialog-centered modal-dialog-scrollable` classes
 - [ ] Add `data-label` to every column in `_columns.php`
 - [ ] Replace `glyphicon` icons with `fa` icons
 - [ ] Replace `data-dismiss` with `data-bs-dismiss`
 - [ ] Replace jQuery `.modal('show')` with Bootstrap 5 API
 - [ ] Remove any inline `<style>` blocks that duplicate shared CSS patterns
+- [ ] **All `role="modal-remote"` links inside PJAX containers have `data-pjax="0"`**
+- [ ] **Modal JS handler parses JSON `{title, content, footer}` — NOT raw HTML**
+- [ ] **Custom JS files implement full modal lifecycle (load/submit/forceClose/refresh)**
 - [ ] Test: desktop table view
 - [ ] Test: mobile card layout
-- [ ] Test: modal (view/create/update/delete)
+- [ ] Test: modal (view/create/update/delete) — verify modal actually opens and shows content
+- [ ] Test: multi-step modals (e.g. select → form) if applicable
 - [ ] Test: pagination
+
+## Critical Pitfalls (MUST READ Before Rebuilding Any Screen)
+
+### Pitfall 1: Modal Handler Must Parse JSON — NOT Raw HTML
+
+Controllers return JSON `{title, content, footer, forceClose, size}` for AJAX requests. The JS modal handler **MUST** use `dataType: 'json'` and render each field into the correct modal section:
+
+```javascript
+// ❌ WRONG — treats response as HTML, modal shows nothing or [object Object]
+$.get(href, function (html) {
+    $modal.find('.modal-body').html(html);
+});
+
+// ✅ CORRECT — parses JSON response structure
+$.ajax({
+    url: href, type: 'GET', dataType: 'json',
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+}).done(function (data) {
+    if (data.forceClose) { hideModal(); return; }
+    if (data.title)   $modal.find('.modal-title').html(data.title);
+    if (data.content) $modal.find('.modal-body').html(data.content);
+    if (data.footer)  $modal.find('.modal-footer').html(data.footer);
+    if (data.size)    setModalSize(data.size);
+});
+```
+
+### Pitfall 2: PJAX Intercepts `role="modal-remote"` Clicks
+
+When `role="modal-remote"` links are inside a `Pjax::begin/end` container OR a GridView with `'pjax' => true`, **PJAX intercepts the click** before the modal handler fires. The modal never opens.
+
+**Fix:** Add `'data-pjax' => 0` to every `role="modal-remote"` link inside PJAX containers:
+
+```php
+// ❌ WRONG — PJAX intercepts this click, modal never opens
+Html::a('إضافة إجراء', ['create'], [
+    'class' => 'btn btn-success',
+    'role' => 'modal-remote',
+])
+
+// ✅ CORRECT — data-pjax=0 tells PJAX to ignore this link
+Html::a('إضافة إجراء', ['create'], [
+    'class' => 'btn btn-success',
+    'role' => 'modal-remote',
+    'data-pjax' => 0,
+])
+```
+
+**Check ALL places** where `role="modal-remote"` appears inside PJAX:
+- Toolbar buttons in GridView (`'toolbar' => [...]`)
+- Action menu links in `_columns.php`
+- Inline row action buttons
+
+### Pitfall 3: Modal HTML Must Include `modal-footer`
+
+The modal template **MUST** have a `<div class="modal-footer"></div>` element. Without it, controller-provided footer buttons (إغلاق, إضافة, حفظ) are silently lost.
+
+```html
+<!-- ✅ Complete modal template -->
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer"></div>  <!-- ← REQUIRED -->
+        </div>
+    </div>
+</div>
+```
+
+### Pitfall 4: Multi-Step Modal Flows Need Form Submission + Nested modal-remote
+
+Some create flows have 2 steps (e.g. select judiciary → fill form). The modal handler must support:
+
+1. **Nested `role="modal-remote"` clicks inside the modal body** — links loaded via AJAX that open a new form in the same modal
+2. **Form submission via AJAX** — intercept `form submit` and `[type="submit"]` click inside the modal, POST as JSON, render response
+3. **File uploads** — detect `input[type="file"]` and use `FormData` with `processData: false, contentType: false`
+4. **`forceClose` handling** — when save succeeds, close modal and refresh the active tab/grid
+
+### Pitfall 5: Custom JS Files Need Full Modal Handler
+
+When a page uses its own JS file (like `judiciary-v2.js`) instead of the shared `tayseer-gridview-modal.js`, that JS file must implement the **complete** modal handler including:
+
+- `loadRemoteModal(href)` — AJAX GET with JSON parsing
+- `submitModalForm($form)` — AJAX POST with file upload support
+- `renderModalResponse(data)` — handle title/content/footer/forceClose/size
+- `refreshActiveTab()` — reload the current tab/grid after CRUD operations
+- Event delegation for `[role="modal-remote"]`, `[type="submit"]`, `form submit`
+- Delete confirmation modal for `[data-request-method="post"]`
+
+Reference implementation: `backend/modules/judiciaryCustomersActions/views/judiciary-customers-actions/index.php` (inline JS block).
+
+---
 
 ## Pages Already Converted
 
@@ -188,6 +289,7 @@ The CSS in `tayseer-gridview-responsive.css` does this at `≤767px`:
 - `court/index.php` — Standard CrudAsset pattern, fully converted
 - `jobs/index.php` — Custom fin-page layout + CrudAsset, fully converted
 - `judiciary/index.php` — Full rewrite with dedicated `judiciary-v2.css` / `judiciary-v2.js`
+- `customers/index.php` — Full rewrite with dedicated `customers-v2.css` / `customers-v2.js`
 
 ## Pages Remaining (use this skill to convert them)
 

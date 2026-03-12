@@ -143,8 +143,7 @@ class smplPDO extends PDO {
 		try { 
 			parent::__construct( $dsn, $username, $password, $driver_options ); 
 		} catch ( PDOException $e ) {
-			// You may prefer to fail silently on a production server.
-			exit( $e->getMessage() );
+			throw $e;
 		}
 	}
 	

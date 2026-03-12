@@ -195,6 +195,76 @@ class JobsController extends Controller
     }
 
     // ========================
+    // Select2 AJAX search — real-time job list
+    // ========================
+
+    /**
+     * AJAX endpoint for Select2: search jobs by name (case-insensitive, partial match).
+     * Returns {results:[{id,text}]} format compatible with Select2.
+     */
+    public function actionSearchList()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim((string) Yii::$app->request->get('q', ''));
+
+        $query = Jobs::find()
+            ->select(['id', 'name'])
+            ->andWhere(['is_deleted' => 0])
+            ->orderBy(['name' => SORT_ASC])
+            ->limit(30);
+
+        if ($q !== '') {
+            $query->andWhere(['like', 'LOWER(name)', mb_strtolower($q, 'UTF-8')]);
+        }
+
+        $items = [];
+        foreach ($query->asArray()->all() as $row) {
+            $items[] = ['id' => $row['id'], 'text' => $row['name']];
+        }
+
+        return ['results' => $items];
+    }
+
+    /**
+     * Quick-create a new job via AJAX (name only).
+     * Returns {success, id, text} so Select2 can select the new entry.
+     */
+    public function actionQuickCreate()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isPost) {
+            return ['success' => false, 'message' => 'POST only'];
+        }
+
+        $name = trim((string) Yii::$app->request->post('name', ''));
+        if ($name === '') {
+            return ['success' => false, 'message' => 'الاسم مطلوب'];
+        }
+
+        $existing = Jobs::find()
+            ->where(['LOWER(name)' => mb_strtolower($name, 'UTF-8')])
+            ->andWhere(['is_deleted' => 0])
+            ->one();
+
+        if ($existing) {
+            return ['success' => true, 'id' => $existing->id, 'text' => $existing->name, 'existing' => true];
+        }
+
+        $model = new Jobs();
+        $model->name = $name;
+        $model->status = Jobs::STATUS_ACTIVE;
+        $model->job_type = 0;
+
+        if ($model->save(false)) {
+            $this->updateJobsCache();
+            return ['success' => true, 'id' => $model->id, 'text' => $model->name, 'existing' => false];
+        }
+
+        return ['success' => false, 'message' => 'فشل في الحفظ', 'errors' => $model->errors];
+    }
+
+    // ========================
     // Similar Name Search (AJAX) — duplicate detection
     // ========================
 

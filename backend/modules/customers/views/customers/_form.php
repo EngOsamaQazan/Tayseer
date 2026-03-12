@@ -96,11 +96,25 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
         <legend><i class="fa fa-briefcase"></i> المعلومات المهنية</legend>
         <div class="row">
             <div class="col-md-3">
-                <?= $form->field($model, 'job_title')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($jobs, 'id', 'name'),
-                    'options' => ['placeholder' => 'اختر الوظيفة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('المسمى الوظيفي') ?>
+                <div class="job-title-wrapper">
+                    <?= $form->field($model, 'job_title')->widget(Select2::class, [
+                        'initValueText' => $model->job_title ? \backend\modules\jobs\models\Jobs::findOne($model->job_title)?->name : '',
+                        'options' => ['placeholder' => 'ابحث عن جهة العمل...', 'id' => 'customers-job_title'],
+                        'pluginOptions' => [
+                            'allowClear' => true,
+                            'dir' => 'rtl',
+                            'minimumInputLength' => 0,
+                            'ajax' => [
+                                'url' => Url::to(['/jobs/jobs/search-list']),
+                                'dataType' => 'json',
+                                'delay' => 200,
+                                'data' => new \yii\web\JsExpression('function(p){return {q:p.term||""};}'),
+                                'processResults' => new \yii\web\JsExpression('function(d){return d;}'),
+                            ],
+                        ],
+                    ])->label('المسمى الوظيفي') ?>
+                    <button type="button" class="btn-add-job" id="btn-add-job-classic" title="إضافة جهة عمل جديدة"><i class="fa fa-plus"></i></button>
+                </div>
             </div>
             <div class="col-md-2">
                 <?= $form->field($model, 'job_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوظيفي'])->label('الرقم الوظيفي') ?>
@@ -265,6 +279,52 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
 </div>
 
 <?php
+$this->registerCss(<<<CSS
+.job-title-wrapper { position: relative; }
+.job-title-wrapper .form-group { margin-bottom: 0; }
+.btn-add-job {
+    position: absolute; top: 28px; left: 0;
+    width: 34px; height: 34px;
+    border: 1px solid #800020; border-radius: 6px;
+    background: #fff; color: #800020;
+    font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s; z-index: 2;
+}
+.btn-add-job:hover { background: #800020; color: #fff; transform: scale(1.08); }
+.job-title-wrapper .select2-container { width: calc(100% - 42px) !important; }
+CSS
+);
+
+$this->registerJs(<<<'JSJOB'
+$(document).on('click', '.btn-add-job', function() {
+    var name = prompt('أدخل اسم جهة العمل الجديدة:');
+    if (!name || !name.trim()) return;
+    name = name.trim();
+    var $btn = $(this);
+    $btn.prop('disabled', true).find('i').removeClass('fa-plus').addClass('fa-spinner fa-spin');
+    $.ajax({
+        url: '/jobs/jobs/quick-create',
+        method: 'POST',
+        data: { name: name, _csrf: $('meta[name="csrf-token"]').attr('content') || yii.getCsrfToken() },
+        dataType: 'json',
+        success: function(res) {
+            if (res.success) {
+                var $sel = $('#customers-job_title');
+                var opt = new Option(res.text, res.id, true, true);
+                $sel.append(opt).trigger('change');
+                alert(res.existing ? 'جهة العمل موجودة مسبقًا وتم اختيارها' : 'تمت إضافة جهة العمل بنجاح');
+            } else {
+                alert(res.message || 'فشل في الإضافة');
+            }
+        },
+        error: function() { alert('حدث خطأ في الاتصال'); },
+        complete: function() { $btn.prop('disabled', false).find('i').removeClass('fa-spinner fa-spin').addClass('fa-plus'); }
+    });
+});
+JSJOB
+);
+
 $jsIsNew = $isNew ? 'true' : 'false';
 $this->registerJs(<<<JS
 /* Alpine.js handles show/hide for social security & real estate fields via x-show */

@@ -202,11 +202,25 @@ if (!$isNew) {
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية</h3>
                     <div class="so-grid so-grid-3">
-                        <div><?= $form->field($model, 'job_title')->widget(Select2::class, [
-                            'data' => ArrayHelper::map($jobs, 'id', 'name'),
-                            'options' => ['placeholder' => 'اختر جهة العمل'],
-                            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                        ])->label('جهة العمل') ?></div>
+                        <div class="job-title-wrapper">
+                            <?= $form->field($model, 'job_title')->widget(Select2::class, [
+                                'initValueText' => $model->job_title ? \backend\modules\jobs\models\Jobs::findOne($model->job_title)?->name : '',
+                                'options' => ['placeholder' => 'ابحث عن جهة العمل...', 'id' => 'customers-job_title'],
+                                'pluginOptions' => [
+                                    'allowClear' => true,
+                                    'dir' => 'rtl',
+                                    'minimumInputLength' => 0,
+                                    'ajax' => [
+                                        'url' => Url::to(['/jobs/jobs/search-list']),
+                                        'dataType' => 'json',
+                                        'delay' => 200,
+                                        'data' => new \yii\web\JsExpression('function(p){return {q:p.term||""};}'),
+                                        'processResults' => new \yii\web\JsExpression('function(d){return d;}'),
+                                    ],
+                                ],
+                            ])->label('جهة العمل') ?>
+                            <button type="button" class="btn-add-job" id="btn-add-job-smart" title="إضافة جهة عمل جديدة"><i class="fa fa-plus"></i></button>
+                        </div>
                         <div>
                             <div class="form-group">
                                 <label for="fin-employer-name">المسمى الوظيفي</label>

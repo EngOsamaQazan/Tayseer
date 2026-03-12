@@ -626,6 +626,33 @@
 }
 .rp-quick-link i { font-size: 15px; }
 
+/* ═══ Job Title: Add-New Button ═══ */
+.job-title-wrapper {
+    position: relative;
+}
+.job-title-wrapper .form-group { margin-bottom: 0; }
+.btn-add-job {
+    position: absolute;
+    top: 28px;
+    left: 0;
+    width: 34px; height: 34px;
+    border: 1px solid var(--clr-primary, #800020);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--clr-primary, #800020);
+    font-size: 14px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all .2s;
+    z-index: 2;
+}
+.btn-add-job:hover {
+    background: var(--clr-primary, #800020);
+    color: #fff;
+    transform: scale(1.08);
+}
+.job-title-wrapper .select2-container { width: calc(100% - 42px) !important; }
+
 /* ═══ Edit Mode Responsive ═══ */
 @media (max-width: 767px) {
     .so-mode-edit .so-steps {

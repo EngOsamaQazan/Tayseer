@@ -1,16 +1,15 @@
 <?php
 /**
- * أعمدة جدول العملاء
- * تعريفات الأعمدة مع تحسين الأداء (لا N+1)
+ * أعمدة جدول العملاء — V2
+ * Custom dropdown menus (no BS3 ButtonDropdown)
+ * All modal-remote links have data-pjax="0"
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\ButtonDropdown;
 use common\helper\Permissions;
 use backend\helpers\NameHelper;
 
 return [
-    /* رقم العميل */
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'id',
@@ -18,31 +17,28 @@ return [
         'contentOptions' => ['style' => 'width:50px', 'data-label' => '#'],
     ],
 
-    /* الاسم */
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'name',
         'label' => 'الاسم',
         'format' => 'raw',
         'value' => fn($m) => Permissions::can(Permissions::CUST_UPDATE)
-            ? Html::a(Html::encode(NameHelper::short($m->name)), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600', 'title' => $m->name])
+            ? Html::a(Html::encode(NameHelper::short($m->name)), ['update', 'id' => $m->id], ['class' => 'text-burgundy', 'style' => 'font-weight:600', 'title' => $m->name, 'data-pjax' => 0])
             : Html::encode(NameHelper::short($m->name)),
         'contentOptions' => fn($m) => ['title' => $m->name, 'data-label' => 'الاسم'],
     ],
 
-    /* الهاتف */
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'primary_phone_number',
         'label' => 'الهاتف',
         'format' => 'raw',
         'value' => function ($model) {
-            return '<span dir="ltr">' . \yii\helpers\Html::encode(\backend\helpers\PhoneHelper::toLocal($model->primary_phone_number)) . '</span>';
+            return '<span dir="ltr">' . Html::encode(\backend\helpers\PhoneHelper::toLocal($model->primary_phone_number)) . '</span>';
         },
         'contentOptions' => ['style' => 'direction:ltr;text-align:right;font-family:monospace', 'data-label' => 'الهاتف'],
     ],
 
-    /* الرقم الوطني */
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'id_number',
@@ -50,7 +46,6 @@ return [
         'contentOptions' => ['style' => 'font-family:monospace', 'data-label' => 'الوطني'],
     ],
 
-    /* مشتكى عليه - استعلام EXISTS للأداء */
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'مشتكى عليه',
@@ -64,13 +59,12 @@ return [
                     ->exists();
             }
             return $cache[$m->id]
-                ? '<span class="label label-danger">نعم</span>'
-                : '<span class="label label-success">لا</span>';
+                ? '<span class="label label-danger" style="padding:3px 10px;border-radius:10px;font-size:11px">نعم</span>'
+                : '<span class="label label-success" style="padding:3px 10px;border-radius:10px;font-size:11px">لا</span>';
         },
         'contentOptions' => ['style' => 'text-align:center;width:70px', 'data-label' => 'مشتكى عليه'],
     ],
 
-    /* العقود */
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'العقود',
@@ -84,7 +78,7 @@ return [
             $links = [];
             foreach ($contracts as $cid) {
                 $links[] = Html::a(
-                    '<span class="label label-info">' . $cid . '</span>',
+                    '<span class="label label-info" style="padding:2px 8px;border-radius:8px;font-size:11px">' . $cid . '</span>',
                     ['/followUp/follow-up/index', 'contract_id' => $cid],
                     ['data-pjax' => '0', 'title' => "متابعة العقد $cid"]
                 );
@@ -94,7 +88,6 @@ return [
         'contentOptions' => ['data-label' => 'العقود'],
     ],
 
-    /* الوظيفة */
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'job_title',
@@ -103,32 +96,38 @@ return [
         'contentOptions' => ['data-label' => 'الوظيفة'],
     ],
 
-    /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',
-        'contentOptions' => ['style' => 'width:100px;text-align:center', 'data-label' => ''],
+        'contentOptions' => ['style' => 'width:60px;text-align:center;overflow:visible', 'data-label' => ''],
         'header' => 'إجراءات',
         'template' => '{all}',
         'buttons' => [
-            'all' => fn($url, $m) => ButtonDropdown::widget([
-                'encodeLabel' => false,
-                'label' => '<i class="fa fa-ellipsis-v"></i>',
-                'dropdown' => [
-                    'encodeLabels' => false,
-                    'items' => array_filter([
-                        Permissions::can(Permissions::CUST_UPDATE) ? ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $m->id]] : null,
-                        ['label' => '<i class="fa fa-eye text-info"></i> عرض', 'url' => ['view', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']],
-                        ['label' => '<i class="fa fa-file-text-o text-success"></i> إضافة عقد', 'url' => ['/contracts/contracts/create', 'id' => $m->id]],
-                        '<li class="divider"></li>',
-                        Permissions::can(Permissions::CUST_UPDATE) ? ['label' => '<i class="fa fa-phone text-warning"></i> تحديث اتصال', 'url' => ['update-contact', 'id' => $m->id], 'linkOptions' => ['role' => 'modal-remote']] : null,
-                        Permissions::can(Permissions::CUST_DELETE) ? '<li class="divider"></li>' : null,
-                        Permissions::can(Permissions::CUST_DELETE) ? ['label' => '<i class="fa fa-trash text-danger"></i> حذف', 'url' => ['delete', 'id' => $m->id], 'linkOptions' => ['data' => ['method' => 'post', 'confirm' => 'هل أنت متأكد من حذف هذا العميل؟']]] : null,
-                    ]),
-                    'options' => ['class' => 'dropdown-menu-left'],
-                ],
-                'options' => ['class' => 'btn-default btn-xs'],
-                'split' => false,
-            ]),
+            'all' => function ($url, $m) {
+                $items = '';
+
+                if (Permissions::can(Permissions::CUST_UPDATE)) {
+                    $items .= '<a href="' . Url::to(['update', 'id' => $m->id]) . '" data-pjax="0"><i class="fa fa-pencil" style="color:#3b82f6"></i> تعديل</a>';
+                }
+
+                $items .= '<a href="' . Url::to(['view', 'id' => $m->id]) . '" role="modal-remote" data-pjax="0"><i class="fa fa-eye" style="color:#0891b2"></i> عرض</a>';
+
+                $items .= '<a href="' . Url::to(['/contracts/contracts/create', 'id' => $m->id]) . '" data-pjax="0"><i class="fa fa-file-text-o" style="color:#059669"></i> إضافة عقد</a>';
+
+                if (Permissions::can(Permissions::CUST_UPDATE)) {
+                    $items .= '<div class="cust-act-sep"></div>';
+                    $items .= '<a href="' . Url::to(['update-contact', 'id' => $m->id]) . '" role="modal-remote" data-pjax="0"><i class="fa fa-phone" style="color:#d97706"></i> تحديث اتصال</a>';
+                }
+
+                if (Permissions::can(Permissions::CUST_DELETE)) {
+                    $items .= '<div class="cust-act-sep"></div>';
+                    $items .= '<a href="' . Url::to(['delete', 'id' => $m->id]) . '" data-method="post" data-confirm="هل أنت متأكد من حذف هذا العميل؟" data-pjax="0"><i class="fa fa-trash" style="color:#dc2626"></i> حذف</a>';
+                }
+
+                return '<div class="cust-act-wrap">'
+                    . '<button class="cust-act-trigger" type="button"><i class="fa fa-ellipsis-v"></i></button>'
+                    . '<div class="cust-act-menu">' . $items . '</div>'
+                    . '</div>';
+            },
         ],
     ],
 ];

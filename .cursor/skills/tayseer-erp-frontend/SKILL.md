@@ -156,6 +156,8 @@ $this->params['breadcrumbs'][] = $this->title;
 - Use `box box-primary` wrapper with header and tools
 - Include a page icon in box-title using Font Awesome
 - Action buttons in `box-tools` section
+- **CRITICAL:** Any `role="modal-remote"` link inside `Pjax::begin/end` or GridView with `'pjax' => true` MUST have `'data-pjax' => 0` — otherwise PJAX intercepts the click and the modal never opens
+- Modal templates MUST include `<div class="modal-footer"></div>` — without it, controller footer buttons are silently lost
 
 ### 2. Form View (_form.php)
 

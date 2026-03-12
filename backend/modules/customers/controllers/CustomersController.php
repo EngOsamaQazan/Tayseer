@@ -125,12 +125,13 @@ class CustomersController extends Controller
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => "customers #" . $id,
+                'title' => 'عرض العميل #' . $id,
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                    Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary']),
+                'size' => 'large',
             ];
         } else {
             return $this->render('view', [
@@ -445,7 +446,7 @@ class CustomersController extends Controller
              *   Process for ajax request
              */
             Yii::$app->response->format = Response::FORMAT_JSON;
-            return ['forceClose' => true, 'forceReload' => '#customers-table-crud-datatable'];
+            return ['forceClose' => true];
         } else {
             /*
              *   Process for non-ajax request
@@ -464,18 +465,15 @@ class CustomersController extends Controller
     public function actionBulkdelete()
     {
         $request = Yii::$app->request;
-        $pks = explode(',', $request->post('pks')); // Array or selected records primary keys
+        $pks = explode(',', $request->post('pks'));
         foreach ($pks as $pk) {
             $model = $this->findModel($pk);
             $model->delete();
         }
 
         if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
             Yii::$app->response->format = Response::FORMAT_JSON;
-            return ['forceClose' => true, 'forceReload' => '#customers-table-crud-datatable'];
+            return ['forceClose' => true];
         } else {
             /*
              *   Process for non-ajax request
@@ -561,7 +559,7 @@ class CustomersController extends Controller
      */
     protected function findModel($id)
     {
-        if (($model = customers::findOne($id)) !== null) {
+        if (($model = Customers::findOne($id)) !== null) {
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
@@ -712,32 +710,25 @@ class CustomersController extends Controller
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => "",
-                    //'forceReload' => '#customers-table-crud-datatable',
+                    'title' => 'تحديث اتصال — ' . $model->name,
                     'content' => $this->renderAjax('contact_update', [
                         'model' => $model,
                         'id' => $id
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                        Html::button('<i class="fa fa-save"></i> حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
-                return [
-                    'forceReload' => '#customers-table-crud-datatable',
-                    'title' => "PhoneNumbers #" . $id,
-                    'content' => "<h3>تم التعديل</h3>",
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Edit', ['contact_update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
-                ];
+                return ['forceClose' => true];
             } else {
                 return [
-                    'title' => "Update PhoneNumbers #" . $id,
+                    'title' => 'تحديث اتصال — ' . $model->name,
                     'content' => $this->renderAjax('contact_update', [
                         'model' => $model,
                         'id' => $id
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                        Html::button('<i class="fa fa-save"></i> حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
         } else {

@@ -11,7 +11,7 @@ $this->params['breadcrumbs'][] = ['label' => 'العملاء', 'url' => ['index'
 $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\JqueryAsset::class]]);
-$this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/customers-v2.css?v=' . time());
 $this->registerCss('.content-header,.page-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
 
 $db = Yii::$app->db;
@@ -418,43 +418,3 @@ $statusLabels = [
     </div>
 </div>
 
-<style>
-.cv-field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-.cv-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--clr-text-muted, #6c757d);
-}
-.cv-value {
-    font-size: 14px;
-    font-weight: 600;
-    color: #1e293b;
-    padding: 8px 12px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: var(--radius-sm, 6px);
-    min-height: 38px;
-    display: flex;
-    align-items: center;
-}
-.cv-value a {
-    color: #0891b2;
-    text-decoration: none;
-}
-.cv-money {
-    font-feature-settings: "tnum";
-    letter-spacing: 0.3px;
-}
-@media (max-width: 767px) {
-    .so-grid-3, .so-grid-4 { grid-template-columns: 1fr !important; }
-    .so-body { flex-direction: column; }
-    .so-risk-panel { width: 100% !important; min-width: 100% !important; height: auto !important; position: static !important; }
-    .so-header { flex-direction: column; gap: 10px; text-align: center; }
-    .so-header h1 { font-size: 18px; }
-    div[style*="grid-template-columns:repeat(4"] { grid-template-columns: 1fr 1fr !important; }
-}
-</style>

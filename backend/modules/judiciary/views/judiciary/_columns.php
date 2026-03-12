@@ -251,7 +251,7 @@ $columns = [
             $menu = '';
             $menu .= '<a href="' . $viewUrl . '" data-pjax="0"><i class="fa fa-eye" style="color:#8B5CF6"></i> مشاهدة</a>';
             if (Permissions::can(Permissions::JUD_CREATE)) {
-                $menu .= '<a href="' . $addActionUrl . '" role="modal-remote"><i class="fa fa-plus" style="color:#16A34A"></i> إضافة إجراء</a>';
+                $menu .= '<a href="' . $addActionUrl . '" role="modal-remote" data-pjax="0"><i class="fa fa-plus" style="color:#16A34A"></i> إضافة إجراء</a>';
                 $menu .= '<div class="jud-act-divider"></div>';
             }
             if (Permissions::can(Permissions::JUD_UPDATE)) {
