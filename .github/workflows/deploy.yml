@@ -23,7 +23,7 @@ jobs:
           script: |
             set -e
             
-            REPO_URL="https://${{ secrets.GH_TOKEN }}@github.com/EngOsamaQazan/Tayseer.git"
+            REPO_URL="https://${{ secrets.GH_TOKEN }}@github.com/EngOsamaQazan/TayseerV3.0.git"
             BRANCH="main"
             
             deploy_site() {
