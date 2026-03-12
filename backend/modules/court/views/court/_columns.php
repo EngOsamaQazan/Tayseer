@@ -4,17 +4,15 @@ use yii\helpers\Url;
 use common\models\Court;
 use common\components\City;
 return [
-    // [
-    // 'class'=>'\kartik\grid\DataColumn',
-    // 'attribute'=>'id',
-    // ],
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'name',
+        'contentOptions' => ['data-label' => 'الاسم'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'city',
+        'contentOptions' => ['data-label' => 'المدينة'],
         'value' => function ($model) {
     $city = City::findMyCity($model->city);
 
@@ -24,45 +22,33 @@ return [
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'adress',
+        'contentOptions' => ['data-label' => 'العنوان'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'phone_number',
+        'contentOptions' => ['data-label' => 'الهاتف'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'created_by',
+        'contentOptions' => ['data-label' => 'أنشأ بواسطة'],
     ],
-    // [
-    // 'class'=>'\kartik\grid\DataColumn',
-    // 'attribute'=>'last_update_by',
-    // ],
-    // [
-    // 'class'=>'\kartik\grid\DataColumn',
-    // 'attribute'=>'created_at',
-    // ],
-    // [
-    // 'class'=>'\kartik\grid\DataColumn',
-    // 'attribute'=>'updates_at',
-    // ],
-    // [
-    // 'class'=>'\kartik\grid\DataColumn',
-    // 'attribute'=>'is_deleted',
-    // ],
     [
         'class' => 'kartik\grid\ActionColumn',
         'dropdown' => false,
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => ''],
         'urlCreator' => function($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
-        'viewOptions' => ['title' => 'View', 'data-toggle' => 'tooltip'],
-        'updateOptions' => ['title' => 'Update', 'data-toggle' => 'tooltip'],
-        'deleteOptions' => ['title' => 'Delete',
-            'data-confirm' => false, 'data-method' => false, // for overide yii data api
+        'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip'],
+        'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip'],
+        'deleteOptions' => ['title' => 'حذف',
+            'data-confirm' => false, 'data-method' => false,
             'data-request-method' => 'post',
             'data-toggle' => 'tooltip',
-            'data-confirm-title' => 'Are you sure?',
-            'data-confirm-message' => 'Are you sure want to delete this item'],
+            'data-confirm-title' => 'هل أنت متأكد؟',
+            'data-confirm-message' => 'هل أنت متأكد من حذف هذا العنصر؟'],
     ],
 ];

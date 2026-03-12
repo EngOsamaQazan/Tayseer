@@ -9,11 +9,13 @@ return [
     [
         'class' => 'kartik\grid\SerialColumn',
         'width' => '40px',
+        'contentOptions' => ['data-label' => '#'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'name',
         'format' => 'raw',
+        'contentOptions' => ['data-label' => 'الاسم'],
         'value' => function ($model) {
             return Html::a(
                 '<i class="fa fa-building-o"></i> ' . Html::encode($model->name),
@@ -26,6 +28,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'job_type',
         'format' => 'raw',
+        'contentOptions' => ['data-label' => 'نوع العمل'],
         'value' => function ($model) {
             return $model->jobType ? Html::encode($model->jobType->name) : '-';
         },
@@ -40,6 +43,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'address_city',
         'label' => 'المدينة',
+        'contentOptions' => ['data-label' => 'المدينة'],
         'value' => function ($model) {
             return $model->address_city ?: '-';
         },
@@ -48,6 +52,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'أرقام الهواتف',
         'format' => 'raw',
+        'contentOptions' => ['data-label' => 'الهواتف'],
         'value' => function ($model) {
             $phones = $model->getPhones()->limit(2)->all();
             if (empty($phones)) {
@@ -69,6 +74,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'العملاء',
         'format' => 'raw',
+        'contentOptions' => ['data-label' => 'العملاء', 'class' => 'text-center'],
         'value' => function ($model) {
             $count = $model->getCustomersCount();
             if ($count > 0) {
@@ -76,13 +82,13 @@ return [
             }
             return '<span class="text-muted">0</span>';
         },
-        'contentOptions' => ['class' => 'text-center'],
         'headerOptions' => ['class' => 'text-center'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'التقييم',
         'format' => 'raw',
+        'contentOptions' => ['data-label' => 'التقييم', 'class' => 'text-center', 'style' => 'white-space:nowrap'],
         'value' => function ($model) {
             $avg = $model->getAverageRating();
             if ($avg === null) {
@@ -99,7 +105,6 @@ return [
             $html .= ' <small class="text-muted">(' . number_format($avg, 1) . ')</small>';
             return $html;
         },
-        'contentOptions' => ['class' => 'text-center', 'style' => 'white-space:nowrap'],
         'headerOptions' => ['class' => 'text-center'],
     ],
     [
@@ -107,11 +112,11 @@ return [
         'attribute' => 'status',
         'label' => 'الحالة',
         'format' => 'raw',
+        'contentOptions' => ['data-label' => 'الحالة', 'class' => 'text-center'],
         'value' => function ($model) {
             return $model->getStatusBadge();
         },
         'filter' => [1 => 'فعال', 0 => 'غير فعال'],
-        'contentOptions' => ['class' => 'text-center'],
         'headerOptions' => ['class' => 'text-center'],
     ],
     [
@@ -121,6 +126,7 @@ return [
         'width' => '120px',
         'template' => '{view} {update} {delete}',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => ''],
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },

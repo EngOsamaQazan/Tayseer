@@ -260,12 +260,14 @@
   $(document).on('click', '.yeas-finish', function (e) {
     e.preventDefault();
     $('#finishContractBtn').attr('href', $(this).data('url'));
-    $('#finishContractModal').modal('show');
+    var el = document.getElementById('finishContractModal');
+    if (el && typeof bootstrap !== 'undefined') bootstrap.Modal.getOrCreateInstance(el).show();
   });
   $(document).on('click', '.yeas-cancel', function (e) {
     e.preventDefault();
     $('#cancelContractBtn').attr('href', $(this).data('url'));
-    $('#cancelContractModal').modal('show');
+    var el = document.getElementById('cancelContractModal');
+    if (el && typeof bootstrap !== 'undefined') bootstrap.Modal.getOrCreateInstance(el).show();
   });
 
   /* ========== KEYBOARD NAVIGATION ========== */

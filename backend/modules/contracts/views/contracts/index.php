@@ -8,7 +8,7 @@ use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\LinkPager;
-use yii\bootstrap\Modal;
+/* Bootstrap 3 Modal removed — using Bootstrap 5 HTML instead */
 use common\helper\Permissions;
 use backend\widgets\ExportButtons;
 use backend\modules\contractInstallment\models\ContractInstallment;
@@ -344,27 +344,42 @@ $end   = $begin + count($models) - 1;
 </div><!-- /.ct-page -->
 
 <!-- ===== MODALS ===== -->
-<?php Modal::begin([
-    'id' => 'cancelContractModal',
-    'header' => '<h4 class="modal-title"><i class="fa fa-ban text-danger"></i> تأكيد إلغاء العقد</h4>',
-    'size' => Modal::SIZE_SMALL,
-]) ?>
-<div class="ct-modal-body">
-    <p class="lead">هل أنت متأكد من إلغاء هذا العقد؟</p>
-    <p class="text-danger"><i class="fa fa-exclamation-triangle"></i> تحذير: لا يمكن التراجع عن هذا الإجراء</p>
-    <div class="ct-modal-actions">
-        <a id="cancelContractBtn" href="#" class="ct-btn ct-btn-primary" style="background:#dc3545;border-color:#dc3545">
-            <i class="fa fa-ban"></i> نعم، إلغاء
-        </a>
-        <button type="button" class="ct-btn ct-btn-outline" data-dismiss="modal">
-            <i class="fa fa-times"></i> تراجع
-        </button>
+<div class="modal fade" id="cancelContractModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa fa-ban text-danger"></i> تأكيد إلغاء العقد</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div class="ct-modal-body">
+                    <p class="lead">هل أنت متأكد من إلغاء هذا العقد؟</p>
+                    <p class="text-danger"><i class="fa fa-exclamation-triangle"></i> تحذير: لا يمكن التراجع عن هذا الإجراء</p>
+                    <div class="ct-modal-actions">
+                        <a id="cancelContractBtn" href="#" class="ct-btn ct-btn-primary" style="background:#dc3545;border-color:#dc3545">
+                            <i class="fa fa-ban"></i> نعم، إلغاء
+                        </a>
+                        <button type="button" class="ct-btn ct-btn-outline" data-bs-dismiss="modal">
+                            <i class="fa fa-times"></i> تراجع
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-<?php Modal::end() ?>
 
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
-<?php Modal::end() ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body"></div>
+        </div>
+    </div>
+</div>
 
 <?php
 /* OLD jQuery - replaced by Alpine.js
