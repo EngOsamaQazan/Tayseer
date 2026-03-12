@@ -16,12 +16,14 @@ return [
             'charset' => 'utf8',
             'tablePrefix' => 'os_',
             'enableSchemaCache' => true,
-
-            // Duration of schema cache.
-            //'schemaCacheDuration' => 3600,
-
-            // Name of the cache component used to store schema information
-            //'schemaCache' => 'cache',
+            'schemaCacheDuration' => 86400,
+            'schemaCache' => 'cache',
+            'enableQueryCache' => true,
+            'queryCacheDuration' => 3600,
+            'attributes' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+            ],
         ],
         'mailer' => [
             'class' => 'yii\symfonymailer\Mailer',

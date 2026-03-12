@@ -78,7 +78,8 @@
 .cust-act-menu {
   display: none;
   position: absolute;
-  left: 0;
+  right: 0;
+  left: auto;
   top: 100%;
   z-index: 9999;
   background: #fff;
@@ -146,7 +147,6 @@
   .cust-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
   .cust-stat { padding: 10px 12px; }
   .cust-stat-val { font-size: 16px; }
-  .cust-act-menu { left: auto; right: 0; }
   .so-grid-3, .so-grid-4 { grid-template-columns: 1fr !important; }
   .so-body { flex-direction: column; }
   .so-risk-panel { width: 100% !important; min-width: 100% !important; height: auto !important; position: static !important; }

@@ -23,7 +23,7 @@ jobs:
           script: |
             set -e
             
-            REPO_URL="https://${{ secrets.GH_TOKEN }}@github.com/EngOsamaQazan/TayseerV3.0.git"
+            REPO_URL="https://${{ secrets.GH_TOKEN }}@github.com/EngOsamaQazan/Tayseer.git"
             BRANCH="main"
             
             deploy_site() {
@@ -91,6 +91,16 @@ jobs:
             
             deploy_site "/var/www/vite.jadal.aqssat.co" "prod_jadal"
             deploy_site "/var/www/vite.namaa.aqssat.co" "prod_namaa"
+            
+            # Clear OPcache + PHP-FPM by restarting services
+            echo "=== Clearing OPcache ==="
+            PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "8.5")
+            systemctl restart "php${PHP_VER}-fpm" 2>/dev/null || true
+            systemctl reload apache2 2>/dev/null || systemctl restart apache2 2>/dev/null || true
+            
+            # Flush Yii2 caches
+            cd /var/www/vite.jadal.aqssat.co && php yii cache/flush-all 2>/dev/null || true
+            cd /var/www/vite.namaa.aqssat.co && php yii cache/flush-all 2>/dev/null || true
             
             echo ""
             echo "All sites deployed successfully!"

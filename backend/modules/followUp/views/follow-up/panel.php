@@ -7,8 +7,10 @@ use yii\bootstrap\Modal;
 use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
 use backend\helpers\NameHelper;
+use backend\helpers\PhoneInputAsset;
 
 CrudAsset::register($this);
+PhoneInputAsset::register($this);
 
 /**
  * @var yii\web\View $this
@@ -602,6 +604,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
         if (!modalEl) return;
         var modalBody = modalEl.querySelector('.modal-body');
         var modalFooter = modalEl.querySelector('.modal-footer');
+        var modalTitle = modalEl.querySelector('.modal-title');
         var bsModal = null;
 
         function getModal() {
@@ -627,15 +630,75 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             return { param: p ? p.content : '_csrf-backend', token: m ? m.content : '' };
         }
 
+        function execScripts(container) {
+            var scripts = container.querySelectorAll('script');
+            for (var i = 0; i < scripts.length; i++) {
+                var s = scripts[i];
+                if (s.src) {
+                    var already = document.querySelector('script[src="' + s.src + '"]');
+                    if (already) { s.remove(); continue; }
+                    var ns = document.createElement('script');
+                    ns.src = s.src;
+                    s.parentNode.replaceChild(ns, s);
+                } else {
+                    var ns = document.createElement('script');
+                    ns.textContent = s.textContent;
+                    s.parentNode.replaceChild(ns, s);
+                }
+            }
+        }
+
+        function setHtml(target, html) {
+            if (!target) return;
+            target.innerHTML = html;
+            execScripts(target);
+        }
+
+        function tryParseJson(text) {
+            try {
+                var json = JSON.parse(text);
+                if (json && typeof json === 'object' &&
+                    (json.content !== undefined || json.title !== undefined || json.forceClose)) {
+                    return json;
+                }
+            } catch(e) {}
+            return null;
+        }
+
+        function renderJsonResponse(data) {
+            if (data.forceClose || data.forceReload) {
+                hideModal();
+                setTimeout(function(){ if (window.ocpRefreshTabs) window.ocpRefreshTabs(); }, 300);
+                return;
+            }
+            if (data.title !== undefined && modalTitle) modalTitle.innerHTML = data.title;
+            if (data.content !== undefined && modalBody) {
+                setHtml(modalBody, data.content);
+                bindModalForms();
+            }
+            if (data.footer !== undefined && modalFooter) {
+                modalFooter.innerHTML = data.footer;
+            }
+            if (data.message && modalBody) {
+                modalBody.innerHTML = '<div class="alert alert-info">' + data.message + '</div>';
+            }
+        }
+
         function loadUrl(url) {
             if (modalBody) modalBody.innerHTML = '<div style="text-align:center;padding:40px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>';
             if (modalFooter) modalFooter.innerHTML = '';
             showModal();
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(function(r) { return r.text(); })
-                .then(function(html) {
-                    if (modalBody) modalBody.innerHTML = html;
-                    bindModalForms();
+                .then(function(r) {
+                    var ct = r.headers.get('Content-Type') || '';
+                    if (ct.indexOf('json') !== -1) {
+                        return r.json().then(renderJsonResponse);
+                    }
+                    return r.text().then(function(text) {
+                        var json = tryParseJson(text);
+                        if (json) { renderJsonResponse(json); return; }
+                        if (modalBody) { setHtml(modalBody, text); bindModalForms(); }
+                    });
                 })
                 .catch(function() {
                     if (modalBody) modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ في التحميل</div>';
@@ -646,6 +709,15 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             var csrf = getCsrf();
             var fd = new FormData(form);
             if (!fd.has(csrf.param)) fd.append(csrf.param, csrf.token);
+
+            var telInputs = form.querySelectorAll('input[type="tel"]');
+            for (var i = 0; i < telInputs.length; i++) {
+                if (telInputs[i]._iti) {
+                    var num = telInputs[i]._iti.getNumber();
+                    if (num) fd.set(telInputs[i].name, num);
+                }
+            }
+
             var url = form.action || location.href;
             var method = (form.method || 'POST').toUpperCase();
             fetch(url, {
@@ -655,18 +727,12 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             }).then(function(r) {
                 var ct = r.headers.get('Content-Type') || '';
                 if (ct.indexOf('json') !== -1) {
-                    return r.json().then(function(data) {
-                        if (data.forceClose || data.forceReload) {
-                            hideModal();
-                            setTimeout(function(){ window.ocpRefreshTabs(); }, 300);
-                        } else if (data.message) {
-                            if (modalBody) modalBody.innerHTML = '<div class="alert alert-info">' + data.message + '</div>';
-                        }
-                    });
+                    return r.json().then(renderJsonResponse);
                 }
-                return r.text().then(function(html) {
-                    if (modalBody) modalBody.innerHTML = html;
-                    bindModalForms();
+                return r.text().then(function(text) {
+                    var json = tryParseJson(text);
+                    if (json) { renderJsonResponse(json); return; }
+                    if (modalBody) { setHtml(modalBody, text); bindModalForms(); }
                 });
             }).catch(function() {
                 if (modalBody) modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ في الإرسال</div>';
@@ -683,6 +749,19 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 });
             });
         }
+
+        modalEl.addEventListener('click', function(e) {
+            var submitBtn = e.target.closest('[type="submit"]');
+            if (submitBtn && !submitBtn.closest('form')) {
+                e.preventDefault();
+                var form = modalBody ? modalBody.querySelector('form') : null;
+                if (form) submitForm(form);
+                return;
+            }
+            if (e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss="modal"]')) {
+                hideModal();
+            }
+        });
 
         document.addEventListener('click', function(e) {
             var link = e.target.closest('[role="modal-remote"]');
@@ -704,7 +783,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 }).then(function(r) { return r.json(); })
                   .then(function(data) {
                       if (data.forceClose || data.forceReload) {
-                          setTimeout(function(){ window.ocpRefreshTabs(); }, 200);
+                          setTimeout(function(){ if (window.ocpRefreshTabs) window.ocpRefreshTabs(); }, 200);
                       }
                   }).catch(function(){});
                 return;
@@ -712,12 +791,6 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
             loadUrl(url);
         }, true);
-
-        modalEl.addEventListener('click', function(e) {
-            if (e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss="modal"]')) {
-                hideModal();
-            }
-        });
 
         modalEl.addEventListener('hidden.bs.modal', function() {
             if (modalBody) modalBody.innerHTML = '';

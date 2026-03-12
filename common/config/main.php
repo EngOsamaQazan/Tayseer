@@ -31,10 +31,18 @@ return [
             'absoluteUrl' => false,
             'databaseComponent' => 'db' // The used database component by the image manager, this defaults to the Yii::$app->db component
         ],
-        'avatar' => function() {
-    $data = Employee::findOne(\Yii::$app->user->id);
-    return (!empty($data->avatar)) ? $data->avatar : null;
-}, 'i18n' => [
+        'avatar' => function () {
+            $userId = \Yii::$app->user->isGuest ? null : \Yii::$app->user->id;
+            if ($userId === null) {
+                return null;
+            }
+            $cacheKey = "user_avatar_{$userId}";
+            return \Yii::$app->cache->getOrSet($cacheKey, function () use ($userId) {
+                $data = Employee::findOne($userId);
+                return (!empty($data->avatar)) ? $data->avatar : null;
+            }, 3600);
+        },
+        'i18n' => [
             'translations' => [
                 'app*' => [
                     'class' => 'yii\i18n\PhpMessageSource',
@@ -56,10 +64,6 @@ return [
                 'User' => 'common\models\User',
                 'LoginForm' => 'backend\models\LoginForm',
             ],
-        ],
-
-        'gii' => [
-            'class' => 'yii\gii\Module',
         ],
     ],
 ];

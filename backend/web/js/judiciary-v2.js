@@ -69,7 +69,11 @@
     if (!wasOpen) {
       $wrap.addClass('open');
       var r = this.getBoundingClientRect();
-      $menu.css({ left: r.left + 'px', top: (r.bottom + 4) + 'px' });
+      var menuW = $menu.outerWidth() || 160;
+      var posLeft = r.right - menuW;
+      if (posLeft < 4) posLeft = 4;
+      if (posLeft + menuW > window.innerWidth) posLeft = window.innerWidth - menuW - 4;
+      $menu.css({ left: posLeft + 'px', top: (r.bottom + 4) + 'px' });
     }
   });
   $(document).on('click', function () {
