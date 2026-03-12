@@ -15,10 +15,10 @@ $this->title = 'العملاء';
 $this->params['breadcrumbs'][] = $this->title;
 $this->registerCss('.content-header,.page-header{display:none!important}');
 
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=' . time());
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/customers-v2.css?v=' . time());
 
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/customers-v2.js?v=' . time(), [
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=' . time(), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
