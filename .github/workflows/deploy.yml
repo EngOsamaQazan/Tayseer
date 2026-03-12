@@ -28,7 +28,8 @@ jobs:
             
             deploy_site() {
               local SITE_DIR="$1"
-              echo "=== Deploying $SITE_DIR ==="
+              local ENV_DIR="$2"
+              echo "=== Deploying $SITE_DIR (env: $ENV_DIR) ==="
               
               cd "$SITE_DIR"
               
@@ -50,21 +51,46 @@ jobs:
                 git reset --hard "origin/$BRANCH"
               fi
               
+              # Apply environment-specific local configs (DB credentials, debug mode)
+              echo "  Applying $ENV_DIR environment configs..."
+              for cfg in common/config/main-local.php common/config/params-local.php \
+                         backend/web/index.php frontend/web/index.php \
+                         console/config/main-local.php console/config/params-local.php; do
+                if [ -f "environments/$ENV_DIR/$cfg" ]; then
+                  mkdir -p "$(dirname "$cfg")"
+                  cp -f "environments/$ENV_DIR/$cfg" "$cfg"
+                fi
+              done
+              
+              # Cookie-key configs: only create if missing (preserve existing sessions)
+              for cfg in backend/config/main-local.php backend/config/params-local.php \
+                         frontend/config/main-local.php frontend/config/params-local.php; do
+                if [ ! -f "$cfg" ] && [ -f "environments/$ENV_DIR/$cfg" ]; then
+                  mkdir -p "$(dirname "$cfg")"
+                  cp "environments/$ENV_DIR/$cfg" "$cfg"
+                  KEY=$(openssl rand -hex 32)
+                  sed -i "s/=> ''/=> '$KEY'/" "$cfg"
+                fi
+              done
+              
               # Fix permissions
-              chown -R www-data:www-data backend/ common/ console/ 2>/dev/null || true
+              chown -R www-data:www-data backend/ common/ console/ frontend/ 2>/dev/null || true
               
               # Clear caches
               rm -rf backend/runtime/cache/*
+              rm -rf frontend/runtime/cache/* 2>/dev/null || true
               
               # Ensure writable dirs
               chmod -R 775 backend/runtime/ 2>/dev/null || true
               chmod -R 775 backend/web/assets/ 2>/dev/null || true
+              chmod -R 775 frontend/runtime/ 2>/dev/null || true
+              chmod -R 775 frontend/web/assets/ 2>/dev/null || true
               
               echo "  Done!"
             }
             
-            deploy_site "/var/www/vite.jadal.aqssat.co"
-            deploy_site "/var/www/vite.namaa.aqssat.co"
+            deploy_site "/var/www/vite.jadal.aqssat.co" "prod_jadal"
+            deploy_site "/var/www/vite.namaa.aqssat.co" "prod_namaa"
             
             echo ""
             echo "All sites deployed successfully!"

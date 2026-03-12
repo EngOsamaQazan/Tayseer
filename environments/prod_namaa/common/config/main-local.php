@@ -12,7 +12,7 @@ return [
             'class' => 'yii\db\Connection',
             'dsn' => 'mysql:host=localhost;dbname=namaa_erp',
             'username' => 'osama',
-            'password' => 'O$amaDaTaBase@123',
+            'password' => 'OsamaDB123',
             'charset' => 'utf8',
             'tablePrefix' => 'os_',
             'enableSchemaCache' => true,
