@@ -1,0 +1,1261 @@
+/* ============================================================
+   TAYSEER ERP — Responsive System Architecture
+   ============================================================
+   Reusable responsive patterns for the entire ERP.
+   Works on top of Bootstrap 5 + Vuexy. RTL-native.
+
+   BREAKPOINTS:
+     --ty-bp-fold:    380px   (foldable cover / ultra-narrow)
+     --ty-bp-phone:   576px   (small phones)
+     --ty-bp-tablet:  768px   (tablet portrait)
+     --ty-bp-laptop:  992px   (tablet landscape / small laptop)
+     --ty-bp-desktop: 1200px  (desktop)
+     --ty-bp-wide:    1400px  (large desktop)
+     --ty-bp-ultra:   1920px  (ultrawide)
+
+   NAMING:
+     .ty-*   = Tayseer responsive utility
+   ============================================================ */
+
+/* ============================================================
+   1. RESPONSIVE VISIBILITY UTILITIES
+   ============================================================ */
+
+/* Hide on phone and below */
+@media (max-width: 575.98px) {
+  .ty-hide-phone { display: none !important; }
+}
+/* Show only on phone */
+@media (min-width: 576px) {
+  .ty-show-phone-only { display: none !important; }
+}
+/* Hide on tablet and below */
+@media (max-width: 767.98px) {
+  .ty-hide-tablet { display: none !important; }
+}
+/* Show only on tablet and below */
+@media (min-width: 768px) {
+  .ty-show-tablet-only { display: none !important; }
+}
+/* Hide on laptop and below */
+@media (max-width: 991.98px) {
+  .ty-hide-laptop { display: none !important; }
+}
+/* Show only on laptop and below */
+@media (min-width: 992px) {
+  .ty-show-laptop-only { display: none !important; }
+}
+/* Hide on desktop */
+@media (min-width: 1200px) {
+  .ty-show-desktop-only { display: none !important; }
+}
+@media (max-width: 1199.98px) {
+  .ty-hide-desktop { display: none !important; }
+}
+
+/* ============================================================
+   2. RESPONSIVE PAGE SHELL
+   ============================================================
+   Wraps entire page content. Handles max-width on ultrawide
+   and fluid padding per breakpoint.
+   ============================================================ */
+
+.ty-page {
+  width: 100%;
+  padding: 0;
+}
+
+@media (min-width: 1920px) {
+  .ty-page--constrained {
+    max-width: 1800px;
+    margin-inline: auto;
+  }
+}
+
+/* ============================================================
+   3. RESPONSIVE TOOLBAR
+   ============================================================
+   Usage:
+     <div class="ty-toolbar">
+       <div class="ty-toolbar__start">
+         <h4>Title</h4>
+       </div>
+       <div class="ty-toolbar__end">
+         <div class="ty-toolbar__group">
+           <button>Add</button>
+           <button>Export</button>
+         </div>
+       </div>
+     </div>
+   ============================================================ */
+
+.ty-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.ty-toolbar__start {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.ty-toolbar__end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ty-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 575.98px) {
+  .ty-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .ty-toolbar__start,
+  .ty-toolbar__end {
+    width: 100%;
+    justify-content: center;
+  }
+  .ty-toolbar__group {
+    width: 100%;
+    justify-content: center;
+  }
+  .ty-toolbar .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  /* Hide button text, show icon only on narrow phones */
+  .ty-toolbar .btn .ty-btn-text {
+    display: none;
+  }
+}
+
+@media (max-width: 379.98px) {
+  .ty-toolbar__group {
+    flex-direction: column;
+  }
+  .ty-toolbar .btn {
+    width: 100%;
+  }
+}
+
+/* ============================================================
+   4. RESPONSIVE FILTER PANEL
+   ============================================================
+   Usage:
+     <div class="ty-filter-toggle ty-show-tablet-only">
+       <button>Filters</button>
+     </div>
+     <div class="ty-filter-panel">
+       <div class="ty-filter-grid">
+         <div class="ty-filter-field">...</div>
+       </div>
+       <div class="ty-filter-actions">
+         <button>Search</button>
+         <button>Reset</button>
+       </div>
+     </div>
+   ============================================================ */
+
+.ty-filter-panel {
+  padding: 16px;
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #e0e0e0);
+  border-radius: 0.5rem;
+  margin-bottom: 16px;
+}
+
+.ty-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.ty-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1199.98px) {
+  .ty-filter-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 991.98px) {
+  .ty-filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 767.98px) {
+  .ty-filter-panel {
+    position: fixed;
+    inset-inline-start: 0;
+    top: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 85vw;
+    z-index: 1060;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    border-radius: 0;
+    border: none;
+    box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+  }
+  [dir="rtl"] .ty-filter-panel {
+    transform: translateX(100%);
+  }
+  [dir="ltr"] .ty-filter-panel {
+    transform: translateX(-100%);
+  }
+  .ty-filter-panel.ty-filter--open {
+    transform: translateX(0) !important;
+  }
+  .ty-filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .ty-filter-actions {
+    flex-direction: column;
+  }
+  .ty-filter-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 379.98px) {
+  .ty-filter-panel {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
+
+.ty-filter-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1059;
+}
+.ty-filter-backdrop.ty-filter--open {
+  display: block;
+}
+
+/* ============================================================
+   5. RESPONSIVE FORM GRID
+   ============================================================
+   Replaces inconsistent col-md-* patterns.
+   Usage:
+     <div class="ty-form-grid">
+       <div class="form-group">...</div>
+       <div class="form-group">...</div>
+     </div>
+   Or with explicit column spans:
+     <div class="ty-form-grid ty-form-grid--3">
+     <div class="ty-form-grid ty-form-grid--2">
+     <div class="ty-form-grid ty-form-grid--4">
+   ============================================================ */
+
+.ty-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 20px;
+}
+.ty-form-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.ty-form-grid--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.ty-form-grid .ty-col-full,
+.ty-form-grid .form-group[class*="ty-col-full"] {
+  grid-column: 1 / -1;
+}
+.ty-form-grid .ty-col-2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 991.98px) {
+  .ty-form-grid,
+  .ty-form-grid--3,
+  .ty-form-grid--4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 575.98px) {
+  .ty-form-grid,
+  .ty-form-grid--2,
+  .ty-form-grid--3,
+  .ty-form-grid--4 {
+    grid-template-columns: 1fr;
+  }
+  .ty-form-grid .ty-col-2 {
+    grid-column: span 1;
+  }
+}
+
+/* ============================================================
+   6. RESPONSIVE FORM SECTION
+   ============================================================
+   Groups form fields into titled sections.
+   Usage:
+     <fieldset class="ty-form-section">
+       <legend>Section Title</legend>
+       <div class="ty-form-grid">...</div>
+     </fieldset>
+   ============================================================ */
+
+.ty-form-section {
+  border: 1px solid var(--bs-border-color, #e0e0e0);
+  border-radius: 0.5rem;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: var(--bs-body-bg, #fff);
+}
+.ty-form-section > legend {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--bs-heading-color, #333);
+  padding: 0 8px;
+  width: auto;
+  float: none;
+  border-bottom: none;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 575.98px) {
+  .ty-form-section {
+    padding: 14px 12px;
+    margin-bottom: 14px;
+  }
+}
+
+/* ============================================================
+   7. RESPONSIVE STATS GRID
+   ============================================================
+   For KPI cards, stat blocks, overview cards.
+   Uses container queries when supported.
+   Usage:
+     <div class="ty-stats-grid">
+       <div class="ty-stat-card">
+         <div class="ty-stat-value">123</div>
+         <div class="ty-stat-label">Label</div>
+       </div>
+     </div>
+   ============================================================ */
+
+.ty-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  container-type: inline-size;
+  container-name: stats-grid;
+}
+
+.ty-stat-card {
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #e0e0e0);
+  border-radius: 0.5rem;
+  padding: 18px 16px;
+  text-align: center;
+}
+.ty-stat-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--bs-heading-color, #333);
+  line-height: 1.2;
+}
+.ty-stat-label {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-top: 4px;
+}
+
+@container stats-grid (max-width: 500px) {
+  .ty-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .ty-stat-card {
+    padding: 12px 10px;
+  }
+  .ty-stat-value {
+    font-size: 1.15rem;
+  }
+}
+
+@container stats-grid (max-width: 300px) {
+  .ty-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   8. RESPONSIVE TABLE WRAPPER
+   ============================================================
+   Wraps tables for mobile safety.
+   Usage:
+     <div class="ty-table-wrap">
+       <table class="table">...</table>
+     </div>
+   ============================================================ */
+
+.ty-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 0.5rem;
+  border: 1px solid var(--bs-border-color, #e0e0e0);
+}
+.ty-table-wrap > table {
+  margin-bottom: 0;
+}
+
+/* Scroll shadow indicators */
+.ty-table-wrap {
+  background:
+    linear-gradient(to left, var(--bs-body-bg, #fff) 30%, transparent) 0 0 / 40px 100% no-repeat local,
+    linear-gradient(to right, var(--bs-body-bg, #fff) 30%, transparent) 100% 0 / 40px 100% no-repeat local,
+    linear-gradient(to left, rgba(0,0,0,.08), transparent) 0 0 / 14px 100% no-repeat scroll,
+    linear-gradient(to right, rgba(0,0,0,.08), transparent) 100% 0 / 14px 100% no-repeat scroll;
+}
+[dir="rtl"] .ty-table-wrap {
+  background:
+    linear-gradient(to right, var(--bs-body-bg, #fff) 30%, transparent) 0 0 / 40px 100% no-repeat local,
+    linear-gradient(to left, var(--bs-body-bg, #fff) 30%, transparent) 100% 0 / 40px 100% no-repeat local,
+    linear-gradient(to right, rgba(0,0,0,.08), transparent) 0 0 / 14px 100% no-repeat scroll,
+    linear-gradient(to left, rgba(0,0,0,.08), transparent) 100% 0 / 14px 100% no-repeat scroll;
+}
+
+/* ============================================================
+   9. RESPONSIVE TABLE COLUMN PRIORITIES
+   ============================================================
+   Usage on <th> and <td>:
+     class="ty-col-essential"  — always visible
+     class="ty-col-secondary"  — hidden < 768px
+     class="ty-col-optional"   — hidden < 992px
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+  .ty-col-optional { display: none !important; }
+}
+@media (max-width: 767.98px) {
+  .ty-col-secondary { display: none !important; }
+}
+
+/* ============================================================
+   10. RESPONSIVE CARD LIST (mobile table alternative)
+   ============================================================
+   Usage:
+     <div class="ty-card-list">
+       <div class="ty-card-item">
+         <div class="ty-card-item__head">
+           <span class="ty-card-item__title">Name</span>
+           <span class="badge">Status</span>
+         </div>
+         <div class="ty-card-item__body">
+           <div class="ty-card-item__field">
+             <span class="ty-card-item__label">Field</span>
+             <span class="ty-card-item__value">Value</span>
+           </div>
+         </div>
+         <div class="ty-card-item__foot">
+           <button>Edit</button>
+         </div>
+       </div>
+     </div>
+   ============================================================ */
+
+.ty-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ty-card-item {
+  border: 1px solid var(--bs-border-color, #e0e0e0);
+  border-radius: 0.5rem;
+  background: var(--bs-body-bg, #fff);
+  overflow: hidden;
+}
+
+.ty-card-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--bs-border-color, #e0e0e0);
+  gap: 8px;
+}
+.ty-card-item__title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--bs-heading-color, #333);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ty-card-item__body {
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 16px;
+}
+
+.ty-card-item__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ty-card-item__label {
+  font-size: 0.72rem;
+  color: var(--bs-secondary-color, #6c757d);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.ty-card-item__value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--bs-body-color, #333);
+}
+
+.ty-card-item__foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--bs-border-color, #e0e0e0);
+  background: var(--bs-tertiary-bg, #f8f9fa);
+}
+
+@media (max-width: 379.98px) {
+  .ty-card-item__body {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   11. RESPONSIVE DETAIL GRID
+   ============================================================
+   For view/detail pages with label-value pairs.
+   Usage:
+     <div class="ty-detail-grid">
+       <div class="ty-detail-field">
+         <dt>Label</dt>
+         <dd>Value</dd>
+       </div>
+     </div>
+   ============================================================ */
+
+.ty-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px 20px;
+  container-type: inline-size;
+  container-name: detail-grid;
+}
+
+.ty-detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bs-border-color-translucent, rgba(0,0,0,0.05));
+}
+.ty-detail-field dt {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--bs-secondary-color, #6c757d);
+}
+.ty-detail-field dd {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--bs-body-color, #333);
+  margin-bottom: 0;
+}
+
+@container detail-grid (max-width: 400px) {
+  .ty-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   12. RESPONSIVE SECTION STACK
+   ============================================================
+   Vertical stack of sections with consistent spacing.
+   Usage:
+     <div class="ty-section-stack">
+       <section class="ty-section">...</section>
+       <section class="ty-section">...</section>
+     </div>
+   ============================================================ */
+
+.ty-section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+@media (max-width: 575.98px) {
+  .ty-section-stack {
+    gap: 14px;
+  }
+}
+
+/* ============================================================
+   13. RESPONSIVE ACTIONS BAR
+   ============================================================
+   Fixed bottom bar for form actions on mobile.
+   Usage:
+     <div class="ty-actions-bar">
+       <button>Save</button>
+       <button>Cancel</button>
+     </div>
+   ============================================================ */
+
+.ty-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 0;
+}
+
+@media (max-width: 575.98px) {
+  .ty-actions-bar--sticky {
+    position: fixed;
+    bottom: 0;
+    inset-inline: 0;
+    background: var(--bs-body-bg, #fff);
+    border-top: 1px solid var(--bs-border-color, #e0e0e0);
+    padding: 12px 16px;
+    z-index: 1040;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+    justify-content: stretch;
+  }
+  .ty-actions-bar--sticky .btn {
+    flex: 1;
+  }
+}
+
+/* ============================================================
+   14. RESPONSIVE SPLIT LAYOUT
+   ============================================================
+   Main + sidebar pattern for detail/view pages.
+   Usage:
+     <div class="ty-split">
+       <div class="ty-split__main">...</div>
+       <aside class="ty-split__side">...</aside>
+     </div>
+   ============================================================ */
+
+.ty-split {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+.ty-split__side {
+  position: sticky;
+  top: 80px;
+}
+
+@media (max-width: 991.98px) {
+  .ty-split {
+    grid-template-columns: 1fr;
+  }
+  .ty-split__side {
+    position: static;
+    order: -1;
+  }
+}
+
+/* ============================================================
+   15. RESPONSIVE MODAL IMPROVEMENTS
+   ============================================================
+   Makes modals fullscreen on mobile.
+   ============================================================ */
+
+@media (max-width: 767.98px) {
+  .modal-dialog {
+    max-width: 100%;
+    margin: 0;
+    min-height: 100vh;
+  }
+  .modal-content {
+    border: none;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+  .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bs-body-bg, #fff);
+  }
+  .modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background: var(--bs-body-bg, #fff);
+  }
+}
+
+/* Keep Vuexy modal sizing on larger screens */
+@media (min-width: 768px) {
+  .modal-dialog.modal-lg,
+  .modal-dialog.modal-xl {
+    max-width: 800px;
+  }
+}
+
+/* ============================================================
+   16. RESPONSIVE TABS
+   ============================================================
+   Makes nav-tabs scrollable on narrow screens.
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+  .ty-tabs-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+  .ty-tabs-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  .ty-tabs-scroll .nav-item {
+    flex-shrink: 0;
+  }
+  .ty-tabs-scroll .nav-link {
+    white-space: nowrap;
+    padding-inline: 12px;
+    font-size: 0.82rem;
+  }
+}
+
+/* ============================================================
+   17. GLOBAL BOOTSTRAP FORM RESPONSIVE FIXES
+   ============================================================
+   Improves default Bootstrap form behavior on mobile.
+   ============================================================ */
+
+/* Ensure all Bootstrap col-md/col-lg forms stack on phones */
+@media (max-width: 575.98px) {
+  .row > [class*="col-md-"],
+  .row > [class*="col-lg-"],
+  .row > [class*="col-xl-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  /* Touch-friendly form controls */
+  .form-control,
+  .form-select,
+  .input-group .form-control {
+    min-height: 44px;
+    font-size: 16px; /* prevents iOS zoom */
+  }
+
+  .btn {
+    min-height: 44px;
+    padding-inline: 16px;
+  }
+
+  /* Select2 touch target */
+  .select2-container .select2-selection--single {
+    min-height: 44px !important;
+  }
+  .select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 42px !important;
+  }
+  .select2-container .select2-selection--single .select2-selection__arrow {
+    height: 42px !important;
+  }
+}
+
+/* ============================================================
+   18. KARTIK GRIDVIEW RESPONSIVE ENHANCEMENTS
+   ============================================================
+   Improves Kartik GridView tables on mobile.
+   ============================================================ */
+
+/* Force horizontal scroll on ALL table containers */
+.kv-grid-container,
+.table-responsive,
+.grid-view .table-responsive,
+.grid-view > table,
+.card-body > .table,
+.card-body > .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Panel header responsive */
+@media (max-width: 991.98px) {
+  .kv-grid-table th {
+    white-space: nowrap;
+    font-size: 0.82rem;
+    padding: 10px 8px;
+  }
+  .kv-grid-table td {
+    font-size: 0.85rem;
+    padding: 10px 8px;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .kv-panel-before {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .kv-panel-before .btn-group,
+  .kv-panel-before .pull-right,
+  .kv-panel-before .float-end {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .kv-grid-table th {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    padding: 8px 6px;
+  }
+  .kv-grid-table td {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+
+  .kv-panel-after .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+  }
+  .kv-panel-after .pagination .page-link {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .kv-panel-after .summary,
+  .kv-panel-pager .kv-summary {
+    text-align: center;
+    font-size: 0.78rem;
+  }
+
+  /* Force all wide tables to scroll */
+  .kv-grid-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kv-grid-table {
+    min-width: 700px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .kv-panel-before .btn .ty-btn-text {
+    display: none;
+  }
+  .kv-panel-before .dropdown-menu {
+    width: 100%;
+    min-width: unset;
+  }
+  .kv-grid-table {
+    min-width: 600px;
+  }
+}
+
+/* ============================================================
+   18b. GLOBAL TABLE MOBILE SAFETY
+   ============================================================
+   Any table inside the content area that could overflow
+   gets wrapped with horizontal scroll automatically.
+   ============================================================ */
+
+.content-wrapper .table,
+.content-wrapper table.table {
+  width: 100%;
+}
+
+@media (max-width: 767.98px) {
+  .content-wrapper .card-body,
+  .content-wrapper .panel-body {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .content-wrapper .table:not(.ct-table),
+  .content-wrapper table.table:not(.ct-table) {
+    min-width: 600px;
+  }
+
+  .content-wrapper .table th,
+  .content-wrapper table.table th {
+    white-space: nowrap;
+    font-size: 0.78rem;
+    padding: 8px 6px;
+  }
+  .content-wrapper .table td,
+  .content-wrapper table.table td {
+    font-size: 0.82rem;
+    padding: 8px 6px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .content-wrapper .table th,
+  .content-wrapper table.table th {
+    font-size: 0.72rem;
+    padding: 6px 4px;
+  }
+  .content-wrapper .table td,
+  .content-wrapper table.table td {
+    font-size: 0.78rem;
+    padding: 6px 4px;
+  }
+}
+
+/* ============================================================
+   19. GLOBAL RTL RESPONSIVE FIXES
+   ============================================================ */
+
+[dir="rtl"] .ty-toolbar__end {
+  margin-inline-start: auto;
+}
+
+[dir="rtl"] .ty-filter-actions {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .ty-actions-bar {
+  justify-content: flex-start;
+}
+
+[dir="rtl"] .ty-card-item__foot {
+  justify-content: flex-start;
+}
+
+/* ============================================================
+   20. RESPONSIVE BREADCRUMB
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+  .breadcrumb {
+    font-size: 0.75rem;
+  }
+  .breadcrumb-item + .breadcrumb-item::before {
+    padding-inline: 4px;
+  }
+}
+
+/* ============================================================
+   21. RESPONSIVE CONTENT WRAPPER PADDING
+   ============================================================
+   Adjusts Vuexy content padding for mobile.
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+  .container-xxl.container-p-y {
+    padding-inline: 12px;
+  }
+}
+
+@media (max-width: 379.98px) {
+  .container-xxl.container-p-y {
+    padding-inline: 8px;
+  }
+}
+
+/* ============================================================
+   22. RESPONSIVE CARD
+   ============================================================
+   Improves Bootstrap card on mobile.
+   ============================================================ */
+
+@media (max-width: 575.98px) {
+  .card {
+    border-radius: 0.375rem;
+  }
+  .card-body {
+    padding: 14px 12px;
+  }
+  .card-header {
+    padding: 12px;
+  }
+  .card-title {
+    font-size: 0.9rem;
+  }
+}
+
+/* ============================================================
+   23. LAYOUT FULL-WIDTH FIX (NUCLEAR)
+   ============================================================
+   Problem:  Vuexy core.css constrains layout via max-width,
+             max-inline-size, and inline-size on containers
+             and layout elements. This creates whitespace on
+             screens wider than 1440px.
+   Solution: Override EVERY property (width, inline-size,
+             max-width, max-inline-size) with !important
+             on EVERY layout element and container variant.
+   ============================================================ */
+
+html body .layout-wrapper,
+html body .layout-page,
+html body .layout-page-content,
+html body .content-wrapper {
+  width: 100% !important;
+  inline-size: auto !important;
+  max-width: 100% !important;
+  max-inline-size: 100% !important;
+  min-width: 0 !important;
+  min-inline-size: 0 !important;
+  flex: 1 1 100% !important;
+}
+
+html body .layout-wrapper *[class*="container"],
+html body .layout-page .container,
+html body .layout-page .container-sm,
+html body .layout-page .container-md,
+html body .layout-page .container-lg,
+html body .layout-page .container-xl,
+html body .layout-page .container-xxl,
+html body .layout-page .container-fluid {
+  max-width: 100% !important;
+  max-inline-size: 100% !important;
+}
+
+/* Navbar base — no sidebar subtraction (fallback) */
+html body .layout-navbar.navbar-detached {
+  max-inline-size: 100% !important;
+  max-width: 100% !important;
+}
+
+/* layout-navbar-fixed is on <html>, NOT inside body */
+.layout-navbar-fixed .layout-navbar.navbar-detached {
+  inline-size: calc(100% - 1.5rem * 2 - var(--bs-menu-width)) !important;
+}
+
+/* layout-menu-collapsed is toggled on <html> */
+.layout-menu-collapsed .layout-navbar.navbar-detached {
+  inline-size: calc(100% - 1.5rem * 2 - var(--bs-menu-collapsed-width)) !important;
+}
+
+.layout-without-menu .layout-navbar.navbar-detached,
+.layout-menu-collapsed:not(.layout-navbar-fixed) .layout-navbar.navbar-detached {
+  inline-size: calc(100% - 1.5rem * 2) !important;
+}
+
+@media (max-width: 1199.98px) {
+  .layout-navbar-fixed .layout-navbar.navbar-detached {
+    inline-size: calc(100% - 1.5rem * 2) !important;
+  }
+}
+
+html body .layout-page .container-xxl,
+html body .layout-page .container-xl,
+html body .layout-page .container-fluid {
+  padding-inline: 1.5rem;
+}
+
+@media (min-width: 1200px) {
+  html body .layout-page .container-xxl,
+  html body .layout-page .container-xl {
+    padding-inline: 2rem;
+  }
+}
+
+@media (min-width: 1600px) {
+  html body .layout-page .container-xxl,
+  html body .layout-page .container-xl {
+    padding-inline: 2.5rem;
+  }
+}
+
+@media (min-width: 2200px) {
+  html body .content-wrapper .container-xxl {
+    max-width: 1920px !important;
+    margin-inline: auto;
+    padding-inline: 3rem;
+  }
+}
+
+/* Laptop range grids */
+@media (min-width: 1200px) and (max-width: 1599px) {
+  .ty-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
+  .ty-filter-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .ty-form-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Large desktop grids */
+@media (min-width: 1600px) {
+  .ty-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  .ty-filter-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  .ty-form-grid--4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ============================================================
+   24. SIDEBAR TRANSITION SMOOTHING
+   ============================================================
+   Ensures content area expands smoothly when sidebar
+   collapses / expands (Vuexy uses padding-inline-start).
+   ============================================================ */
+
+.layout-page {
+  transition: padding-inline-start 0.3s ease;
+}
+
+/* ============================================================
+   24b. MOBILE LAYOUT FIXES (≤767px)
+   ============================================================
+   Fixes the content area on tablet and mobile when the
+   sidebar is hidden by Vuexy's responsive behavior.
+   ============================================================ */
+
+@media (max-width: 991.98px) {
+  .layout-page {
+    padding-inline-start: 0 !important;
+    width: 100% !important;
+  }
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 3rem) !important;
+    inline-size: calc(100% - 3rem) !important;
+    margin-inline: auto !important;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 2rem) !important;
+    inline-size: calc(100% - 2rem) !important;
+  }
+  .container-xxl.container-p-y {
+    padding-inline: 1rem !important;
+  }
+  .content-wrapper {
+    padding-top: 0.5rem;
+  }
+
+  /* Page title & breadcrumb */
+  .page-header h1,
+  .content-header h1 {
+    font-size: 1.2rem;
+  }
+
+  /* Follow-up report stats */
+  .fur-stats {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .fur-stats .fur-stat {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 140px;
+  }
+
+  /* Customer search filter */
+  .ct-filter-grid,
+  .fur-filter-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 1.5rem) !important;
+    inline-size: calc(100% - 1.5rem) !important;
+  }
+  .container-xxl.container-p-y {
+    padding-inline: 0.75rem !important;
+  }
+  .card-body {
+    padding: 12px 10px;
+  }
+}
+
+@media (max-width: 379.98px) {
+  .layout-navbar.navbar-detached {
+    width: calc(100% - 1rem) !important;
+    inline-size: calc(100% - 1rem) !important;
+  }
+  .container-xxl.container-p-y {
+    padding-inline: 0.5rem !important;
+  }
+}
+
+/* ============================================================
+   25. PRINT SAFETY
+   ============================================================ */
+
+/* ============================================================
+   26. DEBUG LAYOUT BORDERS (temporary — remove after fix)
+   ============================================================
+   Red    = .layout-wrapper
+   Blue   = .layout-page
+   Green  = .content-wrapper
+   Orange = .container-xxl (content)
+   ============================================================ */
+.tayseer-debug .layout-wrapper         { outline: 3px solid red !important; }
+.tayseer-debug .layout-page            { outline: 3px solid blue !important; }
+.tayseer-debug .content-wrapper        { outline: 3px solid green !important; }
+.tayseer-debug .content-wrapper > .container-xxl { outline: 3px solid orange !important; }
+.tayseer-debug .layout-navbar          { outline: 3px solid purple !important; }
+
+@media print {
+  .ty-toolbar,
+  .ty-filter-panel,
+  .ty-filter-toggle,
+  .ty-actions-bar--sticky,
+  .layout-menu,
+  .layout-navbar,
+  .layout-overlay {
+    display: none !important;
+  }
+  .layout-page {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  .content-wrapper {
+    margin: 0 !important;
+  }
+}

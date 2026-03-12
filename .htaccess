@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    Options +FollowSymlinks
+    RewriteEngine On
+    # Yii2 Advanced: do not rewrite backend/web and frontend/web
+    RewriteCond %{REQUEST_URI} /backend/web [OR]
+    RewriteCond %{REQUEST_URI} /frontend/web
+    RewriteRule ^ - [L]
+</IfModule>

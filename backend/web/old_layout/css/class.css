@@ -1,0 +1,96 @@
+a {
+    cursor: pointer !important;
+}
+
+#vr {
+    width: 2px !important;
+    height: 20em !important;
+    background-color: #eeeeee !important;
+    position: absolute !important;
+    left: 12px !important;
+    top: -40px !important;
+}
+
+#step1-btn {
+    width: 100% !important;
+    border-radius: 0 !important;
+    height: 45px !important;
+}
+
+#step2-btn {
+    margin-top: 5px !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    height: 45px !important;
+}
+
+.active {
+    background-color: #48a7fb;
+    border-color: #48a7fb;
+    color: white;
+}
+
+.inactive {
+    background-color: #eee !important;
+    border-color: #eee !important;
+    color: black;
+}
+
+label {
+    font-size: 16px !important;
+    font-weight: normal !important;
+}
+
+#advance-info {
+    border: 2px solid #aaa !important;
+    padding: 20px !important;
+    border-radius: 10px !important;
+}
+
+#toggle-advance {
+    cursor: pointer !important;
+}
+
+.custom-btn {
+    background-color: #47a7fb !important;
+    border-color: #47a7fb !important;
+    padding: 10px 25px !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    font-weight: bold !important;
+}
+
+.dark-btn {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    padding: 5px 10px !important;
+    font-size: 14px !important;
+    font-weight: normal !important;
+}
+
+.mt-50 {
+    margin-top: 50px !important;
+}
+
+.upload-btn {
+    background-color: #47a7fb !important;
+    border-color: #47a7fb !important;
+    padding: 8px 22px 0 !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+    font-weight: bold !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.upload-btn .form-group {
+    margin-bottom: 0 !important;
+}
+
+.upload-btn input {
+    position: absolute !important;
+    font-size: 50px !important;
+    opacity: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+}

@@ -1,0 +1,400 @@
+/* ============================================================
+   TAYSEER ERP — GridView Responsive Card Layout  v1.1
+   ============================================================
+   Shared CSS for ALL pages using Kartik GridView (CrudAsset pattern).
+   Converts GridView tables to mobile cards with data-label attributes.
+
+   USAGE:
+   1. Register this CSS in any GridView page
+   2. Add data-label="عنوان" to each column's contentOptions
+   3. Replace yii\bootstrap\Modal with Bootstrap 5 HTML
+   4. Remove CrudAsset (Bootstrap 3 conflict)
+
+   NO references to .layout-page, .layout-menu, or .container-xxl.
+   Scoped to standard Kartik GridView selectors.
+   ============================================================ */
+
+/* ---- CSS VARIABLES ---- */
+:root {
+  --ty-clr-primary: #800020;
+  --ty-clr-primary-dark: #650019;
+  --ty-clr-surface: #fff;
+  --ty-clr-bg: #FAFBFC;
+  --ty-clr-border: #E2E8F0;
+  --ty-clr-border-light: #F1F5F9;
+  --ty-clr-text: #1E293B;
+  --ty-clr-text-muted: #64748B;
+  --ty-clr-text-light: #94A3B8;
+  --ty-radius-sm: 6px;
+  --ty-radius-md: 10px;
+  --ty-radius-lg: 12px;
+  --ty-shadow-card: 0 1px 3px rgba(0,0,0,.04);
+  --ty-font: 'Tajawal','Cairo',sans-serif;
+}
+
+/* ============================================================
+   1. PANEL STYLING (Kartik GridView wrapper)
+   ============================================================ */
+.grid-view .panel {
+  border: 1px solid var(--ty-clr-border) !important;
+  border-radius: var(--ty-radius-md) !important;
+  box-shadow: none !important;
+  margin-bottom: 16px !important;
+}
+.grid-view .panel-heading {
+  background: var(--ty-clr-bg) !important;
+  border-bottom: 1px solid var(--ty-clr-border) !important;
+  padding: 10px 14px !important;
+  border-radius: var(--ty-radius-md) var(--ty-radius-md) 0 0 !important;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ty-clr-text);
+}
+.grid-view .panel-heading .badge {
+  background: var(--ty-clr-primary);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.grid-view .panel-body {
+  border: none !important;
+  padding: 0 !important;
+}
+.grid-view .panel-footer {
+  background: var(--ty-clr-bg) !important;
+  border-top: 1px solid var(--ty-clr-border) !important;
+  padding: 8px 12px !important;
+  border-radius: 0 0 var(--ty-radius-md) var(--ty-radius-md) !important;
+}
+
+/* ============================================================
+   2. TABLE STYLING (desktop)
+   ============================================================ */
+.grid-view .kv-grid-table {
+  width: 100% !important;
+  border: none !important;
+}
+.grid-view .kv-grid-table thead th {
+  background: var(--ty-clr-bg) !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  color: var(--ty-clr-text-muted) !important;
+  border-bottom: 2px solid var(--ty-clr-border) !important;
+  padding: 8px 8px !important;
+  white-space: nowrap;
+}
+.grid-view .kv-grid-table thead th a {
+  color: var(--ty-clr-text-muted) !important;
+  text-decoration: none !important;
+}
+.grid-view .kv-grid-table thead th a:hover {
+  color: #334155 !important;
+}
+.grid-view .kv-grid-table tbody td {
+  font-size: 12px;
+  vertical-align: middle;
+  padding: 8px 8px !important;
+  border-bottom: 1px solid var(--ty-clr-border-light) !important;
+  border-top: none !important;
+}
+.grid-view .kv-grid-table tbody tr {
+  transition: background .15s;
+}
+.grid-view .kv-grid-table tbody tr:hover {
+  background: var(--ty-clr-bg);
+}
+.grid-view .kv-grid-table .filters td {
+  padding: 4px 4px !important;
+}
+.grid-view .kv-grid-table .filters input,
+.grid-view .kv-grid-table .filters select {
+  border-radius: var(--ty-radius-sm) !important;
+  border: 1px solid var(--ty-clr-border) !important;
+  font-size: 11px !important;
+  padding: 4px 6px !important;
+}
+.grid-view .table-bordered {
+  border: none !important;
+}
+.grid-view .table-bordered > thead > tr > th,
+.grid-view .table-bordered > tbody > tr > td {
+  border-right: none !important;
+  border-left: none !important;
+}
+
+/* ============================================================
+   3. TOOLBAR BUTTONS
+   ============================================================ */
+.grid-view .panel-heading .pull-right .btn {
+  border-radius: var(--ty-radius-sm) !important;
+  border: 1px solid var(--ty-clr-border) !important;
+  background: var(--ty-clr-surface) !important;
+  color: var(--ty-clr-text-muted) !important;
+  padding: 4px 10px !important;
+  font-size: 12px;
+  transition: all .15s;
+}
+.grid-view .panel-heading .pull-right .btn:hover {
+  background: var(--ty-clr-border-light) !important;
+  color: var(--ty-clr-text) !important;
+}
+.grid-view .panel-heading .pull-right .btn.btn-success {
+  background: var(--ty-clr-primary) !important;
+  color: #fff !important;
+  border-color: var(--ty-clr-primary) !important;
+}
+.grid-view .panel-heading .pull-right .btn.btn-success:hover {
+  background: var(--ty-clr-primary-dark) !important;
+}
+
+/* ============================================================
+   4. PAGINATION
+   ============================================================ */
+.grid-view .pagination > li > a,
+.grid-view .pagination > li > span {
+  border-radius: var(--ty-radius-sm) !important;
+  margin: 0 1px;
+  border: 1px solid var(--ty-clr-border);
+  color: var(--ty-clr-text-muted);
+  font-size: 12px;
+  padding: 5px 10px;
+}
+.grid-view .pagination > .active > a,
+.grid-view .pagination > .active > span {
+  background: var(--ty-clr-primary) !important;
+  border-color: var(--ty-clr-primary) !important;
+  color: #fff !important;
+}
+.grid-view .pagination > li > a:hover {
+  background: var(--ty-clr-border-light);
+  border-color: #CBD5E1;
+}
+
+/* ============================================================
+   5. MODAL (Bootstrap 5 replacement for yii\bootstrap\Modal)
+   ============================================================ */
+#ajaxCrudModal .modal-header {
+  background: var(--ty-clr-bg);
+  border-bottom: 1px solid var(--ty-clr-border);
+  padding: 12px 16px;
+}
+#ajaxCrudModal .modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ty-clr-text);
+}
+#ajaxCrudModal .modal-body {
+  padding: 16px;
+}
+
+/* ============================================================
+   6. ACTION COLUMN — modern dropdown
+   ============================================================ */
+.grid-view .kv-grid-table .dropdown-menu {
+  border-radius: 8px !important;
+  border: 1px solid var(--ty-clr-border) !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12) !important;
+  padding: 4px 0 !important;
+  font-size: 12px;
+}
+.grid-view .kv-grid-table .dropdown-menu > li > a {
+  padding: 8px 14px !important;
+  color: #334155 !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.grid-view .kv-grid-table .dropdown-menu > li > a:hover {
+  background: var(--ty-clr-border-light) !important;
+}
+
+/* ============================================================
+   7. RESPONSIVE — TABLET (≤992px)
+   ============================================================ */
+@media (max-width: 992px) {
+  .grid-view .panel-heading .pull-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .grid-view .panel-heading .pull-right .btn {
+    font-size: 11px;
+    padding: 3px 8px !important;
+  }
+  .grid-view .kv-grid-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .grid-view .kv-grid-table {
+    min-width: 600px;
+  }
+}
+
+/* ============================================================
+   8. RESPONSIVE — MOBILE CARD LAYOUT (≤767px)
+   ============================================================
+   Converts Kartik GridView tables into cards.
+   Requires data-label="عنوان" on each td via contentOptions.
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Panel */
+  .grid-view .panel {
+    border-radius: 8px !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .grid-view .panel-heading {
+    padding: 8px 10px !important;
+    font-size: 12px;
+    border-radius: 8px 8px 0 0 !important;
+  }
+
+  /* Hide thead, show cards */
+  .grid-view .kv-grid-container {
+    overflow: visible !important;
+  }
+  .grid-view .kv-grid-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: auto !important;
+  }
+  .grid-view .kv-grid-table thead {
+    display: none;
+  }
+  .grid-view .kv-grid-table tbody tr {
+    display: block;
+    background: var(--ty-clr-surface);
+    border: 1px solid var(--ty-clr-border);
+    border-radius: var(--ty-radius-md);
+    margin-bottom: 8px;
+    padding: 10px 12px;
+    box-shadow: var(--ty-shadow-card);
+  }
+  .grid-view .kv-grid-table tbody tr:hover {
+    background: #FFFBEB;
+  }
+  .grid-view .kv-grid-table tbody td {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0 !important;
+    border: none !important;
+    font-size: 12px;
+    width: 100% !important;
+    max-width: none !important;
+    white-space: normal !important;
+    overflow: visible !important;
+  }
+  .grid-view .kv-grid-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--ty-clr-text-muted);
+    font-size: 11px;
+    min-width: 70px;
+    flex-shrink: 0;
+    margin-left: 8px;
+  }
+  .grid-view .kv-grid-table tbody td:last-child {
+    justify-content: flex-end;
+    padding-top: 6px !important;
+    margin-top: 4px;
+    border-top: 1px solid var(--ty-clr-border-light) !important;
+  }
+  .grid-view .kv-grid-table .filters {
+    display: none;
+  }
+
+  /* Summary text */
+  .grid-view .kv-panel-after,
+  .grid-view .kv-panel-before {
+    padding: 6px 8px !important;
+  }
+  .grid-view .summary {
+    font-size: 11px !important;
+  }
+
+  /* Toolbar buttons stack */
+  .grid-view .panel-heading .pull-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+    float: none !important;
+    margin-top: 6px;
+  }
+
+  /* Pagination compact */
+  .grid-view .pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+  }
+  .grid-view .pagination > li > a,
+  .grid-view .pagination > li > span {
+    padding: 3px 6px;
+    font-size: 10px;
+    min-width: 28px;
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Touch targets */
+  .grid-view .panel-heading .pull-right .btn {
+    min-height: 36px;
+  }
+
+  /* Modal full-width on mobile */
+  #ajaxCrudModal .modal-dialog {
+    margin: 8px !important;
+    max-width: calc(100vw - 16px) !important;
+    width: auto !important;
+  }
+  #ajaxCrudModal .modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+
+/* ============================================================
+   9. RESPONSIVE — SMALL MOBILE (≤480px)
+   ============================================================ */
+@media (max-width: 480px) {
+  .grid-view .kv-grid-table tbody td {
+    font-size: 11px;
+  }
+  .grid-view .kv-grid-table tbody td::before {
+    font-size: 10px;
+    min-width: 60px;
+  }
+}
+
+/* ============================================================
+   10. PRINT
+   ============================================================ */
+@media print {
+  .grid-view .panel-heading .pull-right,
+  #ajaxCrudModal {
+    display: none !important;
+  }
+  .grid-view .kv-grid-table {
+    font-size: 10px;
+  }
+  .grid-view .kv-grid-table thead {
+    display: table-header-group !important;
+  }
+  .grid-view .kv-grid-table tbody tr {
+    display: table-row !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .grid-view .kv-grid-table tbody td {
+    display: table-cell !important;
+  }
+  .grid-view .kv-grid-table tbody td::before {
+    display: none !important;
+  }
+}

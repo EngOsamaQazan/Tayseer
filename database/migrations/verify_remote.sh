@@ -1,0 +1,10 @@
+#!/bin/bash
+echo "=== namaa_jadal ==="
+mysql --defaults-file=/tmp/.my.cnf namaa_jadal -e "SELECT COUNT(*) as workdays FROM os_workdays"
+mysql --defaults-file=/tmp/.my.cnf namaa_jadal -e "SELECT COUNT(*) as shifts FROM os_work_shift"
+mysql --defaults-file=/tmp/.my.cnf namaa_jadal -e "SELECT COUNT(*) as hr_tables FROM information_schema.tables WHERE table_schema='namaa_jadal' AND table_name LIKE 'os_hr%'"
+echo "=== namaa_erp ==="
+mysql --defaults-file=/tmp/.my.cnf namaa_erp -e "SELECT COUNT(*) as workdays FROM os_workdays"
+mysql --defaults-file=/tmp/.my.cnf namaa_erp -e "SELECT COUNT(*) as shifts FROM os_work_shift"
+mysql --defaults-file=/tmp/.my.cnf namaa_erp -e "SELECT COUNT(*) as hr_tables FROM information_schema.tables WHERE table_schema='namaa_erp' AND table_name LIKE 'os_hr%'"
+echo "=== ALL DONE ==="

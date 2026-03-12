@@ -1,0 +1,682 @@
+<?php
+
+namespace common\helper;
+
+use Yii;
+//Yii::$app->user->can('مدير')
+class Permissions
+{
+
+    const CUSTOMERS = 'العملاء';
+    const ROUTE = 'الجذر';
+    const ASSIGNMENT = 'اسناد الصلاحيات  للموظفين';
+    const ROLE = 'القواعد';
+    const PERMISSION = 'الصلاحيات';
+    const LOAN_SCHEDULING = 'التسويات الماليه';
+    const EXPENSES = 'المصاريف';
+    const FINANCIAL_TRANSACTION = 'الحركات المالية';
+    const EXPENSE_CATEGORIES = 'فئات المصايف';
+    const EMPLOYEE = 'الموظفين';
+    const INCOME = 'الدخل';
+    const FOLLOW_UP_REPORT = 'تقرير المتابعة';
+    const CONTRACTS = 'العقود';
+    const INVENTORY_ITEMS = 'عناصر المخزون';
+    const INVENTORY_STOCK_LOCATIONS = 'مواقع المخزون';
+    const INVENTORY_SUPPLIERS = 'موردي المخزون';
+    const COMPANIES = 'الشركات';
+    const INVENTORY_ITEMS_QUANTITY = 'كمية عناصر المخزون';
+    const TRANSFER_TO_LEGAL_DEPARTMENT = 'التحويل إلى الدائره القانونية';
+    const LAWYERS = 'المحامون';
+    const COURT = 'المحاكم';
+    const JUDICIARY_TYPE = 'انواع القضايا';
+    const JUDICIARY = 'القضاء';
+    const JUDICIARY_ACTION = 'الإجراءات القضائية';
+    const JUDICIARY_CUSTOMERS_ACTION = 'إجراءات العملاء القضائية';
+    const Notification = 'الاشعارات';
+    const HOLIDAYS = 'العطل';
+    const LEAVE_POLICY = 'سياسات الاجازات';
+    const LEAVE_TYPES = 'أنواع الإجازات';
+    const WORKDAYS = 'أيام العمل';
+    const  LEAVE_REQUEST = 'طلب إجازة';
+    const  DOCUMENT_HOLDER = 'حامل الوثيقة';
+    const  MANAGER = 'الاداره';
+    const  DIWAN = 'الديوان';
+    const  DIWAN_REPORTS = 'تقارير الديوان';
+    const  JOBS = 'الوظائف';
+    const  COLLECTION = 'الحسميات';
+    const COMPAINES = 'المستثمرين';
+    const REPORTS = 'التقارير';
+    const STATUS = 'الحالات';
+    const COUSINS = 'الاقارب';
+    const CITIZEN = 'الجنسيه';
+    const BANCKS = 'البنوك';
+    const HEAR_ABOUT_US = 'كيف سمعت عنا';
+    const CITY = 'المدن';
+    const PAYMENT_TYPE = 'طرق الدفع';
+    const FEELINGS = 'الانفعالات';
+    const CONTACT_TYPE = 'طريقة الاتصال';
+    const CONNECTION_RESPONSE = 'نتيجة الاتصال';
+    const CLIENT_RESPONSE = 'رد العميل';
+    const MESSAGES = 'الرسائل';
+    const  DOCYUMENT_TYPE = 'انواع الوثائق';
+    const Document_STATUS = 'حالات الوثائق';
+    const INVENTORY_INVOICES = 'فواتير المخزون';
+    const INVENTORY_IEMS_QUERY = 'استعلام عناصر المخزون';
+    const FINANCIAL_TRANSACTION_TO_EXPORT_DATA = 'الحركات المالية لتصدير ونقل البيانات';
+    const COLLECTION_MANAGER = 'مدير التحصيل';
+    const JUDICIARY_INFORM_ADDRESS = 'الموطن المختار';
+
+    /** لوحة التحكم الرئيسية — ملخص أعمال الشركة (تظهر في قسم الإدارة) */
+    const DASHBOARD = 'لوحة التحكم';
+
+    /** أدوات المستخدم (فحص حساب، إصلاح، تعيين كلمة مرور) — إدارة الصلاحيات */
+    const USER_TOOLS = 'أدوات المستخدم';
+
+    /** اشعارات الموظفين — للموارد البشرية */
+    const EMPLOYEE_NOTIFICATIONS = 'اشعارات الموظفين';
+
+    /* ═══════════════════════════════════════════════════════════════
+     *  صلاحيات الإجراءات — الحركات المالية (Action-Level)
+     * ═══════════════════════════════════════════════════════════════ */
+    const FIN_VIEW     = 'الحركات المالية: مشاهدة';
+    const FIN_CREATE   = 'الحركات المالية: إضافة';
+    const FIN_EDIT     = 'الحركات المالية: تعديل';
+    const FIN_DELETE   = 'الحركات المالية: حذف';
+    const FIN_IMPORT   = 'الحركات المالية: استيراد';
+    const FIN_TRANSFER = 'الحركات المالية: ترحيل';
+
+    /* ═══ صلاحيات الإجراءات — الدفعات ═══ */
+    const INC_VIEW   = 'الدخل: مشاهدة';
+    const INC_CREATE = 'الدخل: إضافة';
+    const INC_EDIT   = 'الدخل: تعديل';
+    const INC_DELETE  = 'الدخل: حذف';
+    const INC_REVERT = 'الدخل: ارجاع';
+
+    /* ═══ صلاحيات الإجراءات — المصاريف ═══ */
+    const EXP_VIEW   = 'المصاريف: مشاهدة';
+    const EXP_CREATE = 'المصاريف: إضافة';
+    const EXP_EDIT   = 'المصاريف: تعديل';
+    const EXP_DELETE  = 'المصاريف: حذف';
+    const EXP_REVERT = 'المصاريف: ارجاع';
+
+    /* ═══════════════════════════════════════════════════════════════
+     *  صلاحيات CRUD تفصيلية — العملاء
+     * ═══════════════════════════════════════════════════════════════ */
+    const CUST_VIEW   = 'العملاء: مشاهدة';
+    const CUST_CREATE = 'العملاء: إضافة';
+    const CUST_UPDATE = 'العملاء: تعديل';
+    const CUST_DELETE = 'العملاء: حذف';
+    const CUST_EXPORT = 'العملاء: تصدير';
+
+    /* ═══ CRUD — المستثمرين ═══ */
+    const COMP_VIEW   = 'المستثمرين: مشاهدة';
+    const COMP_CREATE = 'المستثمرين: إضافة';
+    const COMP_UPDATE = 'المستثمرين: تعديل';
+    const COMP_DELETE = 'المستثمرين: حذف';
+
+    /* ═══ CRUD — العقود ═══ */
+    const CONT_VIEW   = 'العقود: مشاهدة';
+    const CONT_CREATE = 'العقود: إضافة';
+    const CONT_UPDATE = 'العقود: تعديل';
+    const CONT_DELETE = 'العقود: حذف';
+
+    /* ═══ CRUD — المتابعة ═══ */
+    const FOLLOWUP_VIEW   = 'المتابعة: مشاهدة';
+    const FOLLOWUP_CREATE = 'المتابعة: إضافة';
+    const FOLLOWUP_UPDATE = 'المتابعة: تعديل';
+    const FOLLOWUP_DELETE = 'المتابعة: حذف';
+
+    /* ═══ CRUD — الحسميات ═══ */
+    const COLL_VIEW   = 'الحسميات: مشاهدة';
+    const COLL_CREATE = 'الحسميات: إضافة';
+    const COLL_UPDATE = 'الحسميات: تعديل';
+    const COLL_DELETE = 'الحسميات: حذف';
+
+    /* ═══ CRUD — القضاء ═══ */
+    const JUD_VIEW   = 'القضاء: مشاهدة';
+    const JUD_CREATE = 'القضاء: إضافة';
+    const JUD_UPDATE = 'القضاء: تعديل';
+    const JUD_DELETE = 'القضاء: حذف';
+
+    /* ═══ CRUD — الموظفين ═══ */
+    const EMP_VIEW   = 'الموظفين: مشاهدة';
+    const EMP_CREATE = 'الموظفين: إضافة';
+    const EMP_UPDATE = 'الموظفين: تعديل';
+    const EMP_DELETE = 'الموظفين: حذف';
+
+    /* ═══ CRUD — عناصر المخزون ═══ */
+    const INVITEM_VIEW   = 'عناصر المخزون: مشاهدة';
+    const INVITEM_CREATE = 'عناصر المخزون: إضافة';
+    const INVITEM_UPDATE = 'عناصر المخزون: تعديل';
+    const INVITEM_DELETE = 'عناصر المخزون: حذف';
+
+    /* ═══ CRUD — فواتير المخزون ═══ */
+    const INVINV_VIEW    = 'فواتير المخزون: مشاهدة';
+    const INVINV_CREATE  = 'فواتير المخزون: إضافة';
+    const INVINV_UPDATE  = 'فواتير المخزون: تعديل';
+    const INVINV_DELETE  = 'فواتير المخزون: حذف';
+    const INVINV_APPROVE = 'فواتير المخزون: اعتماد';
+
+    /* ═══ CRUD — الديوان ═══ */
+    const DIWAN_VIEW   = 'الديوان: مشاهدة';
+    const DIWAN_CREATE = 'الديوان: إضافة';
+    const DIWAN_UPDATE = 'الديوان: تعديل';
+    const DIWAN_DELETE = 'الديوان: حذف';
+
+    /* ═══ CRUD — التقارير ═══ */
+    const REP_VIEW   = 'التقارير: مشاهدة';
+    const REP_EXPORT = 'التقارير: تصدير';
+
+
+    /* ═══════════════════════════════════════════════════════════════
+     *  هرمية الصلاحيات — الأب يمنح كل الأبناء تلقائياً
+     *  ─────────────────────────────────────────────────────────────
+     *  عندما يملك المستخدم الصلاحية الأب (مثلاً «العملاء»)
+     *  فإن Yii2 RBAC تمنحه تلقائياً كل الأبناء المذكورة هنا.
+     *  هذا يضمن التوافق العكسي: من لديه الصلاحية القديمة يحتفظ بكل الوصول.
+     * ═══════════════════════════════════════════════════════════════ */
+    public static function getPermissionHierarchy()
+    {
+        return [
+            self::CUSTOMERS => [self::CUST_VIEW, self::CUST_CREATE, self::CUST_UPDATE, self::CUST_DELETE, self::CUST_EXPORT],
+            self::COMPAINES => [self::COMP_VIEW, self::COMP_CREATE, self::COMP_UPDATE, self::COMP_DELETE],
+            self::CONTRACTS => [self::CONT_VIEW, self::CONT_CREATE, self::CONT_UPDATE, self::CONT_DELETE],
+            'المتابعة'     => [self::FOLLOWUP_VIEW, self::FOLLOWUP_CREATE, self::FOLLOWUP_UPDATE, self::FOLLOWUP_DELETE],
+            self::COLLECTION => [self::COLL_VIEW, self::COLL_CREATE, self::COLL_UPDATE, self::COLL_DELETE],
+            self::FINANCIAL_TRANSACTION => [self::FIN_VIEW, self::FIN_CREATE, self::FIN_EDIT, self::FIN_DELETE, self::FIN_IMPORT, self::FIN_TRANSFER],
+            self::INCOME    => [self::INC_VIEW, self::INC_CREATE, self::INC_EDIT, self::INC_DELETE, self::INC_REVERT],
+            self::EXPENSES  => [self::EXP_VIEW, self::EXP_CREATE, self::EXP_EDIT, self::EXP_DELETE, self::EXP_REVERT],
+            self::JUDICIARY => [self::JUD_VIEW, self::JUD_CREATE, self::JUD_UPDATE, self::JUD_DELETE],
+            self::EMPLOYEE  => [self::EMP_VIEW, self::EMP_CREATE, self::EMP_UPDATE, self::EMP_DELETE],
+            self::INVENTORY_ITEMS    => [self::INVITEM_VIEW, self::INVITEM_CREATE, self::INVITEM_UPDATE, self::INVITEM_DELETE],
+            self::INVENTORY_INVOICES => [self::INVINV_VIEW, self::INVINV_CREATE, self::INVINV_UPDATE, self::INVINV_DELETE, self::INVINV_APPROVE],
+            self::DIWAN     => [self::DIWAN_VIEW, self::DIWAN_CREATE, self::DIWAN_UPDATE, self::DIWAN_DELETE],
+            self::REPORTS   => [self::REP_VIEW, self::REP_EXPORT],
+        ];
+    }
+
+    /**
+     * إرجاع كل صلاحيات وحدة معيّنة (الأب + كل الأبناء CRUD)
+     */
+    public static function getModulePermissions($parentPermission)
+    {
+        $hierarchy = self::getPermissionHierarchy();
+        $result = [$parentPermission];
+        if (isset($hierarchy[$parentPermission])) {
+            $result = array_merge($result, $hierarchy[$parentPermission]);
+        }
+        return $result;
+    }
+
+    /**
+     * خريطة الإجراءات التفصيلية — تحدد أي صلاحية مطلوبة لكل action محدد
+     * المفتاح: controllerId (مثل customers/customers)
+     * القيمة: مصفوفة [actionId => صلاحية أو مصفوفة صلاحيات]
+     * الإجراءات غير المذكورة = لا تحتاج فحص إضافي (يكفي صلاحية الوحدة)
+     */
+    public static function getActionPermissionMap()
+    {
+        return [
+            /* العملاء */
+            'customers/customers' => [
+                'index'         => self::CUST_VIEW,
+                'view'          => self::CUST_VIEW,
+                'create'        => self::CUST_CREATE,
+                'create-summary'=> self::CUST_VIEW,
+                'update'        => self::CUST_UPDATE,
+                'update-contact'=> self::CUST_UPDATE,
+                'delete'        => self::CUST_DELETE,
+                'bulkdelete'    => self::CUST_DELETE,
+            ],
+            /* المستثمرين */
+            'companies/companies' => [
+                'index'  => self::COMP_VIEW,
+                'view'   => self::COMP_VIEW,
+                'create' => self::COMP_CREATE,
+                'update' => self::COMP_UPDATE,
+                'delete' => self::COMP_DELETE,
+                'bulkdelete' => self::COMP_DELETE,
+            ],
+            /* العقود */
+            'contracts/contracts' => [
+                'index'              => self::CONT_VIEW,
+                'view'               => self::CONT_VIEW,
+                'create'             => self::CONT_CREATE,
+                'update'             => self::CONT_UPDATE,
+                'delete'             => self::CONT_DELETE,
+                'bulkdelete'         => self::CONT_DELETE,
+                'index-legal-department' => self::CONT_VIEW,
+                'legal-department'   => self::CONT_VIEW,
+                'print-preview'      => self::CONT_VIEW,
+                'print-first-page'   => self::CONT_VIEW,
+                'print-second-page'  => self::CONT_VIEW,
+            ],
+            /* المتابعة */
+            'followUp/follow-up' => [
+                'index'  => self::FOLLOWUP_VIEW,
+                'view'   => self::FOLLOWUP_VIEW,
+                'create' => self::FOLLOWUP_CREATE,
+                'update' => self::FOLLOWUP_UPDATE,
+                'delete' => self::FOLLOWUP_DELETE,
+            ],
+            /* الحسميات */
+            'collection/collection' => [
+                'index'  => self::COLL_VIEW,
+                'view'   => self::COLL_VIEW,
+                'create' => self::COLL_CREATE,
+                'update' => self::COLL_UPDATE,
+                'delete' => self::COLL_DELETE,
+            ],
+            /* الحركات المالية */
+            'financialTransaction/financial-transaction' => [
+                'index'  => self::FIN_VIEW,
+                'view'   => self::FIN_VIEW,
+                'create' => self::FIN_CREATE,
+                'update' => self::FIN_EDIT,
+                'delete' => self::FIN_DELETE,
+            ],
+            /* الدخل */
+            'income/income' => [
+                'index'  => self::INC_VIEW,
+                'view'   => self::INC_VIEW,
+                'create' => self::INC_CREATE,
+                'update' => self::INC_EDIT,
+                'delete' => self::INC_DELETE,
+            ],
+            /* المصاريف */
+            'expenses/expenses' => [
+                'index'  => self::EXP_VIEW,
+                'view'   => self::EXP_VIEW,
+                'create' => self::EXP_CREATE,
+                'update' => self::EXP_EDIT,
+                'delete' => self::EXP_DELETE,
+            ],
+            /* القضاء */
+            'judiciary/judiciary' => [
+                'index'  => self::JUD_VIEW,
+                'view'   => self::JUD_VIEW,
+                'create' => self::JUD_CREATE,
+                'update' => self::JUD_UPDATE,
+                'delete' => self::JUD_DELETE,
+                'tab-actions'     => self::JUD_VIEW,
+                'tab-cases'       => self::JUD_VIEW,
+                'tab-persistence' => self::JUD_VIEW,
+                'tab-legal'       => self::JUD_VIEW,
+                'export-cases-report' => self::JUD_VIEW,
+                'batch-print'     => self::JUD_VIEW,
+            ],
+            /* الموظفين */
+            'employee/employee' => [
+                'index'  => self::EMP_VIEW,
+                'view'   => self::EMP_VIEW,
+                'create' => self::EMP_CREATE,
+                'update' => self::EMP_UPDATE,
+                'delete' => self::EMP_DELETE,
+            ],
+            'hr/hr-employee' => [
+                'index'  => self::EMP_VIEW,
+                'view'   => self::EMP_VIEW,
+                'create' => self::EMP_CREATE,
+                'update' => self::EMP_UPDATE,
+                'delete' => self::EMP_DELETE,
+            ],
+            /* عناصر المخزون */
+            'inventoryItems/inventory-items' => [
+                'index'    => self::INVITEM_VIEW,
+                'view'     => self::INVITEM_VIEW,
+                'create'   => self::INVITEM_CREATE,
+                'update'   => self::INVITEM_UPDATE,
+                'delete'   => self::INVITEM_DELETE,
+                'settings' => self::INVITEM_UPDATE,
+            ],
+            /* فواتير المخزون */
+            'inventoryInvoices/inventory-invoices' => [
+                'index'         => self::INVINV_VIEW,
+                'view'          => self::INVINV_VIEW,
+                'create'        => self::INVINV_CREATE,
+                'create-wizard' => self::INVINV_CREATE,
+                'update'        => self::INVINV_UPDATE,
+                'delete'        => self::INVINV_DELETE,
+                'approve'       => self::INVINV_APPROVE,
+            ],
+            /* الديوان */
+            'diwan/diwan' => [
+                'index'  => self::DIWAN_VIEW,
+                'view'   => self::DIWAN_VIEW,
+                'create' => self::DIWAN_CREATE,
+                'update' => self::DIWAN_UPDATE,
+                'delete' => self::DIWAN_DELETE,
+            ],
+            /* التقارير */
+            'reports/reports' => [
+                'index' => self::REP_VIEW,
+            ],
+        ];
+    }
+
+    /**
+     * فحص صلاحية إجراء محدد لمسار معيّن
+     * يُرجع الصلاحية المطلوبة أو null إذا لا قيد action-level
+     */
+    public static function getActionPermission(string $controllerId, string $actionId)
+    {
+        $map = self::getActionPermissionMap();
+
+        // محاولة مطابقة المسار الكامل
+        if (isset($map[$controllerId][$actionId])) {
+            return $map[$controllerId][$actionId];
+        }
+
+        // محاولة المسار المختصر (segment واحد)
+        if (strpos($controllerId, '/') === false) {
+            $expanded = $controllerId . '/' . $controllerId;
+            if (isset($map[$expanded][$actionId])) {
+                return $map[$expanded][$actionId];
+            }
+            foreach (array_keys($map) as $key) {
+                if (strpos($key, $controllerId . '/') === 0 && isset($map[$key][$actionId])) {
+                    return $map[$key][$actionId];
+                }
+            }
+        }
+
+        return null;
+    }
+
+
+    /** صلاحيات الموارد البشرية (أي واحدة تكفي للوصول لشاشات HR) */
+    public static function getHrPermissions()
+    {
+        return [
+            self::EMPLOYEE,
+            self::HOLIDAYS,
+            self::LEAVE_POLICY,
+            self::LEAVE_TYPES,
+            self::WORKDAYS,
+            self::LEAVE_REQUEST,
+            self::EMPLOYEE_NOTIFICATIONS,
+            self::EMP_VIEW, self::EMP_CREATE, self::EMP_UPDATE, self::EMP_DELETE,
+        ];
+    }
+
+    /** صلاحيات إعدادات النظام (أي واحدة تكفي للوصول لصفحة الإعدادات) */
+    public static function getSettingsPermissions()
+    {
+        return [
+            self::STATUS,
+            self::Document_STATUS,
+            self::COUSINS,
+            self::CITIZEN,
+            self::BANCKS,
+            self::HEAR_ABOUT_US,
+            self::CITY,
+            self::PAYMENT_TYPE,
+            self::FEELINGS,
+            self::CONTACT_TYPE,
+            self::CLIENT_RESPONSE,
+            self::DOCYUMENT_TYPE,
+            self::MESSAGES,
+        ];
+    }
+
+    /**
+     * فحص AND — المستخدم يملك **كل** الصلاحيات المُمرّرة
+     */
+    public static function hasPermissionOn($permission)
+    {
+        $permission = is_array($permission) ? $permission : [$permission];
+        $hasPermission = true;
+        foreach ($permission as $key => $permissionName) {
+            if (!Yii::$app->user->can($permissionName)) {
+                $hasPermission = false;
+                break;
+            }
+        }
+        return $hasPermission;
+    }
+
+    /**
+     * فحص OR — المستخدم يملك **أي** صلاحية من المُمرّرة
+     */
+    public static function hasAnyPermission($permissions)
+    {
+        $permissions = is_array($permissions) ? $permissions : [$permissions];
+        foreach ($permissions as $permissionName) {
+            if (Yii::$app->user->can($permissionName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * فحص صلاحية CRUD — يتحقق من الصلاحية التفصيلية أو الأب (التوافق العكسي)
+     * مثال: can('العملاء: إضافة') يقبل إذا المستخدم لديه:
+     *   - «العملاء: إضافة» مباشرة، أو
+     *   - «العملاء» (الأب — من خلال الهرمية RBAC)
+     * ملاحظة: Yii2 RBAC يعالج الهرمية تلقائياً عبر auth_item_child
+     */
+    public static function can($permission)
+    {
+        return Yii::$app->user->can($permission);
+    }
+
+    /**
+     * خريطة المسارات والصلاحيات — للتحقق من الوصول المباشر عبر الرابط
+     * المفتاح: بادئة المسار (مثلاً hr/) أو المسار الكامل (مثلاً customers/customers)
+     * القيمة: مصفوفة صلاحيات (يكفي امتلاك أي واحدة)
+     * إذا المسار غير موجود في الخريطة يُسمح بالوصول (للتوافق مع لوحة التحكم والروابط العامة).
+     */
+    public static function getRoutePermissionMap()
+    {
+        return [
+            /* لوحة التحكم — الصفحة الرئيسية */
+            'site' => [self::DASHBOARD],
+            /* العملاء */
+            'customers/customers' => self::getModulePermissions(self::CUSTOMERS),
+            'customers/smart-media' => self::getModulePermissions(self::CUSTOMERS),
+            /* العقود والمتابعة */
+            'contracts/contracts' => array_merge(
+                self::getModulePermissions(self::CONTRACTS),
+                self::getModulePermissions('المتابعة')
+            ),
+            'followUp/follow-up' => array_merge(
+                self::getModulePermissions(self::CONTRACTS),
+                self::getModulePermissions('المتابعة')
+            ),
+            'followUpReport/follow-up-report' => [self::FOLLOW_UP_REPORT],
+            /* المالية */
+            'financialTransaction/financial-transaction' => array_merge(
+                self::getModulePermissions(self::FINANCIAL_TRANSACTION),
+                self::getModulePermissions(self::INCOME),
+                self::getModulePermissions(self::EXPENSES),
+                [self::LOAN_SCHEDULING]
+            ),
+            'income/income' => self::getModulePermissions(self::INCOME),
+            'expenses/expenses' => self::getModulePermissions(self::EXPENSES),
+            'expenseCategories/expense-categories' => [self::EXPENSE_CATEGORIES],
+            'loanScheduling/loan-scheduling' => [self::LOAN_SCHEDULING],
+            'movment/movment' => self::getModulePermissions(self::FINANCIAL_TRANSACTION),
+            /* القضاء والقانون */
+            'judiciary/judiciary' => self::getModulePermissions(self::JUDICIARY),
+            'judiciaryActions/judiciary-actions' => [self::JUDICIARY_ACTION],
+            'judiciaryCustomersActions/judiciary-customers-actions' => [self::JUDICIARY_CUSTOMERS_ACTION],
+            'judiciaryType/judiciary-type' => [self::JUDICIARY_TYPE],
+            'court/court' => [self::COURT],
+            'lawyers/lawyers' => [self::LAWYERS],
+            'JudiciaryInformAddress/judiciary-inform-address' => [self::JUDICIARY_INFORM_ADDRESS],
+            /* التحصيل */
+            'collection/collection' => self::getModulePermissions(self::COLLECTION),
+            /* التقارير */
+            'reports/reports' => self::getModulePermissions(self::REPORTS),
+            /* الموارد البشرية (متحكمات خارج موديول hr) */
+            'employee/employee' => self::getHrPermissions(),
+            'designation/designation' => self::getHrPermissions(),
+            'holidays/holidays' => [self::HOLIDAYS],
+            'leaveTypes/leave-types' => [self::LEAVE_TYPES],
+            'leaveRequest/leave-request' => [self::LEAVE_REQUEST],
+            'leavePolicy/leave-policy' => [self::LEAVE_POLICY],
+            'workdays/workdays' => [self::WORKDAYS],
+            'attendance/attendance' => self::getHrPermissions(),
+            'jobs/jobs' => [self::JOBS],
+            /* المخزون */
+            'inventoryItems/inventory-items' => array_merge(
+                self::getModulePermissions(self::INVENTORY_ITEMS),
+                self::getModulePermissions(self::INVENTORY_INVOICES),
+                [self::INVENTORY_SUPPLIERS, self::INVENTORY_STOCK_LOCATIONS, self::INVENTORY_ITEMS_QUANTITY, self::INVENTORY_IEMS_QUERY]
+            ),
+            'inventoryInvoices/inventory-invoices' => self::getModulePermissions(self::INVENTORY_INVOICES),
+            'inventorySuppliers/inventory-suppliers' => [self::INVENTORY_SUPPLIERS],
+            'inventoryStockLocations/inventory-stock-locations' => [self::INVENTORY_STOCK_LOCATIONS],
+            'inventoryItemQuantities/inventory-item-quantities' => [self::INVENTORY_ITEMS_QUANTITY],
+            'itemsInventoryInvoices/items-inventory-invoices' => self::getModulePermissions(self::INVENTORY_INVOICES),
+            /* المستثمرين والاستثمار */
+            'companies/companies' => self::getModulePermissions(self::COMPAINES),
+            'shareholders/shareholders' => self::getModulePermissions(self::COMPAINES),
+            'capitalTransactions/capital-transactions' => self::getModulePermissions(self::COMPAINES),
+            'sharedExpenses/shared-expense' => self::getModulePermissions(self::COMPAINES),
+            'profitDistribution/profit-distribution' => self::getModulePermissions(self::COMPAINES),
+            /* الديوان */
+            'diwan/diwan' => array_merge(
+                self::getModulePermissions(self::DIWAN),
+                [self::DIWAN_REPORTS]
+            ),
+            /* إدارة الصلاحيات وأدوات المستخدم */
+            'permissions-management' => [self::PERMISSION, self::ROLE, self::ASSIGNMENT],
+            'user-tools' => [self::USER_TOOLS],
+            /* الإعدادات والمراجع */
+            'status/status' => self::getSettingsPermissions(),
+            'documentStatus/document-status' => self::getSettingsPermissions(),
+            'cousins/cousins' => self::getSettingsPermissions(),
+            'citizen/citizen' => self::getSettingsPermissions(),
+            'bancks/bancks' => self::getSettingsPermissions(),
+            'hearAboutUs/hear-about-us' => self::getSettingsPermissions(),
+            'city/city' => self::getSettingsPermissions(),
+            'paymentType/payment-type' => self::getSettingsPermissions(),
+            'feelings/feelings' => self::getSettingsPermissions(),
+            'contactType/contact-type' => self::getSettingsPermissions(),
+            'connectionResponse/connection-response' => self::getSettingsPermissions(),
+            'documentType/document-type' => self::getSettingsPermissions(),
+            'notification/notification' => [self::Notification],
+            'phoneNumbers/phone-numbers' => self::getSettingsPermissions(),
+            'location/location' => self::getSettingsPermissions(),
+            'address/address' => self::getSettingsPermissions(),
+            /* أخرى */
+            'documentHolder/document-holder' => [self::DOCUMENT_HOLDER],
+            'department/department' => [self::MANAGER],
+            'authAssignment/auth-assignment' => [self::ASSIGNMENT],
+            'rejesterFollowUpType/rejester-follow-up-type' => self::getModulePermissions(self::CONTRACTS),
+            'contractInstallment/contract-installment' => self::getModulePermissions(self::CONTRACTS),
+            'contractDocumentFile/contract-document-file' => self::getModulePermissions(self::CONTRACTS),
+            'invoice/invoice' => self::getModulePermissions(self::INCOME),
+            'incomeCategory/income-category' => self::getModulePermissions(self::INCOME),
+            'items/items' => self::getModulePermissions(self::INVENTORY_ITEMS),
+            'divisionsCollection/divisions-collection' => self::getModulePermissions(self::COLLECTION),
+            /* مدير الصور / ImageManager */
+            'imagemanager' => [self::MANAGER],
+            'imagemanager/imagemanager' => [self::MANAGER],
+            /* تثبيت العناصر — متاح لجميع المستخدمين المسجّلين */
+            'pin' => [],
+        ];
+    }
+
+    /**
+     * إرجاع مصفوفة مسطّحة بكل الصلاحيات المذكورة في خريطة المسارات (لا تكرار)
+     * — للاستخدام في «إظهار لوحة التحكم فقط لمن لديه أي صلاحية»
+     */
+    public static function getAllMappedPermissions()
+    {
+        $out = [];
+        foreach (self::getRoutePermissionMap() as $perms) {
+            $arr = is_array($perms) ? $perms : [$perms];
+            foreach ($arr as $p) {
+                if (is_string($p)) $out[$p] = true;
+            }
+        }
+        foreach (self::getHrPermissions() as $p) {
+            $out[$p] = true;
+        }
+        return array_keys($out);
+    }
+
+    /**
+     * إرجاع صلاحيات مطلوبة لمسار معيّن.
+     * يدعم المسارات المختصرة (مثل customers بدل customers/customers) لأن urlManager ينتج روابط قصيرة.
+     */
+    public static function getRequiredPermissionsForRoute(string $controllerUniqueId)
+    {
+        $map = self::getRoutePermissionMap();
+        if (isset($map[$controllerUniqueId])) {
+            return $map[$controllerUniqueId];
+        }
+        // مسار مختصر من segment واحد (مثلاً customers، contracts) — نطابق مع module/controller
+        if (strpos($controllerUniqueId, '/') === false) {
+            $expanded = $controllerUniqueId . '/' . $controllerUniqueId;
+            if (isset($map[$expanded])) {
+                return $map[$expanded];
+            }
+            // محاولة كيكس: financialTransaction → financialTransaction/financial-transaction
+            foreach (array_keys($map) as $key) {
+                if (strpos($key, $controllerUniqueId . '/') === 0) {
+                    return $map[$key];
+                }
+            }
+        }
+        // نظام الحضور والانصراف — متاح لجميع الموظفين المسجّلين
+        if ($controllerUniqueId === 'hr/hr-field') {
+            return [];
+        }
+        if (strpos($controllerUniqueId, 'hr/') === 0) {
+            return self::getHrPermissions();
+        }
+        return null;
+    }
+
+    /**
+     * فلترة عناصر القائمة الجانبية
+     * ─────────────────────────────
+     * يدعم privilege كـ:
+     *   - string → فحص صلاحية واحدة (AND كالسابق)
+     *   - array  → فحص OR (يكفي امتلاك أي صلاحية)
+     */
+    public static function checkMainMenuItems($items)
+    {
+        foreach ($items as $key => $menuItem) {
+            // ── تجاوز العناوين (headers) — لا تحتاج صلاحيات ──
+            if (isset($menuItem['options']['class']) && is_string($menuItem['options']['class']) && strpos($menuItem['options']['class'], 'header') !== false) {
+                continue;
+            }
+
+            // ── تجاوز العناصر بدون privilege ولكن لها url (متاحة للجميع مثل لوحة التحكم) ──
+            if (!isset($menuItem['privilege']) && !isset($menuItem['items']) && isset($menuItem['url'])) {
+                continue;
+            }
+
+            if (isset($menuItem['privilege'])) {
+                $priv = $menuItem['privilege'];
+                /* إذا privilege مصفوفة → فحص OR */
+                if (is_array($priv)) {
+                    if (!self::hasAnyPermission($priv)) {
+                        unset($items[$key]);
+                        continue;
+                    }
+                } else {
+                    if (!Yii::$app->user->can($priv)) {
+                        unset($items[$key]);
+                        continue;
+                    }
+                }
+            }
+
+            if (isset($menuItem['items'])) {
+                $items[$key]['items'] = self::checkMainMenuItems($menuItem['items']);
+            }
+
+            // حذف القوائم الفرعية الفارغة فقط
+            if (isset($menuItem['items']) && count($items[$key]['items'] ?? []) == 0) {
+                unset($items[$key]);
+            }
+        }
+        return $items;
+    }
+}

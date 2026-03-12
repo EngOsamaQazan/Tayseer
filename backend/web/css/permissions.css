@@ -1,0 +1,920 @@
+/* ═══════════════════════════════════════════════════════════════════
+   نظام إدارة الصلاحيات — Enterprise Permissions Management
+   ─────────────────────────────────────────────────────────────────
+   المنهج:  Desktop-first → Tablet → Mobile
+   الخط:   Cairo (عربي مريح)
+   البادئة: perm-
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── المتغيرات الأساسية ── */
+.perm-page {
+  --perm-font: 'Cairo', 'Segoe UI', Tahoma, sans-serif;
+  --perm-primary: #800020;
+  --perm-primary-light: #a0003a;
+  --perm-primary-soft: #fdf2f4;
+  --perm-primary-bg: #f9e6eb;
+  --perm-success: #15803d;
+  --perm-success-bg: #dcfce7;
+  --perm-warning: #b45309;
+  --perm-warning-bg: #fef3c7;
+  --perm-danger: #b91c1c;
+  --perm-danger-bg: #fee2e2;
+  --perm-info: #0369a1;
+  --perm-info-bg: #e0f2fe;
+  --perm-neutral: #64748b;
+  --perm-neutral-bg: #f1f5f9;
+  --perm-border: #e2e8f0;
+  --perm-bg: #f8fafc;
+  --perm-surface: #ffffff;
+  --perm-text: #1e293b;
+  --perm-text2: #64748b;
+  --perm-text3: #94a3b8;
+  --perm-r: 12px;
+  --perm-r-sm: 8px;
+  --perm-r-lg: 16px;
+  --perm-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --perm-shadow-md: 0 4px 12px rgba(0,0,0,.08);
+  --perm-shadow-lg: 0 8px 30px rgba(0,0,0,.12);
+  --perm-transition: .2s ease;
+  font-family: var(--perm-font);
+  line-height: 1.6;
+  direction: rtl;
+  color: var(--perm-text);
+  padding: 0;
+}
+
+/* ╔═══════════════════════════════════════╗
+   ║  شريط الملخص العلوي (Overview)       ║
+   ╚═══════════════════════════════════════╝ */
+.perm-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.perm-ov-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+  border-radius: var(--perm-r);
+  background: var(--perm-surface);
+  box-shadow: var(--perm-shadow);
+  border: 1px solid var(--perm-border);
+  transition: box-shadow var(--perm-transition), transform var(--perm-transition);
+}
+.perm-ov-card:hover { box-shadow: var(--perm-shadow-md); transform: translateY(-2px); }
+.perm-ov-icon {
+  width: 48px; height: 48px;
+  border-radius: var(--perm-r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+}
+.perm-ov-info { flex: 1; min-width: 0; }
+.perm-ov-label { font-size: 12.5px; color: var(--perm-text2); margin: 0; }
+.perm-ov-value { font-size: 22px; font-weight: 700; color: var(--perm-text); margin: 0; line-height: 1.2; }
+
+/* ╔═══════════════════════════════════════╗
+   ║  تبويبات الصلاحيات                   ║
+   ╚═══════════════════════════════════════╝ */
+.perm-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--perm-surface);
+  border-radius: var(--perm-r);
+  padding: 4px;
+  box-shadow: var(--perm-shadow);
+  border: 1px solid var(--perm-border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.perm-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--perm-r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--perm-text2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--perm-transition);
+  text-decoration: none !important;
+}
+.perm-tab:hover { background: var(--perm-neutral-bg); color: var(--perm-text); }
+.perm-tab.active {
+  background: var(--perm-primary);
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(128,0,32,.25);
+}
+.perm-tab i { font-size: 15px; }
+.perm-tab .perm-tab-badge {
+  background: rgba(255,255,255,.2);
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.perm-tab:not(.active) .perm-tab-badge {
+  background: var(--perm-neutral-bg);
+  color: var(--perm-text2);
+}
+.perm-tab-content { display: none; }
+.perm-tab-content.active { display: block; }
+
+/* ╔═══════════════════════════════════════╗
+   ║  شريط البحث والإجراءات               ║
+   ╚═══════════════════════════════════════╝ */
+.perm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.perm-search {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+.perm-search input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1px solid var(--perm-border);
+  border-radius: var(--perm-r-sm);
+  font-family: var(--perm-font);
+  font-size: 14px;
+  background: var(--perm-surface);
+  transition: border-color var(--perm-transition), box-shadow var(--perm-transition);
+  direction: rtl;
+}
+.perm-search input:focus {
+  outline: none;
+  border-color: var(--perm-primary);
+  box-shadow: 0 0 0 3px rgba(128,0,32,.1);
+}
+.perm-search .perm-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--perm-text3);
+  font-size: 14px;
+  pointer-events: none;
+}
+.perm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: var(--perm-r-sm);
+  font-family: var(--perm-font);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all var(--perm-transition);
+  white-space: nowrap;
+  text-decoration: none !important;
+}
+.perm-btn--primary {
+  background: var(--perm-primary);
+  color: #fff;
+}
+.perm-btn--primary:hover { background: var(--perm-primary-light); color: #fff; box-shadow: 0 2px 8px rgba(128,0,32,.3); }
+.perm-btn--success { background: var(--perm-success); color: #fff; }
+.perm-btn--success:hover { background: #16a34a; color: #fff; }
+.perm-btn--outline {
+  background: transparent;
+  color: var(--perm-text2);
+  border: 1px solid var(--perm-border);
+}
+.perm-btn--outline:hover { background: var(--perm-neutral-bg); color: var(--perm-text); }
+.perm-btn--danger { background: var(--perm-danger); color: #fff; }
+.perm-btn--danger:hover { background: #dc2626; color: #fff; }
+.perm-btn--sm { padding: 6px 14px; font-size: 12.5px; }
+.perm-btn--xs { padding: 4px 10px; font-size: 11.5px; border-radius: 6px; }
+.perm-btn i { font-size: 14px; }
+
+/* ╔═══════════════════════════════════════╗
+   ║  بطاقات المستخدمين                   ║
+   ╚═══════════════════════════════════════╝ */
+.perm-users-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.perm-user-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--perm-r);
+  background: var(--perm-surface);
+  box-shadow: var(--perm-shadow);
+  border: 1px solid var(--perm-border);
+  cursor: pointer;
+  transition: all var(--perm-transition);
+  position: relative;
+  overflow: hidden;
+}
+.perm-user-card::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 4px; height: 100%;
+  background: var(--perm-border);
+  transition: background var(--perm-transition);
+}
+.perm-user-card:hover {
+  box-shadow: var(--perm-shadow-md);
+  transform: translateY(-2px);
+  border-color: var(--perm-primary);
+}
+.perm-user-card:hover::before { background: var(--perm-primary); }
+.perm-user-card.perm-user-card--no-perms { opacity: .6; }
+.perm-user-card.perm-user-card--no-perms::before { background: var(--perm-danger); }
+.perm-user-avatar {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--perm-neutral-bg);
+  flex-shrink: 0;
+  border: 2px solid var(--perm-border);
+}
+.perm-user-info { flex: 1; min-width: 0; }
+.perm-user-name {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--perm-text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.perm-user-email {
+  font-size: 12px;
+  color: var(--perm-text3);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: ltr;
+  text-align: right;
+}
+.perm-user-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.perm-user-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.perm-user-badge--perms {
+  background: var(--perm-primary-bg);
+  color: var(--perm-primary);
+}
+.perm-user-badge--active {
+  background: var(--perm-success-bg);
+  color: var(--perm-success);
+}
+.perm-user-badge--suspended {
+  background: var(--perm-danger-bg);
+  color: var(--perm-danger);
+}
+.perm-user-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.perm-user-action-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--perm-border);
+  background: var(--perm-surface);
+  color: var(--perm-text2);
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all var(--perm-transition);
+  padding: 0;
+}
+.perm-user-action-btn:hover {
+  background: var(--perm-danger-bg);
+  color: var(--perm-danger);
+  border-color: var(--perm-danger);
+}
+.perm-user-card--suspended .perm-user-action-btn:hover {
+  background: var(--perm-success-bg);
+  color: var(--perm-success);
+  border-color: var(--perm-success);
+}
+.perm-user-card--suspended {
+  opacity: .55;
+  border-color: var(--perm-danger) !important;
+}
+.perm-user-card--suspended::before { background: var(--perm-danger) !important; }
+.perm-user-card--suspended:hover { opacity: .8; }
+
+/* ─── فاصل المعطلين ─── */
+.perm-users-separator {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin: 4px 0;
+}
+.perm-users-separator-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to left, transparent, #fca5a5, transparent);
+}
+.perm-users-separator-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #991b1b;
+  background: #fee2e2;
+  padding: 4px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perm-user-arrow {
+  color: var(--perm-text3);
+  font-size: 16px;
+  transition: transform var(--perm-transition);
+}
+.perm-user-card:hover .perm-user-arrow { transform: translateX(-4px); color: var(--perm-primary); }
+
+/* ╔═══════════════════════════════════════╗
+   ║  مودال محرر الصلاحيات                ║
+   ╚═══════════════════════════════════════╝ */
+.perm-modal .modal-dialog { max-width: 960px; margin: 20px auto; }
+.perm-modal .modal-content {
+  border: none;
+  border-radius: var(--perm-r-lg);
+  box-shadow: var(--perm-shadow-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+}
+.perm-modal .perm-modal-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #800020, #a0003a) !important;
+  color: #fff !important;
+  flex-shrink: 0;
+  border-bottom: none;
+}
+.perm-modal-header .perm-user-avatar {
+  border-color: rgba(255,255,255,.3);
+  width: 52px; height: 52px;
+  flex-shrink: 0;
+  order: 1;
+}
+.perm-modal-header-info {
+  flex: 1;
+  min-width: 0;
+  order: 2;
+}
+.perm-modal-header-name {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+  line-height: 1.3;
+}
+.perm-modal-header-sub {
+  font-size: 13px;
+  opacity: .8;
+  margin: 2px 0 0;
+  direction: ltr;
+  text-align: right;
+}
+.perm-modal-close { order: 0; }
+.perm-modal-close {
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background var(--perm-transition);
+}
+.perm-modal-close:hover { background: rgba(255,255,255,.3); }
+
+/* شريط أدوات المودال */
+.perm-modal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: var(--perm-neutral-bg);
+  border-bottom: 1px solid var(--perm-border);
+  flex-wrap: wrap;
+}
+.perm-modal-toolbar .perm-search { min-width: 200px; }
+.perm-modal-counter {
+  margin-right: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--perm-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.perm-modal-counter .count-num {
+  background: var(--perm-primary);
+  color: #fff;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+/* محتوى المودال — مجموعات الصلاحيات */
+.perm-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.perm-modal-body::-webkit-scrollbar { width: 6px; }
+.perm-modal-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+.perm-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.perm-group-card {
+  border: 2px solid var(--perm-border);
+  border-radius: var(--perm-r);
+  overflow: hidden;
+  transition: border-color var(--perm-transition);
+  background: #fff;
+}
+.perm-group-card:hover { border-color: #94a3b8; }
+.perm-group-card.perm-group-card--all-selected { border-color: #059669; background: #f0fdf4; }
+.perm-group-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  transition: background var(--perm-transition), border-color var(--perm-transition);
+  background: #f8fafc;
+  border-bottom: 1px solid transparent;
+}
+.perm-group-header.expanded,
+.perm-group-card:has(.perm-group-body:not(.collapsed)) .perm-group-header {
+  border-bottom: 1px solid var(--perm-border);
+}
+.perm-group-header:hover { background: #f1f5f9; }
+.perm-group-icon {
+  width: 38px; height: 38px;
+  border-radius: var(--perm-r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.perm-group-info { flex: 1; min-width: 0; }
+.perm-group-name { font-size: 14px; font-weight: 700; margin: 0; color: #0f172a; }
+.perm-group-count { font-size: 12px; color: #475569; margin: 0; font-weight: 500; }
+.perm-group-toggle {
+  position: relative;
+  width: 44px; height: 24px;
+  border-radius: 12px;
+  background: #cbd5e1;
+  cursor: pointer;
+  transition: background var(--perm-transition);
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+}
+.perm-group-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; right: 3px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: transform var(--perm-transition);
+}
+.perm-group-toggle.active { background: var(--perm-success); }
+.perm-group-toggle.active::after { transform: translateX(-20px); }
+.perm-group-toggle.partial { background: var(--perm-warning); }
+
+.perm-group-body {
+  padding: 8px 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+}
+.perm-group-body.collapsed { display: none; }
+.perm-group-chevron { transition: transform .2s ease; transform: rotate(90deg); }
+.perm-group-chevron.open { transform: rotate(0deg); }
+
+/* صلاحية فردية */
+.perm-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--perm-r-sm);
+  transition: background var(--perm-transition);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.perm-item:hover { background: #f1f5f9; border-color: #e2e8f0; }
+.perm-item.checked {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+.perm-item.checked:hover { background: #d1fae5; }
+.perm-item label {
+  flex: 1;
+  font-size: 13.5px;
+  color: #1e293b;
+  cursor: pointer;
+  margin: 0;
+  font-weight: 500;
+}
+.perm-item.checked label { color: #065f46; font-weight: 700; }
+
+/* Checkbox مخصص */
+.perm-check {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px; height: 22px;
+  border: 2px solid #94a3b8;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all var(--perm-transition);
+  position: relative;
+  flex-shrink: 0;
+  background: #fff;
+}
+.perm-check:hover { border-color: #64748b; }
+.perm-check:checked {
+  background: #059669;
+  border-color: #059669;
+}
+.perm-check:checked::before {
+  content: '';
+  position: absolute;
+  top: 3px; left: 6px;
+  width: 6px; height: 10px;
+  border: solid #fff;
+  border-width: 0 2.5px 2.5px 0;
+  transform: rotate(45deg);
+}
+.perm-check:focus { box-shadow: 0 0 0 3px rgba(5,150,105,.2); }
+
+/* أزرار تحديد الكل / إلغاء الكل */
+.perm-toggle-btn {
+  padding: 6px 14px;
+  font-family: var(--perm-font);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  background: #f8f9fa;
+  color: #495057;
+  cursor: pointer;
+  transition: all var(--perm-transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.perm-toggle-btn:hover { background: #e9ecef; }
+.perm-toggle-btn.active {
+  background: #800020;
+  color: #fff;
+}
+.perm-toggle-btn.active:hover {
+  background: #6b001a;
+}
+
+/* تذييل المودال */
+.perm-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #f1f5f9;
+  border-top: 2px solid #e2e8f0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+}
+.perm-modal-footer-info { font-size: 13px; color: var(--perm-text2); }
+.perm-modal-footer .perm-btn--success {
+  background: #059669 !important;
+  color: #fff !important;
+  font-size: 14px;
+  padding: 10px 28px;
+  box-shadow: 0 2px 8px rgba(5,150,105,.3);
+}
+.perm-modal-footer .perm-btn--success:hover {
+  background: #047857 !important;
+  box-shadow: 0 4px 12px rgba(5,150,105,.4);
+}
+
+/* ╔═══════════════════════════════════════╗
+   ║  تبويب الأدوار                       ║
+   ╚═══════════════════════════════════════╝ */
+.perm-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.perm-role-card {
+  padding: 20px;
+  border-radius: var(--perm-r);
+  background: var(--perm-surface);
+  box-shadow: var(--perm-shadow);
+  border: 1px solid var(--perm-border);
+  transition: all var(--perm-transition);
+  position: relative;
+}
+.perm-role-card:hover { box-shadow: var(--perm-shadow-md); transform: translateY(-2px); }
+.perm-role-card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.perm-role-name { font-size: 16px; font-weight: 700; color: var(--perm-text); margin: 0; }
+.perm-role-desc { font-size: 12.5px; color: var(--perm-text2); margin: 4px 0 0; }
+.perm-role-actions { display: flex; gap: 4px; }
+.perm-role-stats { display: flex; gap: 12px; padding-top: 12px; border-top: 1px solid var(--perm-border); }
+.perm-role-stat { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--perm-text2); }
+.perm-role-stat i { font-size: 13px; }
+.perm-role-stat strong { color: var(--perm-text); font-weight: 700; }
+
+/* بطاقة إنشاء دور جديد */
+.perm-role-card--add {
+  border: 2px dashed var(--perm-border);
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  min-height: 160px;
+  transition: all var(--perm-transition);
+}
+.perm-role-card--add:hover {
+  border-color: var(--perm-primary);
+  background: var(--perm-primary-soft);
+}
+.perm-role-card--add i { font-size: 28px; color: var(--perm-text3); transition: color var(--perm-transition); }
+.perm-role-card--add:hover i { color: var(--perm-primary); }
+.perm-role-card--add span { font-size: 14px; font-weight: 600; color: var(--perm-text2); }
+
+/* ╔═══════════════════════════════════════╗
+   ║  مصفوفة الصلاحيات                    ║
+   ╚═══════════════════════════════════════╝ */
+.perm-matrix-wrap {
+  overflow-x: auto;
+  border-radius: var(--perm-r);
+  box-shadow: var(--perm-shadow);
+  border: 1px solid var(--perm-border);
+  background: var(--perm-surface);
+}
+.perm-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.perm-matrix th,
+.perm-matrix td {
+  padding: 10px 14px;
+  text-align: center;
+  border-bottom: 1px solid var(--perm-border);
+  white-space: nowrap;
+}
+.perm-matrix thead th {
+  background: linear-gradient(135deg, var(--perm-primary), var(--perm-primary-light));
+  color: #fff;
+  font-weight: 700;
+  font-size: 12.5px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.perm-matrix thead th:first-child {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  text-align: right;
+  min-width: 160px;
+}
+.perm-matrix tbody td:first-child {
+  position: sticky;
+  right: 0;
+  background: var(--perm-surface);
+  z-index: 1;
+  text-align: right;
+  font-weight: 600;
+  border-left: 1px solid var(--perm-border);
+}
+.perm-matrix tbody tr:hover td { background: var(--perm-neutral-bg); }
+.perm-matrix tbody tr:hover td:first-child { background: #f1f5f9; }
+.perm-matrix-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px; height: 24px;
+  border-radius: 6px;
+}
+.perm-matrix-check--yes {
+  background: var(--perm-success-bg);
+  color: var(--perm-success);
+  font-size: 13px;
+}
+.perm-matrix-check--no {
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 12px;
+}
+.perm-matrix-check--partial {
+  background: var(--perm-warning-bg);
+  color: var(--perm-warning);
+  font-size: 12px;
+}
+
+/* ╔═══════════════════════════════════════╗
+   ║  حالة فارغة                          ║
+   ╚═══════════════════════════════════════╝ */
+.perm-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--perm-text2);
+}
+.perm-empty i { font-size: 48px; color: var(--perm-text3); margin-bottom: 16px; display: block; }
+.perm-empty h3 { font-size: 18px; font-weight: 700; color: var(--perm-text); margin: 0 0 8px; }
+.perm-empty p { font-size: 14px; margin: 0 0 20px; }
+
+/* ╔═══════════════════════════════════════╗
+   ║  مودال الأدوار                       ║
+   ╚═══════════════════════════════════════╝ */
+.perm-role-modal .modal-dialog { max-width: 750px; }
+.perm-role-form-group { margin-bottom: 16px; }
+.perm-role-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--perm-text);
+  margin-bottom: 6px;
+}
+.perm-role-form-group input,
+.perm-role-form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--perm-border);
+  border-radius: var(--perm-r-sm);
+  font-family: var(--perm-font);
+  font-size: 14px;
+  transition: border-color var(--perm-transition);
+}
+.perm-role-form-group input:focus,
+.perm-role-form-group textarea:focus {
+  outline: none;
+  border-color: var(--perm-primary);
+  box-shadow: 0 0 0 3px rgba(128,0,32,.1);
+}
+
+/* ╔═══════════════════════════════════════╗
+   ║  إشعارات Toast                       ║
+   ╚═══════════════════════════════════════╝ */
+.perm-toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  padding: 12px 24px;
+  border-radius: var(--perm-r-sm);
+  font-family: var(--perm-font);
+  font-size: 14px;
+  font-weight: 600;
+  z-index: 99999;
+  box-shadow: var(--perm-shadow-lg);
+  transition: transform .4s ease;
+  direction: rtl;
+}
+.perm-toast.show { transform: translateX(-50%) translateY(0); }
+.perm-toast--success { background: var(--perm-success); color: #fff; }
+.perm-toast--error { background: var(--perm-danger); color: #fff; }
+.perm-toast--info { background: var(--perm-info); color: #fff; }
+
+/* تحميل */
+.perm-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px;
+  color: var(--perm-text2);
+  font-size: 14px;
+}
+.perm-spinner {
+  width: 24px; height: 24px;
+  border: 3px solid var(--perm-border);
+  border-top-color: var(--perm-primary);
+  border-radius: 50%;
+  animation: permSpin .7s linear infinite;
+}
+@keyframes permSpin { to { transform: rotate(360deg); } }
+
+/* ╔═══════════════════════════════════════╗
+   ║  نسخ صلاحيات — Clone Dropdown        ║
+   ╚═══════════════════════════════════════╝ */
+.perm-clone-dropdown {
+  position: relative;
+  display: inline-block;
+}
+.perm-clone-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #ffffff;
+  background-color: #ffffff;
+  opacity: 1;
+  border: 1px solid var(--perm-border);
+  border-radius: var(--perm-r-sm);
+  box-shadow: var(--perm-shadow-lg);
+  min-width: 220px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  padding: 4px 0;
+}
+.perm-clone-menu.show { display: block; }
+.perm-clone-dropdown .perm-clone-menu {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+.perm-clone-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--perm-text);
+  cursor: pointer;
+  transition: background var(--perm-transition);
+  background: transparent;
+}
+.perm-clone-item:hover { background: var(--perm-neutral-bg); }
+.perm-clone-dropdown .perm-clone-item {
+  background: #ffffff;
+}
+.perm-clone-dropdown .perm-clone-item:hover {
+  background: var(--perm-neutral-bg);
+}
+.perm-clone-item img { width: 28px; height: 28px; border-radius: 50%; }
+
+/* ╔═══════════════════════════════════════╗
+   ║  Responsive                          ║
+   ╚═══════════════════════════════════════╝ */
+@media (max-width: 1200px) {
+  .perm-users-grid { grid-template-columns: repeat(2, 1fr); }
+  .perm-roles-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 992px) {
+  .perm-overview { grid-template-columns: repeat(2, 1fr); }
+  .perm-groups-grid { grid-template-columns: 1fr; }
+  .perm-modal .modal-dialog { max-width: 95%; margin: 10px auto; }
+}
+@media (max-width: 768px) {
+  .perm-users-grid { grid-template-columns: 1fr; }
+  .perm-roles-grid { grid-template-columns: 1fr; }
+  .perm-overview { grid-template-columns: 1fr; }
+  .perm-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  .perm-modal-body { max-height: 50vh; padding: 16px; }
+  .perm-modal .modal-dialog { margin: 10px; }
+  .perm-toolbar { flex-direction: column; align-items: stretch; }
+  .perm-search { min-width: unset; }
+}
+@media (max-width: 480px) {
+  .perm-ov-card { padding: 14px; gap: 10px; }
+  .perm-ov-value { font-size: 18px; }
+  .perm-tab { padding: 8px 14px; font-size: 13px; }
+  .perm-user-card { padding: 12px 14px; }
+}

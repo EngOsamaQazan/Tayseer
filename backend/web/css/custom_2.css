@@ -1,0 +1,65 @@
+.treq-btn{
+    background-color: #02b9bf;
+    color: white;
+}
+.treq-btn:hover{
+   color:#EDF1F2 !important;;
+}
+
+.setting-btn{
+    border: 1px solid #ccc !important;
+    background: white !important;
+    border-radius: 10px !important;
+    margin-right: 5px !important;
+}
+
+.p16{
+    padding: 16px;
+}
+
+.workshop-m{
+    margin-top: 3px;
+}
+.font-x-small{
+    font-size: x-small;
+    margin: 0 0 0px;
+}
+.paid-btn{
+    background: #5fbb5f;
+    border-radius: 50px;
+    color: white;
+    margin-left: -11px;
+    margin-top: 13px;
+}
+.paid-print-certificate{
+    border-color: #3c4447 !important;
+    color: #45545c !important;
+    background: #ffffff !important;
+    margin-left: 6%;
+    margin-right: 25%;
+}
+
+.edit_lift_side{
+    float: right;
+}
+.note_coupon_box{
+    width: 94%;
+    margin-left: 13px;
+}
+.membership-register-form{
+    border: 1px solid gray !important;
+
+}
+
+.line-height-6{
+    line-height: 6;
+}
+
+.tabs-x .nav > li > a{
+    color: #000000;
+}
+.field-employee-profile_attachment_files{
+    display: inline-block;
+    float: right;
+    margin-bottom: 0;
+}

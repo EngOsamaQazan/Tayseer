@@ -1,0 +1,736 @@
+<?php
+
+use yii\helpers\Html;
+use yii\helpers\Url;
+use yii\helpers\Json;
+use yii\bootstrap\Modal;
+use johnitvn\ajaxcrud\CrudAsset;
+use common\helper\Permissions;
+use backend\helpers\NameHelper;
+
+CrudAsset::register($this);
+
+/**
+ * @var yii\web\View $this
+ * @var backend\modules\contracts\models\Contracts $contract
+ * @var array $riskData
+ * @var array $aiData
+ * @var array $kanbanData
+ * @var array $timeline
+ * @var array $financials
+ * @var array $alerts
+ * @var backend\modules\customers\models\Customers|null $customer
+ * @var backend\modules\followUp\helper\ContractCalculations $contractCalculations
+ * @var string|int $contract_id
+ * @var backend\modules\followUp\models\FollowUp $model
+ * @var yii\data\ActiveDataProvider $dataProvider
+ * @var array $modelsPhoneNumbersFollwUps
+ * @var array $judiciaryData
+ */
+
+$isJudiciaryPaid = $contract->isJudiciaryPaid();
+$isLegal = in_array($contract->status, ['judiciary', 'legal_department']) && !$isJudiciaryPaid;
+$isClosed = in_array($contract->status, ['finished', 'canceled']) || $isJudiciaryPaid;
+$hasCase = in_array($contract->status, ['judiciary', 'legal_department']) && !empty($judiciaryData['judiciary']);
+
+$this->title = 'لوحة تحكم العقد #' . $contract->id;
+$this->params['breadcrumbs'][] = ['label' => 'تقارير المتابعة', 'url' => ['/followUpReport']];
+$this->params['breadcrumbs'][] = $this->title;
+
+// Register OCP assets
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/ocp.css?v=20260223', ['depends' => [\yii\web\JqueryAsset::class]]);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/ocp.js', ['depends' => [\yii\web\JqueryAsset::class], 'position' => \yii\web\View::POS_END]);
+
+// Pass data to JS
+$contractId = $contract->id;
+$this->registerJs("window.OCP_CONFIG = " . Json::encode([
+    'contractId' => $contractId,
+    'urls' => [
+        'createTask' => Url::to(['/followUp/follow-up/create-task']),
+        'moveTask' => Url::to(['/followUp/follow-up/move-task']),
+        'saveFollowUp' => Url::to(['/followUp/follow-up/save-follow-up']),
+        'savePromise' => Url::to(['/followUp/follow-up/save-promise']),
+        'aiFeedback' => Url::to(['/followUp/follow-up/ai-feedback']),
+        'getTimeline' => Url::to(['/followUp/follow-up/get-timeline', 'contract_id' => $contractId]),
+        'sendSms' => Url::to(['/followUp/follow-up/send-sms']),
+        'changeStatus' => Url::to(['/followUp/follow-up/change-status']),
+        'customerInfo' => Url::to(['/followUp/follow-up/custamer-info']),
+        'updateJudiciaryCheck' => Url::to(['/followUp/follow-up/update-judiciary-check']),
+        'addNewLoan' => Url::to(['/followUp/follow-up/add-new-loan']),
+        'createJudiciary' => Url::to(['/judiciary/judiciary/create', 'contract_id' => $contractId]),
+    ],
+]) . ";", \yii\web\View::POS_HEAD);
+
+// JS vars for old modals compatibility
+$this->registerJsVar('is_loan', $contractCalculations->contract_model->is_loan ?? 0, \yii\web\View::POS_HEAD);
+$this->registerJsVar('change_status_url', Url::to(['/followUp/follow-up/change-status']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), \yii\web\View::POS_HEAD);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
+
+$dpd = $riskData['dpd'] ?? 0;
+$dpdClass = $dpd <= 0 ? 'ok' : ($dpd <= 7 ? 'warning' : ($dpd <= 30 ? 'danger' : 'critical'));
+$riskLevel = $riskData['level'] ?? 'low';
+$showWarningStrip = in_array($riskLevel, ['high', 'critical']) || $isLegal;
+$isFinishedPaid = ($contract->status === 'finished');
+$statusBadge = ($isJudiciaryPaid || $isFinishedPaid) ? 'settled' : \backend\modules\followUp\helper\RiskEngine::statusBadgeClass($contract->status);
+$statusLabel = $isJudiciaryPaid ? 'قضائي مسدد' : ($isFinishedPaid ? 'مسدد' : \backend\modules\followUp\helper\RiskEngine::statusLabel($contract->status));
+$customerName = $customer ? NameHelper::short($customer->name) : 'غير محدد';
+$lastPayment = $riskData['last_payment'] ?? ['date' => '-', 'amount' => 0];
+
+$riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'مرتفع', 'critical' => 'حرج'];
+?>
+
+<div class="ocp-page <?= $isClosed ? 'ocp-page--settled' : '' ?>">
+
+    <?php // ═══ SETTLED STRIP ═══ ?>
+    <?php if ($isClosed): ?>
+    <div class="ocp-warning-strip ocp-warning-strip--settled">
+        <i class="fa fa-check-circle"></i>
+        <span>
+            <?php if ($isJudiciaryPaid): ?>
+                هذا العقد <strong>قضائي مسدد</strong> — تم تسديد كامل المبلغ المستحق. جميع الإجراءات متوقفة.
+            <?php elseif ($contract->status === 'finished'): ?>
+                هذا العقد <strong>مسدد بالكامل</strong> — لا يمكن تنفيذ إجراءات عليه.
+            <?php else: ?>
+                هذا العقد <strong>ملغي</strong> — لا يمكن تنفيذ إجراءات عليه.
+            <?php endif; ?>
+        </span>
+    </div>
+    <?php endif; ?>
+
+    <?php // ═══ WARNING STRIP ═══ ?>
+    <?php if ($showWarningStrip && !$isClosed): ?>
+    <div class="ocp-warning-strip <?= in_array($contract->status, ['judiciary', 'legal_department']) ? 'ocp-warning-strip--legal' : '' ?>">
+        <i class="fa fa-exclamation-triangle"></i>
+        <?php if (in_array($contract->status, ['judiciary', 'legal_department'])): ?>
+            <span>هذا العقد في المرحلة القضائية — تطبق قيود خاصة على الإجراءات المتاحة</span>
+        <?php else: ?>
+            <span>تنبيه: مستوى المخاطر <?= $riskLevelArabic[$riskLevel] ?? 'مرتفع' ?> — <?= Html::encode($riskData['primary_reason'] ?? '') ?></span>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php // ═══ STATUS BAR ═══ ?>
+    <div class="ocp-status-bar">
+        <div class="ocp-status-bar__inner">
+            <?php // Contract ID ?>
+            <div class="ocp-status-bar__contract">
+                <span class="ocp-status-bar__contract-id">#<?= $contract->id ?></span>
+                <button class="ocp-status-bar__copy-btn" onclick="OCP.copyToClipboard('<?= $contract->id ?>')" title="نسخ رقم العقد">
+                    <i class="fa fa-copy"></i>
+                </button>
+            </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // All contract parties ?>
+            <div class="ocp-status-bar__customer" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <?php
+                $allParties = $contract->contractsCustomers ?? [];
+                if (!empty($allParties)):
+                    foreach ($allParties as $pi => $ccEntry):
+                        $partyCust = $ccEntry->customer ?? null;
+                        if (!$partyCust) continue;
+                        $isClient = $ccEntry->customer_type === 'client';
+                ?>
+                    <?php if ($pi > 0): ?><span style="color:#CBD5E1;font-size:10px">|</span><?php endif; ?>
+                    <span style="display:inline-flex;align-items:center;gap:3px">
+                        <i class="fa <?= $isClient ? 'fa-user' : 'fa-shield' ?>" style="font-size:9px;color:<?= $isClient ? '#BE185D' : '#2563EB' ?>"></i>
+                        <a href="javascript:void(0)" class="custmer-popup ocp-status-bar__customer-name" data-target="#customerInfoModal" data-toggle="modal" customer-id="<?= $partyCust->id ?>" title="<?= Html::encode($partyCust->name) ?> (<?= $isClient ? 'مشتري' : 'كفيل' ?>)" style="cursor:pointer;font-size:12px"><?= Html::encode(NameHelper::short($partyCust->name)) ?></a>
+                    </span>
+                <?php
+                    endforeach;
+                else:
+                ?>
+                    <span class="ocp-status-bar__customer-name"><?= Html::encode($customerName) ?></span>
+                <?php endif; ?>
+            </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Status + DPD ?>
+            <span class="ocp-badge ocp-badge--<?= $statusBadge ?>"><?= Html::encode($statusLabel) ?></span>
+            
+            <div class="ocp-dpd ocp-dpd--<?= $dpdClass ?>">
+                <span><?= $dpd ?></span>
+                <span class="ocp-dpd__label">يوم تأخير</span>
+            </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Quick Metrics ?>
+            <div class="ocp-status-bar__metrics">
+                <div class="ocp-metric-mini">
+                    <span class="ocp-metric-mini__value ocp-ltr"><?= number_format($financials['remaining'] ?? 0) ?></span>
+                    <span class="ocp-metric-mini__label">المتبقي</span>
+                </div>
+                <div class="ocp-metric-mini">
+                    <span class="ocp-metric-mini__value ocp-ltr ocp-text-danger"><?= number_format($financials['overdue'] ?? 0) ?></span>
+                    <span class="ocp-metric-mini__label">المتأخر</span>
+                </div>
+                <div class="ocp-metric-mini">
+                    <span class="ocp-metric-mini__value ocp-ltr"><?= $lastPayment['date'] !== null ? date('Y/m/d', strtotime($lastPayment['date'])) : '-' ?></span>
+                    <span class="ocp-metric-mini__label">آخر دفعة</span>
+                </div>
+                <div class="ocp-metric-mini">
+                    <span class="ocp-metric-mini__value ocp-ltr"><?= !empty($contract->Date_of_sale) ? date('Y/m/d', strtotime($contract->Date_of_sale)) : '-' ?></span>
+                    <span class="ocp-metric-mini__label">تاريخ البيع</span>
+                </div>
+            </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Counters ?>
+            <div class="ocp-status-bar__counters">
+                <?php $brokenPromises = $riskData['broken_promises'] ?? 0; ?>
+                <?php if ($brokenPromises > 0): ?>
+                <span class="ocp-counter-chip ocp-counter-chip--danger">
+                    <i class="fa fa-warning"></i>
+                    <span class="ocp-counter-chip__count"><?= $brokenPromises ?></span> وعد غير منفذ
+                </span>
+                <?php endif; ?>
+                
+                <?php $overdueTasks = 0; foreach ($kanbanData as $col) $overdueTasks += $col['overdue']; ?>
+                <?php if ($overdueTasks > 0): ?>
+                <span class="ocp-counter-chip ocp-counter-chip--danger">
+                    <i class="fa fa-clock-o"></i>
+                    <span class="ocp-counter-chip__count"><?= $overdueTasks ?></span> مهمة متأخرة
+                </span>
+                <?php endif; ?>
+            </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Risk Badge ?>
+            <div class="ocp-risk-badge ocp-risk-badge--<?= $riskLevel ?>">
+                <span class="ocp-risk-badge__dot"></span>
+                <?= $riskLevelArabic[$riskLevel] ?? 'غير محدد' ?>
+            </div>
+
+            <?php // Judiciary info in status bar — فقط إذا في قضية فعلاً ?>
+            <?php if ($hasCase): ?>
+            <div class="ocp-status-bar__divider"></div>
+            <div class="ocp-status-bar__judiciary" style="display:flex;align-items:center;gap:6px;font-size:var(--ocp-font-size-sm)">
+                <i class="fa fa-gavel" style="color:var(--ocp-danger)"></i>
+                <span class="ocp-mono"><?= ($judiciaryData['judiciary']->judiciary_number ?: '-') . '/' . ($judiciaryData['judiciary']->year ?: '-') ?></span>
+                <span style="color:var(--ocp-text-muted)">|</span>
+                <span><?= $judiciaryData['judiciary']->court ? Html::encode($judiciaryData['judiciary']->court->name) : '' ?></span>
+                <span style="color:var(--ocp-text-muted)">|</span>
+                <span><?= $judiciaryData['judiciary']->lawyer ? Html::encode($judiciaryData['judiciary']->lawyer->name) : '' ?></span>
+            </div>
+            <?php endif; ?>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Assignee ?>
+            <div class="ocp-assignee">
+                <div class="ocp-assignee__avatar">
+                    <i class="fa fa-user"></i>
+                </div>
+                <span class="ocp-assignee__name"><?= Html::encode($contract->followedBy ? $contract->followedBy->username : 'غير محدد') ?></span>
+            </div>
+
+            <div class="ocp-status-bar__divider"></div>
+
+            <?php // Next Contract Buttons ?>
+            <?php
+            $nextID = $model->getNextContractID($contract_id);
+            $nextIDForManager = $model->getNextContractIDForManager($contract_id);
+            $targetNextId = Yii::$app->user->can('Manger') ? $nextIDForManager : $nextID;
+
+            $reportIds = Yii::$app->session->get('followup_report_ids', []);
+            $reportNextId = null;
+            $reportPrevId = null;
+            $currentIndex = false;
+            if (!empty($reportIds)) {
+                $currentIndex = array_search((int)$contract_id, array_map('intval', $reportIds));
+                if ($currentIndex !== false) {
+                    if (isset($reportIds[$currentIndex + 1])) {
+                        $reportNextId = $reportIds[$currentIndex + 1];
+                    }
+                    if ($currentIndex > 0) {
+                        $reportPrevId = $reportIds[$currentIndex - 1];
+                    }
+                }
+            }
+            ?>
+            <?php
+            $reportTotal = count($reportIds);
+            $reportPos = ($currentIndex !== false && $currentIndex !== null) ? $currentIndex + 1 : null;
+            ?>
+            <?php if ($reportPos !== null): ?>
+            <div style="display:flex;gap:4px;align-items:center">
+                <?php if ($reportPrevId): ?>
+                <a href="<?= Url::to(['panel', 'contract_id' => $reportPrevId]) ?>" class="ocp-next-contract-btn" title="العقد السابق حسب التقرير" style="background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;padding:4px 8px">
+                    <i class="fa fa-arrow-right"></i>
+                </a>
+                <?php endif; ?>
+                <span style="font-size:10px;color:#64748B;white-space:nowrap;font-weight:600" title="موقعك في تقرير المتابعة"><?= $reportPos ?>/<?= $reportTotal ?></span>
+                <?php if ($reportNextId): ?>
+                <a href="<?= Url::to(['panel', 'contract_id' => $reportNextId]) ?>" class="ocp-next-contract-btn" title="العقد التالي حسب التقرير" style="background:#EFF6FF;color:#2563EB;border-color:#BFDBFE;padding:4px 8px">
+                    <i class="fa fa-arrow-left"></i>
+                </a>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+            <?php if ($targetNextId > 0): ?>
+            <a href="<?= Url::to(['panel', 'contract_id' => $targetNextId]) ?>" class="ocp-next-contract-btn" title="الانتقال للعقد التالي تسلسلياً">
+                <i class="fa fa-arrow-left"></i> العقد التالي
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <?php // ═══ MAIN CONTENT ═══ ?>
+    <div class="ocp-container" style="padding-top: var(--ocp-space-xl);">
+
+        <?php // ═══ TWO COLUMN LAYOUT ═══ ?>
+        <div class="ocp-grid-2col">
+
+            <?php // ═══ LEFT COLUMN (Main) ═══ ?>
+            <div>
+                <?php // 1) TABS + TAB CONTENT — التبويبات ومحتواها معاً في الأعلى ?>
+                <?php
+                $defaultTab = 'timeline';
+                ?>
+                <div class="ocp-section">
+                    <div class="ocp-tabs" style="flex-wrap:wrap;gap:4px">
+                        <button class="ocp-tab active" data-tab="timeline" onclick="OCP.switchTab('timeline')">
+                            <i class="fa fa-clock-o"></i> السجل الزمني
+                            <span class="ocp-tab__count"><?= count($timeline) ?></span>
+                        </button>
+                        <button class="ocp-tab" data-tab="kanban" onclick="OCP.switchTab('kanban')">
+                            <i class="fa fa-columns"></i> سير العمل
+                            <?php $totalTasks = 0; foreach ($kanbanData as $col) $totalTasks += $col['total']; ?>
+                            <span class="ocp-tab__count"><?= $totalTasks ?></span>
+                        </button>
+                        <button class="ocp-tab" data-tab="financial" onclick="OCP.switchTab('financial')">
+                            <i class="fa fa-money"></i> اللقطة المالية
+                        </button>
+                        <button class="ocp-tab" data-tab="phones" onclick="OCP.switchTab('phones')">
+                            <i class="fa fa-phone"></i> أرقام الهواتف
+                        </button>
+                        <button class="ocp-tab" data-tab="payments" onclick="OCP.switchTab('payments')">
+                            <i class="fa fa-credit-card"></i> الدفعات
+                        </button>
+                        <button class="ocp-tab" data-tab="settlements" onclick="OCP.switchTab('settlements')">
+                            <i class="fa fa-balance-scale"></i> التسويات
+                        </button>
+                        <?php if ($hasCase): ?>
+                        <button class="ocp-tab" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
+                            <i class="fa fa-gavel"></i> إجراءات قضائية
+                            <?php if (!empty($judiciaryData['actions'])): ?>
+                            <span class="ocp-tab__count"><?= count($judiciaryData['actions']) ?></span>
+                            <?php endif; ?>
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                    <?php // TIMELINE TAB — always default ?>
+                    <div class="ocp-tab-content" id="tab-timeline">
+                        <?= $this->render('panel/_timeline', ['timeline' => $timeline]) ?>
+                    </div>
+
+                    <?php // KANBAN TAB ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-kanban">
+                        <?= $this->render('panel/_kanban', ['kanbanData' => $kanbanData, 'contract' => $contract]) ?>
+                    </div>
+
+                    <?php // FINANCIAL TAB ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-financial">
+                        <?= $this->render('panel/_financial', ['financials' => $financials, 'settlementFinancials' => $settlementFinancials ?? null]) ?>
+                    </div>
+
+                    <?php // PHONE NUMBERS TAB (from old index) ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-phones">
+                        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+                            <?= $this->render('partial/tabs/phone_numbers.php', [
+                                'contractCalculations' => $contractCalculations,
+                                'contract_id' => $contract_id,
+                                'model' => $model,
+                            ]) ?>
+                        </div>
+                    </div>
+
+                    <?php // PAYMENTS TAB ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-payments">
+                        <?= $this->render('partial/tabs/payments.php', [
+                            'contract_id' => $contract_id,
+                            'model' => $model,
+                        ]) ?>
+                    </div>
+
+                    <?php // SETTLEMENTS TAB — Cards ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-settlements">
+                        <?= $this->render('partial/tabs/loan_scheduling.php', [
+                            'contract_id' => $contract_id,
+                            'model' => $model,
+                            'contractCalculations' => $contractCalculations,
+                        ]) ?>
+                    </div>
+
+                    <?php // JUDICIARY ACTIONS TAB — يظهر فقط إذا العقد عليه قضية ?>
+                    <?php if ($hasCase): ?>
+                    <div class="ocp-tab-content ocp-hidden" id="tab-judiciary-actions">
+                        <?= $this->render('panel/_judiciary_tab', [
+                            'contract_id' => $contract_id,
+                            'contract' => $contract,
+                            'judiciaryData' => $judiciaryData,
+                            'model' => $model,
+                        ]) ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <?php // 2) ACTION CENTER — مركز الأفعال ?>
+                <?php if (Permissions::can(Permissions::FOLLOWUP_CREATE) || Permissions::can(Permissions::FOLLOWUP_UPDATE)): ?>
+                <div class="ocp-section">
+                    <div class="ocp-action-center">
+                        <div class="ocp-action-center__title">
+                            <i class="fa fa-bolt"></i>
+                            مركز الأفعال — ماذا تريد أن تفعل الآن؟
+                        </div>
+                        <div class="ocp-action-grid">
+                            <?php if ($isClosed): ?>
+                                <div class="ocp-action-closed-msg" style="grid-column:1/-1;text-align:center;padding:var(--ocp-space-lg);color:var(--ocp-text-muted)">
+                                    <i class="fa fa-lock" style="font-size:24px;margin-bottom:8px;display:block"></i>
+                                    هذا العقد <?= $isJudiciaryPaid ? 'قضائي مسدد' : ($contract->status === 'finished' ? 'منتهي' : 'ملغي') ?> — لا يمكن تنفيذ إجراءات عليه
+                                </div>
+                            <?php else: ?>
+                            <button class="ocp-action-btn" data-action="call" onclick="OCP.openPanel('call')">
+                                <span class="ocp-action-btn__shortcut">C</span>
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--call"><i class="fa fa-phone"></i></div>
+                                <span class="ocp-action-btn__label">تسجيل اتصال</span>
+                            </button>
+                            <button class="ocp-action-btn" data-action="promise" onclick="OCP.openPanel('promise')">
+                                <span class="ocp-action-btn__shortcut">P</span>
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--promise"><i class="fa fa-handshake-o"></i></div>
+                                <span class="ocp-action-btn__label">وعد دفع</span>
+                            </button>
+                            <button class="ocp-action-btn" data-action="visit" onclick="OCP.openPanel('visit')">
+                                <span class="ocp-action-btn__shortcut">V</span>
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--visit"><i class="fa fa-car"></i></div>
+                                <span class="ocp-action-btn__label">تسجيل زيارة</span>
+                            </button>
+                            <button class="ocp-action-btn" data-action="sms" onclick="OCP.openPanel('sms')">
+                                <span class="ocp-action-btn__shortcut">S</span>
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--sms"><i class="fa fa-comment"></i></div>
+                                <span class="ocp-action-btn__label">إرسال تذكير</span>
+                            </button>
+                            <?php if ($isLegal): ?>
+                                <?php
+                                $judiciaryModel = $judiciaryData['judiciary'] ?? null;
+                                $addActionUrl = $judiciaryModel
+                                    ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id])
+                                    : '#';
+                                ?>
+                                <button class="ocp-action-btn" data-action="add_judiciary_action" onclick="<?= $judiciaryModel ? "window.open('" . Url::to(['/judiciary/judiciary/update', 'id' => $judiciaryModel->id, 'contract_id' => $contract_id]) . "', '_blank')" : "OCP.toast('لا يوجد ملف قضائي مسجل — يجب إنشاء قضية أولاً', 'warning')" ?>">
+                                    <span class="ocp-action-btn__shortcut">J</span>
+                                    <div class="ocp-action-btn__icon ocp-action-btn__icon--legal"><i class="fa fa-gavel"></i></div>
+                                    <span class="ocp-action-btn__label">فتح ملف القضية</span>
+                                </button>
+                            <?php else: ?>
+                                <button class="ocp-action-btn" data-action="legal" onclick="OCP.openPanel('legal')">
+                                    <span class="ocp-action-btn__shortcut">L</span>
+                                    <div class="ocp-action-btn__icon ocp-action-btn__icon--legal"><i class="fa fa-gavel"></i></div>
+                                    <span class="ocp-action-btn__label">تحويل للقضائي</span>
+                                </button>
+                            <?php endif; ?>
+                            <button class="ocp-action-btn ocp-action-more-btn" onclick="OCP.toggleMoreActions()">
+                                <div class="ocp-action-btn__icon" style="background:var(--ocp-border-light);color:var(--ocp-text-muted)"><i class="fa fa-ellipsis-h"></i></div>
+                                <span class="ocp-action-btn__label">المزيد</span>
+                            </button>
+                            <?php endif; ?>
+                        </div>
+                        <div class="ocp-action-grid ocp-hidden" id="ocp-more-actions" style="margin-top:var(--ocp-space-md)">
+                            <?php if ($hasCase): ?>
+                            <?php $judiciaryModel = $judiciaryData['judiciary'] ?? null; ?>
+                            <a class="ocp-action-btn" href="<?= $judiciaryModel ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]) : '#' ?>" role="modal-remote" style="text-decoration:none">
+                                <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-plus-circle"></i></div>
+                                <span class="ocp-action-btn__label">إضافة إجراء قضائي</span>
+                            </a>
+                            <?php endif; ?>
+                            <button class="ocp-action-btn" data-action="review" onclick="OCP.openPanel('review')">
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--review"><i class="fa fa-user-circle"></i></div>
+                                <span class="ocp-action-btn__label">طلب مراجعة مدير</span>
+                            </button>
+                            <button class="ocp-action-btn" data-action="note" onclick="OCP.openPanel('note')">
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--note"><i class="fa fa-sticky-note"></i></div>
+                                <span class="ocp-action-btn__label">إضافة ملاحظة</span>
+                            </button>
+                            <button class="ocp-action-btn" data-action="freeze" onclick="OCP.openPanel('freeze')">
+                                <div class="ocp-action-btn__icon ocp-action-btn__icon--freeze"><i class="fa fa-pause-circle"></i></div>
+                                <span class="ocp-action-btn__label">تجميد المتابعة</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#customerImagesModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#E8F5E9;color:#388E3C"><i class="fa fa-image"></i></div>
+                                <span class="ocp-action-btn__label">صور العملاء</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#changeStatusModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-exchange"></i></div>
+                                <span class="ocp-action-btn__label">تغيير حالة العقد</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#auditModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#E3F2FD;color:#1565C0"><i class="fa fa-check-square-o"></i></div>
+                                <span class="ocp-action-btn__label">للتدقيق</span>
+                            </button>
+                            <button class="ocp-action-btn" onclick="$('#settlementModal').modal('show')">
+                                <div class="ocp-action-btn__icon" style="background:#F3E5F5;color:#7B1FA2"><i class="fa fa-balance-scale"></i></div>
+                                <span class="ocp-action-btn__label">إضافة تسوية</span>
+                            </button>
+                            <a class="ocp-action-btn" href="<?= Url::to(['printer', 'contract_id' => $contract_id]) ?>" target="_blank" style="text-decoration:none">
+                                <div class="ocp-action-btn__icon" style="background:#ECEFF1;color:#455A64"><i class="fa fa-print"></i></div>
+                                <span class="ocp-action-btn__label">كشف حساب</span>
+                            </a>
+                            <a class="ocp-action-btn" href="<?= Url::to(['clearance', 'contract_id' => $contract_id]) ?>" target="_blank" style="text-decoration:none">
+                                <div class="ocp-action-btn__icon" style="background:#E8EAF6;color:#283593"><i class="fa fa-file-text-o"></i></div>
+                                <span class="ocp-action-btn__label">براءة الذمة</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <?php endif ?>
+
+                <?php // 3) SMART ALERTS — التنبيهات (hidden for closed contracts) ?>
+                <?php if (!empty($alerts) && !$isClosed): ?>
+                <div class="ocp-section">
+                    <div class="ocp-alerts">
+                        <?php foreach ($alerts as $alert): ?>
+                        <div class="ocp-alert ocp-alert--<?= $alert['severity'] ?>">
+                            <div class="ocp-alert__icon">
+                                <i class="fa <?= $alert['icon'] ?>"></i>
+                            </div>
+                            <div class="ocp-alert__body">
+                                <div class="ocp-alert__title"><?= Html::encode($alert['title']) ?></div>
+                                <div class="ocp-alert__desc"><?= Html::encode($alert['description']) ?></div>
+                            </div>
+                            <?php if (!empty($alert['cta'])): ?>
+                            <div class="ocp-alert__cta">
+                                <button class="ocp-alert__cta-btn" data-action="<?= $alert['cta']['action'] ?>" onclick="OCP.handleAlertCTA(this)">
+                                    <?= Html::encode($alert['cta']['label']) ?>
+                                </button>
+                            </div>
+                            <?php endif; ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <?php // ═══ RIGHT COLUMN (AI + Sidebar) ═══ ?>
+            <div>
+                <?php // AI SUGGESTION PANEL ?>
+                <?= $this->render('panel/_ai_suggestions', ['aiData' => $aiData, 'contract' => $contract, 'isClosed' => $isClosed, 'isJudiciaryPaid' => $isJudiciaryPaid]) ?>
+            </div>
+
+        </div>
+    </div>
+
+    <?php // ═══ NEXT CONTRACT (from old index) ═══ ?>
+    <?php if ($model->next ?? null): ?>
+    <div class="ocp-section" style="margin-top:var(--ocp-space-lg)">
+        <div class="ocp-card" style="padding:var(--ocp-space-lg)">
+            <?= $this->render('partial/next_contract.php', ['model' => $model, 'contract_id' => $contract_id]) ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <?php // ═══ SIDE PANELS (Hidden by default) ═══ ?>
+    <div class="ocp-side-panel__overlay" id="ocp-overlay" onclick="OCP.closePanel()"></div>
+    <?= $this->render('panel/_side_panels', ['contract' => $contract, 'customer' => $customer]) ?>
+
+    <?php // ═══ OLD MODALS (Customer Info, Customer Images, Audit, Settlement, Change Status, SMS) ═══ ?>
+    <?= $this->render('modals.php', ['contractCalculations' => $contractCalculations, 'contract_id' => $contract_id]) ?>
+
+    <?php // ═══ AJAX CRUD MODAL (for phone numbers, settlements etc.) ═══ ?>
+    <?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
+    <?php Modal::end() ?>
+
+    <?php
+    $this->registerJs(<<<'JS'
+    OCP.restoreTab();
+
+    var _ocpRefreshPending = false;
+    var _ocpRefreshTimer = null;
+
+    window.ocpRefreshTabs = function() {
+        if (_ocpRefreshTimer) clearTimeout(_ocpRefreshTimer);
+        _ocpRefreshTimer = setTimeout(function() {
+            _ocpRefreshTimer = null;
+            if (_ocpRefreshPending) return;
+            _ocpRefreshPending = true;
+            var activeTab = OCP.getActiveTab();
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', location.href);
+            xhr.onload = function() {
+                _ocpRefreshPending = false;
+                if (xhr.status !== 200) return;
+                var doc = new DOMParser().parseFromString(xhr.responseText, 'text/html');
+
+                var tabs = ['timeline','kanban','financial','phones','payments','settlements','judiciary-actions'];
+                for (var i = 0; i < tabs.length; i++) {
+                    var id = 'tab-' + tabs[i];
+                    var newEl = doc.getElementById(id);
+                    var curEl = document.getElementById(id);
+                    if (newEl && curEl) curEl.innerHTML = newEl.innerHTML;
+                }
+
+                var newBtns = doc.querySelectorAll('.ocp-tabs .ocp-tab');
+                var curBtns = document.querySelectorAll('.ocp-tabs .ocp-tab');
+                for (var j = 0; j < newBtns.length && j < curBtns.length; j++) {
+                    var nc = newBtns[j].querySelector('.ocp-tab__count');
+                    var cc = curBtns[j].querySelector('.ocp-tab__count');
+                    if (nc && cc) cc.textContent = nc.textContent;
+                }
+
+                var nm = doc.querySelector('.ocp-status-bar__metrics');
+                var cm = document.querySelector('.ocp-status-bar__metrics');
+                if (nm && cm) cm.innerHTML = nm.innerHTML;
+
+                OCP.switchTab(activeTab);
+            };
+            xhr.onerror = function() { _ocpRefreshPending = false; };
+            xhr.send();
+        }, 150);
+    };
+
+    /* ═══ Vanilla JS Modal (replaces ajaxcrud ModalRemote) ═══ */
+    (function(){
+        var modalEl = document.getElementById('ajaxCrudModal');
+        if (!modalEl) return;
+        var modalBody = modalEl.querySelector('.modal-body');
+        var modalFooter = modalEl.querySelector('.modal-footer');
+        var bsModal = null;
+
+        function getModal() {
+            if (!bsModal && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            }
+            return bsModal;
+        }
+        function showModal() { var m = getModal(); if (m) m.show(); }
+        function hideModal() {
+            var m = getModal();
+            if (m) { try { m.hide(); } catch(e) {} }
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }
+        function getCsrf() {
+            var m = document.querySelector('meta[name="csrf-token"]');
+            var p = document.querySelector('meta[name="csrf-param"]');
+            return { param: p ? p.content : '_csrf-backend', token: m ? m.content : '' };
+        }
+
+        function loadUrl(url) {
+            if (modalBody) modalBody.innerHTML = '<div style="text-align:center;padding:40px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>';
+            if (modalFooter) modalFooter.innerHTML = '';
+            showModal();
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    if (modalBody) modalBody.innerHTML = html;
+                    bindModalForms();
+                })
+                .catch(function() {
+                    if (modalBody) modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ في التحميل</div>';
+                });
+        }
+
+        function submitForm(form) {
+            var csrf = getCsrf();
+            var fd = new FormData(form);
+            if (!fd.has(csrf.param)) fd.append(csrf.param, csrf.token);
+            var url = form.action || location.href;
+            var method = (form.method || 'POST').toUpperCase();
+            fetch(url, {
+                method: method,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd
+            }).then(function(r) {
+                var ct = r.headers.get('Content-Type') || '';
+                if (ct.indexOf('json') !== -1) {
+                    return r.json().then(function(data) {
+                        if (data.forceClose || data.forceReload) {
+                            hideModal();
+                            setTimeout(function(){ window.ocpRefreshTabs(); }, 300);
+                        } else if (data.message) {
+                            if (modalBody) modalBody.innerHTML = '<div class="alert alert-info">' + data.message + '</div>';
+                        }
+                    });
+                }
+                return r.text().then(function(html) {
+                    if (modalBody) modalBody.innerHTML = html;
+                    bindModalForms();
+                });
+            }).catch(function() {
+                if (modalBody) modalBody.innerHTML = '<div class="alert alert-danger">حدث خطأ في الإرسال</div>';
+            });
+        }
+
+        function bindModalForms() {
+            if (!modalBody) return;
+            var forms = modalBody.querySelectorAll('form');
+            forms.forEach(function(f) {
+                f.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    submitForm(f);
+                });
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('[role="modal-remote"]');
+            if (!link) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var url = link.getAttribute('href');
+            if (!url || url === '#') return;
+
+            var method = link.getAttribute('data-request-method');
+            if (method && method.toLowerCase() === 'post') {
+                var csrf = getCsrf();
+                var fd = new FormData();
+                fd.append(csrf.param, csrf.token);
+                fetch(url, {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                }).then(function(r) { return r.json(); })
+                  .then(function(data) {
+                      if (data.forceClose || data.forceReload) {
+                          setTimeout(function(){ window.ocpRefreshTabs(); }, 200);
+                      }
+                  }).catch(function(){});
+                return;
+            }
+
+            loadUrl(url);
+        }, true);
+
+        modalEl.addEventListener('click', function(e) {
+            if (e.target.closest('[data-dismiss="modal"]') || e.target.closest('[data-bs-dismiss="modal"]')) {
+                hideModal();
+            }
+        });
+
+        modalEl.addEventListener('hidden.bs.modal', function() {
+            if (modalBody) modalBody.innerHTML = '';
+            if (modalFooter) modalFooter.innerHTML = '';
+        });
+    })();
+JS
+    , $this::POS_READY);
+    ?>
+
+    <?php // ═══ TOAST NOTIFICATION ═══ ?>
+    <div class="ocp-toast" id="ocp-toast">
+        <i class="fa" id="ocp-toast-icon"></i>
+        <span id="ocp-toast-message"></span>
+    </div>
+</div>

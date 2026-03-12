@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════════════════
+   PIN SYSTEM — Reusable pinned items bar
+   ═══════════════════════════════════════════════════ */
+
+/* ── Pin Bar ── */
+.pin-bar {
+    display: none;
+    margin-bottom: 16px;
+    background: #fff;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    overflow: hidden;
+    animation: pinBarIn 0.3s ease;
+}
+.pin-bar.has-pins { display: block; }
+
+@keyframes pinBarIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.pin-bar-hdr {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #FFFBEB, #FEF3C7);
+    border-bottom: 1px solid #FDE68A;
+    font-size: 12px;
+    font-weight: 700;
+    color: #92400E;
+}
+.pin-bar-hdr i { font-size: 14px; }
+.pin-bar-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    background: #F59E0B;
+    color: #fff;
+}
+
+.pin-bar-body {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.pin-bar-body::-webkit-scrollbar { height: 4px; }
+.pin-bar-body::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 2px; }
+
+/* ── Pin Chip ── */
+.pin-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    animation: pinChipIn 0.25s ease;
+}
+@keyframes pinChipIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+.pin-chip:hover {
+    background: #EFF6FF;
+    border-color: #93C5FD;
+}
+.pin-chip-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 6px 6px 14px;
+    color: #334155;
+    text-decoration: none !important;
+    cursor: pointer;
+}
+.pin-chip-link:hover {
+    color: #1D4ED8;
+    text-decoration: none !important;
+}
+.pin-chip i.pin-chip-icon {
+    font-size: 13px;
+    color: #F59E0B;
+}
+.pin-chip .pin-chip-id {
+    font-weight: 700;
+    color: #800020;
+}
+.pin-chip .pin-chip-label {
+    color: #475569;
+    font-weight: 500;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pin-chip .pin-chip-unpin {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: #94A3B8;
+    font-size: 10px;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+.pin-chip .pin-chip-unpin:hover {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+/* ── Pin Button (in table rows) ── */
+.pin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    background: #fff;
+    color: #94A3B8;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.15s;
+}
+.pin-btn:hover {
+    border-color: #F59E0B;
+    color: #F59E0B;
+    background: #FFFBEB;
+}
+.pin-btn.pinned {
+    background: #FFFBEB;
+    border-color: #F59E0B;
+    color: #F59E0B;
+}
+.pin-btn.pinned:hover {
+    background: #FEE2E2;
+    border-color: #DC2626;
+    color: #DC2626;
+}
+
+@media (max-width: 768px) {
+    .pin-chip { padding: 5px 8px 5px 10px; font-size: 11px; }
+    .pin-chip .pin-chip-label { max-width: 80px; }
+    .pin-bar-body { gap: 6px; padding: 8px 10px; }
+}
