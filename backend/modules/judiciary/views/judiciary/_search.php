@@ -10,12 +10,17 @@ use backend\helpers\FlatpickrWidget;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
 use backend\modules\judiciaryType\models\JudiciaryType;
+use backend\modules\judiciaryActions\models\JudiciaryActions;
 
 $cache = Yii::$app->cache;
 $courts  = $cache->getOrSet('lookup_courts', fn() => ArrayHelper::map(Court::find()->asArray()->all(), 'id', 'name'), 3600);
 $types   = $cache->getOrSet('lookup_judiciary_types', fn() => ArrayHelper::map(JudiciaryType::find()->asArray()->all(), 'id', 'name'), 3600);
 $lawyers = $cache->getOrSet('lookup_lawyers', fn() => ArrayHelper::map(Lawyers::find()->asArray()->all(), 'id', 'name'), 3600);
-$hasFilters = $model->judiciary_number || $model->contract_id || $model->court_id || $model->type_id || $model->lawyer_id || $model->year || $model->from_income_date || $model->to_income_date || $model->party_name;
+$judActions = $cache->getOrSet('lookup_judiciary_actions_all', fn() => ArrayHelper::map(
+    JudiciaryActions::find()->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])->orderBy(['name' => SORT_ASC])->asArray()->all(),
+    'id', 'name'
+), 3600);
+$hasFilters = $model->judiciary_number || $model->contract_id || $model->court_id || $model->type_id || $model->lawyer_id || $model->year || $model->from_income_date || $model->to_income_date || $model->party_name || $model->last_party_action;
 ?>
 
 <div class="jud-search <?= $hasFilters ? '' : '' ?>">
@@ -77,6 +82,12 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
                     'options' => ['placeholder' => 'إلى', 'style' => 'font-size:12px'],
                     'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                 ])->label('ورود إلى') ?>
+            </div>
+            <div class="jud-filter-col-wide">
+                <?= $form->field($model, 'last_party_action')->widget(Select2::class, [
+                    'data' => $judActions, 'options' => ['placeholder' => 'الكل'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                ])->label('آخر إجراء على الأطراف') ?>
             </div>
             <div class="jud-search-actions">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>

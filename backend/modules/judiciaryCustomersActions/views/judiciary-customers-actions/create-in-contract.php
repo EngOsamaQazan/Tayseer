@@ -297,9 +297,7 @@ $showReqTarget = (!$isNew && (int)$model->judiciary_actions_id === 55) ? 'true' 
             $isSelected = ($existingCustomerId == $p['customer_id']);
         ?>
         <div class="jaf-party <?= $isSelected ? 'selected' : '' ?>" data-customer-id="<?= $p['customer_id'] ?>">
-            <?php if ($isNew): ?>
             <div class="jaf-party-check"><i class="fa fa-square-o"></i></div>
-            <?php endif; ?>
             <?php $photoUrl = $partyPhotos[$p['customer_id']] ?? null; ?>
             <div class="jaf-party-avatar" style="background:<?= $isClient ? '#DBEAFE' : '#FEF3C7' ?>;border:2px solid <?= $isClient ? '#93C5FD' : '#FCD34D' ?>">
                 <?php if ($photoUrl): ?>
@@ -563,19 +561,30 @@ var JAF = (function() {
     var REFUND_ID = 55;
     var isNewRecord = <?= $isNew ? 'true' : 'false' ?>;
 
+    function hidePartyError() {
+        try {
+            var el = document.getElementById('jaf-alpine-root');
+            if (el && typeof Alpine !== 'undefined' && Alpine.$data) {
+                Alpine.$data(el).showPartyError = false;
+            }
+        } catch (e) {
+            var errEl = document.getElementById('jaf-party-error');
+            if (errEl) errEl.style.display = 'none';
+        }
+    }
+
     function init() {
+        var $container = $('#jaf-parties-container');
         if (isNewRecord) {
-            // Multi-select mode for new records
-            $('#jaf-parties-container .jaf-party').on('click', function() {
+            $container.off('click.jaf').on('click.jaf', '.jaf-party', function(e) {
+                e.stopPropagation();
                 $(this).toggleClass('selected');
                 syncMultiCustomers();
-                /* OLD jQuery - replaced by Alpine.js: $('#jaf-party-error').hide(); */
-                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = false;
+                hidePartyError();
             });
 
-            // Select All toggle
-            $('.jaf-select-all').on('click', function() {
-                var $parties = $('#jaf-parties-container .jaf-party');
+            $(document).off('click.jaf-select-all').on('click.jaf-select-all', '.jaf-select-all', function() {
+                var $parties = $container.find('.jaf-party');
                 var allSelected = $parties.filter('.selected').length === $parties.length;
                 if (allSelected) {
                     $parties.removeClass('selected');
@@ -587,17 +596,15 @@ var JAF = (function() {
                     $(this).find('span').text('إلغاء تحديد الكل');
                 }
                 syncMultiCustomers();
-                /* OLD jQuery - replaced by Alpine.js: $('#jaf-party-error').hide(); */
-                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = false;
+                hidePartyError();
             });
         } else {
-            // Single-select mode for editing
-            $('#jaf-parties-container .jaf-party').on('click', function() {
-                $('#jaf-parties-container .jaf-party').removeClass('selected');
+            $container.off('click.jaf').on('click.jaf', '.jaf-party', function(e) {
+                e.stopPropagation();
+                $container.find('.jaf-party').removeClass('selected');
                 $(this).addClass('selected');
                 $('#jaf-customer-id').val($(this).data('customer-id'));
-                /* OLD jQuery - replaced by Alpine.js: $('#jaf-party-error').hide(); */
-                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = false;
+                hidePartyError();
             });
         }
 
@@ -610,7 +617,15 @@ var JAF = (function() {
                 $('#jaf-date-error').hide();
             }
             if (isNewRecord && $('#jaf-parties-container .jaf-party.selected').length === 0) {
-                Alpine.$data(document.getElementById('jaf-alpine-root')).showPartyError = true;
+                try {
+                    var el = document.getElementById('jaf-alpine-root');
+                    if (el && typeof Alpine !== 'undefined' && Alpine.$data) {
+                        Alpine.$data(el).showPartyError = true;
+                    }
+                } catch (e) {
+                    var errEl = document.getElementById('jaf-party-error');
+                    if (errEl) errEl.style.display = '';
+                }
                 valid = false;
             }
             return valid;
@@ -644,7 +659,9 @@ var JAF = (function() {
 
         // Action search filter
         var searchTimer;
-        document.getElementById('jaf-action-search').addEventListener('input', function() {
+        var searchEl = document.getElementById('jaf-action-search');
+        if (!searchEl) return;
+        searchEl.addEventListener('input', function() {
             clearTimeout(searchTimer);
             var q = this.value.trim().toLowerCase();
             searchTimer = setTimeout(function() {
@@ -733,21 +750,18 @@ var JAF = (function() {
 
         $('#jaf-parent-id').val('');
 
-        var _jafData = Alpine.$data(document.getElementById('jaf-alpine-root'));
-
-        /* OLD jQuery - replaced by Alpine.js
-        showContext(nature);
-        */
-        _jafData.activeContext = nature;
-
-        /* OLD jQuery - replaced by Alpine.js
-        if (parseInt(actionId) === REFUND_ID) {
-            $('#ctx-request-target').show();
-        } else {
-            $('#ctx-request-target').hide();
+        try {
+            var rootEl = document.getElementById('jaf-alpine-root');
+            if (rootEl && typeof Alpine !== 'undefined' && Alpine.$data) {
+                var _jafData = Alpine.$data(rootEl);
+                _jafData.activeContext = nature;
+                _jafData.showRequestTarget = (parseInt(actionId) === REFUND_ID);
+            } else {
+                showContext(nature);
+            }
+        } catch (e) {
+            showContext(nature);
         }
-        */
-        _jafData.showRequestTarget = (parseInt(actionId) === REFUND_ID);
     }
 
     function showContext(nature) {
@@ -843,8 +857,14 @@ var JAF = (function() {
         });
     }
 
-    // Call init immediately (AJAX modal: document.ready already fired)
-    init();
+    // Call init immediately + delayed fallback for AJAX modal contexts
+    try { init(); } catch (e) {}
+    setTimeout(function() {
+        if (!$('#jaf-parties-container').data('jaf-init')) {
+            try { init(); } catch (e) {}
+        }
+        $('#jaf-parties-container').data('jaf-init', 1);
+    }, 100);
 
     return {
         toggleNature: toggleNature,

@@ -28,6 +28,7 @@ class JudiciarySearch extends Judiciary
 
     public $contract_not_in_status;
     public $party_name;
+    public $last_party_action;
 
     public function rules()
     {
@@ -35,7 +36,7 @@ class JudiciarySearch extends Judiciary
             [['id', 'court_id', 'type_id', 'lawyer_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'number_row', 'case_cost'], 'integer'],
             [['lawyer_cost', 'contract_id'], 'number'],
             [['income_date', 'year', 'from_income_date', 'to_income_date'], 'string'],
-            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number', 'party_name'], 'safe']
+            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number', 'party_name', 'last_party_action'], 'safe']
         ];
     }
 
@@ -155,6 +156,24 @@ class JudiciarySearch extends Judiciary
             $query->leftJoin(['lastAction' => $subQuery], 'j.id = lastAction.judiciary_id');
             $query->leftJoin('{{%judiciary_actions}} ja', 'ja.id = lastAction.max_action_id');
             $query->andWhere(['ja.id' => $params['JudiciarySearch']['judiciary_actions']]);
+        }
+
+        // ─── فلتر: آخر إجراء على أطراف القضية ───
+        if (!empty($params['JudiciarySearch']['last_party_action'])) {
+            $actionId = (int)$params['JudiciarySearch']['last_party_action'];
+            $latestPerParty = (new Query())
+                ->select(['judiciary_id'])
+                ->from('{{%judiciary_customers_actions}} jca_lp')
+                ->where(['jca_lp.is_deleted' => 0])
+                ->andWhere('jca_lp.id = (
+                    SELECT MAX(j3.id) FROM {{%judiciary_customers_actions}} j3
+                    WHERE j3.judiciary_id = jca_lp.judiciary_id
+                      AND j3.customers_id = jca_lp.customers_id
+                      AND j3.is_deleted = 0
+                )')
+                ->andWhere(['jca_lp.judiciary_actions_id' => $actionId])
+                ->distinct();
+            $query->andWhere(['in', 'j.id', $latestPerParty]);
         }
 
         // ─── فلتر: فقط القضايا التي لديها طلبات معلّقة ───

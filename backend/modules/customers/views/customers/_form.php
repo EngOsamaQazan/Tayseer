@@ -298,29 +298,7 @@ CSS
 
 $this->registerJs(<<<'JSJOB'
 $(document).on('click', '.btn-add-job', function() {
-    var name = prompt('أدخل اسم جهة العمل الجديدة:');
-    if (!name || !name.trim()) return;
-    name = name.trim();
-    var $btn = $(this);
-    $btn.prop('disabled', true).find('i').removeClass('fa-plus').addClass('fa-spinner fa-spin');
-    $.ajax({
-        url: '/jobs/jobs/quick-create',
-        method: 'POST',
-        data: { name: name, _csrf: $('meta[name="csrf-token"]').attr('content') || yii.getCsrfToken() },
-        dataType: 'json',
-        success: function(res) {
-            if (res.success) {
-                var $sel = $('#customers-job_title');
-                var opt = new Option(res.text, res.id, true, true);
-                $sel.append(opt).trigger('change');
-                alert(res.existing ? 'جهة العمل موجودة مسبقًا وتم اختيارها' : 'تمت إضافة جهة العمل بنجاح');
-            } else {
-                alert(res.message || 'فشل في الإضافة');
-            }
-        },
-        error: function() { alert('حدث خطأ في الاتصال'); },
-        complete: function() { $btn.prop('disabled', false).find('i').removeClass('fa-spinner fa-spin').addClass('fa-plus'); }
-    });
+    window.open('/jobs/jobs/create', '_blank');
 });
 JSJOB
 );

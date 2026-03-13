@@ -74,7 +74,7 @@ jobs:
               done
               
               # Fix permissions
-              chown -R www-data:www-data backend/ common/ console/ frontend/ 2>/dev/null || true
+              chown -R www-data:www-data backend/ common/ console/ frontend/ api/ 2>/dev/null || true
               
               # Clear caches
               rm -rf backend/runtime/cache/*
@@ -85,6 +85,11 @@ jobs:
               chmod -R 775 backend/web/assets/ 2>/dev/null || true
               chmod -R 775 frontend/runtime/ 2>/dev/null || true
               chmod -R 775 frontend/web/assets/ 2>/dev/null || true
+              
+              # API directories (eFAWATEERcom)
+              mkdir -p api/runtime api/web/assets 2>/dev/null || true
+              chmod -R 775 api/runtime/ 2>/dev/null || true
+              chmod -R 775 api/web/assets/ 2>/dev/null || true
               
               echo "  Done!"
             }

@@ -226,7 +226,17 @@ class JobsController extends Controller
     }
 
     /**
-     * Quick-create a new job via AJAX (name only).
+     * AJAX: returns all job types for the quick-create modal.
+     */
+    public function actionJobTypesList()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $types = \backend\modules\jobs\models\JobsType::find()->asArray()->all();
+        return ['results' => $types];
+    }
+
+    /**
+     * Quick-create a new job via AJAX (name + optional fields).
      * Returns {success, id, text} so Select2 can select the new entry.
      */
     public function actionQuickCreate()
@@ -253,10 +263,20 @@ class JobsController extends Controller
 
         $model = new Jobs();
         $model->name = $name;
+        $model->job_type = (int) Yii::$app->request->post('job_type', 0) ?: 0;
+        $model->address_city = trim((string) Yii::$app->request->post('address_city', '')) ?: null;
+        $model->address_area = trim((string) Yii::$app->request->post('address_area', '')) ?: null;
         $model->status = Jobs::STATUS_ACTIVE;
-        $model->job_type = 0;
 
         if ($model->save(false)) {
+            $phone = trim((string) Yii::$app->request->post('phone', ''));
+            if ($phone !== '') {
+                $phoneModel = new JobsPhone();
+                $phoneModel->job_id = $model->id;
+                $phoneModel->phone_number = $phone;
+                $phoneModel->phone_type = 'office';
+                $phoneModel->save(false);
+            }
             $this->updateJobsCache();
             return ['success' => true, 'id' => $model->id, 'text' => $model->name, 'existing' => false];
         }

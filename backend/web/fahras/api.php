@@ -171,6 +171,8 @@ foreach ($rows as $row) {
   $custId     = (int)$row['customer_id'];
   $contractId = (int)$row['contract_id'];
 
+  // المعادلة المُعتمدة — متطابقة مع ContractCalculations::remainingAmount()
+  // المتبقي = max(0, round(الإجمالي − المدفوع − الخصومات, 2))
   $totalDebt = (float)($row['total_value'] ?? 0)
              + (float)$row['expenses_sum']
              + (float)$row['lawyer_sum'];
