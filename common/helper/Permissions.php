@@ -351,6 +351,15 @@ class Permissions
             'reports/reports' => [
                 'index' => self::REP_VIEW,
             ],
+            /* جهات العمل — CRUD يحتاج صلاحية الوظائف، لكن search-list مسموح لمن يملك صلاحية عملاء أو عقود */
+            'jobs/jobs' => [
+                'index'       => self::JOBS,
+                'view'        => self::JOBS,
+                'create'      => self::JOBS,
+                'update'      => self::JOBS,
+                'delete'      => self::JOBS,
+                'bulk-delete' => self::JOBS,
+            ],
         ];
     }
 
@@ -518,7 +527,11 @@ class Permissions
             'leavePolicy/leave-policy' => [self::LEAVE_POLICY],
             'workdays/workdays' => [self::WORKDAYS],
             'attendance/attendance' => self::getHrPermissions(),
-            'jobs/jobs' => [self::JOBS],
+            'jobs/jobs' => array_merge(
+                [self::JOBS],
+                self::getModulePermissions(self::CUSTOMERS),
+                self::getModulePermissions(self::CONTRACTS)
+            ),
             /* المخزون */
             'inventoryItems/inventory-items' => array_merge(
                 self::getModulePermissions(self::INVENTORY_ITEMS),
