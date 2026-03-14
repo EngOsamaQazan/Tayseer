@@ -112,9 +112,12 @@ class ContractsController extends Controller
         $nameWhere = [];
         $nameParams = [];
         foreach ($words as $i => $w) {
-            $paramKey = ":w{$i}";
-            $nameWhere[] = "($nameNorm LIKE $paramKey OR $nameNormNoSpace LIKE $paramKey)";
-            $nameParams[$paramKey] = '%' . $w . '%';
+            $p1 = ":w{$i}a";
+            $p2 = ":w{$i}b";
+            $nameWhere[] = "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)";
+            $likeVal = '%' . $w . '%';
+            $nameParams[$p1] = $likeVal;
+            $nameParams[$p2] = $likeVal;
         }
         $nameClause = implode(' AND ', $nameWhere);
 
@@ -127,18 +130,20 @@ class ContractsController extends Controller
              LEFT JOIN {{%customers}} cu ON cu.id = cc.customer_id
              WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
                AND (
-                   c.id = :qInt
+                   c.id = :qIntContract
                    OR ($nameClause)
-                   OR cu.id_number LIKE :qLike
-                   OR cu.primary_phone_number LIKE :qLike
-                   OR cu.id = :qInt
+                   OR cu.id_number LIKE :qLikeId
+                   OR cu.primary_phone_number LIKE :qLikePhone
+                   OR cu.id = :qIntCustomer
                )
              GROUP BY c.id
              ORDER BY c.id DESC
              LIMIT 10"
         , array_merge([
-            ':qInt'  => (int)$q,
-            ':qLike' => '%' . $q . '%',
+            ':qIntContract'  => (int)$q,
+            ':qIntCustomer'  => (int)$q,
+            ':qLikeId'       => '%' . $q . '%',
+            ':qLikePhone'    => '%' . $q . '%',
         ], $nameParams))->queryAll();
 
         $results = [];

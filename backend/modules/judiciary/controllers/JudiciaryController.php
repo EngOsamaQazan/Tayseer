@@ -164,8 +164,13 @@ class JudiciaryController extends Controller
 
         /* بحث نصي */
         if ($search !== '') {
-            $where[] = "(customer_name LIKE :q OR court_name LIKE :q OR judiciary_number LIKE :q OR CAST(contract_id AS CHAR) LIKE :q OR lawyer_name LIKE :q)";
-            $params[':q'] = "%{$search}%";
+            $where[] = "(customer_name LIKE :q1 OR court_name LIKE :q2 OR judiciary_number LIKE :q3 OR CAST(contract_id AS CHAR) LIKE :q4 OR lawyer_name LIKE :q5)";
+            $sv = "%{$search}%";
+            $params[':q1'] = $sv;
+            $params[':q2'] = $sv;
+            $params[':q3'] = $sv;
+            $params[':q4'] = $sv;
+            $params[':q5'] = $sv;
         }
 
         $sql = count($where) ? ' WHERE ' . implode(' AND ', $where) : '';
@@ -243,8 +248,13 @@ class JudiciaryController extends Controller
         $statsParams = [];
         $statsWhere = '';
         if ($search !== '') {
-            $statsWhere = " WHERE (customer_name LIKE :q OR court_name LIKE :q OR judiciary_number LIKE :q OR CAST(contract_id AS CHAR) LIKE :q OR lawyer_name LIKE :q)";
-            $statsParams[':q'] = "%{$search}%";
+            $statsWhere = " WHERE (customer_name LIKE :q1 OR court_name LIKE :q2 OR judiciary_number LIKE :q3 OR CAST(contract_id AS CHAR) LIKE :q4 OR lawyer_name LIKE :q5)";
+            $sv = "%{$search}%";
+            $statsParams[':q1'] = $sv;
+            $statsParams[':q2'] = $sv;
+            $statsParams[':q3'] = $sv;
+            $statsParams[':q4'] = $sv;
+            $statsParams[':q5'] = $sv;
         }
         $stats = $db->createCommand("
             SELECT
