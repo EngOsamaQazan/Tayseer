@@ -67,12 +67,6 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 .map-search-results .result-item .result-name { font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .map-search-results .result-item .result-addr { font-size:11px; color:#94a3b8; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .map-search-loading { padding:14px; text-align:center; color:#94a3b8; font-size:13px; }
-/* Google Places Autocomplete dropdown styling */
-.pac-container { border-radius:8px; border:1px solid #e2e8f0; box-shadow:0 8px 24px rgba(0,0,0,.12); font-family:'Cairo','Segoe UI',Tahoma,sans-serif; z-index:10000; }
-.pac-item { padding:10px 14px; font-size:13px; border-bottom:1px solid #f1f5f9; direction:rtl; }
-.pac-item:hover { background:#f0f9ff; }
-.pac-item-query { font-weight:600; color:#1e293b; }
-#gmp-place-input { --gmpac-sc-input-border-radius:8px; --gmpac-sc-input-font-size:14px; --gmpac-sc-input-text-align:right; height:44px; direction:rtl; }
 .geo-filled { border-color:#22c55e !important; box-shadow:0 0 0 3px rgba(34,197,94,.2) !important; transition:border-color .3s, box-shadow .3s; }
 .pac-icon { display:inline-block; }
 
@@ -304,12 +298,6 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<?php
-$googleMapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', null)
-    ?? Yii::$app->params['googleMapsApiKey'] ?? null;
-if ($googleMapsKey && preg_match('/^AIza[0-9A-Za-z_-]{30,}$/', $googleMapsKey)): ?>
-<script src="https://maps.googleapis.com/maps/api/js?key=<?= Html::encode($googleMapsKey) ?>&libraries=places&language=ar&loading=async" async defer></script>
-<?php endif; ?>
 
 <?php
 $existingPhonesCount = count($existingPhones);
@@ -511,179 +499,82 @@ map.on('click', function(e){
     setMapMarker(e.latlng.lat, e.latlng.lng, false);
 });
 
-/* ─── بحث على الخريطة ─── */
-var searchTimer = null;
-var _googlePlacesActive = false;
+/* ─── بحث على الخريطة (Nominatim — OpenStreetMap) ─── */
+var _searchTimer = null;
 
-function fallbackMapSearch(q) {
+function mapSearch(q) {
     if (!q || q.length < 2) { $('#map-search-results').removeClass('show').empty(); return; }
     $('#map-search-results').html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
-    var mapCenter = map.getCenter();
-    $.getJSON('https://photon.komoot.io/api/', {
-        q: q, lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
-    }, function(data){
-        if (!data || !data.features || data.features.length === 0) {
-            $.getJSON('https://nominatim.openstreetmap.org/search', {
-                q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
-                viewbox: '34.8,33.4,39.3,29.1', bounded: 0
-            }, function(nd){
-                if (!nd || nd.length === 0) { $('#map-search-results').html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show'); return; }
-                var html = '';
-                nd.forEach(function(r){
-                    html += '<div class="result-item" data-lat="'+r.lat+'" data-lng="'+r.lon+'">';
-                    html += '<span class="result-icon"><i class="fa fa-map-marker"></i></span>';
-                    html += '<span class="result-text"><span class="result-name">'+r.display_name+'</span></span>';
-                    html += '</div>';
-                });
-                $('#map-search-results').html(html).addClass('show');
-            });
+
+    $.getJSON('https://nominatim.openstreetmap.org/search', {
+        q: q,
+        format: 'json',
+        limit: 8,
+        addressdetails: 1,
+        'accept-language': 'ar',
+        viewbox: '34.8,33.4,39.3,29.1',
+        bounded: 0
+    }, function(results) {
+        if (!results || results.length === 0) {
+            $('#map-search-results').html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show');
             return;
         }
         var html = '';
-        data.features.forEach(function(f){
-            var p = f.properties, g = f.geometry;
-            var name = p.name || p.street || '';
-            var addr = [p.city, p.state, p.country].filter(Boolean).join('، ');
-            var osmVal = p.osm_value || p.osm_key || '';
+        results.forEach(function(r) {
             var icon = 'fa-map-marker';
-            if (['restaurant','cafe','fast_food','bar'].indexOf(osmVal) >= 0) icon = 'fa-cutlery';
-            else if (['hospital','clinic','pharmacy','doctors'].indexOf(osmVal) >= 0) icon = 'fa-medkit';
-            else if (['school','university','college'].indexOf(osmVal) >= 0) icon = 'fa-graduation-cap';
-            else if (['supermarket','shop','mall','marketplace'].indexOf(osmVal) >= 0) icon = 'fa-shopping-cart';
-            else if (['bank'].indexOf(osmVal) >= 0) icon = 'fa-university';
-            else if (['hotel','hostel','guest_house'].indexOf(osmVal) >= 0) icon = 'fa-bed';
-            else if (['fuel','gas'].indexOf(osmVal) >= 0) icon = 'fa-car';
-            else if (['place_of_worship','mosque'].indexOf(osmVal) >= 0) icon = 'fa-moon-o';
-            else if (['office','company','commercial'].indexOf(osmVal) >= 0) icon = 'fa-building';
-            else if (p.osm_key === 'highway' || p.osm_key === 'road') icon = 'fa-road';
-            else if (p.osm_key === 'place') icon = 'fa-map-pin';
-            html += '<div class="result-item" data-lat="'+g.coordinates[1]+'" data-lng="'+g.coordinates[0]+'">';
-            html += '<span class="result-icon"><i class="fa '+icon+'"></i></span>';
-            html += '<span class="result-text"><span class="result-name">'+name+'</span>';
-            if (addr) html += '<span class="result-addr">'+addr+'</span>';
+            var t = (r.type || '').toLowerCase();
+            var c = (r.class || '').toLowerCase();
+            if (c === 'amenity' && /hospital|clinic|pharmacy|doctors/.test(t)) icon = 'fa-medkit';
+            else if (c === 'amenity' && /school|university|college/.test(t)) icon = 'fa-graduation-cap';
+            else if (c === 'amenity' && /restaurant|cafe|fast_food/.test(t)) icon = 'fa-cutlery';
+            else if (c === 'amenity' && /bank/.test(t)) icon = 'fa-university';
+            else if (c === 'shop' || /supermarket|mall/.test(t)) icon = 'fa-shopping-cart';
+            else if (c === 'tourism' && /hotel|hostel/.test(t)) icon = 'fa-bed';
+            else if (c === 'amenity' && /mosque|place_of_worship/.test(t)) icon = 'fa-moon-o';
+            else if (c === 'office' || c === 'building') icon = 'fa-building';
+            else if (c === 'highway') icon = 'fa-road';
+            else if (c === 'place') icon = 'fa-map-pin';
+
+            var name = r.display_name.split('،')[0].trim();
+            var addr = r.display_name.split('،').slice(1, 4).join('،').trim();
+
+            html += '<div class="result-item" data-lat="' + r.lat + '" data-lng="' + r.lon + '">';
+            html += '<span class="result-icon"><i class="fa ' + icon + '"></i></span>';
+            html += '<span class="result-text"><span class="result-name">' + name + '</span>';
+            if (addr) html += '<span class="result-addr">' + addr + '</span>';
             html += '</span></div>';
         });
         $('#map-search-results').html(html).addClass('show');
-    }).fail(function(){
-        doNominatimFallback(q);
-    });
-}
-function doNominatimFallback(q) {
-    $.getJSON('https://nominatim.openstreetmap.org/search', {
-        q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
-        viewbox: '34.8,33.4,39.3,29.1', bounded: 1
-    }, function(nd){
-        if (!nd || nd.length === 0) { $('#map-search-results').html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show'); return; }
-        var html = '';
-        nd.forEach(function(r){
-            html += '<div class="result-item" data-lat="'+r.lat+'" data-lng="'+r.lon+'">';
-            html += '<span class="result-icon"><i class="fa fa-map-marker"></i></span>';
-            html += '<span class="result-text"><span class="result-name">'+r.display_name+'</span></span>';
-            html += '</div>';
-        });
-        $('#map-search-results').html(html).addClass('show');
-    }).fail(function(){
-        $('#map-search-results').html('<div class="map-search-loading">خطأ في البحث</div>').addClass('show');
+    }).fail(function() {
+        $('#map-search-results').html('<div class="map-search-loading">خطأ في البحث — حاول مرة أخرى</div>').addClass('show');
     });
 }
 
-$('#map-search-input').on('input', function(){
-    if (_googlePlacesActive) return;
-    clearTimeout(searchTimer);
+$('#map-search-input').on('input', function() {
+    clearTimeout(_searchTimer);
     var q = $(this).val().trim();
     if (q.length < 2) { $('#map-search-results').removeClass('show').empty(); return; }
-    searchTimer = setTimeout(function(){ fallbackMapSearch(q); }, 350);
+    _searchTimer = setTimeout(function() { mapSearch(q); }, 400);
 });
-$('#map-search-input').on('keydown', function(e){
-    if (_googlePlacesActive) return;
-    if (e.keyCode === 13) { e.preventDefault(); clearTimeout(searchTimer); fallbackMapSearch($(this).val().trim()); }
+$('#map-search-input').on('keydown', function(e) {
+    if (e.keyCode === 13) { e.preventDefault(); clearTimeout(_searchTimer); mapSearch($(this).val().trim()); }
 });
-$('#btn-map-search').on('click', function(){
-    if (_googlePlacesActive) return;
-    clearTimeout(searchTimer); fallbackMapSearch($('#map-search-input').val().trim());
+$('#btn-map-search').on('click', function() {
+    clearTimeout(_searchTimer);
+    mapSearch($('#map-search-input').val().trim());
 });
-$(document).on('click', '#map-search-results .result-item', function(){
+$(document).on('click', '#map-search-results .result-item', function() {
     var lat = parseFloat($(this).data('lat'));
     var lng = parseFloat($(this).data('lng'));
     if (!isNaN(lat) && !isNaN(lng)) {
         setMapMarker(lat, lng, true);
-        var name = $(this).find('.result-name').text().trim();
-        $('#map-search-input').val(name);
+        $('#map-search-input').val($(this).find('.result-name').text().trim());
     }
     $('#map-search-results').removeClass('show');
 });
-$('#map-search-input').on('blur', function(){
-    if (!_googlePlacesActive) setTimeout(function(){ $('#map-search-results').removeClass('show'); }, 300);
+$('#map-search-input').on('blur', function() {
+    setTimeout(function() { $('#map-search-results').removeClass('show'); }, 300);
 });
-
-/* ─── Google Places Autocomplete (tries New API first, falls back to Legacy) ─── */
-function tryInitGooglePlaces() {
-    if (typeof google === 'undefined' || !google.maps || !google.maps.places) return false;
-    if (_googlePlacesActive) return true;
-
-    var wrap = document.querySelector('.map-search-wrap');
-    if (!wrap) return false;
-
-    // Try New API (PlaceAutocompleteElement) — works with "Places API (New)"
-    if (google.maps.places.PlaceAutocompleteElement) {
-        try {
-            var pac = new google.maps.places.PlaceAutocompleteElement({
-                locationBias: { north: 33.4, south: 29.1, east: 39.3, west: 34.8 }
-            });
-            pac.id = 'gmp-place-input';
-            pac.style.cssText = 'width:100%;';
-            pac.setAttribute('placeholder', 'ابحث بالاسم: شركة، مستشفى، مطعم، شارع...');
-
-            $('#map-search-input').hide();
-            $('#btn-map-search').hide();
-            $('#map-search-results').remove();
-            wrap.insertBefore(pac, wrap.firstChild);
-
-            pac.addEventListener('gmp-select', async function(e) {
-                var place = e.placePrediction.toPlace();
-                await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] });
-                if (place.location) {
-                    setMapMarker(place.location.lat(), place.location.lng(), true);
-                }
-            });
-
-            _googlePlacesActive = true;
-            return true;
-        } catch(e) { /* fall through to legacy */ }
-    }
-
-    // Legacy API (Autocomplete) — works with old "Places API"
-    if (google.maps.places.Autocomplete) {
-        var input = document.getElementById('map-search-input');
-        var autocomplete = new google.maps.places.Autocomplete(input, {
-            fields: ['geometry', 'name', 'formatted_address']
-        });
-        autocomplete.setBounds(new google.maps.LatLngBounds(
-            new google.maps.LatLng(29.1, 34.8),
-            new google.maps.LatLng(33.4, 39.3)
-        ));
-        autocomplete.addListener('place_changed', function() {
-            var place = autocomplete.getPlace();
-            if (place && place.geometry) {
-                setMapMarker(place.geometry.location.lat(), place.geometry.location.lng(), true);
-                input.value = place.name || place.formatted_address || '';
-            }
-        });
-        $('#map-search-input').off('input keydown');
-        $('#btn-map-search').hide();
-        $('#map-search-results').remove();
-        _googlePlacesActive = true;
-        return true;
-    }
-
-    return false;
-}
-if (!tryInitGooglePlaces()) {
-    var _gpRetry = setInterval(function(){
-        if (tryInitGooglePlaces()) clearInterval(_gpRetry);
-    }, 800);
-    setTimeout(function(){ clearInterval(_gpRetry); }, 12000);
-}
 
 /* ═══════════════════════════════════════════════════════════
  *  4. لصق الموقع الذكي (Smart Location Paste)
@@ -845,71 +736,6 @@ $('#jobs-plus_code').on('input', function() {
         });
     }, 600);
 });
-
-/* ─── Google Places autocomplete on address text fields ─── */
-function initAddrAutocomplete() {
-    if (typeof google === 'undefined' || !google.maps || !google.maps.places) return false;
-
-    var fields = document.querySelectorAll('.addr-field');
-    if (!fields.length) return false;
-
-    fields.forEach(function(input) {
-        if (input._addrAcInit) return;
-        input._addrAcInit = true;
-
-        // Try New API
-        if (google.maps.places.PlaceAutocompleteElement) {
-            var wrap = document.createElement('div');
-            wrap.style.cssText = 'position:relative;';
-            input.parentNode.insertBefore(wrap, input);
-            wrap.appendChild(input);
-
-            var pac = new google.maps.places.PlaceAutocompleteElement({
-                locationBias: { north: 33.4, south: 29.1, east: 39.3, west: 34.8 }
-            });
-            pac.style.cssText = 'position:absolute;top:100%;right:0;left:0;z-index:500;display:none;';
-            wrap.appendChild(pac);
-
-            input.addEventListener('focus', function() { pac.style.display = ''; });
-            input.addEventListener('blur', function() { setTimeout(function(){ pac.style.display = 'none'; }, 300); });
-
-            pac.addEventListener('gmp-select', async function(e) {
-                var place = e.placePrediction.toPlace();
-                await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location', 'addressComponents'] });
-                if (place.location) {
-                    setMapMarker(place.location.lat(), place.location.lng(), true);
-                }
-                pac.style.display = 'none';
-            });
-            return;
-        }
-
-        // Legacy API fallback
-        if (google.maps.places.Autocomplete) {
-            var ac = new google.maps.places.Autocomplete(input, {
-                fields: ['geometry', 'name', 'formatted_address', 'address_components'],
-                types: ['geocode', 'establishment']
-            });
-            ac.setBounds(new google.maps.LatLngBounds(
-                new google.maps.LatLng(29.1, 34.8),
-                new google.maps.LatLng(33.4, 39.3)
-            ));
-            ac.addListener('place_changed', function() {
-                var place = ac.getPlace();
-                if (place && place.geometry) {
-                    setMapMarker(place.geometry.location.lat(), place.geometry.location.lng(), true);
-                }
-            });
-        }
-    });
-    return true;
-}
-if (!initAddrAutocomplete()) {
-    var _addrAcRetry = setInterval(function(){
-        if (initAddrAutocomplete()) clearInterval(_addrAcRetry);
-    }, 1000);
-    setTimeout(function(){ clearInterval(_addrAcRetry); }, 12000);
-}
 
 /* Working hours toggle */
 $('.wh-closed-toggle').on('change', function(){
