@@ -307,7 +307,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 <?php
 $googleMapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', null)
     ?? Yii::$app->params['googleMapsApiKey'] ?? null;
-if ($googleMapsKey && preg_match('/^AIza[0-9A-Za-z_-]{30,}$/', $googleMapsKey)): ?>
+if ($googleMapsKey): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= Html::encode($googleMapsKey) ?>&libraries=places&language=ar&loading=async" async defer></script>
 <?php endif; ?>
 
@@ -520,7 +520,7 @@ function fallbackMapSearch(q) {
     $('#map-search-results').html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
     var mapCenter = map.getCenter();
     $.getJSON('https://photon.komoot.io/api/', {
-        q: q, lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
+        q: q, lang: 'ar', lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
     }, function(data){
         if (!data || !data.features || data.features.length === 0) {
             $.getJSON('https://nominatim.openstreetmap.org/search', {
