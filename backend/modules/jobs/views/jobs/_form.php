@@ -523,7 +523,7 @@ function fallbackMapSearch(q) {
     if (!q || q.length < 2) { $('#map-search-results').removeClass('show').empty(); return; }
     $('#map-search-results').html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
     $.getJSON('https://photon.komoot.io/api/', {
-        q: q, lang: 'ar', lat: defaultLat, lon: defaultLng, limit: 10
+        q: q, lat: defaultLat, lon: defaultLng, limit: 10
     }, function(data){
         var features = (data && data.features) ? data.features.filter(function(f) {
             var lat = f.geometry.coordinates[1], lng = f.geometry.coordinates[0];
