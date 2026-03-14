@@ -138,7 +138,8 @@ $js = <<<JS
  * ═══════════════════════════════════════════════════════════ */
 (function(){
     var resolveUrl = '$resolveLocationUrl';
-    var defaultLat = 31.95, defaultLng = 35.91;
+    var defaultLat = 31.95, defaultLng = 35.93;
+    var jordanBounds = L.latLngBounds([29.0, 34.8], [33.5, 39.4]);
     var maps = {};
 
     /* ─── Jordanian postal codes fallback ─── */
@@ -237,7 +238,10 @@ $js = <<<JS
         var initLng = parseFloat(lngInput.val()) || defaultLng;
         var initZoom = (latInput.val() && lngInput.val()) ? 15 : 8;
 
-        var map = L.map(container).setView([initLat, initLng], initZoom);
+        var map = L.map(container, {
+            maxBounds: jordanBounds.pad(0.5),
+            maxBoundsViscosity: 0.3
+        }).setView([initLat, initLng], initZoom);
 
         var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ar', {
             attribution: '&copy; Google Maps', maxZoom: 21
@@ -347,12 +351,20 @@ $js = <<<JS
         var resEl = entry.panel.find('.addr-map-search-results');
         resEl.html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
         var c = entry.map.getCenter();
-        $.getJSON('https://photon.komoot.io/api/', { q: q, lang: 'ar', lat: c.lat, lon: c.lng, limit: 6 }, function(data) {
+        $.getJSON('https://photon.komoot.io/api/', {
+            q: q, lang: 'ar', lat: defaultLat, lon: defaultLng, limit: 6,
+            bbox: '34.8,29.0,39.4,33.5'
+        }, function(data) {
             if (!data || !data.features || data.features.length === 0) {
                 nominatimFallback(entry, q); return;
             }
+            var features = data.features.filter(function(f) {
+                var lat = f.geometry.coordinates[1], lng = f.geometry.coordinates[0];
+                return lat >= 29.0 && lat <= 33.5 && lng >= 34.8 && lng <= 39.4;
+            });
+            if (features.length === 0) { nominatimFallback(entry, q); return; }
             var html = '';
-            data.features.forEach(function(f) {
+            features.forEach(function(f) {
                 var p = f.properties, g = f.geometry;
                 var name = p.name || p.street || '';
                 var addr = [p.city, p.state, p.country].filter(Boolean).join('، ');

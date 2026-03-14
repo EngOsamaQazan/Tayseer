@@ -368,12 +368,16 @@ $(document).on('click', '.btn-remove-phone', function(){ $(this).closest('.phone
  *  3. الخريطة التفاعلية (Leaflet + OpenStreetMap)
  * ═══════════════════════════════════════════════════════════ */
 var defaultLat = 31.95;
-var defaultLng = 35.91;
+var defaultLng = 35.93;
+var jordanBounds = L.latLngBounds([29.0, 34.8], [33.5, 39.4]);
 var initLat = parseFloat($('#job-latitude').val()) || defaultLat;
 var initLng = parseFloat($('#job-longitude').val()) || defaultLng;
 var initZoom = ($('#job-latitude').val() && $('#job-longitude').val()) ? 15 : 8;
 
-var map = L.map('job-map-container').setView([initLat, initLng], initZoom);
+var map = L.map('job-map-container', {
+    maxBounds: jordanBounds.pad(0.5),
+    maxBoundsViscosity: 0.3
+}).setView([initLat, initLng], initZoom);
 
 var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ar', {
     attribution: '&copy; Google Maps',
@@ -518,14 +522,18 @@ var _googlePlacesActive = false;
 function fallbackMapSearch(q) {
     if (!q || q.length < 2) { $('#map-search-results').removeClass('show').empty(); return; }
     $('#map-search-results').html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
-    var mapCenter = map.getCenter();
     $.getJSON('https://photon.komoot.io/api/', {
-        q: q, lang: 'ar', lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
+        q: q, lang: 'ar', lat: defaultLat, lon: defaultLng, limit: 6,
+        bbox: '34.8,29.0,39.4,33.5'
     }, function(data){
-        if (!data || !data.features || data.features.length === 0) {
+        var features = (data && data.features) ? data.features.filter(function(f) {
+            var lat = f.geometry.coordinates[1], lng = f.geometry.coordinates[0];
+            return lat >= 29.0 && lat <= 33.5 && lng >= 34.8 && lng <= 39.4;
+        }) : [];
+        if (features.length === 0) {
             $.getJSON('https://nominatim.openstreetmap.org/search', {
                 q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
-                viewbox: '34.8,33.4,39.3,29.1', bounded: 0
+                viewbox: '34.8,29.1,39.3,33.4', bounded: 1
             }, function(nd){
                 if (!nd || nd.length === 0) { $('#map-search-results').html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show'); return; }
                 var html = '';
@@ -540,7 +548,7 @@ function fallbackMapSearch(q) {
             return;
         }
         var html = '';
-        data.features.forEach(function(f){
+        features.forEach(function(f){
             var p = f.properties, g = f.geometry;
             var name = p.name || p.street || '';
             var addr = [p.city, p.state, p.country].filter(Boolean).join('، ');

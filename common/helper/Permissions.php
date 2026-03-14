@@ -163,6 +163,12 @@ class Permissions
     const DIWAN_UPDATE = 'الديوان: تعديل';
     const DIWAN_DELETE = 'الديوان: حذف';
 
+    /* ═══ CRUD — الوظائف (جهات العمل) ═══ */
+    const JOBS_VIEW   = 'الوظائف: مشاهدة';
+    const JOBS_CREATE = 'الوظائف: إضافة';
+    const JOBS_UPDATE = 'الوظائف: تعديل';
+    const JOBS_DELETE = 'الوظائف: حذف';
+
     /* ═══ CRUD — التقارير ═══ */
     const REP_VIEW   = 'التقارير: مشاهدة';
     const REP_EXPORT = 'التقارير: تصدير';
@@ -191,6 +197,7 @@ class Permissions
             self::INVENTORY_ITEMS    => [self::INVITEM_VIEW, self::INVITEM_CREATE, self::INVITEM_UPDATE, self::INVITEM_DELETE],
             self::INVENTORY_INVOICES => [self::INVINV_VIEW, self::INVINV_CREATE, self::INVINV_UPDATE, self::INVINV_DELETE, self::INVINV_APPROVE],
             self::DIWAN     => [self::DIWAN_VIEW, self::DIWAN_CREATE, self::DIWAN_UPDATE, self::DIWAN_DELETE],
+            self::JOBS      => [self::JOBS_VIEW, self::JOBS_CREATE, self::JOBS_UPDATE, self::JOBS_DELETE],
             self::REPORTS   => [self::REP_VIEW, self::REP_EXPORT],
         ];
     }
@@ -351,14 +358,14 @@ class Permissions
             'reports/reports' => [
                 'index' => self::REP_VIEW,
             ],
-            /* جهات العمل — CRUD يحتاج صلاحية الوظائف، لكن search-list مسموح لمن يملك صلاحية عملاء أو عقود */
+            /* جهات العمل — CRUD بصلاحيات تفصيلية، search-list مسموح لمن يملك صلاحية عملاء أو عقود */
             'jobs/jobs' => [
-                'index'       => self::JOBS,
-                'view'        => self::JOBS,
-                'create'      => self::JOBS,
-                'update'      => self::JOBS,
-                'delete'      => self::JOBS,
-                'bulk-delete' => self::JOBS,
+                'index'       => self::JOBS_VIEW,
+                'view'        => self::JOBS_VIEW,
+                'create'      => self::JOBS_CREATE,
+                'update'      => self::JOBS_UPDATE,
+                'delete'      => self::JOBS_DELETE,
+                'bulk-delete' => self::JOBS_DELETE,
             ],
         ];
     }
@@ -425,6 +432,11 @@ class Permissions
             self::CLIENT_RESPONSE,
             self::DOCYUMENT_TYPE,
             self::MESSAGES,
+            self::JOBS,
+            self::JOBS_VIEW,
+            self::JOBS_CREATE,
+            self::JOBS_UPDATE,
+            self::JOBS_DELETE,
         ];
     }
 
@@ -528,7 +540,7 @@ class Permissions
             'workdays/workdays' => [self::WORKDAYS],
             'attendance/attendance' => self::getHrPermissions(),
             'jobs/jobs' => array_merge(
-                [self::JOBS],
+                self::getModulePermissions(self::JOBS),
                 self::getModulePermissions(self::CUSTOMERS),
                 self::getModulePermissions(self::CONTRACTS)
             ),
