@@ -890,6 +890,8 @@
 }
 .perm-clone-item img { width: 28px; height: 28px; border-radius: 50%; }
 
+.perm-search-hidden { display: none !important; }
+
 /* ╔═══════════════════════════════════════╗
    ║  Responsive                          ║
    ╚═══════════════════════════════════════╝ */

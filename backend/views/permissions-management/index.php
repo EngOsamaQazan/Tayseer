@@ -726,10 +726,11 @@ $js = <<<'JSBLOCK'
         $('#modalUserAvatar').attr('src', isValidAvatar ? avatarVal : DEFAULT_AVATAR_PLACEHOLDER);
 
         /* إعادة تعيين */
+        $('#permSearch').val('');
+        $('.perm-item').removeClass('checked perm-search-hidden');
+        $('.perm-group-card').removeClass('perm-group-card--all-selected perm-search-hidden');
         $('.perm-perm-check').prop('checked', false);
-        $('.perm-item').removeClass('checked');
         $('.perm-group-toggle').removeClass('active partial');
-        $('.perm-group-card').removeClass('perm-group-card--all-selected');
         var _pcData = Alpine.$data(document.getElementById('permGroupsContainer'));
         _pcData.loading = true;
 
@@ -848,14 +849,18 @@ $js = <<<'JSBLOCK'
         clearTimeout(permSearchTimer);
         var q = $(this).val().toLowerCase().trim();
         permSearchTimer = setTimeout(function(){
+            if (!q) {
+                $('.perm-item').removeClass('perm-search-hidden');
+                $('.perm-group-card').removeClass('perm-search-hidden');
+                return;
+            }
             $('.perm-item').each(function(){
                 var name = ($(this).data('perm-name') || '').toLowerCase();
-                $(this).toggle(!q || name.indexOf(q) > -1);
+                $(this).toggleClass('perm-search-hidden', name.indexOf(q) === -1);
             });
-            /* إخفاء/إظهار المجموعات الفارغة */
             $('.perm-group-card').each(function(){
-                var visibleItems = $(this).find('.perm-item:visible').length;
-                $(this).toggle(visibleItems > 0);
+                var hasMatch = $(this).find('.perm-item:not(.perm-search-hidden)').length > 0;
+                $(this).toggleClass('perm-search-hidden', !hasMatch);
             });
         }, 200);
     });
