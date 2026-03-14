@@ -31,7 +31,7 @@ $saveLocationUrl    = Url::to(['save-location']);
 $deleteLocationUrl  = Url::to(['delete-location']);
 $googleMapsKey     = \common\models\SystemSettings::get('google_maps', 'api_key', null)
     ?? Yii::$app->params['googleMapsApiKey'] ?? null;
-$useGoogleMaps     = !empty($googleMapsKey);
+$useGoogleMaps     = !empty($googleMapsKey) && strpos($googleMapsKey, 'AIza') === 0;
 ?>
 
 <?php if (!$useGoogleMaps): ?>

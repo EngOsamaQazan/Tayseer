@@ -126,7 +126,7 @@ DynamicFormWidget::begin([
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<?php if ($googleMapsKey): ?>
+<?php if ($googleMapsKey && strpos($googleMapsKey, 'AIza') === 0): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= Html::encode($googleMapsKey) ?>&libraries=places&language=ar&loading=async" async defer></script>
 <?php endif; ?>
 

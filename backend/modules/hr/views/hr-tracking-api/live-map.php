@@ -3,7 +3,8 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 $this->title = 'التتبع المباشر — خريطة حية';
-$mapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', '');
+$_mapsKeyRaw = \common\models\SystemSettings::get('google_maps', 'api_key', '');
+$mapsKey = ($_mapsKeyRaw && strpos($_mapsKeyRaw, 'AIza') === 0) ? $_mapsKeyRaw : '';
 $liveDataUrl = Url::to(['/hr/hr-tracking-api/live-data']);
 $summaryUrl = Url::to(['/hr/hr-tracking-api/attendance-summary']);
 ?>

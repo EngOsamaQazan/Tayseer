@@ -281,6 +281,10 @@ class SiteController extends Controller
 
             if ($tab === 'google_maps') {
                 $newKey = trim($post['gm_api_key'] ?? '');
+                if ($newKey !== '' && strpos($newKey, 'AIza') !== 0) {
+                    Yii::$app->session->setFlash('error', 'مفتاح Google Maps غير صالح — يجب أن يبدأ بـ AIza');
+                    return $this->redirect(['system-settings', 'tab' => 'google_apis']);
+                }
                 $existingKey = SystemSettings::get('google_maps', 'api_key', '');
                 $keyToSave = $newKey !== '' ? $newKey : $existingKey;
                 SystemSettings::set('google_maps', 'api_key', $keyToSave, true, 'Google Maps API Key');

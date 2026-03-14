@@ -168,7 +168,8 @@ $typeColors = [
         </div>
 
         <?php
-        $mapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', '');
+        $_mapsKeyRaw = \common\models\SystemSettings::get('google_maps', 'api_key', '');
+        $mapsKey = ($_mapsKeyRaw && strpos($_mapsKeyRaw, 'AIza') === 0) ? $_mapsKeyRaw : '';
         if ($mapsKey):
         ?>
         <script>

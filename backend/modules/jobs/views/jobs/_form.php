@@ -307,7 +307,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 <?php
 $googleMapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', null)
     ?? Yii::$app->params['googleMapsApiKey'] ?? null;
-if ($googleMapsKey): ?>
+if ($googleMapsKey && strpos($googleMapsKey, 'AIza') === 0): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= Html::encode($googleMapsKey) ?>&libraries=places&language=ar&loading=async" async defer></script>
 <?php endif; ?>
 
