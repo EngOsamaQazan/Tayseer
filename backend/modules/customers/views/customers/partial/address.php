@@ -353,8 +353,7 @@ $js = <<<JS
         resEl.html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
         var c = entry.map.getCenter();
         $.getJSON('https://photon.komoot.io/api/', {
-            q: q, lang: 'ar', lat: defaultLat, lon: defaultLng, limit: 6,
-            bbox: '34.8,29.0,39.4,33.5'
+            q: q, lang: 'ar', lat: defaultLat, lon: defaultLng, limit: 10
         }, function(data) {
             if (!data || !data.features || data.features.length === 0) {
                 nominatimFallback(entry, q); return;
