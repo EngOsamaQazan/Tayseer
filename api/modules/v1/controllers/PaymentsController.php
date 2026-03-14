@@ -54,7 +54,7 @@ class PaymentsController extends Controller
 
         $response = [
             'name'   => $name,
-            'amount' => $deserved ?: $remaining,
+            'amount' => $deserved,
             'min'    => min($installment, $remaining) ?: 1,
             'max'    => $remaining,
         ];
@@ -73,7 +73,7 @@ class PaymentsController extends Controller
 
         $response = [
             'name'   => $name,
-            'amount' => $deserved ?: $remaining,
+            'amount' => $deserved,
             'min'    => min($installment, $remaining) ?: 1,
             'max'    => $remaining,
         ];
