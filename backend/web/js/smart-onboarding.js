@@ -96,6 +96,19 @@
             if (this._iti) this._iti.handleUtils();
         });
 
+        // Fix Leaflet maps inside newly visible step
+        setTimeout(function() {
+            $section.find('.leaflet-container').each(function() {
+                var mapInstance = $(this).data('leafletMap');
+                if (mapInstance) {
+                    mapInstance.invalidateSize();
+                } else if (this._leaflet_id && L && L.Map) {
+                    // Fallback: trigger map:show on the parent panel
+                    $(this).closest('.addrres-item').trigger('map:show');
+                }
+            });
+        }, 350);
+
         // Scroll to top
         $('.so-form-area').scrollTop(0);
     }

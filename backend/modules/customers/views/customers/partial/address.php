@@ -258,6 +258,7 @@ $js = <<<JS
 
         var entry = { map: map, marker: null, panel: panel };
         maps[pid] = entry;
+        $(container).data('leafletMap', map);
 
         map.on('click', function(e) {
             setMarker(entry, e.latlng.lat, e.latlng.lng, false);
@@ -404,10 +405,15 @@ $js = <<<JS
         var entry = initMap(panel);
         if (entry) {
             setTimeout(function(){ entry.map.invalidateSize(); }, 100);
+            setTimeout(function(){ entry.map.invalidateSize(); }, 400);
+            setTimeout(function(){
+                entry.map.invalidateSize();
+                entry.map.setView(entry.map.getCenter(), entry.map.getZoom());
+            }, 800);
         }
     });
 
-    // Auto-init all maps on page load
+    // Auto-init all maps on page load (only for visible containers)
     setTimeout(function() {
         $('.addrres-item').each(function() {
             var panel = $(this);
