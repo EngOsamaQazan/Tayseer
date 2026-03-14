@@ -309,6 +309,7 @@ return [
         'user' => [
             'identityClass' => 'common\models\User',
             'enableAutoLogin' => true,
+            'loginUrl' => ['/user/login'],
             'identityCookie' => ['name' => '_identity-website', 'httpOnly' => true],
         ],
         'session' => [
