@@ -74,7 +74,7 @@ $mainMenuItems = [
     ['label' => 'إعدادات النظام', 'icon' => 'cogs', 'url' => ['/site/system-settings'], 'privilege' => Permissions::getSettingsPermissions()],
 
     // ─── تسجيل الدخول (للزوار) ───
-    ['label' => 'تسجيل الدخول', 'url' => ['site/login'], 'visible' => Yii::$app->user->isGuest],
+    ['label' => 'تسجيل الدخول', 'url' => ['/user/login'], 'visible' => Yii::$app->user->isGuest],
 ];
 
 return Permissions::checkMainMenuItems($mainMenuItems);

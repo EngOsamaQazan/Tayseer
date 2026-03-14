@@ -54,7 +54,7 @@ class HrFieldController extends Controller
                         return $action->controller->redirect(['mobile-login']);
                     }
                     // Default: redirect to standard login
-                    return $action->controller->redirect(['/site/login']);
+                    return $action->controller->redirect(['/user/login']);
                 },
                 'rules' => [
                     [
