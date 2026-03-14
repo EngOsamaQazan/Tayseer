@@ -69,16 +69,25 @@ class ContractsSearch extends Contracts
         $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
 
         $nameParts = [];
-        $params = [':qInt' => (int)$q, ':qLike' => '%' . $q . '%'];
+        $qLike = '%' . $q . '%';
+        $params = [
+            ':qIntContract' => (int)$q,
+            ':qIntCustomer' => (int)$q,
+            ':qLikeId'      => $qLike,
+            ':qLikePhone'   => $qLike,
+        ];
         foreach ($words as $i => $w) {
-            $p = ':nw' . $i;
-            $nameParts[] = "($normExpr LIKE $p OR $normNoSpace LIKE $p)";
-            $params[$p] = '%' . self::arabicNormalize($w) . '%';
+            $p1 = ':nw' . $i . 'a';
+            $p2 = ':nw' . $i . 'b';
+            $wNorm = '%' . self::arabicNormalize($w) . '%';
+            $nameParts[] = "($normExpr LIKE $p1 OR $normNoSpace LIKE $p2)";
+            $params[$p1] = $wNorm;
+            $params[$p2] = $wNorm;
         }
         $nameClause = implode(' AND ', $nameParts);
 
         $query->andWhere(
-            "os_contracts.id = :qInt OR c.id = :qInt OR ($nameClause) OR c.id_number LIKE :qLike OR c.primary_phone_number LIKE :qLike",
+            "os_contracts.id = :qIntContract OR c.id = :qIntCustomer OR ($nameClause) OR c.id_number LIKE :qLikeId OR c.primary_phone_number LIKE :qLikePhone",
             $params
         );
     }

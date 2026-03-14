@@ -56,22 +56,26 @@ class ShareholdersController extends Controller
             $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
             $wNorm = str_replace('ة', 'ه', $wNorm);
             $wNorm = str_replace('ى', 'ي', $wNorm);
-            $p = ':nw' . $i;
-            $nameClauses[] = "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)";
-            $nameParams[$p] = '%' . $wNorm . '%';
+            $p1 = ':nw' . $i . 'a';
+            $p2 = ':nw' . $i . 'b';
+            $likeVal = '%' . $wNorm . '%';
+            $nameClauses[] = "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)";
+            $nameParams[$p1] = $likeVal;
+            $nameParams[$p2] = $likeVal;
         }
         $nameClause = implode(' AND ', $nameClauses);
+        $qLike = '%' . $q . '%';
 
         $rows = $db->createCommand(
             "SELECT id, name, phone, national_id, email
              FROM {{%shareholders}}
              WHERE ($nameClause)
-                OR phone LIKE :qLike
-                OR national_id LIKE :qLike
-                OR email LIKE :qLike
+                OR phone LIKE :qLikePhone
+                OR national_id LIKE :qLikeNid
+                OR email LIKE :qLikeEmail
              ORDER BY id DESC
              LIMIT 10",
-            array_merge([':qLike' => '%' . $q . '%'], $nameParams)
+            array_merge([':qLikePhone' => $qLike, ':qLikeNid' => $qLike, ':qLikeEmail' => $qLike], $nameParams)
         )->queryAll();
 
         $results = [];

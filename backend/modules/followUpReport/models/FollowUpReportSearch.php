@@ -65,10 +65,13 @@ class FollowUpReportSearch extends FollowUpReport
 
         foreach ($words as $w) {
             $wNorm = self::arabicNormalize($w);
-            $p = ':cw' . (self::$cwIdx++);
+            $idx = self::$cwIdx++;
+            $p1 = ':cw' . $idx . 'a';
+            $p2 = ':cw' . $idx . 'b';
+            $likeVal = '%' . $wNorm . '%';
             $nameExpr = new \yii\db\Expression(
-                "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)",
-                [$p => '%' . $wNorm . '%']
+                "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)",
+                [$p1 => $likeVal, $p2 => $likeVal]
             );
             $or = ['or', $nameExpr,
                 ['like', 'c.id_number', $w],

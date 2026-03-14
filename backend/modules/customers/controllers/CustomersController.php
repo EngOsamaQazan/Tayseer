@@ -602,11 +602,17 @@ class CustomersController extends Controller
             $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
             $wNorm = str_replace('ة', 'ه', $wNorm);
             $wNorm = str_replace('ى', 'ي', $wNorm);
-            $p = ':nw' . $i;
-            $nameClauses[] = "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)";
-            $nameParams[$p] = '%' . $wNorm . '%';
+            $p1 = ':nw' . $i . 'a';
+            $p2 = ':nw' . $i . 'b';
+            $likeVal = '%' . $wNorm . '%';
+            $nameClauses[] = "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)";
+            $nameParams[$p1] = $likeVal;
+            $nameParams[$p2] = $likeVal;
         }
         $nameClause = implode(' AND ', $nameClauses);
+
+        $qLike = '%' . $q . '%';
+        $qNormLike = '%' . str_replace('ى', 'ي', str_replace('ة', 'ه', str_replace(['أ', 'إ', 'آ'], 'ا', $q))) . '%';
 
         $rows = $db->createCommand(
             "SELECT c.id, c.name, c.id_number, c.primary_phone_number, c.city,
@@ -617,16 +623,17 @@ class CustomersController extends Controller
                AND (
                    c.id = :qInt
                    OR ($nameClause)
-                   OR c.id_number LIKE :qLike
-                   OR c.primary_phone_number LIKE :qLike
+                   OR c.id_number LIKE :qLikeId
+                   OR c.primary_phone_number LIKE :qLikePhone
                    OR REPLACE(REPLACE(REPLACE(REPLACE(j.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي') LIKE :qNormLike
                )
              ORDER BY c.id DESC
              LIMIT 10",
             array_merge([
-                ':qInt'  => (int)$q,
-                ':qLike' => '%' . $q . '%',
-                ':qNormLike' => '%' . str_replace('ى', 'ي', str_replace('ة', 'ه', str_replace(['أ', 'إ', 'آ'], 'ا', $q))) . '%',
+                ':qInt'      => (int)$q,
+                ':qLikeId'   => $qLike,
+                ':qLikePhone'=> $qLike,
+                ':qNormLike' => $qNormLike,
             ], $nameParams)
         )->queryAll();
 

@@ -103,9 +103,12 @@ class CompaniesController extends Controller
             $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
             $wNorm = str_replace('ة', 'ه', $wNorm);
             $wNorm = str_replace('ى', 'ي', $wNorm);
-            $p = ':nw' . $i;
-            $nameClauses[] = "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)";
-            $nameParams[$p] = '%' . $wNorm . '%';
+            $p1 = ':nw' . $i . 'a';
+            $p2 = ':nw' . $i . 'b';
+            $likeVal = '%' . $wNorm . '%';
+            $nameClauses[] = "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)";
+            $nameParams[$p1] = $likeVal;
+            $nameParams[$p2] = $likeVal;
         }
         $nameClause = implode(' AND ', $nameClauses);
 
@@ -113,10 +116,10 @@ class CompaniesController extends Controller
             "SELECT id, name, phone_number
              FROM {{%companies}}
              WHERE ($nameClause)
-                OR phone_number LIKE :qLike
+                OR phone_number LIKE :qLikePhone
              ORDER BY id DESC
              LIMIT 10",
-            array_merge([':qLike' => '%' . $q . '%'], $nameParams)
+            array_merge([':qLikePhone' => '%' . $q . '%'], $nameParams)
         )->queryAll();
 
         $results = [];

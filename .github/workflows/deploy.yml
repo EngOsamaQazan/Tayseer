@@ -94,27 +94,9 @@ jobs:
               echo "  Done!"
             }
             
-            # List available sites for diagnostics
-            echo "=== Available sites in /var/www/ ==="
-            ls -d /var/www/*aqssat* 2>/dev/null || echo "  No aqssat directories found"
-            echo ""
-            
-            # Deploy vite.* domains
-            deploy_site "/var/www/vite.jadal.aqssat.co" "prod_jadal"
-            deploy_site "/var/www/vite.namaa.aqssat.co" "prod_namaa"
-            
-            # Deploy main domains (without vite. prefix)
-            if [ -d "/var/www/jadal.aqssat.co" ]; then
-              deploy_site "/var/www/jadal.aqssat.co" "prod_jadal"
-            else
-              echo "⚠ /var/www/jadal.aqssat.co not found — skipping"
-            fi
-            
-            if [ -d "/var/www/namaa.aqssat.co" ]; then
-              deploy_site "/var/www/namaa.aqssat.co" "prod_namaa"
-            else
-              echo "⚠ /var/www/namaa.aqssat.co not found — skipping"
-            fi
+            # Deploy main domains
+            deploy_site "/var/www/jadal.aqssat.co" "prod_jadal"
+            deploy_site "/var/www/namaa.aqssat.co" "prod_namaa"
             
             # Clear OPcache + PHP-FPM by restarting services
             echo "=== Clearing OPcache ==="
@@ -122,11 +104,9 @@ jobs:
             systemctl restart "php${PHP_VER}-fpm" 2>/dev/null || true
             systemctl reload apache2 2>/dev/null || systemctl restart apache2 2>/dev/null || true
             
-            # Flush Yii2 caches for all sites
-            for site_dir in /var/www/vite.jadal.aqssat.co /var/www/vite.namaa.aqssat.co /var/www/jadal.aqssat.co /var/www/namaa.aqssat.co; do
-              if [ -d "$site_dir" ]; then
-                cd "$site_dir" && php yii cache/flush-all 2>/dev/null || true
-              fi
+            # Flush Yii2 caches
+            for site_dir in /var/www/jadal.aqssat.co /var/www/namaa.aqssat.co; do
+              cd "$site_dir" && php yii cache/flush-all 2>/dev/null || true
             done
             
             echo ""

@@ -38,10 +38,13 @@ class ShareholdersSearch extends Shareholders
             $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
             $wNorm = str_replace('ة', 'ه', $wNorm);
             $wNorm = str_replace('ى', 'ي', $wNorm);
-            $p = ':cw' . (self::$cwIdx++);
+            $idx = self::$cwIdx++;
+            $p1 = ':cw' . $idx . 'a';
+            $p2 = ':cw' . $idx . 'b';
+            $likeVal = '%' . $wNorm . '%';
             $nameExpr = new \yii\db\Expression(
-                "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)",
-                [$p => '%' . $wNorm . '%']
+                "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)",
+                [$p1 => $likeVal, $p2 => $likeVal]
             );
             $or = ['or', $nameExpr,
                 ['like', 'os_shareholders.phone', $w],

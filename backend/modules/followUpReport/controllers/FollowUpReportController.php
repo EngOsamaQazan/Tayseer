@@ -85,11 +85,15 @@ class FollowUpReportController extends Controller
             $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
             $wNorm = str_replace('ة', 'ه', $wNorm);
             $wNorm = str_replace('ى', 'ي', $wNorm);
-            $p = ':nw' . $i;
-            $nameClauses[] = "($nameNorm LIKE $p OR $nameNormNoSpace LIKE $p)";
-            $nameParams[$p] = '%' . $wNorm . '%';
+            $p1 = ':nw' . $i . 'a';
+            $p2 = ':nw' . $i . 'b';
+            $likeVal = '%' . $wNorm . '%';
+            $nameClauses[] = "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)";
+            $nameParams[$p1] = $likeVal;
+            $nameParams[$p2] = $likeVal;
         }
         $nameClause = implode(' AND ', $nameClauses);
+        $qLike = '%' . $q . '%';
 
         $rows = $db->createCommand(
             "SELECT c.id, c.status,
@@ -102,18 +106,20 @@ class FollowUpReportController extends Controller
              WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
                AND c.status NOT IN ('finished','canceled')
                AND (
-                   c.id = :qInt
+                   c.id = :qIntContract
                    OR ($nameClause)
-                   OR cu.id_number LIKE :qLike
-                   OR cu.primary_phone_number LIKE :qLike
-                   OR cu.id = :qInt
+                   OR cu.id_number LIKE :qLikeId
+                   OR cu.primary_phone_number LIKE :qLikePhone
+                   OR cu.id = :qIntCustomer
                )
              GROUP BY c.id
              ORDER BY c.id DESC
              LIMIT 10"
         , array_merge([
-            ':qInt'  => (int)$q,
-            ':qLike' => '%' . $q . '%',
+            ':qIntContract' => (int)$q,
+            ':qIntCustomer' => (int)$q,
+            ':qLikeId'      => $qLike,
+            ':qLikePhone'   => $qLike,
         ], $nameParams))->queryAll();
 
         $statusLabels = [
