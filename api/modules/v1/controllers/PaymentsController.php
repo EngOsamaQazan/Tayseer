@@ -45,18 +45,18 @@ class PaymentsController extends Controller
 
     public function actionContractEnquiry($contract_id)
     {
-        $contractCalculations = new ContractCalculations($contract_id);
-        $remaining_amount =  $contractCalculations->calculationRemainingAmount();
-        $deservedAmount = $contractCalculations->deservedAmount();
-        $min = ($contractCalculations->contract_model->monthly_installment_value) ? $contractCalculations->contract_model->monthly_installment_value : 0 ;
-        $customers = $contractCalculations->contract_model->getCustomersAndGuarantor();
-        $customers = $contractCalculations->contract_model->getCustomersName($contractCalculations->contract_id);
-        $name = implode(',',$customers);
+        $calc = new ContractCalculations($contract_id);
+        $remaining   = $calc->remainingAmount();
+        $deserved    = $calc->deservedAmount();
+        $installment = $calc->effectiveInstallment();
+        $customers   = $calc->contract_model->getCustomersName($calc->contract_id);
+        $name        = implode(',', $customers);
+
         $response = [
-            'name' => $name,
-            'amount' => 1, // amount from contract - paid amount
-            'min' => $min, // instelment value
-            'max' => $remaining_amount // amount from contract - paid amount
+            'name'   => $name,
+            'amount' => $deserved ?: $remaining,
+            'min'    => min($installment, $remaining) ?: 1,
+            'max'    => $remaining,
         ];
 
         return ApiResponse::get(200, $response);
@@ -64,17 +64,18 @@ class PaymentsController extends Controller
 
     public function actionFlatContractEnquiry($contract_id)
     {
-        $contractCalculations = new ContractCalculations($contract_id);
-        $remaining_amount =  $contractCalculations->calculationRemainingAmount();
-        $deservedAmount = $contractCalculations->deservedAmount();
-        $min = ($contractCalculations->contract_model->monthly_installment_value) ? $contractCalculations->contract_model->monthly_installment_value : 0 ;
-        $customers = $contractCalculations->contract_model->getCustomersName($contractCalculations->contract_id);
-        $name = implode(',',$customers);
+        $calc = new ContractCalculations($contract_id);
+        $remaining   = $calc->remainingAmount();
+        $deserved    = $calc->deservedAmount();
+        $installment = $calc->effectiveInstallment();
+        $customers   = $calc->contract_model->getCustomersName($calc->contract_id);
+        $name        = implode(',', $customers);
+
         $response = [
-            'name' => $name,
-            'amount' => 1, // amount from contract - paid amount
-            'min' => $min, // instelment value
-            'max' => $remaining_amount // amount from contract - paid amount
+            'name'   => $name,
+            'amount' => $deserved ?: $remaining,
+            'min'    => min($installment, $remaining) ?: 1,
+            'max'    => $remaining,
         ];
 
         return $response;
