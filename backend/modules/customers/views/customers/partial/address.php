@@ -1,6 +1,7 @@
 <?php
 /**
- * نموذج ديناميكي - عناوين العميل (بنفس أسلوب جهات العمل)
+ * نموذج ديناميكي - عناوين العميل
+ * كود الخريطة منقول بالكامل من شاشة الوظائف (_form.php)
  */
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -82,11 +83,11 @@ DynamicFormWidget::begin([
                     <div class="row">
                         <div class="col-md-12">
                             <div class="addr-map-search-wrap">
-                                <input type="text" class="form-control addr-map-search" placeholder="ابحث عن موقع..." autocomplete="off">
+                                <input type="text" class="form-control addr-map-search" placeholder="ابحث عن موقع (مثل: مستشفى الأمير حمزة، شركة نماء عمان)..." autocomplete="off">
                                 <button type="button" class="addr-map-search-btn" title="بحث"><i class="fa fa-search"></i></button>
                                 <div class="addr-map-search-results"></div>
                             </div>
-                            <div class="addr-map-container" style="height:300px;border-radius:8px;margin-top:8px"></div>
+                            <div class="addr-map-container" style="height:350px;border-radius:8px;margin-top:8px"></div>
                         </div>
                     </div>
                     <div class="row" style="margin-top:8px">
@@ -120,7 +121,7 @@ DynamicFormWidget::begin([
 
 <?php DynamicFormWidget::end() ?>
 
-<!-- Leaflet -->
+<!-- Leaflet CSS/JS from CDN -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -132,14 +133,16 @@ DynamicFormWidget::begin([
 $js = <<<JS
 
 /* ═══════════════════════════════════════════════════════════
- *  Customer Address Maps — dynamic per-item map management
+ *  Customer Address Maps
+ *  منقول بالكامل من شاشة الوظائف - مع دعم عناوين متعددة
  * ═══════════════════════════════════════════════════════════ */
 (function(){
     var resolveUrl = '$resolveLocationUrl';
-    var defaultLat = 31.95, defaultLng = 35.91;
+    var defaultLat = 31.95;
+    var defaultLng = 35.91;
     var maps = {};
 
-    /* ─── Jordanian postal codes fallback ─── */
+    /* ─── Jordanian postal codes fallback table ─── */
     var _joPostal = {
         'عمان':'11110','جبل عمان':'11181','العبدلي':'11190','الشميساني':'11194','جبل الحسين':'11118',
         'جبل اللويبدة':'11191','ماركا':'11511','طارق':'11947','الهاشمي':'11141','المقابلين':'11710',
@@ -171,6 +174,7 @@ $js = <<<JS
         return '';
     }
 
+    /* ─── Plus Code (Open Location Code) encoder ─── */
     function encodePlusCode(lat, lng) {
         var CHARS = '23456789CFGHJMPQRVWX';
         lat = Math.min(90, Math.max(-90, lat)) + 90;
@@ -189,8 +193,10 @@ $js = <<<JS
         return code;
     }
 
+    /* ─── Parse location input (coordinates, URLs, DMS) ─── */
     function parseLocationInput(raw) {
         var m;
+        /* 1. Decimal coordinates */
         m = raw.match(/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/);
         if (m) {
             var a = parseFloat(m[1]), b = parseFloat(m[2]);
@@ -199,29 +205,34 @@ $js = <<<JS
                 if (Math.abs(b) <= 90 && Math.abs(a) <= 180) return {lat: b, lng: a};
             }
         }
+        /* 2. Google Maps URL with coordinates */
         m = raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
         if (m) return {lat: parseFloat(m[1]), lng: parseFloat(m[2])};
         m = raw.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
         if (m) return {lat: parseFloat(m[1]), lng: parseFloat(m[2])};
         m = raw.match(/!3d(-?\d+\.\d+).*!4d(-?\d+\.\d+)/);
         if (m) return {lat: parseFloat(m[1]), lng: parseFloat(m[2])};
+        /* 3. DMS coordinates */
         var dmsRe = /(\d+)[°](\d+)[′''](\d+\.?\d*)[″""]?\s*([NSns])\s*,?\s*(\d+)[°](\d+)[′''](\d+\.?\d*)[″""]?\s*([EWew])/;
         m = raw.match(dmsRe);
         if (m) {
-            var lat2 = parseInt(m[1]) + parseInt(m[2])/60 + parseFloat(m[3])/3600;
-            if (m[4].toLowerCase() === 's') lat2 = -lat2;
-            var lng2 = parseInt(m[5]) + parseInt(m[6])/60 + parseFloat(m[7])/3600;
-            if (m[8].toLowerCase() === 'w') lng2 = -lng2;
-            return {lat: lat2, lng: lng2};
+            var lat = parseInt(m[1]) + parseInt(m[2])/60 + parseFloat(m[3])/3600;
+            if (m[4].toLowerCase() === 's') lat = -lat;
+            var lng = parseInt(m[5]) + parseInt(m[6])/60 + parseFloat(m[7])/3600;
+            if (m[8].toLowerCase() === 'w') lng = -lng;
+            return {lat: lat, lng: lng};
         }
         return null;
     }
 
-    /* ─── Get item panel reference ─── */
+    /* ─── Panel helpers ─── */
     function getPanel(el) { return $(el).closest('.addrres-item'); }
     function getPanelId(panel) { return panel.data('addr-idx') || panel.index(); }
 
-    /* ─── Init map for a panel ─── */
+    /* ═══════════════════════════════════════════════════════════
+     *  الخريطة التفاعلية (Leaflet + OpenStreetMap)
+     *  — نسخة طبق الأصل من شاشة الوظائف
+     * ═══════════════════════════════════════════════════════════ */
     function initMap(panel) {
         var pid = getPanelId(panel);
         if (maps[pid]) return maps[pid];
@@ -248,9 +259,13 @@ $js = <<<JS
         });
 
         googleStreets.addTo(map);
-        L.control.layers({'خريطة Google': googleStreets, 'قمر صناعي': googleHybrid, 'OpenStreetMap': osmLayer}, null, {position: 'topright'}).addTo(map);
+        L.control.layers({
+            'خريطة Google': googleStreets,
+            'قمر صناعي': googleHybrid,
+            'OpenStreetMap': osmLayer
+        }, null, {position: 'topright'}).addTo(map);
 
-        var entry = { map: map, marker: null, panel: panel };
+        var entry = { map: map, marker: null, panel: panel, _googlePlacesActive: false };
         maps[pid] = entry;
 
         map.on('click', function(e) {
@@ -262,10 +277,13 @@ $js = <<<JS
         }
 
         setTimeout(function(){ map.invalidateSize(); }, 200);
+
+        tryInitGooglePlaces(entry);
+
         return entry;
     }
 
-    /* ─── Set marker and reverse geocode ─── */
+    /* ─── Set marker ─── */
     function setMarker(entry, lat, lng, flyTo) {
         var panel = entry.panel;
         if (entry.marker) entry.map.removeLayer(entry.marker);
@@ -284,68 +302,58 @@ $js = <<<JS
         reverseGeocode(entry, lat, lng);
     }
 
-    /* ─── Reverse geocode ─── */
+    /* ─── Reverse Geocoding: coordinates → address fields ─── */
+    var _rgTimers = {};
     function reverseGeocode(entry, lat, lng) {
         var panel = entry.panel;
+        var pid = getPanelId(panel);
+        clearTimeout(_rgTimers[pid]);
+
         var plusCode = encodePlusCode(lat, lng);
         panel.find('.addr-plus-code').val(plusCode);
 
-        $.getJSON('https://nominatim.openstreetmap.org/reverse', {
-            lat: lat, lon: lng, format: 'json', addressdetails: 1,
-            'accept-language': 'ar', zoom: 18
-        }, function(data) {
-            var a = (data && data.address) ? data.address : {};
-            var city = a.city || a.town || a.village || a.county || a.state || '';
-            var area = a.suburb || a.neighbourhood || a.quarter || a.hamlet || '';
-            var street = a.road || a.pedestrian || a.footway || '';
-            var building = a.house_number || '';
-            var postal = a.postcode || lookupPostal(city, area);
+        _rgTimers[pid] = setTimeout(function() {
+            $.getJSON('https://nominatim.openstreetmap.org/reverse', {
+                lat: lat, lon: lng, format: 'json', addressdetails: 1,
+                'accept-language': 'ar', zoom: 18
+            }, function(data) {
+                var a = (data && data.address) ? data.address : {};
 
-            panel.find('[data-addr=city]').val(city);
-            panel.find('[data-addr=area]').val(area);
-            panel.find('[data-addr=street]').val(street);
-            panel.find('input[name*="address_building"]').val(building);
-            panel.find('input[name*="postal_code"]').val(postal);
+                var city = a.city || a.town || a.village || a.county || a.state || '';
+                var area = a.suburb || a.neighbourhood || a.quarter || a.hamlet || '';
+                var street = a.road || a.pedestrian || a.footway || '';
+                var building = a.house_number || '';
+                var postal = a.postcode || lookupPostal(city, area);
 
-            panel.find('.addr-field, input[name*="address_building"], input[name*="postal_code"]').filter(function(){ return $(this).val(); }).addClass('geo-filled');
-            setTimeout(function(){ panel.find('.geo-filled').removeClass('geo-filled'); }, 2500);
+                panel.find('[data-addr=city]').val(city);
+                panel.find('[data-addr=area]').val(area);
+                panel.find('[data-addr=street]').val(street);
+                panel.find('input[name*="address_building"]').val(building);
+                panel.find('input[name*="postal_code"]').val(postal);
 
-            var popup = '<div style="direction:rtl;font-size:12px;line-height:1.6;max-width:240px">';
-            var parts = [street, area, city].filter(Boolean);
-            popup += '<strong>' + (parts.length ? parts.join('، ') : (data && data.display_name ? data.display_name.split('،').slice(0,3).join('،') : '')) + '</strong>';
-            if (postal) popup += '<br><i class="fa fa-envelope-o" style="color:#94a3b8"></i> ' + postal;
-            if (plusCode) popup += '<br><span style="color:#4285f4;font-family:monospace;font-size:11px"><i class="fa fa-plus-square"></i> ' + plusCode + '</span>';
-            popup += '</div>';
-            if (entry.marker) entry.marker.bindPopup(popup).openPopup();
-        });
+                panel.find('.addr-field, input[name*="address_building"], input[name*="postal_code"]').filter(function() { return $(this).val(); }).addClass('geo-filled');
+                setTimeout(function() { panel.find('.geo-filled').removeClass('geo-filled'); }, 2500);
+
+                var popup = '<div style="direction:rtl;font-size:12px;line-height:1.6;max-width:240px">';
+                var parts = [street, area, city].filter(Boolean);
+                popup += '<strong>' + (parts.length ? parts.join('، ') : (data && data.display_name ? data.display_name.split('،').slice(0,3).join('،') : '')) + '</strong>';
+                if (postal) popup += '<br><i class="fa fa-envelope-o" style="color:#94a3b8"></i> ' + postal;
+                if (plusCode) popup += '<br><span style="color:#4285f4;font-family:monospace;font-size:11px"><i class="fa fa-plus-square"></i> ' + plusCode + '</span>';
+                popup += '</div>';
+                if (entry.marker) entry.marker.bindPopup(popup).openPopup();
+            });
+        }, 300);
     }
 
-    /* ─── Forward geocode (addr fields → map) ─── */
-    function forwardGeocode(entry) {
-        var panel = entry.panel;
-        var parts = [
-            panel.find('[data-addr=street]').val(),
-            panel.find('[data-addr=area]').val(),
-            panel.find('[data-addr=city]').val()
-        ].filter(Boolean);
-        if (!parts.length) return;
-        $.getJSON('https://nominatim.openstreetmap.org/search', {
-            q: parts.join(', '), format: 'json', limit: 1, 'accept-language': 'ar',
-            viewbox: '34.8,33.4,39.3,29.1', bounded: 1
-        }, function(results) {
-            if (results && results.length > 0) {
-                setMarker(entry, parseFloat(results[0].lat), parseFloat(results[0].lon), true);
-            }
-        });
-    }
-
-    /* ─── Map search (مطابق لشاشة الوظائف) ─── */
-    function doMapSearch(entry, q) {
+    /* ─── بحث على الخريطة — نسخة طبق الأصل من الوظائف ─── */
+    function fallbackMapSearch(entry, q) {
         if (!q || q.length < 2) { entry.panel.find('.addr-map-search-results').removeClass('show').empty(); return; }
         var resEl = entry.panel.find('.addr-map-search-results');
         resEl.html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
-        var c = entry.map.getCenter();
-        $.getJSON('https://photon.komoot.io/api/', { q: q, lat: c.lat, lon: c.lng, limit: 6 }, function(data) {
+        var mapCenter = entry.map.getCenter();
+        $.getJSON('https://photon.komoot.io/api/', {
+            q: q, lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
+        }, function(data){
             if (!data || !data.features || data.features.length === 0) {
                 $.getJSON('https://nominatim.openstreetmap.org/search', {
                     q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
@@ -389,11 +397,11 @@ $js = <<<JS
             });
             resEl.html(html).addClass('show');
         }).fail(function(){
-            nominatimFallback(entry, q);
+            doNominatimFallback(entry, q);
         });
     }
 
-    function nominatimFallback(entry, q) {
+    function doNominatimFallback(entry, q) {
         var resEl = entry.panel.find('.addr-map-search-results');
         $.getJSON('https://nominatim.openstreetmap.org/search', {
             q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
@@ -413,9 +421,72 @@ $js = <<<JS
         });
     }
 
-    /* ─── Event Delegation ─── */
+    /* ─── Google Places Autocomplete — نسخة طبق الأصل من الوظائف ─── */
+    function tryInitGooglePlaces(entry) {
+        if (typeof google === 'undefined' || !google.maps || !google.maps.places) return false;
+        if (entry._googlePlacesActive) return true;
 
-    // Toggle map section (collapse/expand)
+        var wrap = entry.panel.find('.addr-map-search-wrap')[0];
+        if (!wrap) return false;
+
+        if (google.maps.places.PlaceAutocompleteElement) {
+            try {
+                var pac = new google.maps.places.PlaceAutocompleteElement({
+                    locationBias: { north: 33.4, south: 29.1, east: 39.3, west: 34.8 }
+                });
+                pac.id = 'gmp-place-input-' + getPanelId(entry.panel);
+                pac.style.cssText = 'width:100%;';
+                pac.setAttribute('placeholder', 'ابحث بالاسم: شركة، مستشفى، مطعم، شارع...');
+
+                entry.panel.find('.addr-map-search').hide();
+                entry.panel.find('.addr-map-search-btn').hide();
+                entry.panel.find('.addr-map-search-results').remove();
+                wrap.insertBefore(pac, wrap.firstChild);
+
+                pac.addEventListener('gmp-select', async function(e) {
+                    var place = e.placePrediction.toPlace();
+                    await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] });
+                    if (place.location) {
+                        setMarker(entry, place.location.lat(), place.location.lng(), true);
+                    }
+                });
+
+                entry._googlePlacesActive = true;
+                return true;
+            } catch(e) { /* fall through to legacy */ }
+        }
+
+        if (google.maps.places.Autocomplete) {
+            var input = entry.panel.find('.addr-map-search')[0];
+            var autocomplete = new google.maps.places.Autocomplete(input, {
+                fields: ['geometry', 'name', 'formatted_address']
+            });
+            autocomplete.setBounds(new google.maps.LatLngBounds(
+                new google.maps.LatLng(29.1, 34.8),
+                new google.maps.LatLng(33.4, 39.3)
+            ));
+            autocomplete.addListener('place_changed', function() {
+                var place = autocomplete.getPlace();
+                if (place && place.geometry) {
+                    setMarker(entry, place.geometry.location.lat(), place.geometry.location.lng(), true);
+                    input.value = place.name || place.formatted_address || '';
+                }
+            });
+            entry.panel.find('.addr-map-search').off('input keydown');
+            entry.panel.find('.addr-map-search-btn').hide();
+            entry.panel.find('.addr-map-search-results').remove();
+            entry._googlePlacesActive = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  Event Delegation — أحداث مفوّضة للعناصر الديناميكية
+     * ═══════════════════════════════════════════════════════════ */
+
+    // Toggle map section
     $(document).on('click', '.addr-toggle-map', function() {
         var panel = getPanel(this);
         var section = panel.find('.addr-map-section');
@@ -424,6 +495,7 @@ $js = <<<JS
                 var entry = initMap(panel);
                 if (entry) {
                     setTimeout(function(){ entry.map.invalidateSize(); }, 100);
+                    setTimeout(function(){ entry.map.invalidateSize(); }, 500);
                 }
             }
         });
@@ -443,12 +515,14 @@ $js = <<<JS
     $(document).on('input', '.addr-map-search', function() {
         var panel = getPanel(this);
         var pid = getPanelId(panel);
+        var entry = maps[pid];
+        if (entry && entry._googlePlacesActive) return;
         clearTimeout(_searchTimers[pid]);
         var q = $(this).val().trim();
         if (q.length < 2) { panel.find('.addr-map-search-results').removeClass('show').empty(); return; }
         _searchTimers[pid] = setTimeout(function() {
             var entry = maps[pid]; if (!entry) return;
-            doMapSearch(entry, q);
+            fallbackMapSearch(entry, q);
         }, 350);
     });
     $(document).on('keydown', '.addr-map-search', function(e) {
@@ -456,16 +530,20 @@ $js = <<<JS
             e.preventDefault();
             var panel = getPanel(this);
             var pid = getPanelId(panel);
+            var entry = maps[pid];
+            if (entry && entry._googlePlacesActive) return;
             clearTimeout(_searchTimers[pid]);
-            var entry = maps[pid]; if (!entry) return;
-            doMapSearch(entry, $(this).val().trim());
+            if (!entry) return;
+            fallbackMapSearch(entry, $(this).val().trim());
         }
     });
     $(document).on('click', '.addr-map-search-btn', function() {
         var panel = getPanel(this);
         var pid = getPanelId(panel);
-        var entry = maps[pid]; if (!entry) return;
-        doMapSearch(entry, panel.find('.addr-map-search').val().trim());
+        var entry = maps[pid];
+        if (entry && entry._googlePlacesActive) return;
+        if (!entry) return;
+        fallbackMapSearch(entry, panel.find('.addr-map-search').val().trim());
     });
     $(document).on('click', '.addr-map-search-results .result-item', function() {
         var panel = getPanel(this);
@@ -481,10 +559,13 @@ $js = <<<JS
     });
     $(document).on('blur', '.addr-map-search', function() {
         var panel = getPanel(this);
-        setTimeout(function(){ panel.find('.addr-map-search-results').removeClass('show'); }, 300);
+        var entry = maps[getPanelId(panel)];
+        if (entry && !entry._googlePlacesActive) {
+            setTimeout(function(){ panel.find('.addr-map-search-results').removeClass('show'); }, 300);
+        }
     });
 
-    // Smart paste
+    /* ─── Smart paste — لصق الموقع الذكي ─── */
     $(document).on('input', '.addr-smart-paste', function() {
         var panel = getPanel(this);
         var pid = getPanelId(panel);
@@ -501,7 +582,12 @@ $js = <<<JS
             return;
         }
 
+        var isUrl = /^https?:\/\//i.test(raw);
+        var isPlusCode = /[23456789CFGHJMPQRVWX]{2,}\+/i.test(raw);
+        var delay = (isUrl || isPlusCode) ? 100 : 600;
+
         resEl.html('<i class="fa fa-spinner fa-spin"></i> جاري التحليل...').css({background:'#fef3c7',color:'#92400e'}).addClass('show');
+
         setTimeout(function() {
             $.getJSON(resolveUrl, {q: raw}, function(data) {
                 if (data && data.success) {
@@ -509,15 +595,21 @@ $js = <<<JS
                     var entry = maps[pid] || initMap(panel);
                     if (entry) setMarker(entry, lat, lng, true);
                     var msg = '<i class="fa fa-check-circle"></i> ';
-                    msg += data.display_name ? data.display_name + ' (' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ')' : 'تم التعرف على الموقع: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+                    if (data.display_name) {
+                        msg += data.display_name + ' (' + lat.toFixed(6) + ', ' + lng.toFixed(6) + ')';
+                    } else {
+                        msg += 'تم التعرف على الموقع: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+                    }
                     resEl.html(msg).css({background:'#dcfce7',color:'#15803d'}).addClass('show');
                 } else {
-                    resEl.html('<i class="fa fa-exclamation-circle"></i> لم يتم التعرف على الموقع.').css({background:'#fee2e2',color:'#b91c1c'}).addClass('show');
+                    resEl.html('<i class="fa fa-exclamation-circle"></i> لم يتم التعرف على الموقع. جرب إحداثيات عددية أو رابط جوجل ماب أو Plus Code.')
+                        .css({background:'#fee2e2',color:'#b91c1c'}).addClass('show');
                 }
             }).fail(function() {
-                resEl.html('<i class="fa fa-exclamation-circle"></i> خطأ في التحليل.').css({background:'#fee2e2',color:'#b91c1c'}).addClass('show');
+                resEl.html('<i class="fa fa-exclamation-circle"></i> خطأ في التحليل.')
+                    .css({background:'#fee2e2',color:'#b91c1c'}).addClass('show');
             });
-        }, 200);
+        }, delay);
     });
 
     // Current location
@@ -558,7 +650,7 @@ $js = <<<JS
         panel.find('.addr-smart-result').removeClass('show');
     });
 
-    // Forward geocode on addr field change
+    /* ─── Address fields → map sync (forward geocoding) ─── */
     var _fwdTimers = {};
     $(document).on('change', '.addr-field', function() {
         var panel = getPanel(this);
@@ -566,7 +658,24 @@ $js = <<<JS
         var entry = maps[pid];
         if (!entry) return;
         clearTimeout(_fwdTimers[pid]);
-        _fwdTimers[pid] = setTimeout(function(){ forwardGeocode(entry); }, 500);
+        _fwdTimers[pid] = setTimeout(function() {
+            var parts = [
+                panel.find('[data-addr=street]').val(),
+                panel.find('[data-addr=area]').val(),
+                panel.find('[data-addr=city]').val()
+            ].filter(Boolean);
+            if (!parts.length) return;
+            var q = parts.join(', ');
+            $.getJSON('https://nominatim.openstreetmap.org/search', {
+                q: q, format: 'json', limit: 1, 'accept-language': 'ar',
+                viewbox: '34.8,33.4,39.3,29.1', bounded: 1
+            }, function(results) {
+                if (results && results.length > 0) {
+                    var r = results[0];
+                    setMarker(entry, parseFloat(r.lat), parseFloat(r.lon), true);
+                }
+            });
+        }, 500);
     });
 
     // Update badge on type change
@@ -591,11 +700,20 @@ $js = <<<JS
     $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
         var newIdx = 'new-' + Date.now();
         $(item).attr('data-addr-idx', newIdx);
+        $(item).find('.addr-map-container').empty();
+        $(item).find('.addr-lat, .addr-lng, .addr-plus-code').val('');
+        $(item).find('.addr-smart-paste').val('');
+        $(item).find('.addr-smart-result').removeClass('show');
         setTimeout(function() {
             var entry = initMap($(item));
             if (entry) setTimeout(function(){ entry.map.invalidateSize(); }, 200);
         }, 300);
     });
+
+    /* Fix Leaflet map rendering */
+    setTimeout(function(){
+        for (var pid in maps) { if (maps[pid]) maps[pid].map.invalidateSize(); }
+    }, 500);
 
 })();
 JS;
