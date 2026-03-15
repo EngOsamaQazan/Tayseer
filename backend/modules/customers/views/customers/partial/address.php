@@ -339,7 +339,7 @@ $js = <<<JS
         });
     }
 
-    /* ─── Map search ─── */
+    /* ─── Map search (مطابق لشاشة الوظائف) ─── */
     function doMapSearch(entry, q) {
         if (!q || q.length < 2) { entry.panel.find('.addr-map-search-results').removeClass('show').empty(); return; }
         var resEl = entry.panel.find('.addr-map-search-results');
@@ -347,21 +347,50 @@ $js = <<<JS
         var c = entry.map.getCenter();
         $.getJSON('https://photon.komoot.io/api/', { q: q, lat: c.lat, lon: c.lng, limit: 6 }, function(data) {
             if (!data || !data.features || data.features.length === 0) {
-                nominatimFallback(entry, q); return;
+                $.getJSON('https://nominatim.openstreetmap.org/search', {
+                    q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
+                    viewbox: '34.8,33.4,39.3,29.1', bounded: 0
+                }, function(nd){
+                    if (!nd || nd.length === 0) { resEl.html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show'); return; }
+                    var html = '';
+                    nd.forEach(function(r){
+                        html += '<div class="result-item" data-lat="'+r.lat+'" data-lng="'+r.lon+'">';
+                        html += '<span class="result-icon"><i class="fa fa-map-marker"></i></span>';
+                        html += '<span class="result-text"><span class="result-name">'+r.display_name+'</span></span>';
+                        html += '</div>';
+                    });
+                    resEl.html(html).addClass('show');
+                });
+                return;
             }
             var html = '';
-            data.features.forEach(function(f) {
+            data.features.forEach(function(f){
                 var p = f.properties, g = f.geometry;
                 var name = p.name || p.street || '';
                 var addr = [p.city, p.state, p.country].filter(Boolean).join('، ');
+                var osmVal = p.osm_value || p.osm_key || '';
+                var icon = 'fa-map-marker';
+                if (['restaurant','cafe','fast_food','bar'].indexOf(osmVal) >= 0) icon = 'fa-cutlery';
+                else if (['hospital','clinic','pharmacy','doctors'].indexOf(osmVal) >= 0) icon = 'fa-medkit';
+                else if (['school','university','college'].indexOf(osmVal) >= 0) icon = 'fa-graduation-cap';
+                else if (['supermarket','shop','mall','marketplace'].indexOf(osmVal) >= 0) icon = 'fa-shopping-cart';
+                else if (['bank'].indexOf(osmVal) >= 0) icon = 'fa-university';
+                else if (['hotel','hostel','guest_house'].indexOf(osmVal) >= 0) icon = 'fa-bed';
+                else if (['fuel','gas'].indexOf(osmVal) >= 0) icon = 'fa-car';
+                else if (['place_of_worship','mosque'].indexOf(osmVal) >= 0) icon = 'fa-moon-o';
+                else if (['office','company','commercial'].indexOf(osmVal) >= 0) icon = 'fa-building';
+                else if (p.osm_key === 'highway' || p.osm_key === 'road') icon = 'fa-road';
+                else if (p.osm_key === 'place') icon = 'fa-map-pin';
                 html += '<div class="result-item" data-lat="'+g.coordinates[1]+'" data-lng="'+g.coordinates[0]+'">';
-                html += '<span class="result-icon"><i class="fa fa-map-marker"></i></span>';
+                html += '<span class="result-icon"><i class="fa '+icon+'"></i></span>';
                 html += '<span class="result-text"><span class="result-name">'+name+'</span>';
                 if (addr) html += '<span class="result-addr">'+addr+'</span>';
                 html += '</span></div>';
             });
             resEl.html(html).addClass('show');
-        }).fail(function(){ nominatimFallback(entry, q); });
+        }).fail(function(){
+            nominatimFallback(entry, q);
+        });
     }
 
     function nominatimFallback(entry, q) {
@@ -369,15 +398,18 @@ $js = <<<JS
         $.getJSON('https://nominatim.openstreetmap.org/search', {
             q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
             viewbox: '34.8,33.4,39.3,29.1', bounded: 1
-        }, function(nd) {
+        }, function(nd){
             if (!nd || nd.length === 0) { resEl.html('<div class="map-search-loading">لا توجد نتائج</div>').addClass('show'); return; }
             var html = '';
-            nd.forEach(function(r) {
+            nd.forEach(function(r){
                 html += '<div class="result-item" data-lat="'+r.lat+'" data-lng="'+r.lon+'">';
                 html += '<span class="result-icon"><i class="fa fa-map-marker"></i></span>';
-                html += '<span class="result-text"><span class="result-name">'+r.display_name+'</span></span></div>';
+                html += '<span class="result-text"><span class="result-name">'+r.display_name+'</span></span>';
+                html += '</div>';
             });
             resEl.html(html).addClass('show');
+        }).fail(function(){
+            resEl.html('<div class="map-search-loading">خطأ في البحث</div>').addClass('show');
         });
     }
 
