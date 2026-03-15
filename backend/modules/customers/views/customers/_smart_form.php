@@ -184,7 +184,7 @@ if (!$isNew) {
                         <div><?= $form->field($model, 'primary_phone_number')->widget(PhoneInputWidget::class, [
                             'options' => ['class' => 'form-control', 'inputmode' => 'tel', 'autocomplete' => 'tel'],
                         ])->label('الهاتف الرئيسي') ?></div>
-                        <div><?= $form->field($model, 'email')->textInput(['type' => 'email', 'placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?></div>
+                        <div><?= $form->field($model, 'email')->textInput(['placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?></div>
                         <div><?= $form->field($model, 'hear_about_us')->dropDownList(ArrayHelper::map($hearAboutUs, 'id', 'name'), ['prompt' => '-- كيف سمعت عنا --'])->label('كيف سمعت عنا') ?></div>
                     </div>
                 </div>

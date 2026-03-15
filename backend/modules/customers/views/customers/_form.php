@@ -128,7 +128,7 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
                 ])->label('آخر استعلام وظيفي') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'email')->textInput(['type' => 'email', 'placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?>
+                <?= $form->field($model, 'email')->textInput(['placeholder' => 'example@email.com'])->label('البريد الإلكتروني') ?>
             </div>
         </div>
     </fieldset>

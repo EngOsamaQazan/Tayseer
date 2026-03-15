@@ -160,6 +160,8 @@ class Customers extends \yii\db\ActiveRecord
             [['property_number'], 'string'],
             [['number_row'], 'integer'],
             [['email', 'citizen', 'account_number', 'social_security_number', 'property_name'], 'string', 'max' => 50],
+            [['email'], 'email', 'skipOnEmpty' => true],
+            [['email'], 'default', 'value' => null],
             [['bank_branch'], 'string', 'max' => 100],
             [['notes'], 'string', 'max' => 500],
             [['has_social_security_salary'], 'in', 'range' => ['yes', 'no', ''], 'skipOnEmpty' => true],
