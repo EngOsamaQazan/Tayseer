@@ -141,7 +141,7 @@ $years = range($currentYear - 5, $currentYear);
             <div class="rp-qc-icon"><i class="fa fa-balance-scale"></i></div>
             <div class="rp-qc-body">
                 <span class="rp-qc-title">التقارير القضائية</span>
-                <span class="rp-qc-desc">القضايا والمحاكم والمحامين</span>
+                <span class="rp-qc-desc">القضايا والمحاكم والمفوضين</span>
             </div>
         </a>
         <a href="<?= Url::to(['/reports/reports/customers-judiciary-actions']) ?>" class="rp-quick-card rp-qc--actions">

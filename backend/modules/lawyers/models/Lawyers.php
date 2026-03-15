@@ -38,7 +38,49 @@ class Lawyers extends \yii\db\ActiveRecord {
     public $number_row;
     public $image;
     public $type;
-    
+
+    const REP_TYPE_DELEGATE = 'delegate';
+    const REP_TYPE_LAWYER   = 'lawyer';
+
+    private $_representative_type = self::REP_TYPE_DELEGATE;
+    private $_signature_image;
+
+    /**
+     * Safe accessor for columns that may not exist yet (pre-migration).
+     * Once the migration runs and DB columns exist, ActiveRecord handles them natively.
+     */
+    public function __get($name)
+    {
+        if ($name === 'representative_type') {
+            return $this->hasAttribute($name) ? parent::__get($name) : $this->_representative_type;
+        }
+        if ($name === 'signature_image') {
+            return $this->hasAttribute($name) ? parent::__get($name) : $this->_signature_image;
+        }
+        return parent::__get($name);
+    }
+
+    public function __set($name, $value)
+    {
+        if ($name === 'representative_type') {
+            if ($this->hasAttribute($name)) {
+                parent::__set($name, $value);
+            } else {
+                $this->_representative_type = $value;
+            }
+            return;
+        }
+        if ($name === 'signature_image') {
+            if ($this->hasAttribute($name)) {
+                parent::__set($name, $value);
+            } else {
+                $this->_signature_image = $value;
+            }
+            return;
+        }
+        parent::__set($name, $value);
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -76,6 +118,9 @@ class Lawyers extends \yii\db\ActiveRecord {
             [['name', 'status'], 'required'],
             [['status', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted'], 'integer'],
             [['notes','type'], 'string'],
+            [['representative_type'], 'in', 'range' => [self::REP_TYPE_DELEGATE, self::REP_TYPE_LAWYER]],
+            [['representative_type'], 'default', 'value' => self::REP_TYPE_DELEGATE],
+            [['signature_image'], 'string', 'max' => 500],
             [['name', 'address', 'phone_number'], 'string', 'max' => 255],
             [['image'], 'file',  'mimeTypes' => 'image/*', 'skipOnError' => false, 'extensions'=>'jpg,jpeg,png', 'maxFiles' => 2],
             [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::className(), 'targetAttribute' => ['created_by' => 'id']],
@@ -98,6 +143,8 @@ class Lawyers extends \yii\db\ActiveRecord {
             'last_update_by' => Yii::t('app', 'Last Update By'),
             'is_deleted' => Yii::t('app', 'Is Deleted'),
             'notes' => Yii::t('app', 'Notes'),
+            'representative_type' => 'نوع التمثيل',
+            'signature_image' => 'صورة التوقيع',
         ];
     }
 

@@ -26,7 +26,7 @@ class Permissions
     const COMPANIES = 'الشركات';
     const INVENTORY_ITEMS_QUANTITY = 'كمية عناصر المخزون';
     const TRANSFER_TO_LEGAL_DEPARTMENT = 'التحويل إلى الدائره القانونية';
-    const LAWYERS = 'المحامون';
+    const LAWYERS = 'المفوضين والوكلاء';
     const COURT = 'المحاكم';
     const JUDICIARY_TYPE = 'انواع القضايا';
     const JUDICIARY = 'القضاء';
@@ -58,6 +58,8 @@ class Permissions
     const CONNECTION_RESPONSE = 'نتيجة الاتصال';
     const CLIENT_RESPONSE = 'رد العميل';
     const MESSAGES = 'الرسائل';
+    const MASSAGING = 'الرسائل';
+    const FOLLOW_UP_REPORTS = 'تقرير المتابعة';
     const  DOCYUMENT_TYPE = 'انواع الوثائق';
     const Document_STATUS = 'حالات الوثائق';
     const INVENTORY_INVOICES = 'فواتير المخزون';
@@ -564,8 +566,15 @@ class Permissions
             /* الديوان */
             'diwan/diwan' => array_merge(
                 self::getModulePermissions(self::DIWAN),
+                self::getModulePermissions(self::JUDICIARY),
                 [self::DIWAN_REPORTS]
             ),
+            /* الجهات الرسمية */
+            'judiciaryAuthorities/judiciary-authorities' => self::getModulePermissions(self::JUDICIARY),
+            /* العطل الرسمية */
+            'officialHolidays/official-holidays' => self::getModulePermissions(self::JUDICIARY),
+            /* قوالب الطلبات */
+            'judiciaryRequestTemplates/judiciary-request-templates' => self::getModulePermissions(self::JUDICIARY),
             /* إدارة الصلاحيات وأدوات المستخدم */
             'permissions-management' => [self::PERMISSION, self::ROLE, self::ASSIGNMENT],
             'user-tools' => [self::USER_TOOLS],
@@ -664,6 +673,39 @@ class Permissions
      *   - string → فحص صلاحية واحدة (AND كالسابق)
      *   - array  → فحص OR (يكفي امتلاك أي صلاحية)
      */
+    /**
+     * فحص صلاحية مجموعة قائمة جانبية — يُظهر القسم إذا المستخدم يملك أي صلاحية من المجموعة
+     */
+    public static function groupsPermissions($group)
+    {
+        $groups = [
+            'inventory' => [self::INVENTORY_ITEMS, self::INVENTORY_STOCK_LOCATIONS, self::INVENTORY_SUPPLIERS, self::INVENTORY_ITEMS_QUANTITY, self::INVENTORY_INVOICES],
+            'employees manage' => [self::EMPLOYEE, self::HOLIDAYS, self::LEAVE_POLICY, self::LEAVE_TYPES, self::WORKDAYS, self::LEAVE_REQUEST],
+            'legal department' => [self::TRANSFER_TO_LEGAL_DEPARTMENT, self::JUDICIARY, self::JUDICIARY_CUSTOMERS_ACTION, self::COLLECTION],
+            'reports' => [self::REPORTS, self::JUDICIARY, self::JUDICIARY_CUSTOMERS_ACTION, self::COLLECTION],
+            'permissions' => [self::PERMISSION, self::ROLE, self::ROUTE, self::ASSIGNMENT],
+            'changing' => [self::STATUS, self::Document_STATUS, self::COUSINS, self::CITIZEN, self::BANCKS, self::HEAR_ABOUT_US, self::CITY, self::PAYMENT_TYPE, self::FEELINGS, self::CONTACT_TYPE, self::CONNECTION_RESPONSE, self::DOCYUMENT_TYPE, self::JUDICIARY_ACTION, self::JUDICIARY_TYPE, self::LAWYERS, self::COURT, self::MASSAGING, self::JOBS, self::EXPENSE_CATEGORIES],
+        ];
+
+        if (!isset($groups[$group])) {
+            return false;
+        }
+
+        return self::hasAnyPermission($groups[$group]);
+    }
+
+    /**
+     * عرض عنصر قائمة جانبية مع فحص الصلاحية
+     */
+    public static function showItems($permission, $label, $url)
+    {
+        if (!Yii::$app->user->can($permission)) {
+            return '';
+        }
+        $fullUrl = \yii\helpers\Url::to([$url]);
+        return '<li><a href="' . $fullUrl . '"><div class="menu-title">' . $label . '</div></a></li>';
+    }
+
     public static function checkMainMenuItems($items)
     {
         foreach ($items as $key => $menuItem) {

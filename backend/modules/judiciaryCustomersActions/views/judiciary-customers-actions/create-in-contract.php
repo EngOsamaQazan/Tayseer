@@ -556,7 +556,7 @@ $showReqTarget = (!$isNew && (int)$model->judiciary_actions_id === 55) ? 'true' 
 </div>
 
 <script>
-var JAF = (function() {
+window.JAF = (function() {
     var natureMap = <?= Json::encode($actionNatureMap) ?>;
     var REFUND_ID = 55;
     var isNewRecord = <?= $isNew ? 'true' : 'false' ?>;

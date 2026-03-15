@@ -16,6 +16,9 @@ use backend\modules\diwan\models\DiwanTransaction;
 use backend\modules\diwan\models\DiwanTransactionDetail;
 use backend\modules\diwan\models\DiwanDocumentTracker;
 use backend\modules\diwan\models\DiwanTransactionSearch;
+use backend\modules\diwan\models\DiwanCorrespondence;
+use backend\modules\diwan\models\DiwanCorrespondenceSearch;
+use backend\services\DiwanCorrespondenceService;
 use common\models\User;
 
 /**
@@ -38,13 +41,20 @@ class DiwanController extends Controller
                     ],
                     /* ═══ عرض ═══ */
                     [
-                        'actions' => ['index', 'view', 'transactions', 'receipt', 'search', 'document-history', 'quick-search', 'reports'],
+                        'actions' => [
+                            'index', 'view', 'transactions', 'receipt', 'search',
+                            'document-history', 'quick-search', 'reports',
+                            'correspondence-index', 'correspondence-view',
+                        ],
                         'allow' => true,
                         'roles' => [Permissions::DIWAN_VIEW],
                     ],
                     /* ═══ إضافة ═══ */
                     [
-                        'actions' => ['create'],
+                        'actions' => [
+                            'create',
+                            'create-notification', 'create-outgoing-letter', 'create-incoming-response',
+                        ],
                         'allow' => true,
                         'roles' => [Permissions::DIWAN_CREATE],
                     ],
@@ -390,6 +400,124 @@ class DiwanController extends Controller
         }
 
         return ['results' => $results];
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+     *  المراسلات والتبليغات — Correspondence CRUD
+     * ═══════════════════════════════════════════════════════════════ */
+
+    public function actionCorrespondenceIndex()
+    {
+        $searchModel = new DiwanCorrespondenceSearch();
+        $judiciaryId = Yii::$app->request->get('judiciary_id');
+        $dataProvider = $searchModel->search(Yii::$app->request->queryParams, $judiciaryId);
+
+        if (Yii::$app->request->isAjax) {
+            return $this->renderAjax('correspondence_index', [
+                'searchModel' => $searchModel,
+                'dataProvider' => $dataProvider,
+                'judiciaryId' => $judiciaryId,
+            ]);
+        }
+
+        return $this->render('correspondence_index', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'judiciaryId' => $judiciaryId,
+        ]);
+    }
+
+    public function actionCorrespondenceView($id)
+    {
+        $model = DiwanCorrespondence::findOne((int)$id);
+        if (!$model) {
+            throw new NotFoundHttpException('المراسلة غير موجودة');
+        }
+
+        if (Yii::$app->request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return [
+                'success' => true,
+                'data' => $model->toArray(),
+                'recipient_name' => $model->getRecipientDisplayName(),
+                'responses' => $model->responses,
+            ];
+        }
+
+        return $this->render('correspondence_view', ['model' => $model]);
+    }
+
+    public function actionCreateNotification()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        try {
+            $service = new DiwanCorrespondenceService();
+            $model = $service->createNotification(
+                (int)$request->post('judiciary_id'),
+                (int)$request->post('customer_id'),
+                $request->post()
+            );
+            return ['success' => true, 'id' => $model->id, 'message' => 'تم إضافة التبليغ'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function actionCreateOutgoingLetter()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        try {
+            $service = new DiwanCorrespondenceService();
+            $model = $service->createOutgoingLetter(
+                (int)$request->post('judiciary_id'),
+                $request->post('recipient_type'),
+                (int)$request->post('recipient_id'),
+                $request->post()
+            );
+            return ['success' => true, 'id' => $model->id, 'message' => 'تم إضافة الكتاب الصادر'];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function actionCreateIncomingResponse()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        try {
+            $service = new DiwanCorrespondenceService();
+            $model = $service->recordIncomingResponse(
+                (int)$request->post('parent_id'),
+                $request->post()
+            );
+
+            $suggestions = DiwanCorrespondenceService::getSuggestedActions($model->response_result ?? '');
+            return [
+                'success' => true,
+                'id' => $model->id,
+                'message' => 'تم تسجيل الرد الوارد',
+                'suggested_actions' => $suggestions,
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
     }
 
     /* ═══ مساعدة ═══ */

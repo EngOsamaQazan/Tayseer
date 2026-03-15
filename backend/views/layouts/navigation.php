@@ -86,6 +86,7 @@ use app\helper\Permissions;
                                     <?= Permissions::showItems(Permissions::TRANSFER_TO_LEGAL_DEPARTMENT, Yii::t('app', 'Transfer to legal department'), '/contracts/contracts/legal-department') ?>
                                     <?= Permissions::showItems(Permissions::JUDICIARY, Yii::t('app', 'Judiciary'), '/judiciary/judiciary') ?>
                                     <?= Permissions::showItems(Permissions::JUDICIARY_CUSTOMERS_ACTION, Yii::t('app', 'Judiciary Customers Actions'), '/judiciaryCustomersActions/judiciary-customers-actions') ?>
+                                    <?= Permissions::showItems(Permissions::JUDICIARY, 'المراسلات والتبليغات', '/diwan/diwan/correspondence-index') ?>
                                     <?= Permissions::showItems(Permissions::COLLECTION, Yii::t('app', 'Collection'), '/collection/collection') ?>
 
                                 </ul>
@@ -169,12 +170,15 @@ use app\helper\Permissions;
 
                                     <?= Permissions::showItems(Permissions::JUDICIARY_ACTION, Yii::t('app', 'Judiciary Actions'), '/judiciaryActions/judiciary-actions') ?>
                                     <?= Permissions::showItems(Permissions::JUDICIARY_TYPE, Yii::t('app', 'Judiciary Type'), '/judiciaryType/judiciary-type') ?>
-                                    <?= Permissions::showItems(Permissions::LAWYERS, Yii::t('app', 'Lawyers'), '/lawyers/lawyers') ?>
+                                    <?= Permissions::showItems(Permissions::LAWYERS, 'المفوضين والوكلاء', '/lawyers/lawyers') ?>
                                     <?= Permissions::showItems(Permissions::COURT, Yii::t('app', 'Court'), '/court/court') ?>
 
                                     <?= Permissions::showItems(Permissions::MASSAGING, Yii::t('app', 'Massages'), '/sms/sms') ?>
                                     <?= Permissions::showItems(Permissions::JOBS, Yii::t('app', 'Jobs'), '/jobs/jobs') ?>
                                     <?= Permissions::showItems(Permissions::EXPENSE_CATEGORIES, Yii::t('app', 'Expense Categories'), '/expenseCategories/expense-categories') ?>
+                                    <?= Permissions::showItems(Permissions::JUDICIARY, 'الجهات الرسمية', '/judiciaryAuthorities/judiciary-authorities') ?>
+                                    <?= Permissions::showItems(Permissions::JUDICIARY, 'العطل الرسمية', '/officialHolidays/official-holidays') ?>
+                                    <?= Permissions::showItems(Permissions::JUDICIARY, 'قوالب الطلبات', '/judiciaryRequestTemplates/judiciary-request-templates') ?>
 
 
                                 </ul>

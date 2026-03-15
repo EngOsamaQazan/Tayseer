@@ -94,7 +94,7 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             [['image'], 'string'],
             [['image'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif'],
             [['parent_id', 'is_current'], 'integer'],
-            [['request_status'], 'in', 'range' => ['pending', 'approved', 'rejected'], 'skipOnEmpty' => true],
+            [['request_status'], 'in', 'range' => ['printed', 'submitted', 'pending', 'approved', 'rejected'], 'skipOnEmpty' => true],
             [['request_target'], 'in', 'range' => ['judge', 'accounting', 'other'], 'skipOnEmpty' => true],
             [['decision_text'], 'string'],
             [['decision_file'], 'string', 'max' => 255],
@@ -195,9 +195,11 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
     public function getRequestStatusLabel()
     {
         $map = [
-            'pending'  => 'معلق',
-            'approved' => 'موافقة',
-            'rejected' => 'مرفوض',
+            'printed'   => 'مطبوع',
+            'submitted' => 'مُقدَّم للمحكمة',
+            'pending'   => 'معلق',
+            'approved'  => 'موافقة',
+            'rejected'  => 'مرفوض',
         ];
         return $map[$this->request_status] ?? '';
     }
@@ -208,9 +210,11 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
     public function getRequestStatusColor()
     {
         $map = [
-            'pending'  => '#F59E0B',
-            'approved' => '#10B981',
-            'rejected' => '#EF4444',
+            'printed'   => '#6B7280',
+            'submitted' => '#3B82F6',
+            'pending'   => '#F59E0B',
+            'approved'  => '#10B981',
+            'rejected'  => '#EF4444',
         ];
         return $map[$this->request_status] ?? '#6B7280';
     }

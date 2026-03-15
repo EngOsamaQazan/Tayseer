@@ -8,7 +8,7 @@ use yii\data\ActiveDataProvider;
 use backend\modules\lawyers\models\Lawyers;
 
 /**
- * LawyersSearch represents the model behind the search form about `common\models\Lawyers`.
+ * LawyersSearch represents the model behind the search form about Lawyers.
  */
 class LawyersSearch extends Lawyers
 {
@@ -19,7 +19,7 @@ class LawyersSearch extends Lawyers
     {
         return [
             [['id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted'], 'integer'],
-            [['name', 'address', 'phone_number', 'status', 'notes'], 'safe'],
+            [['name', 'address', 'phone_number', 'status', 'notes', 'representative_type'], 'safe'],
         ];
     }
 
@@ -28,7 +28,6 @@ class LawyersSearch extends Lawyers
      */
     public function scenarios()
     {
-        // bypass scenarios() implementation in the parent class
         return Model::scenarios();
     }
 
@@ -50,8 +49,6 @@ class LawyersSearch extends Lawyers
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
@@ -64,14 +61,21 @@ class LawyersSearch extends Lawyers
             'is_deleted' => $this->is_deleted,
         ]);
 
+        $model = new Lawyers();
+        if ($model->hasAttribute('representative_type')) {
+            $query->andFilterWhere(['representative_type' => $this->representative_type]);
+        }
+
         $query->andFilterWhere(['like', 'name', $this->name])
             ->andFilterWhere(['like', 'address', $this->address])
             ->andFilterWhere(['like', 'phone_number', $this->phone_number])
             ->andFilterWhere(['like', 'status', $this->status])
-            ->andFilterWhere(['like', 'notes', $this->notes])->where(['is_deleted' => false]);
+            ->andFilterWhere(['like', 'notes', $this->notes])
+            ->andWhere(['is_deleted' => false]);
 
         return $dataProvider;
     }
+
     public function searchCounter($params)
     {
         $query = Lawyers::find();
@@ -83,8 +87,6 @@ class LawyersSearch extends Lawyers
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
@@ -97,11 +99,17 @@ class LawyersSearch extends Lawyers
             'is_deleted' => $this->is_deleted,
         ]);
 
+        $model = new Lawyers();
+        if ($model->hasAttribute('representative_type')) {
+            $query->andFilterWhere(['representative_type' => $this->representative_type]);
+        }
+
         $query->andFilterWhere(['like', 'name', $this->name])
             ->andFilterWhere(['like', 'address', $this->address])
             ->andFilterWhere(['like', 'phone_number', $this->phone_number])
             ->andFilterWhere(['like', 'status', $this->status])
-            ->andFilterWhere(['like', 'notes', $this->notes])->where(['is_deleted' => false]);
+            ->andFilterWhere(['like', 'notes', $this->notes])
+            ->andWhere(['is_deleted' => false]);
 
         return $query->count();
     }

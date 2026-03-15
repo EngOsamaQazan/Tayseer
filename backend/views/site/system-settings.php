@@ -2146,7 +2146,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </div>
                         <div>
                             <h3>القسم القضائي</h3>
-                            <p>الإجراءات والمحاكم والمحامون</p>
+                            <p>الإجراءات والمحاكم والمفوضين والوكلاء</p>
                         </div>
                     </div>
                     <div class="gs-items-grid">
@@ -2166,11 +2166,11 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                             </div>
                             <i class="fa fa-chevron-left gs-item-arrow"></i>
                         </a>
-                        <a href="<?= Url::to(['/lawyers/lawyers/index']) ?>" class="gs-item" data-search="المحامون lawyers">
+                        <a href="<?= Url::to(['/lawyers/lawyers/index']) ?>" class="gs-item" data-search="المفوضين والوكلاء lawyers representatives">
                             <div class="gs-item-icon"><i class="fa fa-briefcase"></i></div>
                             <div class="gs-item-text">
-                                <span class="gs-item-label">المحامون</span>
-                                <span class="gs-item-desc">قائمة المحامين المعتمدين</span>
+                                <span class="gs-item-label">المفوضين والوكلاء</span>
+                                <span class="gs-item-desc">قائمة المفوضين والوكلاء المعتمدين</span>
                             </div>
                             <i class="fa fa-chevron-left gs-item-arrow"></i>
                         </a>

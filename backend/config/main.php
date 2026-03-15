@@ -99,6 +99,9 @@ return [
         'judiciary' => [
             'class' => 'backend\modules\judiciary\Judiciary',
         ],
+        'judiciaryRequestTemplates' => [
+            'class' => 'backend\modules\judiciaryRequestTemplates\JudiciaryRequestTemplates',
+        ],
         'diwan' => [
             'class' => 'backend\modules\diwan\Diwan',
         ],
@@ -108,6 +111,9 @@ return [
         ],
         'judiciaryType' => [
             'class' => 'backend\modules\judiciaryType\JudiciaryType',
+        ],
+        'judiciaryAuthorities' => [
+            'class' => 'backend\modules\judiciaryAuthorities\JudiciaryAuthorities',
         ],
         'realEstate' => [
             'class' => 'backend\modules\realEstate\RealEstate',
@@ -120,6 +126,9 @@ return [
         ],
         'holidays' => [
             'class' => 'backend\modules\holidays\Holidays',
+        ],
+        'officialHolidays' => [
+            'class' => 'backend\modules\officialHolidays\OfficialHolidays',
         ],
         'imagemanager' => [
             'class' => 'backend\modules\imagemanager\Imagemanager',
@@ -417,6 +426,8 @@ return [
 
                     // Legal
                     'judiciaryType'         => 'judiciary-type',
+                    'judiciaryAuthorities'        => 'judiciary-authorities',
+                    'judiciaryRequestTemplates'   => 'judiciary-request-templates',
                     'JudiciaryInformAddress' => 'judiciary-inform-address',
                     'lawyers'               => 'lawyers',
                     'contractDocumentFile'  => 'contract-document-file',
@@ -431,6 +442,7 @@ return [
                     'designation'           => 'designation',
                     'attendance'            => 'attendance',
                     'holidays'              => 'holidays',
+                    'officialHolidays'      => 'official-holidays',
                     'leavePolicy'           => 'leave-policy',
                     'leaveRequest'          => 'leave-request',
                     'leaveTypes'            => 'leave-types',
@@ -617,6 +629,12 @@ return [
                 'potime\adminlte3\assets\AdminLteAsset' => ['css' => [], 'js' => [], 'depends' => []],
                 'potime\adminlte3\assets\PluginAsset' => ['css' => [], 'depends' => []],
                 'potime\adminlte3\assets\FontAwesomeAsset' => ['css' => [], 'depends' => []],
+                // Suppress legacy CrudAsset JS (replaced by tayseer-gridview-modal.js)
+                'johnitvn\ajaxcrud\CrudAsset' => ['js' => [], 'css' => [], 'depends' => ['yii\web\JqueryAsset']],
+                // Suppress Kartik Dialog assets (BS3 modal wrapper conflicts with BS5;
+                // yii.confirm is already overridden by Vite bundle with SweetAlert2)
+                'kartik\dialog\DialogBootstrapAsset' => ['js' => [], 'depends' => []],
+                'kartik\dialog\DialogYiiAsset' => ['js' => [], 'depends' => []],
                 'backend\assets\ImageManagerInputAsset' => [
                     'basePath' => '@webroot',
                     'baseUrl' => '@web',

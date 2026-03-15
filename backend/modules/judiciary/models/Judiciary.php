@@ -17,6 +17,10 @@ use \backend\modules\customers\models\Customers;
 use \backend\modules\judiciaryType\models\JudiciaryType;
 use \common\models\User;
 use backend\modules\JudiciaryInformAddress\model\JudiciaryInformAddress;
+use backend\models\JudiciaryDefendantStage;
+use backend\models\JudiciaryDeadline;
+use backend\models\JudiciarySeizedAsset;
+use backend\modules\diwan\models\DiwanCorrespondence;
 
 /**
  * This is the model class for table "os_judiciary".
@@ -50,10 +54,31 @@ use backend\modules\JudiciaryInformAddress\model\JudiciaryInformAddress;
  */
 class Judiciary extends \yii\db\ActiveRecord
 {
+    /* Process stage constants — used by furthest_stage, bottleneck_stage, and defendant_stage */
+    const STAGE_CASE_PREPARATION    = 'case_preparation';
+    const STAGE_FEE_PAYMENT         = 'fee_payment';
+    const STAGE_CASE_REGISTRATION   = 'case_registration';
+    const STAGE_NOTIFICATION        = 'notification';
+    const STAGE_PROCEDURAL_REQUESTS = 'procedural_requests';
+    const STAGE_CORRESPONDENCE      = 'correspondence';
+    const STAGE_FOLLOW_UP           = 'follow_up';
+    const STAGE_PAYMENT_SETTLEMENT  = 'payment_settlement';
+    const STAGE_CASE_CLOSURE        = 'case_closure';
+    const STAGE_GENERAL             = 'general';
 
-    /**
-     * {@inheritdoc}
-     */
+    /** Ordered stages for comparison (index = rank) */
+    const STAGE_ORDER = [
+        self::STAGE_CASE_PREPARATION,
+        self::STAGE_FEE_PAYMENT,
+        self::STAGE_CASE_REGISTRATION,
+        self::STAGE_NOTIFICATION,
+        self::STAGE_PROCEDURAL_REQUESTS,
+        self::STAGE_CORRESPONDENCE,
+        self::STAGE_FOLLOW_UP,
+        self::STAGE_PAYMENT_SETTLEMENT,
+        self::STAGE_CASE_CLOSURE,
+    ];
+
     public $from_income_date;
     public $to_income_date;
     public $number_row;
@@ -62,7 +87,6 @@ class Judiciary extends \yii\db\ActiveRecord
     public $job_title;
     public $status;
     public $judiciary_actions;
-
 
     const ACTIVE = "فعال";
     const FINISHED = " منتهي";
@@ -114,8 +138,8 @@ class Judiciary extends \yii\db\ActiveRecord
             [['court_id'], 'exist', 'skipOnError' => true, 'targetClass' => Court::class, 'targetAttribute' => ['court_id' => 'id']],
             [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => User::class, 'targetAttribute' => ['created_by' => 'id']],
             [['judiciary_inform_address_id'], 'exist', 'skipOnError' => true, 'targetClass' => JudiciaryInformAddress::class, 'targetAttribute' => ['judiciary_inform_address_id' => 'id']],
-            [['income_date', 'year', 'last_check_date', 'case_status'], 'string'],
-            [['from_income_date', 'to_income_date', 'company_id', 'last_check_date', 'case_status'], 'safe'],
+            [['income_date', 'year', 'last_check_date', 'case_status', 'furthest_stage', 'bottleneck_stage'], 'string'],
+            [['from_income_date', 'to_income_date', 'company_id', 'last_check_date', 'case_status', 'furthest_stage', 'bottleneck_stage'], 'safe'],
             [['from_income_date', 'to_income_date'], 'string']
 
         ];
@@ -255,5 +279,115 @@ class Judiciary extends \yii\db\ActiveRecord
         if ($this->contract_id) {
             Contracts::refreshContractStatus((int)$this->contract_id);
         }
+    }
+
+    /* ─── Stage-related labels ─── */
+
+    public static function getStageList()
+    {
+        return [
+            self::STAGE_CASE_PREPARATION    => 'تجهيز القضية',
+            self::STAGE_FEE_PAYMENT         => 'دفع الرسوم',
+            self::STAGE_CASE_REGISTRATION   => 'تسجيل الدعوى',
+            self::STAGE_NOTIFICATION        => 'التبليغ والإخطار',
+            self::STAGE_PROCEDURAL_REQUESTS => 'الطلبات الإجرائية',
+            self::STAGE_CORRESPONDENCE      => 'الكتب والمراسلات',
+            self::STAGE_FOLLOW_UP           => 'إجراءات المتابعة',
+            self::STAGE_PAYMENT_SETTLEMENT  => 'الدفع والتسوية',
+            self::STAGE_CASE_CLOSURE        => 'إغلاق الدعوى',
+        ];
+    }
+
+    public static function getStageLabel($stage)
+    {
+        $list = static::getStageList();
+        return $list[$stage] ?? $stage;
+    }
+
+    public static function getStageRank($stage)
+    {
+        $index = array_search($stage, self::STAGE_ORDER, true);
+        return $index !== false ? $index : -1;
+    }
+
+    /* ─── New relations ─── */
+
+    public function getDefendantStages()
+    {
+        return $this->hasMany(JudiciaryDefendantStage::class, ['judiciary_id' => 'id']);
+    }
+
+    public function getDeadlines()
+    {
+        return $this->hasMany(JudiciaryDeadline::class, ['judiciary_id' => 'id'])
+            ->andWhere(['is_deleted' => 0]);
+    }
+
+    public function getActiveDeadlines()
+    {
+        return $this->hasMany(JudiciaryDeadline::class, ['judiciary_id' => 'id'])
+            ->andWhere(['is_deleted' => 0])
+            ->andWhere(['NOT IN', 'status', ['completed']]);
+    }
+
+    public function getSeizedAssets()
+    {
+        return $this->hasMany(JudiciarySeizedAsset::class, ['judiciary_id' => 'id'])
+            ->andWhere(['is_deleted' => 0]);
+    }
+
+    public function getCorrespondences()
+    {
+        return $this->hasMany(DiwanCorrespondence::class, ['related_record_id' => 'id'])
+            ->andWhere(['related_module' => 'judiciary', 'is_deleted' => 0]);
+    }
+
+    /* ─── Dual stage logic ─── */
+
+    /**
+     * Recalculate furthest_stage and bottleneck_stage from defendant stages.
+     */
+    public function refreshCaseStages()
+    {
+        $stages = JudiciaryDefendantStage::find()
+            ->where(['judiciary_id' => $this->id])
+            ->select('current_stage')
+            ->column();
+
+        if (empty($stages)) {
+            return;
+        }
+
+        $ranks = array_map([static::class, 'getStageRank'], $stages);
+        $validRanks = array_filter($ranks, function ($r) { return $r >= 0; });
+
+        if (empty($validRanks)) {
+            return;
+        }
+
+        $maxRank = max($validRanks);
+        $nonClosedRanks = array_filter($validRanks, function ($r) {
+            return $r < array_search(self::STAGE_CASE_CLOSURE, self::STAGE_ORDER, true);
+        });
+        $minRank = !empty($nonClosedRanks) ? min($nonClosedRanks) : $maxRank;
+
+        $this->furthest_stage = self::STAGE_ORDER[$maxRank];
+        $this->bottleneck_stage = self::STAGE_ORDER[$minRank];
+        $this->save(false, ['furthest_stage', 'bottleneck_stage']);
+    }
+
+    /**
+     * Human-readable overall status derived from the two stage columns.
+     */
+    public function getOverallStatus()
+    {
+        if ($this->furthest_stage === $this->bottleneck_stage) {
+            return self::getStageLabel($this->furthest_stage);
+        }
+        if ($this->bottleneck_stage === self::STAGE_CASE_CLOSURE) {
+            return 'منفذة بالكامل';
+        }
+        return 'جزئي: ' . self::getStageLabel($this->bottleneck_stage)
+             . ' — ' . self::getStageLabel($this->furthest_stage);
     }
 }

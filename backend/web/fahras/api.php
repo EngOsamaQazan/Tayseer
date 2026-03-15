@@ -19,7 +19,7 @@ header('Access-Control-Allow-Origin: *');
 require('db.php');
 $db_host = 'localhost';
 $db_user = 'osama';
-$db_pass = 'O$amaDaTaBase@123';
+$db_pass = 'OsamaDB123';
 
 $dbMap = [
   'jadal' => 'namaa_jadal',

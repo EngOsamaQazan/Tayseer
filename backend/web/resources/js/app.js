@@ -31,6 +31,11 @@ window.AOS = AOS;
 window.htmx = htmx;
 
 // ═══ 1. SweetAlert2 — Override Yii2 confirm ═══
+// Stub out krajeeYiiConfirm (Kartik GridView inline scripts call it on DOM-ready,
+// but the real DialogYiiAsset is suppressed since we use SweetAlert2 instead)
+window.krajeeYiiConfirm = function () {};
+window.krajeeDialog = {};
+
 if (typeof yii !== 'undefined') {
     yii.confirm = function (message, ok, cancel) {
         Swal.fire({

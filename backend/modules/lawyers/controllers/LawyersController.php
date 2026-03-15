@@ -11,6 +11,8 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
+use yii\helpers\FileHelper;
+use yii\web\UploadedFile;
 use backend\modules\LawyersImage\models\LawyersImage;
 use backend\helpers\ExportTrait;
 
@@ -35,7 +37,7 @@ class LawyersController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf'],
+                        'actions' => ['logout', 'index','update','create','delete','view','export-excel','export-pdf','delete-photo'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -45,6 +47,7 @@ class LawyersController extends Controller
                 'class' => VerbFilter::className(),
                 'actions' => [
                     'logout' => ['post'],
+                    'delete-photo' => ['post'],
                 ],
             ],
         ];
@@ -78,12 +81,12 @@ class LawyersController extends Controller
         if ($request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
             return [
-                'title' => "Lawyers #" . $id,
+                'title' => "عرض #" . $id,
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                    Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
             return $this->render('view', [
@@ -94,8 +97,6 @@ class LawyersController extends Controller
 
     /**
      * Creates a new Lawyers model.
-     * For ajax request will return json object
-     * and for non-ajax request if creation is successful, the browser will be redirected to the 'view' page.
      * @return mixed
      */
     public function actionCreate()
@@ -104,46 +105,45 @@ class LawyersController extends Controller
         $model = new Lawyers();
 
         if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => "Create new Lawyers",
+                    'title' => "إضافة مفوض / وكيل",
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
                 return [
                     'forceReload' => '#crud-datatable-pjax',
-                    'title' => "Create new Lawyers",
-                    'content' => '<span class="text-success">Create Lawyers success</span>',
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                    'title' => "إضافة مفوض / وكيل",
+                    'content' => '<span class="text-success">تمت الإضافة بنجاح</span>',
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::a('إضافة آخر', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
                 return [
-                    'title' => "Create new Lawyers",
+                    'title' => "إضافة مفوض / وكيل",
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }
         } else {
-            /*
-             *   Process for non-ajax request
-             */
             if ($model->load($request->post()) && $model->save()) {
+                $this->handleSignatureUpload($model);
                 $model->uploadeMultipleImag($model);
-                Yii::$app->cache->set(Yii::$app->params['key_lawyer'],Yii::$app->db->createCommand(Yii::$app->params['lawyer_query']), Yii::$app->params['time_duration']);
+                Yii::$app->cache->set(
+                    Yii::$app->params['key_lawyer'],
+                    Yii::$app->db->createCommand(Yii::$app->params['lawyer_query']),
+                    Yii::$app->params['time_duration']
+                );
 
-                $this->redirect(['index']);
+                return $this->redirect(['index']);
             } else {
                 return $this->render('create', [
                     'model' => $model,
@@ -154,8 +154,6 @@ class LawyersController extends Controller
 
     /**
      * Updates an existing Lawyers model.
-     * For ajax request will return json object
-     * and for non-ajax request if update is successful, the browser will be redirected to the 'view' page.
      * @param integer $id
      * @return mixed
      */
@@ -165,53 +163,51 @@ class LawyersController extends Controller
         $model = $this->findModel($id);
 
         if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => "Update Lawyers #" . $id,
+                    'title' => "تعديل #" . $id,
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
                 return [
                     'forceReload' => '#crud-datatable-pjax',
-                    'title' => "Lawyers #" . $id,
+                    'title' => "#" . $id,
                     'content' => $this->renderAjax('view', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
                 return [
-                    'title' => "Update Lawyers #" . $id,
+                    'title' => "تعديل #" . $id,
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }
         } else {
-            /*
-             *   Process for non-ajax request
-             */
             if ($model->load($request->post()) && $model->save()) {
-          
-               $connection = Yii::$app->getDb();
-               $command = $connection->createCommand("DELETE FROM `os_lawyers_image` WHERE `lawyer_id`= ". $model->id)->execute();
-             
+                $this->handleSignatureUpload($model);
 
+                $connection = Yii::$app->getDb();
+                $connection->createCommand("DELETE FROM `os_lawyers_image` WHERE `lawyer_id`= " . (int)$model->id)->execute();
                 $model->uploadeMultipleImag($model);
-                Yii::$app->cache->set(Yii::$app->params['key_lawyer'],Yii::$app->db->createCommand(Yii::$app->params['lawyer_query']), Yii::$app->params['time_duration']);
 
-                $this->redirect(['index']);
+                Yii::$app->cache->set(
+                    Yii::$app->params['key_lawyer'],
+                    Yii::$app->db->createCommand(Yii::$app->params['lawyer_query']),
+                    Yii::$app->params['time_duration']
+                );
+
+                return $this->redirect(['index']);
             } else {
                 return $this->render('update', [
                     'model' => $model,
@@ -222,8 +218,6 @@ class LawyersController extends Controller
 
     /**
      * Delete an existing Lawyers model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
      * @param integer $id
      * @return mixed
      */
@@ -233,47 +227,51 @@ class LawyersController extends Controller
         $this->findModel($id)->delete();
 
         if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
         } else {
-            /*
-             *   Process for non-ajax request
-             */
             return $this->redirect(['index']);
         }
     }
 
     /**
      * Delete multiple existing Lawyers model.
-     * For ajax request will return json object
-     * and for non-ajax request if deletion is successful, the browser will be redirected to the 'index' page.
-     * @param integer $id
      * @return mixed
      */
     public function actionBulkDelete()
     {
         $request = Yii::$app->request;
-        $pks = explode(',', $request->post('pks')); // Array or selected records primary keys
+        $pks = explode(',', $request->post('pks'));
         foreach ($pks as $pk) {
             $model = $this->findModel($pk);
             $model->delete();
         }
 
         if ($request->isAjax) {
-            /*
-             *   Process for ajax request
-             */
             Yii::$app->response->format = Response::FORMAT_JSON;
             return ['forceClose' => true, 'forceReload' => '#crud-datatable-pjax'];
         } else {
-            /*
-             *   Process for non-ajax request
-             */
             return $this->redirect(['index']);
         }
+    }
+
+    /**
+     * Delete a single LawyersImage photo via AJAX.
+     */
+    public function actionDeletePhoto()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $id = Yii::$app->request->post('id');
+        $image = LawyersImage::findOne($id);
+        if ($image) {
+            $filePath = Yii::getAlias('@backend/web/') . $image->image;
+            if (file_exists($filePath)) {
+                @unlink($filePath);
+            }
+            $image->delete();
+            return ['success' => true];
+        }
+        return ['success' => false];
     }
 
     public function actionExportExcel()
@@ -282,18 +280,20 @@ class LawyersController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
         return $this->exportData($dataProvider, [
-            'title' => 'المحامون',
-            'filename' => 'lawyers',
-            'headers' => ['#', 'الاسم', 'العنوان', 'رقم الهاتف', 'الحالة', 'أنشئ بواسطة'],
+            'title' => 'المفوضين والوكلاء',
+            'filename' => 'representatives',
+            'headers' => ['#', 'الاسم', 'النوع', 'رقم الهاتف', 'الحالة', 'أنشئ بواسطة'],
             'keys' => [
                 '#',
                 'name',
-                'address',
+                function ($model) {
+                    return ($model->representative_type === Lawyers::REP_TYPE_LAWYER) ? 'وكيل محامي' : 'مفوض عادي';
+                },
                 'phone_number',
                 function ($model) { return ($model->status == 0) ? 'نشط' : 'غير نشط'; },
                 'createdBy.username',
             ],
-            'widths' => [8, 25, 25, 20, 15, 20],
+            'widths' => [8, 25, 18, 20, 12, 20],
         ]);
     }
 
@@ -303,13 +303,15 @@ class LawyersController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
         return $this->exportData($dataProvider, [
-            'title' => 'المحامون',
-            'filename' => 'lawyers',
-            'headers' => ['#', 'الاسم', 'العنوان', 'رقم الهاتف', 'الحالة', 'أنشئ بواسطة'],
+            'title' => 'المفوضين والوكلاء',
+            'filename' => 'representatives',
+            'headers' => ['#', 'الاسم', 'النوع', 'رقم الهاتف', 'الحالة', 'أنشئ بواسطة'],
             'keys' => [
                 '#',
                 'name',
-                'address',
+                function ($model) {
+                    return ($model->representative_type === Lawyers::REP_TYPE_LAWYER) ? 'وكيل محامي' : 'مفوض عادي';
+                },
                 'phone_number',
                 function ($model) { return ($model->status == 0) ? 'نشط' : 'غير نشط'; },
                 'createdBy.username',
@@ -318,8 +320,47 @@ class LawyersController extends Controller
     }
 
     /**
+     * Handle signature PNG file upload for a lawyer/representative.
+     */
+    protected function handleSignatureUpload(Lawyers $model)
+    {
+        $signatureFile = UploadedFile::getInstanceByName('signature_file');
+
+        if ($model->signature_image === '__removed__') {
+            if ($model->getOldAttribute('signature_image')) {
+                $oldPath = Yii::getAlias('@backend/web/') . $model->getOldAttribute('signature_image');
+                if (file_exists($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+            $model->signature_image = null;
+            $model->save(false, ['signature_image']);
+            return;
+        }
+
+        if ($signatureFile) {
+            $signatureDir = Yii::getAlias('@backend/web/uploads/lawyers/signatures');
+            if (!is_dir($signatureDir)) {
+                FileHelper::createDirectory($signatureDir, 0777);
+            }
+
+            if ($model->getOldAttribute('signature_image')) {
+                $oldPath = Yii::getAlias('@backend/web/') . $model->getOldAttribute('signature_image');
+                if (file_exists($oldPath)) {
+                    @unlink($oldPath);
+                }
+            }
+
+            $signatureName = 'sig_' . $model->id . '_' . time() . '.png';
+            if ($signatureFile->saveAs($signatureDir . DIRECTORY_SEPARATOR . $signatureName)) {
+                $model->signature_image = 'uploads/lawyers/signatures/' . $signatureName;
+                $model->save(false, ['signature_image']);
+            }
+        }
+    }
+
+    /**
      * Finds the Lawyers model based on its primary key value.
-     * If the model is not found, a 404 HTTP exception will be thrown.
      * @param integer $id
      * @return Lawyers the loaded model
      * @throws NotFoundHttpException if the model cannot be found

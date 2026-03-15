@@ -22,6 +22,16 @@ use backend\helpers\NameHelper;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use common\helper\Permissions;
 use backend\helpers\ExportTrait;
+use backend\services\JudiciaryWorkflowService;
+use backend\services\JudiciaryDeadlineService;
+use backend\services\JudiciaryRequestGenerator;
+use backend\services\EntityResolverService;
+use backend\services\DiwanCorrespondenceService;
+use backend\services\HolidayService;
+use backend\models\JudiciaryDeadline;
+use backend\models\JudiciaryRequestTemplate;
+use backend\modules\diwan\models\DiwanCorrespondence;
+use backend\modules\diwan\models\DiwanCorrespondenceSearch;
 
 /**
  * JudiciaryController implements the CRUD actions for Judiciary model.
@@ -57,6 +67,9 @@ class JudiciaryController extends Controller
                             'export-actions-excel', 'export-actions-pdf',
                             'export-report-excel', 'export-report-pdf',
                             'case-timeline',
+                            'correspondence-list', 'deadline-dashboard',
+                            'entity-search', 'generate-request',
+                            'refresh-deadlines', 'sync-holidays',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -1555,6 +1568,173 @@ class JudiciaryController extends Controller
         return $this->render('batch_print', [
             'models' => $models,
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  المراسلات والتبليغات — AJAX list for case view
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionCorrespondenceList($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $type = Yii::$app->request->get('type');
+
+        $query = DiwanCorrespondence::find()->forCase((int)$id)->chronological();
+        if ($type) {
+            $query->andWhere(['communication_type' => $type]);
+        }
+
+        $rows = $query->with(['customer', 'authority'])->asArray()->all();
+
+        $entityService = new EntityResolverService();
+        $result = [];
+        foreach ($rows as $row) {
+            $recipientName = '';
+            if ($row['recipient_type'] === 'defendant') {
+                $recipientName = $row['customer']['name'] ?? '';
+            } elseif ($row['recipient_type'] && $row['recipient_type'] !== 'defendant') {
+                $fkId = $row['bank_id'] ?? $row['job_id'] ?? $row['authority_id'] ?? null;
+                if ($fkId) {
+                    $recipientName = $entityService->getDisplayName($row['recipient_type'], (int)$fkId);
+                }
+            }
+            $row['recipient_name'] = $recipientName;
+            $result[] = $row;
+        }
+
+        return ['success' => true, 'data' => $result];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  لوحة المواعيد — Deadline Dashboard data
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionDeadlineDashboard()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        JudiciaryDeadlineService::refreshAllStatuses();
+
+        $expired = JudiciaryDeadline::find()
+            ->where(['status' => JudiciaryDeadline::STATUS_EXPIRED])
+            ->orderBy(['deadline_date' => SORT_ASC])
+            ->limit(20)
+            ->with(['judiciary'])
+            ->asArray()
+            ->all();
+
+        $approaching = JudiciaryDeadline::find()
+            ->where(['status' => JudiciaryDeadline::STATUS_APPROACHING])
+            ->orderBy(['deadline_date' => SORT_ASC])
+            ->limit(20)
+            ->with(['judiciary'])
+            ->asArray()
+            ->all();
+
+        return [
+            'success' => true,
+            'expired' => $expired,
+            'approaching' => $approaching,
+            'counts' => [
+                'expired' => JudiciaryDeadline::find()->where(['status' => 'expired'])->count(),
+                'approaching' => JudiciaryDeadline::find()->where(['status' => 'approaching'])->count(),
+                'pending' => JudiciaryDeadline::find()->where(['status' => 'pending'])->count(),
+            ],
+        ];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  بحث موحد عن الجهات — Entity Search for Select2
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionEntitySearch()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = Yii::$app->request->get('q', '');
+        $type = Yii::$app->request->get('type');
+        $companyId = Yii::$app->user->identity->company_id ?? null;
+
+        $service = new EntityResolverService();
+        $results = $service->search($q, $type, $companyId);
+
+        return [
+            'results' => array_map(function ($dto) {
+                return $dto->toArray();
+            }, $results),
+        ];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  توليد الطلبات الإجرائية — Request Generation Wizard
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionGenerateRequest($id)
+    {
+        $model = $this->findModel($id);
+        $request = Yii::$app->request;
+
+        if ($request->isPost) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+
+            $templateIds = $request->post('template_ids', []);
+            $defendantName = $request->post('defendant_name', '');
+            $representativeId = $request->post('representative_id', $model->lawyer_id);
+
+            $context = [
+                'defendant_name' => $defendantName,
+                'representative_id' => $representativeId,
+                'employer_name' => $request->post('employer_name', ''),
+                'bank_name' => $request->post('bank_name', ''),
+                'authority_name' => $request->post('authority_name', ''),
+                'amount' => $request->post('amount', ''),
+                'notification_date' => $request->post('notification_date', ''),
+            ];
+
+            try {
+                $generator = new JudiciaryRequestGenerator();
+                $html = $generator->generate($model->id, $templateIds, $context);
+                return ['success' => true, 'html' => $html];
+            } catch (\Exception $e) {
+                return ['success' => false, 'message' => $e->getMessage()];
+            }
+        }
+
+        $templates = JudiciaryRequestTemplate::find()
+            ->orderBy(['sort_order' => SORT_ASC, 'name' => SORT_ASC])
+            ->all();
+
+        $defendants = $model->customersAndGuarantor;
+        $lawyers = \backend\modules\lawyers\models\Lawyers::find()->all();
+
+        return $this->render('generate_request', [
+            'model' => $model,
+            'templates' => $templates,
+            'defendants' => $defendants,
+            'lawyers' => $lawyers,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تحديث المواعيد — Refresh Deadline Statuses
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionRefreshDeadlines()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $updated = JudiciaryDeadlineService::refreshAllStatuses();
+        return ['success' => true, 'updated' => $updated];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  مزامنة العطل — Sync Holidays from API
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionSyncHolidays()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $year = (int)Yii::$app->request->get('year', date('Y'));
+        $service = new HolidayService();
+        return $service->syncFromApi($year);
     }
 
     /**

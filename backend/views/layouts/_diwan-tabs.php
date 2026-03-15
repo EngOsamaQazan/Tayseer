@@ -44,6 +44,15 @@ if ($u->can(Permissions::DIWAN)) {
     ];
 }
 
+if ($u->can(Permissions::DIWAN) || $u->can(Permissions::JUD_VIEW)) {
+    $tabs[] = [
+        'id'    => 'correspondence',
+        'label' => 'المراسلات والتبليغات',
+        'icon'  => 'fa-envelope',
+        'url'   => Url::to(['/diwan/diwan/correspondence-index']),
+    ];
+}
+
 if ($u->can(Permissions::DIWAN_REPORTS) || $u->can(Permissions::DIWAN)) {
     $tabs[] = [
         'id'    => 'reports',

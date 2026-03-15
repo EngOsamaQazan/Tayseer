@@ -18,17 +18,32 @@ use Yii;
  */
 class JudiciaryActions extends \yii\db\ActiveRecord
 {
-    /* تصنيفات المراحل القضائية */
-    const STAGE_CASE_PREPARATION     = 'case_preparation';     // تجهيز أوراق الدعوى
-    const STAGE_CASE_REGISTRATION    = 'case_registration';    // تسجيل الدعوى
-    const STAGE_NOTIFICATION         = 'notification';         // التبليغ والإخطار
-    const STAGE_SALARY_DEDUCTION     = 'salary_deduction';     // حسم الراتب
-    const STAGE_ARREST_DETENTION     = 'arrest_detention';     // القبض والحبس ومنع السفر
-    const STAGE_ASSET_SEIZURE        = 'asset_seizure';        // حجز الأموال والمركبات
-    const STAGE_APPEAL_CANCELLATION  = 'appeal_cancellation';  // استئناف / إلغاء
-    const STAGE_SETTLEMENT_CLOSURE   = 'settlement_closure';   // تسوية / إغلاق
-    const STAGE_COURT_DECISION       = 'court_decision';       // قرار قضائي
-    const STAGE_GENERAL              = 'general';              // عام
+    /*
+     * Category constants (action_type) — what kind of action this is.
+     * These are stored in os_judiciary_actions.action_type.
+     * Old STAGE_* aliases kept for backward compatibility.
+     */
+    const CATEGORY_CASE_PREPARATION     = 'case_preparation';
+    const CATEGORY_FEE_REGISTRATION     = 'fee_registration';
+    const CATEGORY_NOTIFICATION         = 'notification';
+    const CATEGORY_PROCEDURAL_REQUESTS  = 'procedural_requests';
+    const CATEGORY_CORRESPONDENCE       = 'correspondence';
+    const CATEGORY_FOLLOW_UP            = 'follow_up';
+    const CATEGORY_SETTLEMENT_CLOSURE   = 'settlement_closure';
+    const CATEGORY_APPEAL               = 'appeal_cancellation';
+    const CATEGORY_GENERAL              = 'general';
+
+    // Legacy aliases — kept so existing code referencing STAGE_* still works
+    const STAGE_CASE_PREPARATION     = self::CATEGORY_CASE_PREPARATION;
+    const STAGE_CASE_REGISTRATION    = 'case_registration';
+    const STAGE_NOTIFICATION         = self::CATEGORY_NOTIFICATION;
+    const STAGE_SALARY_DEDUCTION     = 'salary_deduction';
+    const STAGE_ARREST_DETENTION     = 'arrest_detention';
+    const STAGE_ASSET_SEIZURE        = 'asset_seizure';
+    const STAGE_APPEAL_CANCELLATION  = self::CATEGORY_APPEAL;
+    const STAGE_SETTLEMENT_CLOSURE   = self::CATEGORY_SETTLEMENT_CLOSURE;
+    const STAGE_COURT_DECISION       = 'court_decision';
+    const STAGE_GENERAL              = self::CATEGORY_GENERAL;
 
     /**
      * {@inheritdoc}
@@ -45,16 +60,21 @@ class JudiciaryActions extends \yii\db\ActiveRecord
     public static function getActionTypeList()
     {
         return [
-            self::STAGE_CASE_PREPARATION    => 'تجهيز أوراق الدعوى',
-            self::STAGE_CASE_REGISTRATION   => 'تسجيل الدعوى',
-            self::STAGE_NOTIFICATION        => 'التبليغ والإخطار',
-            self::STAGE_SALARY_DEDUCTION    => 'حسم الراتب',
-            self::STAGE_ARREST_DETENTION    => 'القبض والحبس ومنع السفر',
-            self::STAGE_ASSET_SEIZURE       => 'حجز الأموال والمركبات',
-            self::STAGE_APPEAL_CANCELLATION => 'استئناف / إلغاء',
-            self::STAGE_SETTLEMENT_CLOSURE  => 'تسوية / إغلاق',
-            self::STAGE_COURT_DECISION      => 'قرار قضائي',
-            self::STAGE_GENERAL             => 'عام',
+            self::CATEGORY_CASE_PREPARATION    => 'تجهيز القضية',
+            self::CATEGORY_FEE_REGISTRATION    => 'رسوم وتسجيل',
+            self::CATEGORY_NOTIFICATION        => 'تبليغ وإخطار',
+            self::CATEGORY_PROCEDURAL_REQUESTS => 'طلبات إجرائية',
+            self::CATEGORY_CORRESPONDENCE      => 'كتب ومراسلات',
+            self::CATEGORY_FOLLOW_UP           => 'متابعة وتنفيذ',
+            self::CATEGORY_SETTLEMENT_CLOSURE  => 'تسوية وإغلاق',
+            self::CATEGORY_APPEAL              => 'استئناف / إلغاء',
+            self::CATEGORY_GENERAL             => 'عام',
+            // Legacy values still in DB
+            self::STAGE_CASE_REGISTRATION      => 'تسجيل الدعوى',
+            self::STAGE_SALARY_DEDUCTION       => 'حسم الراتب',
+            self::STAGE_ARREST_DETENTION       => 'القبض والحبس ومنع السفر',
+            self::STAGE_ASSET_SEIZURE          => 'حجز الأموال والمركبات',
+            self::STAGE_COURT_DECISION         => 'قرار قضائي',
         ];
     }
 

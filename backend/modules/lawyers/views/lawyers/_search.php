@@ -1,79 +1,32 @@
-<?
+<?php
+
 use yii\widgets\ActiveForm;
-/* @var $model */
+use yii\helpers\Html;
+use backend\modules\lawyers\models\Lawyers;
+
 ?>
-<div class="questions-bank box box-primary">
-
-    <?php
-    $form = yii\widgets\ActiveForm::begin([
-                'id' => '_search',
-                'method' => 'get',
-                'action' => ['index']
-    ]);
-    ?>
-    <div class="row">
-        <div class="col-lg-6">
-            <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
+<div class="box box-primary" style="border-radius:12px;border:1px solid #e2e8f0;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:20px">
+    <?php $form = ActiveForm::begin(['id' => 'lw-search', 'method' => 'get', 'action' => ['index']]); ?>
+    <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+        <div style="flex:1;min-width:180px">
+            <?= $form->field($model, 'name')->textInput(['placeholder' => 'بحث بالاسم...'])->label('الاسم') ?>
         </div>
-        <div class="col-lg-6">
-            <?=
-            $form->field($model, 'status')->widget(kartik\select2\Select2::classname(), [
-                'data' => [Yii::t('app', 'Active'), Yii::t('app', 'None Active')],
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a type.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-            ?>
+        <div style="flex:1;min-width:160px">
+            <?= $form->field($model, 'representative_type')->dropDownList([
+                Lawyers::REP_TYPE_DELEGATE => 'مفوض عادي',
+                Lawyers::REP_TYPE_LAWYER => 'وكيل محامي',
+            ], ['prompt' => 'الكل'])->label('النوع') ?>
+        </div>
+        <div style="flex:1;min-width:160px">
+            <?= $form->field($model, 'status')->dropDownList([
+                0 => 'نشط',
+                1 => 'غير نشط',
+            ], ['prompt' => 'الكل'])->label('الحالة') ?>
+        </div>
+        <div style="display:flex;gap:6px;padding-bottom:15px">
+            <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary btn-sm']) ?>
+            <?= Html::a('إعادة تعيين', ['index'], ['class' => 'btn btn-outline-secondary btn-sm']) ?>
         </div>
     </div>
-    <div class="row">
-        <div class="col-lg-6">
-            <?= $form->field($model, 'address')->textInput(['maxlength' => true]) ?>
-        </div>
-        <div class="col-lg-6">
-<?= $form->field($model, 'phone_number')->textInput(['maxlength' => true]) ?>
-        </div>
-    </div>
-    <div class ="row">
-        <div class="col-lg-6">
-            <?=
-            $form->field($model, 'created_by')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a type.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-            ?>
-        </div>
-        <div class="col-lg-6">
-            <?=
-            $form->field($model, 'last_update_by')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a type.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-            ?>
-        </div>
-
-    </div>
-
-
-    <div class="form-group">
-<?= yii\helpers\Html::submitButton(Yii::t('app', 'Search'), ['class' => 'btn btn-primary']) ?>
-    </div>
+    <?php ActiveForm::end(); ?>
 </div>
-
-<?php yii\widgets\ActiveForm::end() ?>
