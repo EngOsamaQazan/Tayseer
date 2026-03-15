@@ -339,11 +339,13 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 <?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
 <?php \yii\bootstrap\Modal::end() ?>
 
-<?php $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']); ?>
+<?php
+$updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
+$reqUrlJs = json_encode($updateReqUrl);
 
-<script>
-var JCA = (function(){
-    var reqUrl = <?= json_encode($updateReqUrl) ?>;
+$jcaJs = <<<JS
+window.JCA = (function(){
+    var reqUrl = {$reqUrlJs};
     var pendingDecision = {};
 
     function getCsrfParam() {
@@ -429,5 +431,7 @@ var JCA = (function(){
         confirmDecision: confirmDecision
     };
 })();
-</script>
+JS;
+$this->registerJs($jcaJs);
+?>
 <?php endif ?>
