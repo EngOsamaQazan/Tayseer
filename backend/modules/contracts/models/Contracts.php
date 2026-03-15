@@ -10,7 +10,7 @@ use \common\models\User;
 use yii\helpers\ArrayHelper;
 use yii\behaviors\BlameableBehavior;
 use backend\modules\followUp\models\FollowUp;
-use noam148\imagemanager\models\ImageManager;
+use backend\models\Media;
 use backend\modules\companies\models\Companies;
 use backend\modules\customers\models\Customers;
 use backend\modules\judiciary\models\Judiciary;
@@ -46,7 +46,7 @@ use yii\db;
  * @property Customers[] $guarantor
  * @property string $due_date
  * @property integer $selected_image
- * @property ImageManager $selectedImg
+ * @property Media $selectedImg
  * @property string $selectedImagePath
  * @property float $commitment_discount
  * @property boolean $is_can_not_contact
@@ -330,18 +330,13 @@ class Contracts extends \yii\db\ActiveRecord
      */
     public function getSelectedImg()
     {
-        return $this->hasOne(ImageManager::class, ['id' => 'selected_image']);
+        return $this->hasOne(Media::class, ['id' => 'selected_image']);
     }
 
     public function getSelectedImagePath()
     {
-        if ($this->selectedImg) {
-            $file_hash = $this->selectedImg->fileHash;
-            $file_extention = pathinfo($this->selectedImg->fileName, PATHINFO_EXTENSION);
-            $path = '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
-            if (is_file(\Yii::getAlias('@webroot') . $path)) {
-                return $path;
-            }
+        if ($this->selectedImg && $this->selectedImg->fileExists()) {
+            return $this->selectedImg->getUrl();
         }
         return null;
     }

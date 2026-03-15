@@ -9,10 +9,10 @@ return [
     'googleMapsApiKey' => null,
 
     /**
-     * قاعدة روابط صور العملاء (ImageManager).
+     * قاعدة روابط صور العملاء.
      * إذا مُعرّف: تُحمّل كل الصور من هذا العنوان (مثلاً من سيرفر جادل).
-     * الطريقة القديمة كانت: https://jadal.aqssat.co/images/imagemanager/{id}_{fileHash}.{ext}
      * على نماء يمكن تعيين: 'customerImagesBaseUrl' => 'https://jadal.aqssat.co' في params-local
+     * يُستخدم عبر MediaHelper::absoluteUrl()
      */
     'customerImagesBaseUrl' => null,
 ];

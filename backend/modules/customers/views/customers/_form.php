@@ -10,7 +10,6 @@ use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use backend\helpers\PhoneInputWidget;
-use backend\widgets\ImageManagerInputWidget;
 use common\helper\Permissions;
 
 /* جلب القوائم المنسدلة من الكاش - دفعة واحدة */
@@ -250,14 +249,7 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
             </div>
         <?php endif ?>
 
-        <?= $form->field($model, 'customer_images')->widget(ImageManagerInputWidget::class, [
-            'aspectRatio' => 16/9,
-            'cropViewMode' => 1,
-            'showPreview' => true,
-            'showDeletePickedImageConfirm' => true,
-            'groupName' => 'coustmers',
-            'contractId' => $isNew ? $imgRandId : $model->id,
-        ])->label('إدارة الصور') ?>
+        <?= $form->field($model, 'customer_images')->fileInput(['accept' => 'image/*'])->label('إدارة الصور') ?>
     </fieldset>
 
     <!-- زر الحفظ -->

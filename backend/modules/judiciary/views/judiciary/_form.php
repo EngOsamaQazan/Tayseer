@@ -337,7 +337,7 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 
 <!-- Modal -->
 <div class="modal fade" id="jcaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
         <div class="modal-content">
             <div class="modal-header" style="border-bottom:1px solid #E2E8F0;padding:14px 20px">
                 <h5 class="modal-title" id="jcaModalTitle" style="font-weight:700;font-size:15px;color:#334155"></h5>
@@ -355,8 +355,12 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 
 <script>
 var JCA = (function(){
-    var modalEl = document.getElementById('jcaModal');
-    var reqUrl = <?= json_encode($updateReqUrl) ?>;
+    var $modal  = $('#jcaModal');
+    var $title  = $('#jcaModalTitle');
+    var $body   = $('#jcaModalBody');
+    var $footer = $('#jcaModalFooter');
+    var modalEl = $modal[0];
+    var reqUrl  = <?= json_encode($updateReqUrl) ?>;
     var pendingDecision = {};
     var refreshPending = false;
 
@@ -369,21 +373,14 @@ var JCA = (function(){
         return m ? m.getAttribute('content') : '';
     }
 
-    function ajaxHeaders() {
-        return { 'X-Requested-With': 'XMLHttpRequest' };
-    }
-
     function showModal() {
         if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
             var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             inst.show();
         } else {
-            modalEl.classList.add('show');
-            modalEl.style.display = 'block';
-            var bd = document.createElement('div');
-            bd.className = 'modal-backdrop fade show';
-            document.body.appendChild(bd);
-            document.body.classList.add('modal-open');
+            $modal.addClass('show').css('display','block');
+            $('<div class="modal-backdrop fade show"></div>').appendTo('body');
+            $('body').addClass('modal-open');
         }
     }
 
@@ -392,98 +389,115 @@ var JCA = (function(){
             var inst = bootstrap.Modal.getInstance(modalEl);
             if (inst) try { inst.hide(); } catch(e) {}
         }
-        modalEl.classList.remove('show');
-        modalEl.style.display = 'none';
-        document.querySelectorAll('.modal-backdrop').forEach(function(b){ b.remove(); });
-        document.body.classList.remove('modal-open');
-        document.body.style.overflow = '';
-        document.body.style.paddingRight = '';
+        $modal.removeClass('show').css('display','none');
+        $('.modal-backdrop').remove();
+        $('body').removeClass('modal-open').css({overflow:'', paddingRight:''});
     }
 
     function setLoading() {
-        document.getElementById('jcaModalTitle').textContent = 'جاري التحميل...';
-        document.getElementById('jcaModalBody').innerHTML = '<div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>';
-        document.getElementById('jcaModalFooter').innerHTML = '';
+        $title.text('جاري التحميل...');
+        $body.html('<div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>');
+        $footer.html('');
+    }
+
+    function initDynamicContent() {
+        if (typeof Alpine !== 'undefined') {
+            try { if (Alpine.initTree) Alpine.initTree($body[0]); } catch(e) {}
+        }
     }
 
     function refreshActions() {
         if (refreshPending) return;
         refreshPending = true;
-        fetch(location.href).then(function(r){
-            if (!r.ok) throw new Error(r.status);
-            return r.text();
-        }).then(function(html){
+        $.get(location.href).done(function(html) {
             refreshPending = false;
-            var doc = new DOMParser().parseFromString(html, 'text/html');
-            var newC = doc.getElementById('jf-actions-container');
-            var curC = document.getElementById('jf-actions-container');
-            if (newC && curC) curC.innerHTML = newC.innerHTML;
-        }).catch(function(){ refreshPending = false; });
+            var $tmp = $('<div>').append($.parseHTML(html, document, true));
+            var newHtml = $tmp.find('#jf-actions-container').html();
+            if (newHtml) $('#jf-actions-container').html(newHtml);
+        }).fail(function() { refreshPending = false; });
     }
 
     function openModal(url) {
         setLoading();
         showModal();
-        fetch(url, {headers: ajaxHeaders()}).then(function(r){
-            return r.json();
-        }).then(function(resp){
-            if (resp.title) document.getElementById('jcaModalTitle').innerHTML = resp.title;
-            if (resp.content) document.getElementById('jcaModalBody').innerHTML = resp.content;
-            if (resp.footer) document.getElementById('jcaModalFooter').innerHTML = resp.footer;
+        $.ajax({
+            url: url,
+            type: 'GET',
+            headers: {'X-Requested-With':'XMLHttpRequest'}
+        }).done(function(resp) {
+            if (resp.title)   $title.html(resp.title);
+            if (resp.content) $body.html(resp.content);
+            if (resp.footer)  $footer.html(resp.footer);
+            initDynamicContent();
             bindFormSubmit(url);
-        }).catch(function(err){
-            document.getElementById('jcaModalTitle').textContent = 'خطأ';
-            document.getElementById('jcaModalBody').innerHTML = '<div style="color:#DC2626;padding:20px;text-align:center"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px">فشل تحميل النموذج</p></div>';
-            document.getElementById('jcaModalFooter').innerHTML = '<button type="button" class="btn btn-default" onclick="JCA.hideModal()">إغلاق</button>';
+        }).fail(function() {
+            $title.text('خطأ');
+            $body.html('<div style="color:#DC2626;padding:20px;text-align:center"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px">فشل تحميل النموذج</p></div>');
+            $footer.html('<button type="button" class="btn btn-default" onclick="JCA.hideModal()">إغلاق</button>');
         });
     }
 
     function bindFormSubmit(fallbackUrl) {
-        var form = document.querySelector('#jcaModalBody form');
-        var btn = document.querySelector('#jcaModalFooter [type="submit"]');
-        if (!form || !btn) return;
-        btn.addEventListener('click', function(e) {
+        var $form = $body.find('form');
+        var $btn  = $footer.find('[type="submit"]');
+        if (!$form.length || !$btn.length) return;
+
+        $btn.off('click.jca').on('click.jca', function(e) {
             e.preventDefault();
-            submitForm(form.getAttribute('action') || fallbackUrl, new FormData(form));
+            var ev = $.Event('beforeSubmit');
+            $form.trigger(ev);
+            if (ev.result === false) return;
+            submitForm($form.attr('action') || fallbackUrl, new FormData($form[0]));
+        });
+
+        $form.off('submit.jca').on('submit.jca', function(e) {
+            e.preventDefault();
+            submitForm($(this).attr('action') || fallbackUrl, new FormData(this));
         });
     }
 
     function submitForm(url, formData) {
-        var btn = document.querySelector('#jcaModalFooter [type="submit"]');
-        if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...'; }
-        fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: ajaxHeaders()
-        }).then(function(r){ return r.json(); }).then(function(resp){
+        var $btn = $footer.find('[type="submit"]');
+        if ($btn.length) $btn.prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {'X-Requested-With':'XMLHttpRequest'}
+        }).done(function(resp) {
             if (resp.forceClose) {
                 hideModal();
                 setTimeout(refreshActions, 200);
                 return;
             }
-            if (resp.title) document.getElementById('jcaModalTitle').innerHTML = resp.title;
-            if (resp.content) document.getElementById('jcaModalBody').innerHTML = resp.content;
-            if (resp.footer) document.getElementById('jcaModalFooter').innerHTML = resp.footer;
+            if (resp.title)   $title.html(resp.title);
+            if (resp.content) $body.html(resp.content);
+            if (resp.footer)  $footer.html(resp.footer);
+            initDynamicContent();
             bindFormSubmit(url);
-        }).catch(function(){
-            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa fa-save"></i> حفظ'; }
+        }).fail(function() {
+            if ($btn.length) $btn.prop('disabled',false).html('<i class="fa fa-save"></i> حفظ');
             alert('حدث خطأ أثناء الحفظ');
         });
     }
 
     function deleteAction(url, el) {
         if (!confirm('هل أنت متأكد من حذف هذا الإجراء؟')) return;
-        var row = el.closest('.jf-action-row');
-        if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
+        var $row = $(el).closest('.jf-action-row');
+        if ($row.length) $row.css({opacity:'0.4', pointerEvents:'none'});
         var fd = new FormData();
         fd.append(getCsrfParam(), getCsrfToken());
-        fetch(url, {method:'POST', body:fd, headers:ajaxHeaders()}).then(function(r){
-            return r.json();
-        }).then(function(){
-            if (row) { row.style.transition = 'all .2s'; row.style.maxHeight = '0'; row.style.overflow = 'hidden'; row.style.opacity = '0'; }
+        $.ajax({
+            url: url, type:'POST', data:fd,
+            processData:false, contentType:false,
+            headers:{'X-Requested-With':'XMLHttpRequest'}
+        }).done(function() {
+            if ($row.length) $row.css({transition:'all .2s', maxHeight:'0', overflow:'hidden', opacity:'0'});
             setTimeout(refreshActions, 400);
-        }).catch(function(){
-            if (row) { row.style.opacity = '1'; row.style.pointerEvents = ''; }
+        }).fail(function() {
+            if ($row.length) $row.css({opacity:'1', pointerEvents:''});
             alert('حدث خطأ أثناء الحذف');
         });
     }
@@ -515,27 +529,26 @@ var JCA = (function(){
         var df = document.getElementById('jf-df-' + id);
         var btn = df ? df.querySelector('.jf-decision-confirm') : null;
         if (btn) { btn.disabled = true; btn.textContent = 'جاري الحفظ...'; }
-        var fd = new FormData();
-        fd.append('id', pendingDecision.id);
-        fd.append('status', pendingDecision.status);
-        fd.append('decision_text', dt);
-        fd.append(getCsrfParam(), getCsrfToken());
-        fetch(reqUrl, {method:'POST', body:fd, headers:ajaxHeaders()}).then(function(r){
-            return r.json();
-        }).then(function(res){
+        var postData = {
+            id: pendingDecision.id,
+            status: pendingDecision.status,
+            decision_text: dt
+        };
+        postData[getCsrfParam()] = getCsrfToken();
+        $.post(reqUrl, postData).done(function(res) {
             if (res.success) {
                 setTimeout(refreshActions, 100);
             } else {
                 alert(res.message || 'حدث خطأ');
                 if (btn) btn.disabled = false;
             }
-        }).catch(function(){
+        }).fail(function() {
             alert('حدث خطأ أثناء الحفظ');
             if (btn) { btn.disabled = false; btn.textContent = 'تأكيد'; }
-        }).finally(function(){ pendingDecision = {}; });
+        }).always(function() { pendingDecision = {}; });
     }
 
-    document.addEventListener('click', function(e) {
+    $(document).on('click', function(e) {
         var trigger = e.target.closest('.jca-act-trigger');
         if (trigger) {
             e.stopPropagation();

@@ -7,7 +7,6 @@ use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use backend\modules\customers\models\Customers;
 use yii\helpers\Url;
-use backend\widgets\ImageManagerInputWidget;
 use backend\modules\companies\models\Companies;
 
 $this->registerJsFile('/js/Tafqeet.js');
@@ -270,16 +269,7 @@ $this->registerJsFile('/js/Tafqeet.js');
         <?= $form->field($model, 'image_manager_id')->hiddenInput()->label(false); ?>
 
         <div class="row">
-            <?php
-            echo $form->field($model, 'contract_images')->widget(ImageManagerInputWidget::className(), [
-                'aspectRatio' => (16 / 9), //set the aspect ratio
-                'cropViewMode' => 1, //crop mode, option info: https://github.com/fengyuanchen/cropper/#viewmode
-                'showPreview' => true, //false to hide the preview
-                'showDeletePickedImageConfirm' => false, //on true show warning before detach image
-                'groupName' => 'contracts',
-                'contractId' => $model->isNewRecord ? $image_manager_random_id : $model->id,
-            ]);
-            ?>
+            <?= $form->field($model, 'contract_images')->fileInput(['accept' => 'image/*'])->label(false) ?>
         </div>
 
 

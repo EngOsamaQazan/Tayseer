@@ -12,7 +12,7 @@ use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
 use kartik\select2\Select2;
 use backend\helpers\PhoneInputWidget;
-use backend\widgets\ImageManagerInputWidget;
+use backend\helpers\MediaHelper;
 use common\helper\Permissions;
 
 /* Register assets */
@@ -420,8 +420,7 @@ if (!$isNew) {
                             <?php 
                             $DOC_TYPES = ['0'=>'هوية وطنية','1'=>'جواز سفر','2'=>'رخصة قيادة','3'=>'شهادة ميلاد','4'=>'شهادة تعيين','5'=>'كتاب ضمان','6'=>'كشف راتب','7'=>'تعيين عسكري','8'=>'صورة شخصية','9'=>'أخرى'];
                             foreach ($currentImages as $cimg):
-                                $ext = pathinfo($cimg['fileName'] ?? '', PATHINFO_EXTENSION);
-                                $imgPath = '/images/imagemanager/' . $cimg['id'] . '_' . $cimg['fileHash'] . '.' . $ext;
+                                $imgPath = MediaHelper::url((int)$cimg['id'], $cimg['fileHash'], $cimg['fileName'] ?? '');
                                 $typeName = $DOC_TYPES[$cimg['groupName']] ?? '';
                                 $isSelected = (!empty($model->selected_image) && $model->selected_image == $cimg['id']);
                             ?>
@@ -489,7 +488,7 @@ if (!$isNew) {
 
                             foreach ($existingImages as $idx => $img) {
                                 $imgExt = pathinfo($img['fileName'] ?? '', PATHINFO_EXTENSION);
-                                $imgWebPath = '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . '.' . $imgExt;
+                                $imgWebPath = MediaHelper::url((int)$img['id'], $img['fileHash'], $img['fileName'] ?? '');
                                 $imgLabel = $docTypes[$img['groupName'] ?? '9'] ?? 'أخرى';
                                 $isPdf = strtolower($imgExt) === 'pdf';
                                 $thumbSrc = $isPdf ? '/css/images/pdf-icon.png' : $imgWebPath;
@@ -580,22 +579,7 @@ if (!$isNew) {
                         </div>
                     </div>
 
-                    <!-- ═══ Old ImageManager (Fallback) ═══ -->
-                    <details style="margin-top:18px; border:1px solid #e5e5e5; border-radius:8px; padding:12px">
-                        <summary style="cursor:pointer; font-size:13px; color:#888; font-weight:600">
-                            <i class="fa fa-history"></i> إدارة الصور (النظام القديم)
-                        </summary>
-                        <div style="margin-top:12px">
-                            <?= $form->field($model, 'customer_images')->widget(ImageManagerInputWidget::class, [
-                                'aspectRatio' => 16/9,
-                                'cropViewMode' => 1,
-                                'showPreview' => true,
-                                'showDeletePickedImageConfirm' => true,
-                                'groupName' => 'coustmers',
-                                'contractId' => $isNew ? $imgRandId : $model->id,
-                            ])->label('إدارة الصور — ImageManager') ?>
-                        </div>
-                    </details>
+                    <!-- Smart Media handles all image uploads -->
                 </div>
 
                 <!-- Decision Actions -->

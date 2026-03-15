@@ -1,7 +1,5 @@
 <?php
 
-// namespace noam148\imagemanager\components;
-
 namespace backend\widgets;
 
 use yii\base\Widget;

@@ -130,9 +130,6 @@ return [
         'officialHolidays' => [
             'class' => 'backend\modules\officialHolidays\OfficialHolidays',
         ],
-        'imagemanager' => [
-            'class' => 'backend\modules\imagemanager\Imagemanager',
-        ],
         'income' => [
             'class' => 'backend\modules\income\Income',
         ],
@@ -257,27 +254,11 @@ return [
         //     'basePath' => '@api/modules/v1',
         //     'class' => 'api\modules\v1\Module',
         // ],
-        'imagemanager' => [
-            'class' => 'noam148\imagemanager\Module',
-            'canUploadImage' => false,
-            'canRemoveImage' => function () {
-                return false;
-            },
-            'deleteOriginalAfterEdit' => false, // false: keep original image after edit. true: delete original image after edit
-            // Set if blameable behavior is used, if it is, callable function can also be used
-            'setBlameableBehavior' => false,
-            //add css files (to use in media manage selector iframe)
-            'cssFiles' => [
-                // 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css',
-            ],
-        ],
         'admin' => [
             'class' => 'mdm\admin\Module',
         ]
     ],
     'controllerMap' => [
-        'imagemanager' => 'backend\controllers\ImageManagerController',
-
     ],
     'components' => [
         'i18n' => [
@@ -635,31 +616,6 @@ return [
                 // yii.confirm is already overridden by Vite bundle with SweetAlert2)
                 'kartik\dialog\DialogBootstrapAsset' => ['js' => [], 'depends' => []],
                 'kartik\dialog\DialogYiiAsset' => ['js' => [], 'depends' => []],
-                'backend\assets\ImageManagerInputAsset' => [
-                    'basePath' => '@webroot',
-                    'baseUrl' => '@web',
-                    // 'sourcePath' => null, // do not publish the bundle
-                    'js' => [
-                        'js/script.imagemanager.input.js',
-                    ],
-                    'css' => [
-                        'css/imagemanager.input.css',
-                    ]
-                ],
-                'backend\assets\ImageManagerModuleAsset' => [
-                    // 'sourcePath' => null,
-                    'basePath' => '@webroot',
-                    'baseUrl' => '@web',
-                    // 'sourcePath' => '@backend/web', // do not publish the bundle
-                    'js' => [
-                        'js/cropper.min.js',
-                        'js/script.imagemanager.module.js',
-                    ],
-                    'css' => [
-                        'css/cropper.min.css',
-                        'css/imagemanager.module.css'
-                    ]
-                ],
             ],
         ],
     ],

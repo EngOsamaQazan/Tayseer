@@ -37,7 +37,6 @@ class RouteAccessBehavior extends Behavior
         'gii',
         'pin/toggle',
         'pin/list',
-        'imagemanager',
     ];
 
     public function events()

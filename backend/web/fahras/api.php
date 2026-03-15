@@ -218,7 +218,7 @@ foreach ($rows as $row) {
     if ($stmtImg && is_object($stmtImg)) {
       foreach ($stmtImg->fetchAll() as $img) {
         $ext = pathinfo($img['fileName'] ?? '', PATHINFO_EXTENSION);
-        $imgUrl = $baseUrl . '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . '.' . $ext;
+        $imgUrl = $baseUrl . '/images/imagemanager/' . $img['id'] . '_' . $img['fileHash'] . ($ext ? '.' . $ext : '');
         $gn = $img['groupName'] ?? '9';
         $images[] = [
           'id'   => (int)$img['id'],

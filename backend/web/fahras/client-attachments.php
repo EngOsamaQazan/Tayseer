@@ -92,7 +92,7 @@ if (!empty($images)) {
     if (empty($fileHash) || empty($imgId)) continue;
 
     $ext    = pathinfo($fileName, PATHINFO_EXTENSION);
-    $imgUrl = $baseUrl . $imgId . '_' . $fileHash . '.' . $ext;
+    $imgUrl = $baseUrl . $imgId . '_' . $fileHash . ($ext ? '.' . $ext : '');
     $gn     = $img['groupName'] ?? '9';
     $label  = $docTypes[$gn] ?? 'أخرى';
     $count++;

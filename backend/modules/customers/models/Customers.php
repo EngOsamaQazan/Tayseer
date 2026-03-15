@@ -3,7 +3,8 @@
 namespace backend\modules\customers\models;
 
 use backend\modules\jobs\models\JobsType;
-use noam148\imagemanager\models\ImageManager;
+use backend\models\Media;
+use backend\helpers\MediaHelper;
 use Yii;
 use backend\modlues\address\models\Address;
 use backend\modlues\customers\models\ContractsCustomers;
@@ -48,7 +49,7 @@ use backend\modules\jobs\models\Jobs;
  * @property ContractsCustomers[] $contractsCustomers
  * @property CustomersDocument[] $customersDocuments
  * @property PhoneNumbers[] $phoneNumbers
- * @property ImageManager $selectedImg
+ * @property Media $selectedImg
  * @property string $selectedImagePath
  * 
  * @property string|null $has_social_security_salary
@@ -279,35 +280,22 @@ class Customers extends \yii\db\ActiveRecord
      */
     public function getSelectedImg()
     {
-        return $this->hasOne(ImageManager::class, ['id' => 'selected_image']);
+        return $this->hasOne(Media::class, ['id' => 'selected_image']);
     }
 
     public function getSelectedImagePath()
     {
-        $webroot = \Yii::getAlias('@webroot');
-
-        /* أولاً: البحث عن صورة شخصية (groupName = '8') مرتبطة بالعميل عبر customer_id */
-        $personalPhoto = ImageManager::find()
+        $personalPhoto = Media::find()
             ->where(['customer_id' => (int)$this->id, 'groupName' => '8'])
             ->orderBy(new \yii\db\Expression('RAND()'))
             ->one();
 
-        if ($personalPhoto) {
-            $ext = pathinfo($personalPhoto->fileName, PATHINFO_EXTENSION);
-            $path = '/images/imagemanager/' . $personalPhoto->id . '_' . $personalPhoto->fileHash . '.' . $ext;
-            if (is_file($webroot . $path)) {
-                return $path;
-            }
+        if ($personalPhoto && $personalPhoto->fileExists()) {
+            return $personalPhoto->getUrl();
         }
 
-        /* ثانياً: الرجوع للصورة المختارة القديمة (selected_image) */
-        if ($this->selectedImg) {
-            $file_hash = $this->selectedImg->fileHash;
-            $file_extention = pathinfo($this->selectedImg->fileName, PATHINFO_EXTENSION);
-            $path = '/images/imagemanager/' . $this->selected_image . '_' . $file_hash . '.' . $file_extention;
-            if (is_file($webroot . $path)) {
-                return $path;
-            }
+        if ($this->selectedImg && $this->selectedImg->fileExists()) {
+            return $this->selectedImg->getUrl();
         }
 
         return null;

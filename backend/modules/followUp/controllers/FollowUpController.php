@@ -427,23 +427,19 @@ class FollowUpController extends Controller
     }
 
     /**
-     * Serve ImageManager image by id (for customer images modal).
-     * إذا الملف موجود محلياً يُرسل منه، وإلا يُجلب من جادل (لنماء وغيرها).
+     * Serve media image by id (for customer images modal).
+     * إذا الملف موجود محلياً يُرسل منه، وإلا يُجلب من الخادم البعيد.
      */
     public function actionCustomerImage($id)
     {
         $id = (int) $id;
-        $model = \backend\modules\imagemanager\models\Imagemanager::findOne($id);
+        $model = \backend\models\Media::findOne($id);
         if (!$model || empty($model->fileHash)) {
             throw new NotFoundHttpException(Yii::t('app', 'الصورة غير موجودة.'));
         }
-        $ext = pathinfo((string) $model->fileName, PATHINFO_EXTENSION) ?: 'jpg';
+        $ext = $model->getExtension() ?: 'jpg';
         $mime = $ext === 'png' ? 'image/png' : ($ext === 'gif' ? 'image/gif' : ($ext === 'webp' ? 'image/webp' : 'image/jpeg'));
-        $basePath = Yii::getAlias('@backend/web/images/imagemanager');
-        if (!is_dir($basePath)) {
-            $basePath = dirname(dirname(dirname(dirname(__DIR__)))) . '/web/images/imagemanager';
-        }
-        $filePath = $basePath . '/' . $id . '_' . $model->fileHash . '.' . $ext;
+        $filePath = $model->getFilePath();
 
         if (is_file($filePath)) {
             return Yii::$app->response->sendFile($filePath, $id . '.' . $ext, [
@@ -452,11 +448,7 @@ class FollowUpController extends Controller
             ]);
         }
 
-        // الملف غير موجود محلياً (نماء) → جلب من جادل. استعمال cURL لأن allow_url_fopen غالباً معطّل على السيرفرات.
-        $jadalBase = isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== ''
-            ? rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/')
-            : 'https://jadal.aqssat.co';
-        $remoteUrl = $jadalBase . '/images/imagemanager/' . $id . '_' . $model->fileHash . '.' . $ext;
+        $remoteUrl = $model->getAbsoluteUrl();
 
         $content = null;
         if (function_exists('curl_init')) {

@@ -16,6 +16,7 @@ use backend\modules\customers\models\Customers;
 use common\models\Income;
 use yii\db\Query;
 use common\helper\Permissions;
+use backend\helpers\MediaHelper;
 
 /**
  * Site controller — Dashboard + Auth
@@ -935,17 +936,15 @@ class SiteController extends Controller
                 $ext = strtolower(pathinfo($row['fileName'] ?? '', PATHINFO_EXTENSION));
                 if (empty($ext)) $ext = 'jpg';
 
-                // ── بحث في عدة مواقع عن الصورة ──
                 $physicalFile = $row['id'] . '_' . $row['fileHash'] . '.' . $ext;
                 $fileExists = false;
-                $imageUrl = '/images/imagemanager/' . $physicalFile;
-                $source = 'imagemanager';
+                $imageUrl = MediaHelper::url((int)$row['id'], $row['fileHash'], $row['fileName']);
+                $source = 'media';
 
-                // 1) المسار الأصلي: images/imagemanager/{id}_{hash}.{ext}
                 if (file_exists($imagesDir . '/' . $physicalFile)) {
                     $fileExists = true;
-                    $imageUrl = '/images/imagemanager/' . $physicalFile;
-                    $source = 'imagemanager';
+                    $imageUrl = MediaHelper::url((int)$row['id'], $row['fileHash'], $row['fileName']);
+                    $source = 'media';
                 }
                 // 2) بالاسم الأصلي في uploads/customers/documents/{fileName}
                 elseif (file_exists($uploadsDir . '/' . $row['fileName'])) {
@@ -1262,17 +1261,15 @@ class SiteController extends Controller
             "SELECT id, fileName, fileHash FROM os_ImageManager ORDER BY RAND() LIMIT 100"
         )->queryAll();
 
-        $imagesDir = Yii::getAlias('@backend/web/images/imagemanager');
         $uploadsDir = Yii::getAlias('@backend/web/uploads/customers/documents');
         $uploadsPhotosDir = Yii::getAlias('@backend/web/uploads/customers/photos');
         $sampleMissing = 0;
         foreach ($sampleImages as $img) {
             $ext = strtolower(pathinfo($img['fileName'], PATHINFO_EXTENSION));
             if (empty($ext)) $ext = 'jpg';
-            $physFile = $img['id'] . '_' . $img['fileHash'] . '.' . $ext;
-            $found = file_exists($imagesDir . '/' . $physFile)
+            $found = MediaHelper::exists((int)$img['id'], $img['fileHash'], $img['fileName'])
                   || file_exists($uploadsDir . '/' . $img['fileName'])
-                  || file_exists($uploadsDir . '/' . $physFile)
+                  || file_exists($uploadsDir . '/' . $img['id'] . '_' . $img['fileHash'] . '.' . $ext)
                   || file_exists($uploadsPhotosDir . '/' . $img['fileName']);
             if (!$found) $sampleMissing++;
         }
@@ -1358,17 +1355,15 @@ class SiteController extends Controller
             ])->execute();
         }
 
-        // حذف الملف الفعلي — بحث في عدة مواقع
         $ext = strtolower(pathinfo($image['fileName'], PATHINFO_EXTENSION));
         if (empty($ext)) $ext = 'jpg';
         $physicalFile = $image['id'] . '_' . $image['fileHash'] . '.' . $ext;
 
-        $imagesDir  = Yii::getAlias('@backend/web/images/imagemanager');
         $uploadsDir = Yii::getAlias('@backend/web/uploads/customers/documents');
         $photosDir  = Yii::getAlias('@backend/web/uploads/customers/photos');
 
         $paths = [
-            $imagesDir . '/' . $physicalFile,
+            MediaHelper::filePath((int)$image['id'], $image['fileHash'], $image['fileName']),
             $uploadsDir . '/' . $image['fileName'],
             $uploadsDir . '/' . $physicalFile,
             $photosDir . '/' . $image['fileName'],

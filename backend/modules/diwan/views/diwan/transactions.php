@@ -5,7 +5,8 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use kartik\grid\GridView;
+use yii\grid\GridView;
+use yii\grid\ActionColumn;
 use backend\modules\diwan\models\DiwanTransaction;
 use common\helper\Permissions;
 
@@ -29,20 +30,7 @@ $canDiwanDelete = Permissions::can(Permissions::DIWAN_DELETE) || Yii::$app->user
         'id' => 'diwan-transactions-grid',
         'dataProvider' => $dataProvider,
         'filterModel' => $searchModel,
-        'responsive' => true,
-        'hover' => true,
-        'striped' => false,
-        'bordered' => false,
-        'tableOptions' => ['class' => 'table table-hover', 'style' => 'margin-bottom:0;'],
-        'panel' => [
-            'type' => GridView::TYPE_DEFAULT,
-            'heading' => false,
-        ],
-        'pjax' => true,
-        'pjaxSettings' => [
-            'options' => ['id' => 'diwan-pjax'],
-            'neverTimeout' => true,
-        ],
+        'tableOptions' => ['class' => 'table table-hover table-striped', 'style' => 'margin-bottom:0;'],
         'columns' => [
             [
                 'attribute' => 'id',
@@ -102,7 +90,7 @@ $canDiwanDelete = Permissions::can(Permissions::DIWAN_DELETE) || Yii::$app->user
                 },
             ],
             [
-                'class' => 'kartik\grid\ActionColumn',
+                'class' => ActionColumn::class,
                 'header' => '',
                 'template' => $canDiwanDelete ? '{view} {receipt} {delete}' : '{view} {receipt}',
                 'buttons' => [

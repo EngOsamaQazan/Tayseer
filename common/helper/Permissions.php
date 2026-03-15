@@ -606,9 +606,6 @@ class Permissions
             'incomeCategory/income-category' => self::getModulePermissions(self::INCOME),
             'items/items' => self::getModulePermissions(self::INVENTORY_ITEMS),
             'divisionsCollection/divisions-collection' => self::getModulePermissions(self::COLLECTION),
-            /* مدير الصور / ImageManager */
-            'imagemanager' => [self::MANAGER],
-            'imagemanager/imagemanager' => [self::MANAGER],
             /* تثبيت العناصر — متاح لجميع المستخدمين المسجّلين */
             'pin' => [],
         ];

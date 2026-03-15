@@ -2,9 +2,6 @@
 /**
  * SmartMediaController — Smart Document & Photo Management
  * Handles: file upload, webcam capture, AI classification, usage stats
- * 
- * IMPORTANT: All uploads are saved into os_ImageManager + images/imagemanager/
- * to ensure compatibility with the rest of the system (print preview, image manager, etc.)
  */
 
 namespace backend\modules\customers\controllers;
@@ -16,6 +13,7 @@ use yii\web\UploadedFile;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use backend\modules\customers\components\VisionService;
+use backend\helpers\MediaHelper;
 
 class SmartMediaController extends Controller
 {
@@ -43,9 +41,6 @@ class SmartMediaController extends Controller
      * Upload file(s) via AJAX — supports drag-and-drop and traditional upload
      * POST: file (multipart), customer_id (optional), auto_classify (0|1)
      * Returns: JSON with file info + AI classification
-     * 
-     * Files are saved to os_ImageManager table AND images/imagemanager/ directory
-     * so they are visible in: image manager, print preview, customer photo display
      */
     public function actionUpload()
     {
@@ -108,13 +103,10 @@ class SmartMediaController extends Controller
 
             $imageId = $db->getLastInsertID();
 
-            // Save file to images/imagemanager/ with the correct naming: {id}_{hash}.{ext}
-            $imageManagerDir = Yii::getAlias('@backend/web/images/imagemanager');
-            if (!is_dir($imageManagerDir)) mkdir($imageManagerDir, 0755, true);
-
-            $destFilename = $imageId . '_' . $fileHash . '.' . $ext;
-            $destPath = $imageManagerDir . '/' . $destFilename;
-            $webPath = '/images/imagemanager/' . $destFilename;
+            $destPath = MediaHelper::filePath((int)$imageId, $fileHash, $file->name);
+            $destDir = dirname($destPath);
+            if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+            $webPath = MediaHelper::url((int)$imageId, $fileHash, $file->name);
 
             if (!$file->saveAs($destPath)) {
                 // Rollback DB insert if file save fails
@@ -122,12 +114,11 @@ class SmartMediaController extends Controller
                 throw new \Exception('فشل في حفظ الملف');
             }
 
-            // Create thumbnail in uploads/customers/documents/thumbs/ for the UI card
             $thumbWebPath = null;
             if (strpos($file->type, 'image/') === 0) {
                 $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
                 if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-                $thumbFile = 'thumb_' . $destFilename;
+                $thumbFile = 'thumb_' . basename($destPath);
                 $thumbFullPath = $thumbDir . '/' . $thumbFile;
                 if (VisionService::createThumbnail($destPath, $thumbFullPath)) {
                     $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
@@ -164,7 +155,6 @@ class SmartMediaController extends Controller
      * Capture webcam photo
      * POST: image_data (base64 data URL), customer_id (optional), photo_type
      * 
-     * Saved to os_ImageManager + images/imagemanager/ for system-wide compatibility
      */
     public function actionWebcamCapture()
     {
@@ -221,21 +211,17 @@ class SmartMediaController extends Controller
 
             $imageId = $db->getLastInsertID();
 
-            // Save to images/imagemanager/
-            $imageManagerDir = Yii::getAlias('@backend/web/images/imagemanager');
-            if (!is_dir($imageManagerDir)) mkdir($imageManagerDir, 0755, true);
-
-            $destFilename = $imageId . '_' . $fileHash . '.' . $ext;
-            $destPath = $imageManagerDir . '/' . $destFilename;
-            $webPath = '/images/imagemanager/' . $destFilename;
+            $destPath = MediaHelper::filePath((int)$imageId, $fileHash, $originalName);
+            $destDir = dirname($destPath);
+            if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+            $webPath = MediaHelper::url((int)$imageId, $fileHash, $originalName);
 
             file_put_contents($destPath, $binaryData);
 
-            // Create thumbnail
             $thumbWebPath = null;
             $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
             if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-            $thumbFile = 'thumb_' . $destFilename;
+            $thumbFile = 'thumb_' . basename($destPath);
             $thumbFullPath = $thumbDir . '/' . $thumbFile;
             if (VisionService::createThumbnail($destPath, $thumbFullPath, 150, 150)) {
                 $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
@@ -379,15 +365,13 @@ class SmartMediaController extends Controller
 
             // Delete from os_ImageManager if we have the ID
             if ($imageId) {
-                // Get the record to find the file
                 $record = Yii::$app->db->createCommand(
                     "SELECT id, fileName, fileHash FROM {{%ImageManager}} WHERE id = :id",
                     [':id' => (int)$imageId]
                 )->queryOne();
 
                 if ($record) {
-                    $ext = pathinfo($record['fileName'], PATHINFO_EXTENSION);
-                    $imgPath = Yii::getAlias('@backend/web/images/imagemanager/') . $record['id'] . '_' . $record['fileHash'] . '.' . $ext;
+                    $imgPath = MediaHelper::filePath((int)$record['id'], $record['fileHash'], $record['fileName']);
                     if (file_exists($imgPath)) {
                         unlink($imgPath);
                     }

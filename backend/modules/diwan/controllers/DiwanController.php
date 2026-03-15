@@ -335,15 +335,15 @@ class DiwanController extends Controller
                 COUNT(CASE WHEN t.transaction_type = 'تسليم' AND t.from_employee_id = u.id THEN 1 END) as delivered
             FROM os_user u
             INNER JOIN (
-                SELECT from_employee_id as uid FROM os_diwan_transactions WHERE transaction_date >= :dateFrom
+                SELECT from_employee_id as uid FROM os_diwan_transactions WHERE transaction_date >= :df1
                 UNION
-                SELECT to_employee_id as uid FROM os_diwan_transactions WHERE transaction_date >= :dateFrom
+                SELECT to_employee_id as uid FROM os_diwan_transactions WHERE transaction_date >= :df2
             ) active ON active.uid = u.id
             LEFT JOIN os_diwan_transactions t ON (t.from_employee_id = u.id OR t.to_employee_id = u.id)
-                AND t.transaction_date >= :dateFrom
+                AND t.transaction_date >= :df3
             GROUP BY u.id, u.username
             ORDER BY (COUNT(CASE WHEN t.transaction_type = 'استلام' AND t.to_employee_id = u.id THEN 1 END) + COUNT(CASE WHEN t.transaction_type = 'تسليم' AND t.from_employee_id = u.id THEN 1 END)) DESC
-        ", [':dateFrom' => $dateFrom])->queryAll();
+        ", [':df1' => $dateFrom, ':df2' => $dateFrom, ':df3' => $dateFrom])->queryAll();
 
         /* آخر المعاملات في الفترة */
         $transactions = DiwanTransaction::find()

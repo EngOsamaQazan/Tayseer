@@ -5,7 +5,8 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use kartik\grid\GridView;
+use yii\grid\GridView;
+use yii\grid\ActionColumn;
 
 $this->title = 'قسم الديوان';
 ?>
@@ -101,12 +102,7 @@ $this->title = 'قسم الديوان';
 
         <?= GridView::widget([
             'dataProvider' => $allDocuments,
-            'responsive' => true,
-            'hover' => true,
-            'striped' => false,
-            'bordered' => false,
-            'tableOptions' => ['class' => 'table table-hover'],
-            'pjax' => true,
+            'tableOptions' => ['class' => 'table table-hover table-striped'],
             'columns' => [
                 ['class' => 'yii\grid\SerialColumn', 'header' => '#'],
                 [
@@ -135,7 +131,7 @@ $this->title = 'قسم الديوان';
                     'format' => ['datetime', 'php:Y/m/d h:i A'],
                 ],
                 [
-                    'class' => 'kartik\grid\ActionColumn',
+                    'class' => ActionColumn::class,
                     'header' => '',
                     'template' => '{history}',
                     'buttons' => [

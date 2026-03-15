@@ -201,18 +201,14 @@ class CustomersController extends Controller
 
                         foreach ($modelCustomerDocuments as $modelCustomerDocument) {
                             $modelCustomerDocument->customer_id = $model->id;
-                            $image_manager_model = new \noam148\imagemanager\models\ImageManager();
                             if (!($customersDocumentflag = $modelCustomerDocument->save())) {
                                 $transaction->rollBack();
-
                                 break;
                             }
 
                             if (!empty($model->id)) {
-                                //!$image_manager_model->updateAll(['contractId' => $model->id], ['contractId' => $model->image_manager_id])
                                 if (!Yii::$app->db->createCommand("UPDATE {{%ImageManager}} set contractId={$model->id} WHERE contractId={$model->image_manager_id}")) {
                                     $transaction->rollBack();
-
                                 }
                             }
                         }

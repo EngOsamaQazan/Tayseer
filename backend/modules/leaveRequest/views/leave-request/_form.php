@@ -7,7 +7,6 @@ use common\models\UserLeavePolicy;
 use backend\helpers\FlatpickrWidget;
 use yii\web\View;
 use backend\modules\leavePolicy\models\LeavePolicy;
-use backend\widgets\ImageManagerInputWidget;
 
 $this->registerJs(" 
          leave_messages = ['" . Yii::t('app', 'You have leave cridt:') . "', '" . Yii::t('app', 'You dont have any leave cridt days') . "']
@@ -99,14 +98,7 @@ $this->registerJs("
                     <?= Yii::t('app', 'attachment') ?>
                 </div>
                 <div class="col-md-4">
-                    <?=
-                    $form->field($model, 'attachment')->widget(ImageManagerInputWidget::class, [
-                        'aspectRatio' => (16 / 9), //set the aspect ratio
-                        'cropViewMode' => 1, //crop mode, option info: https://github.com/fengyuanchen/cropper/#viewmode
-                        'showPreview' => true, //false to hide the preview
-                        'showDeletePickedImageConfirm' => false, //on true show warning before detach image
-                    ])->label(false);;
-                    ?>
+                    <?= $form->field($model, 'attachment')->fileInput(['accept' => 'image/*,application/pdf'])->label(false) ?>
 
                 </div>
 

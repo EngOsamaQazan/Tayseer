@@ -220,7 +220,7 @@ $selectOpts = function($items, $cls, $field) {
 
                     // === الاستعلام 1: الصور المربوطة مباشرة (contractId = customer_id) ===
                     try {
-                        $directImages = \backend\modules\imagemanager\models\Imagemanager::find()
+                        $directImages = \backend\models\Media::find()
                             ->where(['groupName' => 'coustmers'])
                             ->andWhere(['contractId' => $contractCustomerIds])
                             ->all();
@@ -242,7 +242,7 @@ $selectOpts = function($items, $cls, $field) {
 
                         if (!empty($selectedImageIds)) {
                             // من كل selected_image، نجلب contractId (الرقم العشوائي أو customer_id)
-                            $orphanContractIds = \backend\modules\imagemanager\models\Imagemanager::find()
+                            $orphanContractIds = \backend\models\Media::find()
                                 ->select('contractId')
                                 ->where(['id' => $selectedImageIds])
                                 ->andWhere(['groupName' => 'coustmers'])
@@ -255,7 +255,7 @@ $selectOpts = function($items, $cls, $field) {
                             }));
 
                             if (!empty($orphanContractIds)) {
-                                $orphanImages = \backend\modules\imagemanager\models\Imagemanager::find()
+                                $orphanImages = \backend\models\Media::find()
                                     ->where(['groupName' => 'coustmers'])
                                     ->andWhere(['contractId' => $orphanContractIds])
                                     ->all();
@@ -284,13 +284,8 @@ $selectOpts = function($items, $cls, $field) {
                             if ($isNamaa) {
                                 $path = \yii\helpers\Url::to(['/followUp/follow-up/customer-image', 'id' => $ei->id]);
                             } else {
-                                $ext = pathinfo((string) $ei->fileName, PATHINFO_EXTENSION) ?: 'jpg';
-                                $relPath = '/images/imagemanager/' . (int) $ei->id . '_' . $ei->fileHash . '.' . $ext;
-                                if (!is_file(Yii::getAlias('@webroot') . $relPath)) continue;
-                                $imagesBase = (isset(Yii::$app->params['customerImagesBaseUrl']) && Yii::$app->params['customerImagesBaseUrl'] !== '')
-                                    ? rtrim((string) Yii::$app->params['customerImagesBaseUrl'], '/')
-                                    : (Yii::$app->request->baseUrl ?: '');
-                                $path = $imagesBase . $relPath;
+                                if (!$ei->fileExists()) continue;
+                                $path = $ei->getAbsoluteUrl();
                             }
                             ?>
                             <div class="col-md-3 text-center" style="margin-bottom:12px">
