@@ -27,11 +27,11 @@ DynamicFormWidget::begin([
 
 <div class="container-items">
     <?php foreach ($modelsAddress as $i => $addr): ?>
-        <div class="addrres-item panel panel-default addr-panel" data-addr-idx="<?= $i ?>" x-data="{ showMap: true }">
+        <div class="addrres-item panel panel-default addr-panel" data-addr-idx="<?= $i ?>">
             <div class="panel-heading addr-panel-hdr">
                 <span class="addr-type-badge"><?= $addr->address_type == 1 ? 'عنوان العمل' : ($addr->address_type == 2 ? 'عنوان السكن' : 'عنوان') ?></span>
                 <div class="addr-panel-actions">
-                    <button type="button" class="btn btn-xs btn-info addr-toggle-map" @click="showMap = !showMap" :title="showMap ? 'إخفاء الخريطة' : 'إظهار الخريطة'"><i class="fa" :class="showMap ? 'fa-map' : 'fa-map-o'"></i></button>
+                    <button type="button" class="btn btn-xs btn-info addr-toggle-map" title="إظهار/إخفاء الخريطة"><i class="fa fa-map"></i></button>
                     <button type="button" class="addrres-remove-item btn btn-danger btn-xs" title="حذف"><i class="fa fa-trash"></i></button>
                 </div>
             </div>
@@ -60,7 +60,7 @@ DynamicFormWidget::begin([
                         <?= $form->field($addr, "[{$i}]postal_code")->textInput(['placeholder' => 'مثل 11937', 'dir' => 'ltr', 'style' => 'font-family:monospace'])->label('الرمز البريدي') ?>
                     </div>
                     <div class="col-md-3">
-                        <?= $form->field($addr, "[{$i}]plus_code")->textInput(['placeholder' => 'مثل 8Q6G+4M عمان', 'dir' => 'ltr', 'style' => 'font-family:monospace', 'class' => 'form-control addr-plus-code'])->label('Plus Code') ?>
+                        <?= $form->field($addr, "[{$i}]plus_code")->textInput(['placeholder' => 'مثل 8Q6G+4M', 'dir' => 'ltr', 'style' => 'font-family:monospace', 'readonly' => true, 'class' => 'form-control addr-plus-code'])->label('Plus Code') ?>
                     </div>
                     <div class="col-md-3">
                         <?= $form->field($addr, "[{$i}]address")->textInput(['placeholder' => 'ملاحظات إضافية (اختياري)', 'class' => 'form-control'])->label('ملاحظات العنوان') ?>
@@ -68,9 +68,7 @@ DynamicFormWidget::begin([
                 </div>
 
                 <!-- خريطة -->
-                <div class="addr-map-section" x-show="showMap" x-transition.duration.300ms x-cloak
-                     x-effect="if (showMap) { $nextTick(() => { var panel = $el.closest('.addrres-item'); if (panel && typeof jQuery !== 'undefined') jQuery(panel).trigger('map:show'); }) }"
-                >
+                <div class="addr-map-section">
                     <div class="row" style="margin-bottom:10px">
                         <div class="col-md-12">
                             <div class="addr-smart-loc">
@@ -126,7 +124,7 @@ DynamicFormWidget::begin([
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<?php if ($googleMapsKey && strpos($googleMapsKey, 'AIza') === 0): ?>
+<?php if ($googleMapsKey): ?>
 <script src="https://maps.googleapis.com/maps/api/js?key=<?= Html::encode($googleMapsKey) ?>&libraries=places&language=ar&loading=async" async defer></script>
 <?php endif; ?>
 
@@ -138,8 +136,7 @@ $js = <<<JS
  * ═══════════════════════════════════════════════════════════ */
 (function(){
     var resolveUrl = '$resolveLocationUrl';
-    var defaultLat = 31.95, defaultLng = 35.93;
-    var jordanBounds = L.latLngBounds([29.0, 34.8], [33.5, 39.4]);
+    var defaultLat = 31.95, defaultLng = 35.91;
     var maps = {};
 
     /* ─── Jordanian postal codes fallback ─── */
@@ -238,10 +235,7 @@ $js = <<<JS
         var initLng = parseFloat(lngInput.val()) || defaultLng;
         var initZoom = (latInput.val() && lngInput.val()) ? 15 : 8;
 
-        var map = L.map(container, {
-            maxBounds: jordanBounds.pad(0.5),
-            maxBoundsViscosity: 0.3
-        }).setView([initLat, initLng], initZoom);
+        var map = L.map(container).setView([initLat, initLng], initZoom);
 
         var googleStreets = L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=ar', {
             attribution: '&copy; Google Maps', maxZoom: 21
@@ -258,7 +252,6 @@ $js = <<<JS
 
         var entry = { map: map, marker: null, panel: panel };
         maps[pid] = entry;
-        $(container).data('leafletMap', map);
 
         map.on('click', function(e) {
             setMarker(entry, e.latlng.lat, e.latlng.lng, false);
@@ -352,19 +345,12 @@ $js = <<<JS
         var resEl = entry.panel.find('.addr-map-search-results');
         resEl.html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
         var c = entry.map.getCenter();
-        $.getJSON('https://photon.komoot.io/api/', {
-            q: q, lat: defaultLat, lon: defaultLng, limit: 10
-        }, function(data) {
+        $.getJSON('https://photon.komoot.io/api/', { q: q, lat: c.lat, lon: c.lng, limit: 6 }, function(data) {
             if (!data || !data.features || data.features.length === 0) {
                 nominatimFallback(entry, q); return;
             }
-            var features = data.features.filter(function(f) {
-                var lat = f.geometry.coordinates[1], lng = f.geometry.coordinates[0];
-                return lat >= 29.0 && lat <= 33.5 && lng >= 34.8 && lng <= 39.4;
-            });
-            if (features.length === 0) { nominatimFallback(entry, q); return; }
             var html = '';
-            features.forEach(function(f) {
+            data.features.forEach(function(f) {
                 var p = f.properties, g = f.geometry;
                 var name = p.name || p.street || '';
                 var addr = [p.city, p.state, p.country].filter(Boolean).join('، ');
@@ -397,22 +383,21 @@ $js = <<<JS
 
     /* ─── Event Delegation ─── */
 
-    // Toggle map section — Alpine.js handles visibility via x-show/showMap
-    // Re-init map when Alpine triggers map:show event
-    $(document).on('map:show', '.addrres-item', function() {
-        var panel = $(this);
-        var entry = initMap(panel);
-        if (entry) {
-            setTimeout(function(){ entry.map.invalidateSize(); }, 100);
-            setTimeout(function(){ entry.map.invalidateSize(); }, 400);
-            setTimeout(function(){
-                entry.map.invalidateSize();
-                entry.map.setView(entry.map.getCenter(), entry.map.getZoom());
-            }, 800);
-        }
+    // Toggle map section (collapse/expand)
+    $(document).on('click', '.addr-toggle-map', function() {
+        var panel = getPanel(this);
+        var section = panel.find('.addr-map-section');
+        section.slideToggle(300, function() {
+            if (section.is(':visible')) {
+                var entry = initMap(panel);
+                if (entry) {
+                    setTimeout(function(){ entry.map.invalidateSize(); }, 100);
+                }
+            }
+        });
     });
 
-    // Auto-init all maps on page load (only for visible containers)
+    // Auto-init all maps on page load
     setTimeout(function() {
         $('.addrres-item').each(function() {
             var panel = $(this);
@@ -552,37 +537,6 @@ $js = <<<JS
         _fwdTimers[pid] = setTimeout(function(){ forwardGeocode(entry); }, 500);
     });
 
-    // Plus Code → map (resolve when user types/pastes a Plus Code)
-    var _plusTimers = {};
-    $(document).on('input', '.addr-plus-code', function() {
-        var panel = getPanel(this);
-        var pid = getPanelId(panel);
-        var raw = $(this).val().trim();
-        if (!raw || raw.length < 4) return;
-        var isPlusCode = /[23456789CFGHJMPQRVWX]{2,}\+/i.test(raw);
-        if (!isPlusCode) return;
-        clearTimeout(_plusTimers[pid]);
-        var _pcInput = $(this);
-        _plusTimers[pid] = setTimeout(function() {
-            _pcInput.css('border-color', '#fbbf24');
-            $.getJSON(resolveUrl, {q: raw}, function(data) {
-                if (data && data.success) {
-                    var lat = parseFloat(data.lat), lng = parseFloat(data.lng);
-                    var entry = maps[pid] || initMap(panel);
-                    if (entry) setMarker(entry, lat, lng, true);
-                    _pcInput.css('border-color', '#22c55e');
-                    setTimeout(function(){ _pcInput.css('border-color', ''); }, 2000);
-                } else {
-                    _pcInput.css('border-color', '#ef4444');
-                    setTimeout(function(){ _pcInput.css('border-color', ''); }, 2000);
-                }
-            }).fail(function() {
-                _pcInput.css('border-color', '#ef4444');
-                setTimeout(function(){ _pcInput.css('border-color', ''); }, 2000);
-            });
-        }, 600);
-    });
-
     // Update badge on type change
     $(document).on('change', '.addr-type-select', function() {
         var panel = getPanel(this);
@@ -605,11 +559,6 @@ $js = <<<JS
     $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
         var newIdx = 'new-' + Date.now();
         $(item).attr('data-addr-idx', newIdx);
-        // Clear any cloned map container content and re-init
-        $(item).find('.addr-map-container').empty();
-        $(item).find('.addr-lat, .addr-lng, .addr-plus-code').val('');
-        $(item).find('.addr-smart-paste').val('');
-        $(item).find('.addr-smart-result').removeClass('show');
         setTimeout(function() {
             var entry = initMap($(item));
             if (entry) setTimeout(function(){ entry.map.invalidateSize(); }, 200);
