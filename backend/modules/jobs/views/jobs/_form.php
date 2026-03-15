@@ -520,7 +520,7 @@ function fallbackMapSearch(q) {
     $('#map-search-results').html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
     var mapCenter = map.getCenter();
     $.getJSON('https://photon.komoot.io/api/', {
-        q: q, lang: 'ar', lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
+        q: q, lat: mapCenter.lat, lon: mapCenter.lng, limit: 6
     }, function(data){
         if (!data || !data.features || data.features.length === 0) {
             $.getJSON('https://nominatim.openstreetmap.org/search', {
