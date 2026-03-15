@@ -218,7 +218,7 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
 <?php ActiveForm::end() ?>
 
 <?php if (!$isNew):
-
+    \johnitvn\ajaxcrud\CrudAsset::register($this);
     $contractIdForGrid = $model->contract_id;
     $actionsDP = new yii\data\ActiveDataProvider([
         'query' => \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::find()
@@ -236,10 +236,11 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
             <i class="fa fa-list-ul"></i> إجراءات الأطراف
             <span style="background:#F1F5F9;color:#64748B;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600"><?= $totalCount ?></span>
         </div>
-        <button type="button" class="btn btn-success" style="border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600"
-                onclick="JCA.openModal('<?= Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contractIdForGrid]) ?>')">
-            <i class="fa fa-plus"></i> إضافة إجراء
-        </button>
+        <?= Html::a(
+            '<i class="fa fa-plus"></i> إضافة إجراء',
+            ['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contractIdForGrid],
+            ['role' => 'modal-remote', 'class' => 'btn btn-success', 'style' => 'border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600']
+        ) ?>
     </div>
 
     <div>
@@ -306,9 +307,9 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                     <div class="jca-act-wrap">
                         <button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>
                         <div class="jca-act-menu">
-                            <a href="javascript:void(0)" onclick="JCA.openModal('<?= $editUrl ?>')"><i class="fa fa-pencil text-primary"></i> تعديل</a>
+                            <a href="<?= $editUrl ?>" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>
                             <div class="jca-act-divider"></div>
-                            <a href="javascript:void(0)" onclick="JCA.deleteAction('<?= $delUrl ?>', this)">
+                            <a href="<?= $delUrl ?>" data-request-method="post" data-confirm-message="هل أنت متأكد من حذف هذا الإجراء؟">
                                 <i class="fa fa-trash text-danger"></i> حذف
                             </a>
                         </div>
@@ -335,34 +336,15 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
     <?php endif; ?>
 </div>
 
-<!-- Modal -->
-<div class="modal fade" id="jcaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-        <div class="modal-content">
-            <div class="modal-header" style="border-bottom:1px solid #E2E8F0;padding:14px 20px">
-                <h5 class="modal-title" id="jcaModalTitle" style="font-weight:700;font-size:15px;color:#334155"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق" onclick="JCA.hideModal()"></button>
-            </div>
-            <div class="modal-body" id="jcaModalBody" style="padding:20px">
-                <div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>
-            </div>
-            <div class="modal-footer" id="jcaModalFooter" style="border-top:1px solid #E2E8F0;padding:12px 20px"></div>
-        </div>
-    </div>
-</div>
+<?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
+<?php \yii\bootstrap\Modal::end() ?>
 
 <?php $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']); ?>
 
 <script>
 var JCA = (function(){
-    var $modal  = $('#jcaModal');
-    var $title  = $('#jcaModalTitle');
-    var $body   = $('#jcaModalBody');
-    var $footer = $('#jcaModalFooter');
-    var modalEl = $modal[0];
-    var reqUrl  = <?= json_encode($updateReqUrl) ?>;
+    var reqUrl = <?= json_encode($updateReqUrl) ?>;
     var pendingDecision = {};
-    var refreshPending = false;
 
     function getCsrfParam() {
         var m = document.querySelector('meta[name="csrf-param"]');
@@ -371,135 +353,6 @@ var JCA = (function(){
     function getCsrfToken() {
         var m = document.querySelector('meta[name="csrf-token"]');
         return m ? m.getAttribute('content') : '';
-    }
-
-    function showModal() {
-        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-            var inst = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-            inst.show();
-        } else {
-            $modal.addClass('show').css('display','block');
-            $('<div class="modal-backdrop fade show"></div>').appendTo('body');
-            $('body').addClass('modal-open');
-        }
-    }
-
-    function hideModal() {
-        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-            var inst = bootstrap.Modal.getInstance(modalEl);
-            if (inst) try { inst.hide(); } catch(e) {}
-        }
-        $modal.removeClass('show').css('display','none');
-        $('.modal-backdrop').remove();
-        $('body').removeClass('modal-open').css({overflow:'', paddingRight:''});
-    }
-
-    function setLoading() {
-        $title.text('جاري التحميل...');
-        $body.html('<div style="text-align:center;padding:40px 0"><i class="fa fa-spinner fa-spin fa-2x" style="color:#94A3B8"></i></div>');
-        $footer.html('');
-    }
-
-    function initDynamicContent() {
-        if (typeof Alpine !== 'undefined') {
-            try { if (Alpine.initTree) Alpine.initTree($body[0]); } catch(e) {}
-        }
-    }
-
-    function refreshActions() {
-        if (refreshPending) return;
-        refreshPending = true;
-        $.get(location.href).done(function(html) {
-            refreshPending = false;
-            var $tmp = $('<div>').append($.parseHTML(html, document, true));
-            var newHtml = $tmp.find('#jf-actions-container').html();
-            if (newHtml) $('#jf-actions-container').html(newHtml);
-        }).fail(function() { refreshPending = false; });
-    }
-
-    function openModal(url) {
-        setLoading();
-        showModal();
-        $.ajax({
-            url: url,
-            type: 'GET',
-            headers: {'X-Requested-With':'XMLHttpRequest'}
-        }).done(function(resp) {
-            if (resp.title)   $title.html(resp.title);
-            if (resp.content) $body.html(resp.content);
-            if (resp.footer)  $footer.html(resp.footer);
-            initDynamicContent();
-            bindFormSubmit(url);
-        }).fail(function() {
-            $title.text('خطأ');
-            $body.html('<div style="color:#DC2626;padding:20px;text-align:center"><i class="fa fa-exclamation-triangle fa-2x"></i><p style="margin-top:10px">فشل تحميل النموذج</p></div>');
-            $footer.html('<button type="button" class="btn btn-default" onclick="JCA.hideModal()">إغلاق</button>');
-        });
-    }
-
-    function bindFormSubmit(fallbackUrl) {
-        var $form = $body.find('form');
-        var $btn  = $footer.find('[type="submit"]');
-        if (!$form.length || !$btn.length) return;
-
-        $btn.off('click.jca').on('click.jca', function(e) {
-            e.preventDefault();
-            var ev = $.Event('beforeSubmit');
-            $form.trigger(ev);
-            if (ev.result === false) return;
-            submitForm($form.attr('action') || fallbackUrl, new FormData($form[0]));
-        });
-
-        $form.off('submit.jca').on('submit.jca', function(e) {
-            e.preventDefault();
-            submitForm($(this).attr('action') || fallbackUrl, new FormData(this));
-        });
-    }
-
-    function submitForm(url, formData) {
-        var $btn = $footer.find('[type="submit"]');
-        if ($btn.length) $btn.prop('disabled',true).html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
-        $.ajax({
-            url: url,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            headers: {'X-Requested-With':'XMLHttpRequest'}
-        }).done(function(resp) {
-            if (resp.forceClose) {
-                hideModal();
-                setTimeout(refreshActions, 200);
-                return;
-            }
-            if (resp.title)   $title.html(resp.title);
-            if (resp.content) $body.html(resp.content);
-            if (resp.footer)  $footer.html(resp.footer);
-            initDynamicContent();
-            bindFormSubmit(url);
-        }).fail(function() {
-            if ($btn.length) $btn.prop('disabled',false).html('<i class="fa fa-save"></i> حفظ');
-            alert('حدث خطأ أثناء الحفظ');
-        });
-    }
-
-    function deleteAction(url, el) {
-        if (!confirm('هل أنت متأكد من حذف هذا الإجراء؟')) return;
-        var $row = $(el).closest('.jf-action-row');
-        if ($row.length) $row.css({opacity:'0.4', pointerEvents:'none'});
-        var fd = new FormData();
-        fd.append(getCsrfParam(), getCsrfToken());
-        $.ajax({
-            url: url, type:'POST', data:fd,
-            processData:false, contentType:false,
-            headers:{'X-Requested-With':'XMLHttpRequest'}
-        }).done(function() {
-            if ($row.length) $row.css({transition:'all .2s', maxHeight:'0', overflow:'hidden', opacity:'0'});
-            setTimeout(refreshActions, 400);
-        }).fail(function() {
-            if ($row.length) $row.css({opacity:'1', pointerEvents:''});
-            alert('حدث خطأ أثناء الحذف');
-        });
     }
 
     function startDecision(id, status) {
@@ -537,7 +390,7 @@ var JCA = (function(){
         postData[getCsrfParam()] = getCsrfToken();
         $.post(reqUrl, postData).done(function(res) {
             if (res.success) {
-                setTimeout(refreshActions, 100);
+                location.reload();
             } else {
                 alert(res.message || 'حدث خطأ');
                 if (btn) btn.disabled = false;
@@ -548,33 +401,29 @@ var JCA = (function(){
         }).always(function() { pendingDecision = {}; });
     }
 
+    $(document).on('click', '.jca-act-trigger', function(e) {
+        e.stopPropagation();
+        var wrap = this.closest('.jca-act-wrap');
+        var menu = wrap.querySelector('.jca-act-menu');
+        var wasOpen = wrap.classList.contains('open');
+        document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
+        if (!wasOpen) {
+            wrap.classList.add('open');
+            var r = this.getBoundingClientRect();
+            menu.style.left = r.left + 'px';
+            menu.style.top = (r.bottom + 4) + 'px';
+        }
+    });
     $(document).on('click', function(e) {
-        var trigger = e.target.closest('.jca-act-trigger');
-        if (trigger) {
-            e.stopPropagation();
-            var wrap = trigger.closest('.jca-act-wrap');
-            var menu = wrap.querySelector('.jca-act-menu');
-            var wasOpen = wrap.classList.contains('open');
+        if (!$(e.target).closest('.jca-act-wrap').length) {
             document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
-            if (!wasOpen) {
-                wrap.classList.add('open');
-                var r = trigger.getBoundingClientRect();
-                menu.style.left = r.left + 'px';
-                menu.style.top = (r.bottom + 4) + 'px';
-            }
-            return;
         }
-        if (e.target.closest('.jca-act-menu a')) {
-            document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
-            return;
-        }
+    });
+    $(document).on('click', '.jca-act-menu a', function() {
         document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
     });
 
     return {
-        openModal: openModal,
-        hideModal: hideModal,
-        deleteAction: deleteAction,
         startDecision: startDecision,
         cancelDecision: cancelDecision,
         confirmDecision: confirmDecision
