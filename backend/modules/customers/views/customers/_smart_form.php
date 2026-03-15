@@ -420,7 +420,8 @@ if (!$isNew) {
                             <?php 
                             $DOC_TYPES = ['0'=>'هوية وطنية','1'=>'جواز سفر','2'=>'رخصة قيادة','3'=>'شهادة ميلاد','4'=>'شهادة تعيين','5'=>'كتاب ضمان','6'=>'كشف راتب','7'=>'تعيين عسكري','8'=>'صورة شخصية','9'=>'أخرى'];
                             foreach ($currentImages as $cimg):
-                                $imgPath = '/images/imagemanager/' . ($cimg['fileHash'] ?: $cimg['fileName']);
+                                $ext = pathinfo($cimg['fileName'] ?? '', PATHINFO_EXTENSION);
+                                $imgPath = '/images/imagemanager/' . $cimg['id'] . '_' . $cimg['fileHash'] . '.' . $ext;
                                 $typeName = $DOC_TYPES[$cimg['groupName']] ?? '';
                                 $isSelected = (!empty($model->selected_image) && $model->selected_image == $cimg['id']);
                             ?>
