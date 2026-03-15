@@ -22,7 +22,6 @@ $this->params['breadcrumbs'][] = $this->title;
                 'dataProvider' => $dataProvider,
                 'filterModel' => $searchModel,
                 'columns' => require(__DIR__ . '/_columns.php'),
-                'striped' => true,
                 'tableOptions' => ['class' => 'table table-striped table-bordered'],
             ]) ?>
         </div>

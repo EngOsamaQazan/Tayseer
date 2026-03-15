@@ -25,8 +25,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 'dataProvider' => $dataProvider,
                 'filterModel' => $searchModel,
                 'id' => 'official-holidays-grid',
-                'striped' => true,
-                'hover' => true,
+                'tableOptions' => ['class' => 'table table-striped table-hover table-bordered'],
                 'summary' => '<span class="text-muted">عرض {begin}-{end} من {totalCount}</span>',
                 'pager' => [
                     'firstPageLabel' => 'الأولى',
