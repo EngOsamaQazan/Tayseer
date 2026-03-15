@@ -278,7 +278,12 @@ $js = <<<JS
 
         setTimeout(function(){ map.invalidateSize(); }, 200);
 
-        tryInitGooglePlaces(entry);
+        if (!tryInitGooglePlaces(entry)) {
+            var _gpRetry = setInterval(function(){
+                if (tryInitGooglePlaces(entry)) clearInterval(_gpRetry);
+            }, 800);
+            setTimeout(function(){ clearInterval(_gpRetry); }, 12000);
+        }
 
         return entry;
     }
