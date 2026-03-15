@@ -267,6 +267,7 @@ $js = <<<JS
 
         var entry = { map: map, marker: null, panel: panel, _googlePlacesActive: false };
         maps[pid] = entry;
+        $(container).data('leafletMap', map);
 
         map.on('click', function(e) {
             setMarker(entry, e.latlng.lat, e.latlng.lng, false);
@@ -490,6 +491,20 @@ $js = <<<JS
     /* ═══════════════════════════════════════════════════════════
      *  Event Delegation — أحداث مفوّضة للعناصر الديناميكية
      * ═══════════════════════════════════════════════════════════ */
+
+    // Fix map when wizard step becomes visible
+    $(document).on('map:show', '.addrres-item', function() {
+        var panel = $(this);
+        var entry = initMap(panel);
+        if (entry) {
+            setTimeout(function(){ entry.map.invalidateSize(); }, 100);
+            setTimeout(function(){ entry.map.invalidateSize(); }, 400);
+            setTimeout(function(){
+                entry.map.invalidateSize();
+                entry.map.setView(entry.map.getCenter(), entry.map.getZoom());
+            }, 800);
+        }
+    });
 
     // Toggle map section
     $(document).on('click', '.addr-toggle-map', function() {
