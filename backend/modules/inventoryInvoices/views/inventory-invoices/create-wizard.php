@@ -25,15 +25,43 @@ $companiesList = isset($companiesList) ? $companiesList : [];
 <?= $this->render('@app/views/layouts/_inventory-tabs', ['activeTab' => 'invoices']) ?>
 
 <style>
+/* Override Vuexy tab animation that hides content via opacity:0 */
+.inv-wizard-page .tab-content .tab-pane {
+    opacity: 1 !important;
+    transform: none !important;
+}
+.inv-wizard-page { color: #2c2c2c; }
+.inv-wizard-page h2 { color: #1e293b; }
+.inv-wizard-page p, .inv-wizard-page label, .inv-wizard-page strong { color: #2c2c2c; }
+.inv-wizard-page .text-muted { color: #64748b !important; }
+.inv-wizard-page .text-warning { color: #b45309 !important; }
+.inv-wizard-page .text-danger { color: #dc2626 !important; }
+.inv-wizard-page .form-control { color: #2c2c2c; background: #fff; border: 1px solid #d1d5db; }
+.inv-wizard-page .form-control:focus { border-color: #800020; box-shadow: 0 0 0 3px rgba(128,0,32,.1); }
+.inv-wizard-page .form-control::placeholder { color: #9ca3af; }
+.inv-wizard-page .control-label { color: #374151; font-weight: 600; }
+.inv-wizard-page .nav-tabs { border-bottom: 2px solid #e2e8f0; }
+.inv-wizard-page .nav-tabs a { color: #64748b; padding: 10px 18px; font-weight: 600; text-decoration: none; border-bottom: 3px solid transparent; display: inline-block; }
+.inv-wizard-page .nav-tabs li.active a { color: #800020; border-bottom-color: #800020; }
+.inv-wizard-page .btn { color: inherit; }
+.inv-wizard-page .btn-default { color: #374151; background: #f3f4f6; border: 1px solid #d1d5db; }
+.inv-wizard-page .btn-primary { color: #fff; }
+.inv-wizard-page .btn-success { color: #fff; }
+.inv-wizard-page .btn-warning { color: #fff; }
+.inv-wizard-page .btn-danger { color: #fff; }
+.inv-wizard-page .table { color: #2c2c2c; }
+.inv-wizard-page .table th { color: #374151; background: #f8fafc; }
+.inv-wizard-page .table td { color: #2c2c2c; }
 .inv-wizard-page .wizard-search-results { margin-top:10px; max-height:280px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:8px; background:#f8fafc; }
-.inv-wizard-page .wizard-search-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e2e8f0; }
+.inv-wizard-page .wizard-search-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e2e8f0; color: #2c2c2c; }
 .inv-wizard-page .wizard-search-row:last-child { border-bottom:none; }
-.inv-wizard-page .wizard-selected-list { margin-top:12px; }
-.inv-wizard-page .wizard-selected-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f1f5f9; border-radius:6px; margin-bottom:6px; }
+.inv-wizard-page .wizard-selected-list { margin-top:12px; color: #2c2c2c; }
+.inv-wizard-page .wizard-selected-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#f1f5f9; border-radius:6px; margin-bottom:6px; color: #2c2c2c; }
 .inv-wizard-page .wizard-step2-rows table { width:100%; margin-top:12px; }
 .inv-wizard-page .wizard-step2-rows th, .inv-wizard-page .wizard-step2-rows td { padding:8px; text-align:right; }
 .inv-wizard-page .wizard-step4-table { width:100%; margin:12px 0; }
 .inv-wizard-page .wizard-step4-table th, .inv-wizard-page .wizard-step4-table td { padding:8px; border:1px solid #e2e8f0; }
+.inv-wizard-page #wizard-no-items { color: #6b7280 !important; }
 </style>
 
 <div class="inv-wizard-page" style="max-width:920px; margin:0 auto;">
@@ -56,8 +84,8 @@ $companiesList = isset($companiesList) ? $companiesList : [];
         <li role="presentation"><a href="#step4" data-step="4">4. المراجعة والإنهاء</a></li>
     </ul>
 
-    <div class="tab-content" style="padding:24px; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 8px 8px; background:#fff;">
-        <div id="step1" class="tab-pane active" data-step="1">
+    <div class="tab-content" style="padding:24px; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 8px 8px; background:#fff; color:#2c2c2c;">
+        <div id="step1" class="tab-pane active show" data-step="1">
             <p class="text-muted">ابحث عن صنف ثم اضغط "إضافة للفاتورة". يمكنك إضافة صنف جديد غير موجود في القائمة عبر زر "إضافة صنف جديد".</p>
             <div class="form-group">
                 <label>بحث عن صنف (اسم أو باركود)</label>
@@ -401,8 +429,8 @@ function goStep(n){
         buildStep4Summary();
     }
     currentStep = n;
-    $('.tab-pane').hide();
-    $('#step'+n).show();
+    $('.tab-pane').hide().removeClass('show');
+    $('#step'+n).show().addClass('show');
     $('#wizard-tabs li').removeClass('active').eq(n-1).addClass('active');
     $('#wizard-prev').toggle(n > 1);
     $('#wizard-next').toggle(n < totalSteps);
