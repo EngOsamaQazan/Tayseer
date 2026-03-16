@@ -16,8 +16,8 @@
 
 /* ---- CSS VARIABLES ---- */
 :root {
-  --ty-clr-primary: #800020;
-  --ty-clr-primary-dark: #650019;
+  --ty-clr-primary: var(--t-primary, #800020);
+  --ty-clr-primary-dark: var(--t-primary-hover, #650019);
   --ty-clr-surface: #fff;
   --ty-clr-bg: #FAFBFC;
   --ty-clr-border: #E2E8F0;

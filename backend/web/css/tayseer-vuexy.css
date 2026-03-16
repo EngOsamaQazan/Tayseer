@@ -63,60 +63,11 @@ body {
   font-family: 'Cairo', sans-serif;
 }
 
-/* Primary color for buttons, badges, bg-primary, etc. */
-.bg-primary, .btn-primary {
-  background-color: #800020 !important;
-  border-color: #800020 !important;
-}
-.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
-  background-color: #6a001a !important;
-  border-color: #6a001a !important;
-}
-.btn-outline-primary {
-  color: #800020;
-  border-color: #800020;
-}
-.btn-outline-primary:hover, .btn-outline-primary:active {
-  background-color: #800020;
-  border-color: #800020;
-  color: #fff;
-}
-.btn-label-primary {
-  background-color: rgba(128, 0, 32, 0.08);
-  color: #800020;
-}
-.btn-text-primary {
-  color: #800020;
-}
-.text-primary {
-  color: #800020 !important;
-}
-.border-primary {
-  border-color: #800020 !important;
-}
-.badge.bg-primary {
-  background-color: #800020 !important;
-}
-a {
-  color: #800020;
-}
-a:hover {
-  color: #5a0016;
-}
+/* Primary color for buttons, badges, etc.
+   Now driven by tayseer-themes.css via --t-primary variables.
+   Kept here only as fallback for pages that don't load themes. */
 
-/* Sidebar dark theme with burgundy accent */
-.layout-menu[data-bs-theme="dark"] {
-  --bs-primary: #c8a04a;
-}
-.layout-menu[data-bs-theme="dark"] .menu-inner > .menu-item.active > .menu-link,
-.layout-menu[data-bs-theme="dark"] .menu-inner > .menu-item.active > .menu-link:hover {
-  background-color: rgba(200, 160, 74, 0.16);
-  color: #c8a04a;
-}
-.layout-menu[data-bs-theme="dark"] .menu-sub .menu-item.active > .menu-link,
-.layout-menu[data-bs-theme="dark"] .menu-sub .menu-item.active > .menu-link:hover {
-  color: #c8a04a;
-}
+/* Sidebar dark theme accent — now driven by tayseer-themes.css */
 
 /* App brand styling */
 .app-brand .app-brand-text {
@@ -140,42 +91,16 @@ a:hover {
   background-color: var(--bs-success);
 }
 
-/* Vuexy active menu indicator line */
-.layout-menu .menu-inner > .menu-item.active::before {
-  background: #c8a04a;
-}
+/* Vuexy active menu indicator line — now driven by tayseer-themes.css */
 
-/* Pagination active state */
-.page-item.active .page-link {
-  background-color: #800020;
-  border-color: #800020;
-}
-
-/* Nav pills/tabs */
-.nav-pills .nav-link.active {
-  background-color: #800020;
-}
-.nav-tabs .nav-link.active {
-  color: #800020;
-  border-bottom-color: #800020;
-}
-
-/* Form focus */
-.form-control:focus,
-.form-select:focus {
-  border-color: rgba(128, 0, 32, 0.5);
-  box-shadow: 0 0 0.25rem 0.05rem rgba(128, 0, 32, 0.1);
-}
+/* Pagination, nav, form focus — now driven by tayseer-themes.css */
 
 /* Card header consistency */
 .card {
   border-radius: 0.5rem;
 }
 
-/* Table hover */
-.table-hover > tbody > tr:hover {
-  --bs-table-hover-bg: rgba(128, 0, 32, 0.04);
-}
+/* Table hover — now driven by tayseer-themes.css */
 
 /* RTL fixes for select2 and kartik widgets */
 .select2-container--krajee-bs5 .select2-selection--single .select2-selection__rendered {

@@ -40,7 +40,7 @@
 }
 
 .swal2-popup .swal2-styled:focus {
-  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.25) !important;
+  box-shadow: 0 0 0 3px rgba(var(--t-primary-rgb, 128, 0, 32), 0.25) !important;
 }
 
 /* ============================================================

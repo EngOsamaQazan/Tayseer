@@ -37,6 +37,8 @@ class RouteAccessBehavior extends Behavior
         'gii',
         'pin/toggle',
         'pin/list',
+        'theme/save',
+        'theme/current',
     ];
 
     public function events()

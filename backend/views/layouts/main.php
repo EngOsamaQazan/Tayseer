@@ -4,6 +4,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use common\components\CompanyChecked;
 use backend\modules\notification\models\Notification;
+use common\models\UserPreference;
 
 /* @var $this \yii\web\View */
 /* @var $content string */
@@ -47,19 +48,32 @@ if (Yii::$app->controller->action->id === 'login') {
         ->all();
     $markReadUrl = Url::to(['/notification/notification/is-read']);
 
+    $themePrefs = UserPreference::getTheme();
+    $themeMode  = $themePrefs['mode'];
+    $themeColor = $themePrefs['color'];
+
     ?>
     <?php $this->beginPage() ?>
     <!DOCTYPE html>
     <html lang="ar"
           class="layout-navbar-fixed layout-menu-fixed layout-compact"
           dir="rtl"
-          data-bs-theme="light"
+          data-bs-theme="<?= Html::encode($themeMode) ?>"
+          data-theme-color="<?= Html::encode($themeColor) ?>"
           data-assets-path="<?= $baseUrl ?>/vuexy/"
           data-template="vertical-menu-template">
     <head>
         <meta charset="<?= Yii::$app->charset ?>"/>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <?= Html::csrfMetaTags() ?>
+        <script>
+        (function(){
+          var m=localStorage.getItem('tayseer_theme_mode');
+          var c=localStorage.getItem('tayseer_theme_color');
+          if(m) document.documentElement.setAttribute('data-bs-theme',m);
+          if(c) document.documentElement.setAttribute('data-theme-color',c);
+        })();
+        </script>
         <link rel="shortcut icon" href="<?= $baseUrl ?>/images/favicon.png" type="image/png">
         <link rel="icon" href="<?= $baseUrl ?>/images/favicon.png" type="image/png" sizes="192x192">
         <title><?= Html::encode($this->title) ?></title>
@@ -113,6 +127,7 @@ if (Yii::$app->controller->action->id === 'login') {
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/fin-transactions.css?v=<?= time() ?>">
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-vuexy.css?v=<?= time() ?>">
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-responsive.css?v=<?= time() ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-themes.css?v=<?= time() ?>">
 
         <!-- Vuexy Helpers (must load in head before body renders) -->
         <script src="<?= $baseUrl ?>/vuexy/vendor/js/helpers.js"></script>
@@ -154,6 +169,42 @@ if (Yii::$app->controller->action->id === 'login') {
                                 <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="btnFullscreen" title="وضع ملء الشاشة" onclick="toggleFullScreen()">
                                     <i class="fa-solid fa-expand fa-lg" id="fullscreenIcon"></i>
                                 </a>
+                            </li>
+
+                            <!-- Theme Toggle -->
+                            <li class="nav-item dropdown me-2">
+                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="themeToggleBtn" title="تبديل المظهر">
+                                    <i class="fa-solid fa-sun fa-lg" id="themeToggleIcon"></i>
+                                </a>
+                            </li>
+
+                            <!-- Theme Palette -->
+                            <li class="nav-item dropdown me-2">
+                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="ألوان النظام">
+                                    <i class="fa-solid fa-palette fa-lg"></i>
+                                </a>
+                                <div class="dropdown-menu dropdown-menu-end theme-switcher-menu p-3" style="min-width:240px">
+                                    <div class="theme-section-title mb-2">وضع العرض</div>
+                                    <div class="d-flex gap-2 mb-3">
+                                        <div class="theme-mode-toggle flex-fill text-center" id="themeMode-light">
+                                            <i class="fa-solid fa-sun"></i>
+                                            <span style="font-size:13px">فاتح</span>
+                                        </div>
+                                        <div class="theme-mode-toggle flex-fill text-center" id="themeMode-dark">
+                                            <i class="fa-solid fa-moon"></i>
+                                            <span style="font-size:13px">داكن</span>
+                                        </div>
+                                    </div>
+                                    <div class="theme-section-title mb-2">لون النظام</div>
+                                    <div class="theme-palette-grid">
+                                        <div class="theme-palette-swatch swatch-burgundy" data-color="burgundy" title="عنابي"><i class="fa-solid fa-check swatch-check"></i></div>
+                                        <div class="theme-palette-swatch swatch-ocean" data-color="ocean" title="أزرق"><i class="fa-solid fa-check swatch-check"></i></div>
+                                        <div class="theme-palette-swatch swatch-forest" data-color="forest" title="أخضر"><i class="fa-solid fa-check swatch-check"></i></div>
+                                        <div class="theme-palette-swatch swatch-royal" data-color="royal" title="بنفسجي"><i class="fa-solid fa-check swatch-check"></i></div>
+                                        <div class="theme-palette-swatch swatch-sunset" data-color="sunset" title="برتقالي"><i class="fa-solid fa-check swatch-check"></i></div>
+                                        <div class="theme-palette-swatch swatch-slate" data-color="slate" title="رمادي"><i class="fa-solid fa-check swatch-check"></i></div>
+                                    </div>
+                                </div>
                             </li>
 
                             <!-- Notifications -->
@@ -251,6 +302,9 @@ if (Yii::$app->controller->action->id === 'login') {
     <script src="<?= $baseUrl ?>/vuexy/vendor/libs/hammer/hammer.js"></script>
     <script src="<?= $baseUrl ?>/vuexy/vendor/js/menu.js"></script>
     <script src="<?= $baseUrl ?>/vuexy/js/main.js"></script>
+
+    <!-- Tayseer Theme System -->
+    <script src="<?= $baseUrl ?>/js/tayseer-theme.js?v=<?= time() ?>"></script>
 
     <!-- Tayseer Responsive -->
     <script src="<?= $baseUrl ?>/js/tayseer-responsive.js?v=<?= time() ?>"></script>
