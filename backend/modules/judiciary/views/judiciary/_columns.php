@@ -7,6 +7,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
 use backend\helpers\NameHelper;
+use backend\modules\judiciary\models\Judiciary;
 
 $isPendingFilter = (bool) Yii::$app->request->get('pending_requests');
 
@@ -175,6 +176,33 @@ $columns = [
         },
         'headerOptions' => ['style' => 'width:16%'],
         'contentOptions' => ['style' => 'padding:4px 6px', 'data-label' => 'آخر إجراء'],
+    ],
+
+    /* مرحلة القضية */
+    [
+        'class' => '\kartik\grid\DataColumn',
+        'attribute' => 'furthest_stage',
+        'label' => 'المرحلة',
+        'format' => 'raw',
+        'value' => function ($m) {
+            $stage = $m->furthest_stage;
+            if (!$stage) return '<span style="color:#CBD5E1;font-size:11px">—</span>';
+            $label = Judiciary::getStageLabel($stage);
+            $rank = Judiciary::getStageRank($stage);
+            if ($rank >= 8) { $bg = '#D1FAE5'; $clr = '#065F46'; }
+            elseif ($rank >= 5) { $bg = '#DBEAFE'; $clr = '#1E40AF'; }
+            elseif ($rank >= 2) { $bg = '#FEF3C7'; $clr = '#92400E'; }
+            else { $bg = '#F1F5F9'; $clr = '#64748B'; }
+            $html = '<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:600;background:' . $bg . ';color:' . $clr . ';white-space:nowrap">' . Html::encode($label) . '</span>';
+            if ($m->bottleneck_stage && $m->bottleneck_stage !== $m->furthest_stage) {
+                $bnLabel = Judiciary::getStageLabel($m->bottleneck_stage);
+                $html .= '<div style="font-size:9px;color:#F59E0B;margin-top:2px" title="عنق الزجاجة"><i class="fa fa-exclamation-triangle"></i> ' . Html::encode($bnLabel) . '</div>';
+            }
+            return $html;
+        },
+        'filter' => Judiciary::getStageList(),
+        'headerOptions' => ['style' => 'width:10%;text-align:center'],
+        'contentOptions' => ['style' => 'text-align:center;padding:4px 6px', 'data-label' => 'المرحلة'],
     ],
 
     /* الإجراءات */

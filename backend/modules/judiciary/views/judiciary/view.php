@@ -1,10 +1,16 @@
 <?php
 use yii\helpers\Html;
 use yii\helpers\Url;
+use backend\modules\judiciary\models\Judiciary;
+use backend\models\JudiciarySeizedAsset;
+use backend\models\JudiciaryDeadline;
+use backend\modules\diwan\models\DiwanCorrespondence;
 
 $this->title = 'ملف القضية #' . $model->judiciary_number;
 $this->params['breadcrumbs'][] = ['label' => 'القضاء', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
+
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . time());
 
 $court = $model->court;
 $type = $model->type;
@@ -12,6 +18,11 @@ $lawyer = $model->lawyer;
 $contract = $model->contract;
 $customers = $model->customers;
 $guarantors = $model->customersGuarantor;
+
+$stageList = Judiciary::getStageList();
+$stageOrder = Judiciary::STAGE_ORDER;
+$furthestRank = Judiciary::getStageRank($model->furthest_stage);
+$bottleneckRank = Judiciary::getStageRank($model->bottleneck_stage);
 
 $statusMap = [
     'open' => ['label' => 'مفتوحة', 'color' => '#2563EB', 'bg' => '#EFF6FF', 'icon' => 'fa-folder-open'],
@@ -41,6 +52,13 @@ $natureStyles = [
 ];
 $statusColors = ['pending' => '#F59E0B', 'approved' => '#10B981', 'rejected' => '#EF4444'];
 $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض'];
+
+$assetTypeLabels = JudiciarySeizedAsset::getAssetTypeLabels();
+$assetStatusLabels = JudiciarySeizedAsset::getStatusLabels();
+$deadlineTypeLabels = JudiciaryDeadline::getTypeLabels();
+$deadlineStatusLabels = JudiciaryDeadline::getStatusLabels();
+$corrTypeLabels = DiwanCorrespondence::getCommunicationTypeLabels();
+$corrStatusLabels = DiwanCorrespondence::getStatusLabels();
 ?>
 
 <style>
@@ -253,6 +271,256 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
         <?php endif; ?>
     </div>
     <?php endif; ?>
+
+    <!-- ═══ Workflow Stage Progress Bar ═══ -->
+    <?php if ($model->furthest_stage || !empty($defendantStages)): ?>
+    <div class="jv-card" style="margin-bottom:24px">
+        <div class="jv-card-title"><i class="fa fa-tasks"></i> مراحل سير القضية</div>
+        <div class="jv-stage-bar">
+            <?php foreach ($stageOrder as $i => $stageKey):
+                $label = $stageList[$stageKey] ?? $stageKey;
+                $rank = $i;
+                $isCurrent = ($stageKey === $model->furthest_stage);
+                $isCompleted = ($furthestRank >= 0 && $rank < $furthestRank);
+                $isBottleneck = ($stageKey === $model->bottleneck_stage && $model->furthest_stage !== $model->bottleneck_stage);
+                $stepClass = 'jv-stage-step';
+                if ($isCurrent) $stepClass .= ' current';
+                elseif ($isCompleted) $stepClass .= ' completed';
+                if ($isBottleneck) $stepClass .= ' bottleneck';
+            ?>
+            <div class="<?= $stepClass ?>">
+                <div class="jv-stage-dot">
+                    <?php if ($isCompleted): ?>
+                        <i class="fa fa-check"></i>
+                    <?php elseif ($isCurrent): ?>
+                        <i class="fa fa-circle"></i>
+                    <?php elseif ($isBottleneck): ?>
+                        <i class="fa fa-exclamation"></i>
+                    <?php else: ?>
+                        <span><?= $i + 1 ?></span>
+                    <?php endif; ?>
+                </div>
+                <div class="jv-stage-label"><?= $label ?></div>
+                <?php if ($isBottleneck): ?>
+                    <div class="jv-stage-hint">عنق الزجاجة</div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <?php if ($model->furthest_stage && $model->bottleneck_stage): ?>
+        <div style="display:flex;gap:20px;margin-top:16px;flex-wrap:wrap;font-size:12px;padding:12px 16px;background:#F8FAFC;border-radius:8px">
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="width:10px;height:10px;border-radius:50%;background:#2563EB;display:inline-block"></span>
+                <span style="color:#64748B">أبعد مرحلة:</span>
+                <strong style="color:#1E293B"><?= Judiciary::getStageLabel($model->furthest_stage) ?></strong>
+            </div>
+            <?php if ($model->furthest_stage !== $model->bottleneck_stage): ?>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block"></span>
+                <span style="color:#64748B">عنق الزجاجة:</span>
+                <strong style="color:#92400E"><?= Judiciary::getStageLabel($model->bottleneck_stage) ?></strong>
+            </div>
+            <?php endif; ?>
+            <div style="display:flex;align-items:center;gap:6px">
+                <span style="color:#64748B">الحالة:</span>
+                <strong style="color:#1E293B"><?= $model->getOverallStatus() ?></strong>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- ═══ Per-Defendant Stage Cards ═══ -->
+    <?php if (!empty($defendantStages)): ?>
+    <div style="margin-bottom:24px">
+        <div class="jv-section-title"><i class="fa fa-user-circle" style="color:#8B5CF6"></i> مراحل المدعى عليهم</div>
+        <div class="jv-party-grid" style="margin-top:12px">
+            <?php foreach ($defendantStages as $ds):
+                $custName = ($ds->customer) ? $ds->customer->name : ('عميل #' . $ds->customer_id);
+                $stageLabel = Judiciary::getStageLabel($ds->current_stage);
+                $dsRank = Judiciary::getStageRank($ds->current_stage);
+                if ($dsRank >= 8) { $badgeBg = '#D1FAE5'; $badgeColor = '#065F46'; }
+                elseif ($dsRank >= 5) { $badgeBg = '#DBEAFE'; $badgeColor = '#1E40AF'; }
+                else { $badgeBg = '#FEF3C7'; $badgeColor = '#92400E'; }
+            ?>
+            <div class="jv-party-chip" style="flex-direction:column;align-items:flex-start;gap:8px;padding:14px 16px">
+                <div style="display:flex;align-items:center;gap:8px;width:100%">
+                    <div class="jv-party-icon" style="background:#F5F3FF;color:#7C3AED;width:32px;height:32px;font-size:12px">
+                        <?= mb_substr($custName, 0, 1) ?>
+                    </div>
+                    <div style="flex:1;min-width:0">
+                        <div class="jv-party-name" style="font-size:12px"><?= Html::encode($custName) ?></div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;width:100%">
+                    <span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:<?= $badgeBg ?>;color:<?= $badgeColor ?>"><?= $stageLabel ?></span>
+                    <?php if ($ds->stage_updated_at): ?>
+                        <span style="font-size:10px;color:#94A3B8"><i class="fa fa-clock-o"></i> <?= Yii::$app->formatter->asRelativeTime($ds->stage_updated_at) ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- ═══ Active Deadlines ═══ -->
+    <?php if (!empty($activeDeadlines)): ?>
+    <div class="jv-card" style="margin-bottom:24px">
+        <div class="jv-card-title"><i class="fa fa-clock-o" style="color:#DC2626"></i> المواعيد النهائية النشطة
+            <span style="background:#FEE2E2;color:#991B1B;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-right:8px"><?= count($activeDeadlines) ?></span>
+        </div>
+        <div class="jv-deadline-grid">
+            <?php foreach ($activeDeadlines as $dl):
+                $dlStatus = $dl->status ?? 'pending';
+                $dlColors = [
+                    'expired' => ['bg' => '#FEF2F2', 'border' => '#FECACA', 'color' => '#991B1B', 'icon' => 'fa-exclamation-circle'],
+                    'approaching' => ['bg' => '#FFFBEB', 'border' => '#FDE68A', 'color' => '#92400E', 'icon' => 'fa-warning'],
+                    'pending' => ['bg' => '#F8FAFC', 'border' => '#E2E8F0', 'color' => '#64748B', 'icon' => 'fa-hourglass-half'],
+                    'completed' => ['bg' => '#F0FDF4', 'border' => '#BBF7D0', 'color' => '#166534', 'icon' => 'fa-check-circle'],
+                ];
+                $dc = $dlColors[$dlStatus] ?? $dlColors['pending'];
+                $typeLabel = $deadlineTypeLabels[$dl->deadline_type] ?? $dl->deadline_type;
+                $statusLabel = $deadlineStatusLabels[$dlStatus] ?? $dlStatus;
+                $daysRemaining = $dl->deadline_date ? (int)((strtotime($dl->deadline_date) - time()) / 86400) : null;
+            ?>
+            <div class="jv-deadline-card" style="background:<?= $dc['bg'] ?>;border:1px solid <?= $dc['border'] ?>">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+                    <div style="display:flex;align-items:center;gap:6px">
+                        <i class="fa <?= $dc['icon'] ?>" style="color:<?= $dc['color'] ?>;font-size:14px"></i>
+                        <span style="font-weight:700;font-size:12px;color:<?= $dc['color'] ?>"><?= Html::encode($typeLabel) ?></span>
+                    </div>
+                    <span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:<?= $dc['color'] ?>15;color:<?= $dc['color'] ?>"><?= $statusLabel ?></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
+                    <span style="color:#64748B"><i class="fa fa-calendar"></i> <?= Html::encode($dl->deadline_date ?: '—') ?></span>
+                    <?php if ($daysRemaining !== null): ?>
+                        <span style="font-weight:700;color:<?= $dc['color'] ?>">
+                            <?php if ($daysRemaining < 0): ?>
+                                متأخر <?= abs($daysRemaining) ?> يوم
+                            <?php elseif ($daysRemaining === 0): ?>
+                                اليوم!
+                            <?php else: ?>
+                                باقي <?= $daysRemaining ?> يوم
+                            <?php endif; ?>
+                        </span>
+                    <?php endif; ?>
+                </div>
+                <?php if (!empty($dl->notes)): ?>
+                    <div style="font-size:11px;color:#64748B;margin-top:6px;background:rgba(255,255,255,.6);padding:4px 8px;border-radius:4px"><?= Html::encode($dl->notes) ?></div>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- ═══ Seized Assets ═══ -->
+    <?php if (!empty($seizedAssets)): ?>
+    <div class="jv-card" style="margin-bottom:24px">
+        <div class="jv-card-title"><i class="fa fa-lock" style="color:#7C3AED"></i> الأصول المحجوزة
+            <span style="background:#F5F3FF;color:#7C3AED;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-right:8px"><?= count($seizedAssets) ?></span>
+        </div>
+        <div class="jv-asset-list">
+            <?php foreach ($seizedAssets as $asset):
+                $atLabel = $assetTypeLabels[$asset->asset_type] ?? $asset->asset_type;
+                $asLabel = $assetStatusLabels[$asset->status] ?? $asset->status;
+                $assetStatusColors = [
+                    'seizure_requested' => ['bg' => '#FEF3C7', 'color' => '#92400E'],
+                    'seized' => ['bg' => '#FEE2E2', 'color' => '#991B1B'],
+                    'valued' => ['bg' => '#EDE9FE', 'color' => '#6D28D9'],
+                    'auction_requested' => ['bg' => '#FFF7ED', 'color' => '#C2410C'],
+                    'auctioned' => ['bg' => '#DBEAFE', 'color' => '#1E40AF'],
+                    'released' => ['bg' => '#D1FAE5', 'color' => '#065F46'],
+                ];
+                $asc = $assetStatusColors[$asset->status] ?? ['bg' => '#F1F5F9', 'color' => '#64748B'];
+            ?>
+            <div class="jv-asset-row">
+                <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+                    <div style="width:36px;height:36px;border-radius:8px;background:#F5F3FF;color:#7C3AED;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">
+                        <i class="fa <?= ($asset->asset_type === 'vehicle') ? 'fa-car' : (($asset->asset_type === 'real_estate') ? 'fa-building' : (($asset->asset_type === 'bank_account') ? 'fa-bank' : 'fa-cube')) ?>"></i>
+                    </div>
+                    <div style="min-width:0;flex:1">
+                        <div style="font-weight:600;font-size:12px;color:#1E293B"><?= Html::encode($atLabel) ?></div>
+                        <?php if ($asset->description): ?>
+                            <div style="font-size:11px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= Html::encode($asset->description) ?></div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+                    <?php if ($asset->amount): ?>
+                        <span style="font-weight:700;font-size:12px;color:#1E293B;direction:ltr"><?= number_format($asset->amount, 2) ?></span>
+                    <?php endif; ?>
+                    <span style="padding:3px 10px;border-radius:6px;font-size:10px;font-weight:600;background:<?= $asc['bg'] ?>;color:<?= $asc['color'] ?>"><?= $asLabel ?></span>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- ═══ Correspondence ═══ -->
+    <?php if (!empty($correspondences)): ?>
+    <div class="jv-card" style="margin-bottom:24px">
+        <div class="jv-card-title"><i class="fa fa-envelope" style="color:#0D9488"></i> المراسلات
+            <span style="background:#F0FDFA;color:#0D9488;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-right:8px"><?= count($correspondences) ?></span>
+        </div>
+        <div class="jv-corr-list">
+            <?php foreach ($correspondences as $corr):
+                $ctLabel = $corrTypeLabels[$corr->communication_type] ?? $corr->communication_type;
+                $csLabel = $corrStatusLabels[$corr->status] ?? $corr->status;
+                $corrStatusClr = [
+                    'draft' => '#94A3B8', 'sent' => '#2563EB', 'delivered' => '#16A34A',
+                    'responded' => '#0D9488', 'closed' => '#64748B',
+                ];
+                $cClr = $corrStatusClr[$corr->status] ?? '#64748B';
+            ?>
+            <div class="jv-corr-item">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                    <i class="fa fa-paper-plane" style="color:#0D9488;font-size:12px"></i>
+                    <span style="font-weight:600;font-size:12px;color:#1E293B"><?= Html::encode($corr->purpose ?: $ctLabel) ?></span>
+                    <span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:<?= $cClr ?>15;color:<?= $cClr ?>"><?= $csLabel ?></span>
+                </div>
+                <div style="display:flex;gap:16px;font-size:11px;color:#94A3B8">
+                    <?php if ($corr->correspondence_date): ?>
+                        <span><i class="fa fa-calendar"></i> <?= Html::encode($corr->correspondence_date) ?></span>
+                    <?php endif; ?>
+                    <?php if ($corr->recipient_type): ?>
+                        <?php
+                        $recipientLabels = [
+                            'defendant' => 'المدعى عليه', 'bank' => 'البنك',
+                            'employer' => 'جهة العمل', 'administrative' => 'جهة إدارية',
+                        ];
+                        ?>
+                        <span><i class="fa fa-user"></i> <?= $recipientLabels[$corr->recipient_type] ?? Html::encode($corr->recipient_type) ?></span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+        <?= Html::a('<i class="fa fa-list"></i> عرض جميع المراسلات', ['correspondence-list', 'id' => $model->id], [
+            'class' => 'btn btn-sm btn-default',
+            'style' => 'margin-top:12px;border-radius:8px;font-size:12px;font-weight:600',
+        ]) ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- ═══ Generate Request Button ═══ -->
+    <div style="margin-bottom:24px;display:flex;gap:8px;flex-wrap:wrap">
+        <?= Html::a('<i class="fa fa-file-text"></i> إنشاء طلب إجرائي', ['generate-request', 'id' => $model->id], [
+            'class' => 'btn btn-primary',
+            'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px',
+        ]) ?>
+        <?= Html::a('<i class="fa fa-clock-o"></i> لوحة المواعيد', ['deadline-dashboard'], [
+            'class' => 'btn btn-warning',
+            'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px;color:#fff',
+        ]) ?>
+        <?= Html::a('<i class="fa fa-history"></i> الجدول الزمني', ['case-timeline', 'id' => $model->id], [
+            'class' => 'btn btn-info',
+            'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px;color:#fff',
+        ]) ?>
+    </div>
 
     <?php if (isset($actionsDP)):
         \johnitvn\ajaxcrud\CrudAsset::register($this);

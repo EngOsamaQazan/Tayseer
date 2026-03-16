@@ -43,7 +43,7 @@
 /* ---- 3. STATS CARDS ---- */
 .lh-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -477,7 +477,141 @@
 .cr-empty i { font-size: 28px; display: block; margin-bottom: 10px; }
 
 /* ============================================================
-   11. RESPONSIVE — WIDE DESKTOP (≤1279px)
+   11. STAGE BAR, DEADLINES, ASSETS — view.php
+   ============================================================ */
+
+/* Stage progress bar */
+.jv-stage-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 12px 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.jv-stage-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  min-width: 80px;
+}
+.jv-stage-step::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  background: #E2E8F0;
+  z-index: 0;
+}
+.jv-stage-step:first-child::before { display: none; }
+.jv-stage-step.completed::before { background: #16A34A; }
+.jv-stage-step.current::before { background: #2563EB; }
+
+.jv-stage-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #F1F5F9;
+  color: #94A3B8;
+  border: 2px solid #E2E8F0;
+  position: relative;
+  z-index: 1;
+  transition: all .2s;
+}
+.jv-stage-step.completed .jv-stage-dot {
+  background: #16A34A;
+  color: #fff;
+  border-color: #16A34A;
+}
+.jv-stage-step.current .jv-stage-dot {
+  background: #2563EB;
+  color: #fff;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, .2);
+}
+.jv-stage-step.bottleneck .jv-stage-dot {
+  background: #F59E0B;
+  color: #fff;
+  border-color: #F59E0B;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, .2);
+}
+
+.jv-stage-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94A3B8;
+  margin-top: 6px;
+  text-align: center;
+  line-height: 1.3;
+  max-width: 90px;
+}
+.jv-stage-step.completed .jv-stage-label { color: #16A34A; }
+.jv-stage-step.current .jv-stage-label { color: #2563EB; font-weight: 700; }
+.jv-stage-step.bottleneck .jv-stage-label { color: #F59E0B; }
+
+.jv-stage-hint {
+  font-size: 9px;
+  color: #F59E0B;
+  font-weight: 600;
+  margin-top: 2px;
+  text-align: center;
+}
+
+/* Deadline cards */
+.jv-deadline-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+.jv-deadline-card {
+  border-radius: 10px;
+  padding: 12px 16px;
+  transition: all .2s;
+}
+.jv-deadline-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  transform: translateY(-1px);
+}
+
+/* Asset rows */
+.jv-asset-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.jv-asset-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed #F1F5F9;
+  gap: 10px;
+}
+.jv-asset-row:last-child { border-bottom: none; }
+
+/* Correspondence items */
+.jv-corr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.jv-corr-item {
+  padding: 10px 0;
+  border-bottom: 1px dashed #F1F5F9;
+}
+.jv-corr-item:last-child { border-bottom: none; }
+
+/* ============================================================
+   11b. RESPONSIVE — WIDE DESKTOP (≤1279px)
    ============================================================ */
 @media (max-width: 1279px) {
   .lh-stats { grid-template-columns: repeat(2, 1fr); }
@@ -674,6 +808,14 @@
   /* Timeline panel */
   .ctl-panel { width: 100vw; max-width: 100vw; }
   .ctl-case-info { flex-direction: column; gap: 6px; }
+
+  /* Stage bar mobile */
+  .jv-stage-bar { gap: 0; padding: 8px 4px; }
+  .jv-stage-step { min-width: 60px; }
+  .jv-stage-dot { width: 24px; height: 24px; font-size: 10px; }
+  .jv-stage-label { font-size: 9px; max-width: 65px; }
+  .jv-deadline-grid { grid-template-columns: 1fr; }
+  .jv-asset-row { flex-direction: column; align-items: flex-start; }
 }
 
 /* ============================================================

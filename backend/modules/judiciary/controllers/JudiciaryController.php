@@ -1089,10 +1089,19 @@ class JudiciaryController extends Controller
             ->limit(1)
             ->scalar();
 
+        $defendantStages = $model->getDefendantStages()->with('customer')->all();
+        $activeDeadlines = $model->getActiveDeadlines()->orderBy(['deadline_date' => SORT_ASC])->all();
+        $seizedAssets = $model->getSeizedAssets()->with('authority')->all();
+        $correspondences = $model->getCorrespondences()->orderBy(['correspondence_date' => SORT_DESC])->limit(10)->all();
+
         return $this->render('view', [
             'model' => $model,
             'actionsDP' => $actionsDP,
             'lastRequestDate' => $lastRequestDate ?: null,
+            'defendantStages' => $defendantStages,
+            'activeDeadlines' => $activeDeadlines,
+            'seizedAssets' => $seizedAssets,
+            'correspondences' => $correspondences,
         ]);
     }
 

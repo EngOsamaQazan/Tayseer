@@ -25,6 +25,7 @@
         initConditionalFields();
         initDocumentUploads();
         triggerRiskCalc();
+        if (window.soConfig && window.soConfig.isEditMode) initEditWarnings();
     });
 
     /* ══════════════════════════════════════════
@@ -567,6 +568,55 @@
 
         $form.submit();
     });
+
+    /* ══════════════════════════════════════════
+       EDIT MODE — SOFT WARNINGS (non-blocking)
+       ══════════════════════════════════════════ */
+    var WARN_FIELDS = [
+        {id: 'customers-name',                 label: 'اسم العميل'},
+        {id: 'customers-id_number',            label: 'الرقم الوطني'},
+        {id: 'customers-birth_date',           label: 'تاريخ الميلاد'},
+        {id: 'customers-primary_phone_number', label: 'الهاتف الرئيسي'},
+        {id: 'customers-city',                 label: 'مدينة الولادة'},
+        {id: 'customers-citizen',              label: 'الجنسية'},
+        {id: 'customers-job_title',            label: 'المسمى الوظيفي'},
+    ];
+
+    function initEditWarnings() {
+        WARN_FIELDS.forEach(function(f) {
+            var el = document.getElementById(f.id);
+            if (!el) return;
+            applyWarning(el, f.label);
+            $(el).on('change input', function() { applyWarning(el, f.label); });
+        });
+
+        $('#smart-onboarding-form').on('submit', function() {
+            var missing = [];
+            WARN_FIELDS.forEach(function(f) {
+                var el = document.getElementById(f.id);
+                if (el && !$(el).val()) missing.push(f.label);
+            });
+            if (missing.length) {
+                showToast('تنبيه: الحقول التالية غير مكتملة: ' + missing.join('، '), 'warning');
+            }
+        });
+    }
+
+    function applyWarning(el, label) {
+        var $group = $(el).closest('.form-group');
+        var val = $(el).val();
+        if (!val || val === '') {
+            if (!$group.hasClass('so-warn')) {
+                $group.addClass('so-warn');
+                if (!$group.find('.so-warn-hint').length) {
+                    $group.append('<span class="so-warn-hint"><i class="fa fa-exclamation-triangle"></i> يُفضّل تعبئة هذا الحقل</span>');
+                }
+            }
+        } else {
+            $group.removeClass('so-warn');
+            $group.find('.so-warn-hint').remove();
+        }
+    }
 
     /* ══════════════════════════════════════════
        HELPERS

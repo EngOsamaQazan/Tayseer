@@ -123,6 +123,7 @@ if (!$isNew) {
             $formConfig = [
                 'options' => [
                     'enctype' => 'multipart/form-data',
+                    'novalidate' => true,
                     'data-prev-contracts' => $prevContracts,
                     'data-has-defaults' => $hasDefaults ? '1' : '0',
                 ],
@@ -164,13 +165,13 @@ if (!$isNew) {
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-user"></i> البيانات الشخصية</h3>
                     <div class="so-grid so-grid-3">
-                        <div><?= $form->field($model, 'name')->textInput(['maxlength' => true, 'placeholder' => 'الاسم الرباعي', 'required' => true])->label('اسم العميل') ?></div>
-                        <div><?= $form->field($model, 'id_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني', 'required' => true])->label('الرقم الوطني') ?></div>
+                        <div><?= $form->field($model, 'name')->textInput(['maxlength' => true, 'placeholder' => 'الاسم الرباعي', 'required' => $isNew])->label('اسم العميل') ?></div>
+                        <div><?= $form->field($model, 'id_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني', 'required' => $isNew])->label('الرقم الوطني') ?></div>
                         <div><?= $form->field($model, 'sex')->dropDownList([0 => 'ذكر', 1 => 'أنثى'])->label('الجنس') ?></div>
                     </div>
                     <div class="so-grid so-grid-3" style="margin-top: 16px">
                         <div><?= $form->field($model, 'birth_date')->widget(FlatpickrWidget::class, [
-                            'options' => ['placeholder' => 'YYYY-MM-DD', 'required' => true],
+                            'options' => ['placeholder' => 'YYYY-MM-DD', 'required' => $isNew],
                             'pluginOptions' => ['dateFormat' => 'Y-m-d'],
                         ])->label('تاريخ الميلاد') ?></div>
                         <div><?= $form->field($model, 'city')->dropDownList(ArrayHelper::map($city, 'id', 'name'), ['prompt' => '-- المدينة --'])->label('مدينة الولادة') ?></div>

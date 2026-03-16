@@ -26,6 +26,8 @@
   --t-accent: #c8a04a;
   --t-accent-light: #e8d08a;
   --t-accent-dark: #9a7a2a;
+  --t-sidebar-bg: #2a0810;
+  --t-sidebar-bg-rgb: 42, 8, 16;
 }
 
 [data-theme-color="burgundy"][data-bs-theme="dark"] {
@@ -38,6 +40,8 @@
   --t-accent: #d4b060;
   --t-accent-light: #e8d08a;
   --t-accent-dark: #c8a04a;
+  --t-sidebar-bg: #1e0510;
+  --t-sidebar-bg-rgb: 30, 5, 16;
 }
 
 /* ============================================================
@@ -54,6 +58,8 @@
   --t-accent: #42a5f5;
   --t-accent-light: #90caf9;
   --t-accent-dark: #1565c0;
+  --t-sidebar-bg: #0a1e3a;
+  --t-sidebar-bg-rgb: 10, 30, 58;
 }
 
 [data-theme-color="ocean"][data-bs-theme="dark"] {
@@ -66,6 +72,8 @@
   --t-accent: #90caf9;
   --t-accent-light: #bbdefb;
   --t-accent-dark: #42a5f5;
+  --t-sidebar-bg: #08152a;
+  --t-sidebar-bg-rgb: 8, 21, 42;
 }
 
 /* ============================================================
@@ -82,6 +90,8 @@
   --t-accent: #66bb6a;
   --t-accent-light: #a5d6a7;
   --t-accent-dark: #2e7d32;
+  --t-sidebar-bg: #0c2e10;
+  --t-sidebar-bg-rgb: 12, 46, 16;
 }
 
 [data-theme-color="forest"][data-bs-theme="dark"] {
@@ -94,6 +104,8 @@
   --t-accent: #a5d6a7;
   --t-accent-light: #c8e6c9;
   --t-accent-dark: #66bb6a;
+  --t-sidebar-bg: #081e0c;
+  --t-sidebar-bg-rgb: 8, 30, 12;
 }
 
 /* ============================================================
@@ -110,6 +122,8 @@
   --t-accent: #ce93d8;
   --t-accent-light: #e1bee7;
   --t-accent-dark: #9c27b0;
+  --t-sidebar-bg: #1a0830;
+  --t-sidebar-bg-rgb: 26, 8, 48;
 }
 
 [data-theme-color="royal"][data-bs-theme="dark"] {
@@ -122,6 +136,8 @@
   --t-accent: #e1bee7;
   --t-accent-light: #f3e5f5;
   --t-accent-dark: #ba68c8;
+  --t-sidebar-bg: #120520;
+  --t-sidebar-bg-rgb: 18, 5, 32;
 }
 
 /* ============================================================
@@ -138,6 +154,8 @@
   --t-accent: #ffb74d;
   --t-accent-light: #ffe0b2;
   --t-accent-dark: #f57c00;
+  --t-sidebar-bg: #3a1800;
+  --t-sidebar-bg-rgb: 58, 24, 0;
 }
 
 [data-theme-color="sunset"][data-bs-theme="dark"] {
@@ -150,6 +168,8 @@
   --t-accent: #ffd180;
   --t-accent-light: #ffe0b2;
   --t-accent-dark: #ffab40;
+  --t-sidebar-bg: #2a1200;
+  --t-sidebar-bg-rgb: 42, 18, 0;
 }
 
 /* ============================================================
@@ -166,6 +186,8 @@
   --t-accent: #78909c;
   --t-accent-light: #b0bec5;
   --t-accent-dark: #546e7a;
+  --t-sidebar-bg: #1a2228;
+  --t-sidebar-bg-rgb: 26, 34, 40;
 }
 
 [data-theme-color="slate"][data-bs-theme="dark"] {
@@ -178,6 +200,8 @@
   --t-accent: #b0bec5;
   --t-accent-light: #cfd8dc;
   --t-accent-dark: #78909c;
+  --t-sidebar-bg: #121a1e;
+  --t-sidebar-bg-rgb: 18, 26, 30;
 }
 
 /* ============================================================
@@ -673,22 +697,52 @@ a:hover { color: var(--t-primary-hover); }
 }
 
 /* ============================================================
-   SIDEBAR — Palette Adaptation
+   SIDEBAR — Palette Adaptation (Level 1)
+   Background follows the active palette color.
+   Sidebar keeps data-bs-theme="dark" so text stays light.
    ============================================================ */
 .layout-menu[data-bs-theme="dark"] {
   --bs-primary: var(--t-accent);
+  --bs-menu-bg: var(--t-sidebar-bg);
+  --bs-menu-bg-rgb: var(--t-sidebar-bg-rgb);
+  background-color: var(--t-sidebar-bg) !important;
+}
+.layout-menu[data-bs-theme="dark"] .app-brand {
+  background-color: rgba(var(--t-sidebar-bg-rgb), 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 .layout-menu[data-bs-theme="dark"] .menu-inner > .menu-item.active > .menu-link,
 .layout-menu[data-bs-theme="dark"] .menu-inner > .menu-item.active > .menu-link:hover {
-  background-color: rgba(var(--t-primary-rgb), 0.16);
+  background-color: rgba(255, 255, 255, 0.10);
   color: var(--t-accent);
+}
+.layout-menu[data-bs-theme="dark"] .menu-inner > .menu-item > .menu-link:hover {
+  background-color: rgba(255, 255, 255, 0.06);
 }
 .layout-menu[data-bs-theme="dark"] .menu-sub .menu-item.active > .menu-link,
 .layout-menu[data-bs-theme="dark"] .menu-sub .menu-item.active > .menu-link:hover {
   color: var(--t-accent);
 }
+.layout-menu[data-bs-theme="dark"] .menu-sub .menu-item > .menu-link:hover {
+  color: var(--t-accent-light);
+}
 .layout-menu .menu-inner > .menu-item.active::before {
   background: var(--t-accent);
+}
+.layout-menu[data-bs-theme="dark"] .menu-header {
+  color: rgba(255, 255, 255, 0.4);
+}
+.layout-menu[data-bs-theme="dark"] .menu-item > .menu-link {
+  color: rgba(255, 255, 255, 0.75);
+}
+.layout-menu[data-bs-theme="dark"] .menu-item > .menu-link .menu-icon {
+  color: rgba(255, 255, 255, 0.55);
+}
+.layout-menu[data-bs-theme="dark"] .ps__rail-y {
+  background-color: transparent !important;
+}
+.layout-menu[data-bs-theme="dark"] .ps__thumb-y {
+  background-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 /* ============================================================

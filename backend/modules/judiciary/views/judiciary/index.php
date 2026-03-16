@@ -26,6 +26,10 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . tim
 
 $activeTab = Yii::$app->request->get('tab', 'cases');
 
+$expiredDeadlineCount = (int)\backend\models\JudiciaryDeadline::find()
+    ->where(['status' => 'expired'])->count();
+$seizedAssetCount = (int)\backend\models\JudiciarySeizedAsset::find()->count();
+
 $pendingReqCount = (int)Yii::$app->db->createCommand(
     "SELECT COUNT(*) FROM " . Yii::$app->db->tablePrefix . "judiciary_customers_actions WHERE request_status = 'pending' AND (is_deleted = 0 OR is_deleted IS NULL)"
 )->queryScalar();
@@ -75,6 +79,20 @@ $this->registerJs("window.LH_CONFIG = {$lhConfig};", \yii\web\View::POS_HEAD);
             <div>
                 <div class="lh-stat-val" id="lh-stat-amount" style="color:#2563EB">—</div>
                 <div class="lh-stat-lbl">المتاح للقبض</div>
+            </div>
+        </div>
+        <div class="lh-stat">
+            <div class="lh-stat-icon" style="background:#FEF2F2;color:#DC2626"><i class="fa fa-clock-o"></i></div>
+            <div>
+                <div class="lh-stat-val" style="color:#DC2626"><?= $expiredDeadlineCount ?></div>
+                <div class="lh-stat-lbl">مواعيد متأخرة</div>
+            </div>
+        </div>
+        <div class="lh-stat">
+            <div class="lh-stat-icon" style="background:#F5F3FF;color:#7C3AED"><i class="fa fa-lock"></i></div>
+            <div>
+                <div class="lh-stat-val" style="color:#7C3AED"><?= $seizedAssetCount ?></div>
+                <div class="lh-stat-lbl">أصول محجوزة</div>
             </div>
         </div>
     </div>
