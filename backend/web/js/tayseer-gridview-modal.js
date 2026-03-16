@@ -176,6 +176,10 @@
 
   // ── 5. REFRESH GRID (auto-detect PJAX container) ──
   function refreshGrid() {
+    if (typeof window.ocpRefreshTabs === 'function') {
+      window.ocpRefreshTabs();
+      return;
+    }
     if (!$.pjax) { location.reload(); return; }
     var $pjax = $('[data-pjax-container]').filter('[id$="-pjax"]');
     if (!$pjax.length) $pjax = $('[id$="-grid-pjax"]');
