@@ -8,6 +8,7 @@ use yii\widgets\ActiveForm;
 use yii\widgets\LinkPager;
 use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\inventoryItems\models\InventoryItems;
+use backend\modules\contracts\models\Contracts;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
@@ -99,7 +100,24 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
     </form>
 
     <!-- ═══ الجدول ═══ -->
-    <?php $models = $dataProvider->getModels(); ?>
+    <?php
+    $models = $dataProvider->getModels();
+    $contractIds = [];
+    foreach ($models as $mv) {
+        if (in_array($mv->reference_type, ['contract_sale', 'contract_update_release', 'contract_cancel']) && $mv->reference_id) {
+            $contractIds[] = $mv->reference_id;
+        }
+    }
+    $contractDates = [];
+    if ($contractIds) {
+        $contractDates = Contracts::find()
+            ->select(['id', 'Date_of_sale'])
+            ->where(['id' => array_unique($contractIds)])
+            ->indexBy('id')
+            ->asArray()
+            ->all();
+    }
+    ?>
     <?php if (empty($models)): ?>
         <div class="sm-empty">
             <i class="fa fa-exchange"></i>
@@ -149,7 +167,15 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
                             —
                         <?php endif ?>
                     </td>
-                    <td style="font-size:12.5px;color:#64748b"><?= $mv->created_at ? date('Y-m-d H:i', $mv->created_at) : '—' ?></td>
+                    <td style="font-size:12.5px;color:#64748b">
+                        <?php
+                        if (in_array($mv->reference_type, ['contract_sale', 'contract_update_release', 'contract_cancel']) && isset($contractDates[$mv->reference_id])) {
+                            echo $contractDates[$mv->reference_id]['Date_of_sale'];
+                        } else {
+                            echo $mv->created_at ? date('Y-m-d H:i', $mv->created_at) : '—';
+                        }
+                        ?>
+                    </td>
                 </tr>
                 <?php endforeach ?>
             </tbody>
