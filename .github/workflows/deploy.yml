@@ -76,6 +76,10 @@ jobs:
               # Fix permissions
               chown -R www-data:www-data backend/ common/ console/ frontend/ api/ 2>/dev/null || true
               
+              # Run pending migrations
+              echo "  Running migrations..."
+              php yii migrate/up --interactive=0 2>&1 || true
+              
               # Clear caches
               rm -rf backend/runtime/cache/*
               rm -rf frontend/runtime/cache/* 2>/dev/null || true
