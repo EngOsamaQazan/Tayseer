@@ -11,7 +11,7 @@ ini_set('log_errors', 1);
 require('db.php');
 $db_host = 'localhost';
 $db_user = 'osama';
-$db_pass = 'O$amaDaTaBase@123';
+$db_pass = 'OsamaDB123';
 
 // تحويل اسم الشركة لاسم قاعدة البيانات الصحيح
 $dbMap = [
