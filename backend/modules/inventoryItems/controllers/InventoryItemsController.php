@@ -190,7 +190,12 @@ class InventoryItemsController extends Controller
      * ═══════════════════════════════════════════════════════════ */
     public function actionMovements()
     {
-        $query = StockMovement::find()->orderBy(['created_at' => SORT_DESC]);
+        $prefix = Yii::$app->db->tablePrefix;
+        $contractTypes = ['contract_sale', 'contract_update_release', 'contract_cancel'];
+
+        $query = StockMovement::find()
+            ->leftJoin("{$prefix}contracts c", "c.id = {$prefix}stock_movements.reference_id AND {$prefix}stock_movements.reference_type IN ('" . implode("','", $contractTypes) . "')")
+            ->orderBy(["COALESCE(c.Date_of_sale, FROM_UNIXTIME({$prefix}stock_movements.created_at))" => SORT_DESC]);
 
         /* فلترة */
         $filterType   = Yii::$app->request->get('type');
@@ -198,10 +203,22 @@ class InventoryItemsController extends Controller
         $filterFrom   = Yii::$app->request->get('from');
         $filterTo     = Yii::$app->request->get('to');
 
-        if ($filterType) $query->andWhere(['movement_type' => $filterType]);
-        if ($filterItem) $query->andWhere(['item_id' => $filterItem]);
-        if ($filterFrom) $query->andWhere(['>=', 'created_at', strtotime($filterFrom)]);
-        if ($filterTo)   $query->andWhere(['<=', 'created_at', strtotime($filterTo . ' 23:59:59')]);
+        if ($filterType) $query->andWhere(["{$prefix}stock_movements.movement_type" => $filterType]);
+        if ($filterItem) $query->andWhere(["{$prefix}stock_movements.item_id" => $filterItem]);
+        if ($filterFrom) {
+            $query->andWhere([
+                'OR',
+                ['AND', ['IS NOT', 'c.Date_of_sale', null], ['>=', 'c.Date_of_sale', $filterFrom]],
+                ['AND', ['IS', 'c.Date_of_sale', null], ['>=', "{$prefix}stock_movements.created_at", strtotime($filterFrom)]],
+            ]);
+        }
+        if ($filterTo) {
+            $query->andWhere([
+                'OR',
+                ['AND', ['IS NOT', 'c.Date_of_sale', null], ['<=', 'c.Date_of_sale', $filterTo]],
+                ['AND', ['IS', 'c.Date_of_sale', null], ['<=', "{$prefix}stock_movements.created_at", strtotime($filterTo . ' 23:59:59')]],
+            ]);
+        }
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
