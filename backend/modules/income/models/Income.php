@@ -129,5 +129,27 @@ class Income extends \yii\db\ActiveRecord
         return $this->hasOne(\backend\modules\contracts\models\Contracts::className(), ['id' => 'contract_id']);
     }
 
-
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+        if ($insert && $this->amount > 0) {
+            try {
+                $customerId = null;
+                $contractId = $this->contract_id;
+                if ($contractId) {
+                    $contract = \backend\modules\contracts\models\Contracts::findOne($contractId);
+                    $customerId = $contract ? $contract->customer_id : null;
+                }
+                \backend\modules\accounting\helpers\AutoPostingService::postCustomerPayment(
+                    (float)$this->amount,
+                    $customerId,
+                    $contractId,
+                    $this->payment_purpose ?: ('دفعة #' . $this->id),
+                    $this->date ?: date('Y-m-d')
+                );
+            } catch (\Exception $e) {
+                Yii::error('AutoPosting Income error: ' . $e->getMessage(), 'accounting');
+            }
+        }
+    }
 }

@@ -20,21 +20,14 @@ class PrintAsset extends AssetBundle
 
 
     public $css = [
-
-        "css/bootstrap.min.css",
+        "css/bootstrap.css",
         'css/print/style.css',
-
     ];
     public $js = [
-        "js/jquery.min.js",
-        "js/bootstrap.js",
+        "js/bootstrap.bundle.js",
         'js/Tafqeet.js',
-        'js/popper.min.js',
     ];
     public $depends = [
-        /*'yii\web\JqueryAsset',
-        //'yii\web\YiiAsset',
-        //'yii\bootstrap5\BootstrapAsset',
-        'yii\bootstrap5\BootstrapPluginAsset',*/
+        'yii\web\JqueryAsset',
     ];
 }

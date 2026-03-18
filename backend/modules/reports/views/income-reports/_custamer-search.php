@@ -7,7 +7,7 @@ use backend\helpers\FlatpickrWidget;
 
 
 ?>
-    <div class="questions-bank box box-primary">
+    <div class="questions-bank card card-body">
 
         <?php
         $form = yii\widgets\ActiveForm::begin([
@@ -70,9 +70,9 @@ use backend\helpers\FlatpickrWidget;
         <div class="row">
             <div class="col-lg-6">
                 <?= $form->field($model, '_by')->widget(kartik\select2\Select2::class, [
-                    'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
+                    'data' => yii\helpers\ArrayHelper::map(array_filter(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
                         return Yii::$app->db->createCommand(Yii::$app->params['income_by_query'])->queryAll();
-                    }, Yii::$app->params['time_duration']), '_by', '_by'),
+                    }, Yii::$app->params['time_duration']), fn($row) => $row['_by'] !== null), '_by', '_by'),
                     'options' => [
                         'placeholder' => 'Select a customer name.',
                     ],

@@ -137,6 +137,22 @@ class Expenses extends \yii\db\ActiveRecord
         if ($this->contract_id) {
             \backend\modules\contracts\models\Contracts::refreshContractStatus((int)$this->contract_id);
         }
+        if ($insert && $this->amount > 0) {
+            try {
+                $categoryName = null;
+                if ($this->category_id && $this->category) {
+                    $categoryName = $this->category->name ?? null;
+                }
+                \backend\modules\accounting\helpers\AutoPostingService::postExpense(
+                    (float)$this->amount,
+                    $categoryName,
+                    $this->description ?: ('مصروف #' . $this->id),
+                    $this->expenses_date ?: date('Y-m-d')
+                );
+            } catch (\Exception $e) {
+                \Yii::error('AutoPosting Expense error: ' . $e->getMessage(), 'accounting');
+            }
+        }
     }
 
     public function afterDelete()

@@ -39,7 +39,10 @@
   $backdrop.on('click', closeDrawer);
   $drawerClose.on('click', closeDrawer);
   $(document).on('keydown', function (e) {
-    if (e.key === 'Escape') closeDrawer();
+    if (e.key === 'Escape') {
+      closeDrawer();
+      closeActMenu();
+    }
   });
 
   /* ========== FILTER CHIPS ========== */
@@ -129,8 +132,11 @@
   });
 
   /* ========== ACTIONS MENU (portal approach) ========== */
-  var $activePortal = null;  // the cloned menu currently in <body>
-  var $activeWrap   = null;  // the .ct-act-wrap that owns it
+  var $activePortal = null;
+  var $activeWrap   = null;
+  var _menuScrollY  = null;
+  var _menuTableScroll = null;
+  var _menuOpenTime = 0;
 
   function closeActMenu() {
     if ($activePortal) {
@@ -139,26 +145,25 @@
     }
     if ($activeWrap) {
       $activeWrap.removeClass('open');
-      // Restore original menu visibility
       $activeWrap.find('.ct-act-menu').css('display', '');
       $activeWrap = null;
     }
+    _menuScrollY = null;
+    _menuTableScroll = null;
+    _menuOpenTime = 0;
   }
 
   function openActMenu($wrap) {
     var $trigger = $wrap.find('.ct-act-trigger');
     var $menu    = $wrap.find('.ct-act-menu');
 
-    // Clone menu and append to body so it escapes overflow:hidden
     var $portal = $menu.clone(true, true);
     $portal.removeClass('ct-act-menu').addClass('ct-act-menu-portal');
-    $portal.css('display', ''); // ensure portal is not hidden
+    $portal.css('display', '');
     $('body').append($portal);
 
-    // Hide the original menu (portal will be visible instead)
     $menu.css('display', 'none');
 
-    // Measure after appending (so dimensions are correct)
     var triggerRect = $trigger[0].getBoundingClientRect();
     var menuHeight  = $portal.outerHeight();
     var menuWidth   = $portal.outerWidth();
@@ -166,7 +171,6 @@
     var viewW = window.innerWidth;
     var gap = 4;
 
-    // Vertical: prefer below, fallback above
     var spaceBelow = viewH - triggerRect.bottom - gap;
     var spaceAbove = triggerRect.top - gap;
     var top;
@@ -180,7 +184,6 @@
         : Math.max(gap, triggerRect.top - menuHeight - gap);
     }
 
-    // Horizontal: align to right edge of trigger (RTL)
     var left = triggerRect.right - menuWidth;
     if (left < gap) left = gap;
     if (left + menuWidth > viewW - gap) left = viewW - menuWidth - gap;
@@ -190,10 +193,13 @@
     $wrap.addClass('open');
     $activePortal = $portal;
     $activeWrap   = $wrap;
+    _menuScrollY = window.scrollY;
+    _menuTableScroll = null;
+    _menuOpenTime = Date.now();
   }
 
   $(document).on('click', '.ct-act-trigger', function (e) {
-    e.stopPropagation();
+    e.stopImmediatePropagation();
     var $wrap = $(this).closest('.ct-act-wrap');
     var wasOpen = $wrap.hasClass('open');
 
@@ -204,24 +210,32 @@
     }
   });
 
-  // Close on outside click
+  // Close on outside click (exclude trigger and portal)
   $(document).on('click', function (e) {
-    if ($activePortal && !$(e.target).closest('.ct-act-menu-portal').length) {
-      closeActMenu();
-    }
+    if (!$activePortal) return;
+    if (Date.now() - _menuOpenTime < 300) return;
+    if ($(e.target).closest('.ct-act-menu-portal, .ct-act-wrap').length) return;
+    closeActMenu();
   });
 
-  // Prevent portal menu clicks from closing
+  // Prevent portal menu background clicks from closing, but allow link clicks through
   $(document).on('click', '.ct-act-menu-portal', function (e) {
     e.stopPropagation();
   });
-
-  // Close on scroll / resize so menu doesn't float detached
-  $(window).on('scroll resize', function () {
+  $(document).on('click', '.ct-act-menu-portal a', function () {
     closeActMenu();
   });
-  $(document).on('scroll', '.ct-table-wrap', function () {
-    closeActMenu();
+
+  // Close on scroll / resize — only after meaningful movement
+  $(window).on('scroll', function () {
+    if (!$activePortal) return;
+    if (_menuScrollY === null) { _menuScrollY = window.scrollY; return; }
+    if (Math.abs(window.scrollY - _menuScrollY) > 60) {
+      closeActMenu();
+    }
+  });
+  $(window).on('resize', function () {
+    if ($activePortal) closeActMenu();
   });
 
   /* ========== COPY CONTRACT ID ========== */
@@ -259,14 +273,20 @@
   /* ========== FINISH / CANCEL MODALS ========== */
   $(document).on('click', '.yeas-finish', function (e) {
     e.preventDefault();
-    $('#finishContractBtn').attr('href', $(this).data('url'));
-    var el = document.getElementById('finishContractModal');
+    closeActMenu();
+    var $btn = document.getElementById('finishContractBtn');
+    var el   = document.getElementById('finishContractModal');
+    if ($btn) $btn.setAttribute('href', $(this).data('url'));
+    if (el) { el.style.display = ''; }
     if (el && typeof bootstrap !== 'undefined') bootstrap.Modal.getOrCreateInstance(el).show();
   });
   $(document).on('click', '.yeas-cancel', function (e) {
     e.preventDefault();
-    $('#cancelContractBtn').attr('href', $(this).data('url'));
-    var el = document.getElementById('cancelContractModal');
+    closeActMenu();
+    var $btn = document.getElementById('cancelContractBtn');
+    var el   = document.getElementById('cancelContractModal');
+    if ($btn) $btn.setAttribute('href', $(this).data('url'));
+    if (el) { el.style.display = ''; }
     if (el && typeof bootstrap !== 'undefined') bootstrap.Modal.getOrCreateInstance(el).show();
   });
 

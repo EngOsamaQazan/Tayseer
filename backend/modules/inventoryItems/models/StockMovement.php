@@ -59,7 +59,9 @@ class StockMovement extends ActiveRecord
     {
         if ($insert) {
             $this->created_by = Yii::$app->user->id;
-            $this->created_at = time();
+            if (!$this->created_at) {
+                $this->created_at = time();
+            }
         }
         return parent::beforeSave($insert);
     }
@@ -137,6 +139,7 @@ class StockMovement extends ActiveRecord
         $m->notes            = $opts['notes'] ?? null;
         $m->supplier_id      = $opts['supplier_id'] ?? null;
         $m->company_id       = $opts['company_id'] ?? null;
+        $m->created_at       = $opts['created_at'] ?? null;
         return $m->save(false);
     }
 }

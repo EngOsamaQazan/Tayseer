@@ -193,6 +193,9 @@ return [
         'financialTransaction' => [
             'class' => 'backend\modules\financialTransaction\FinancialTransaction',
         ],
+        'accounting' => [
+            'class' => 'backend\modules\accounting\Accounting',
+        ],
         'followUp' => [
             'class' => 'backend\modules\followUp\FollowUp',
         ],

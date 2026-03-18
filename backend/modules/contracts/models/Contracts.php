@@ -15,6 +15,8 @@ use backend\modules\companies\models\Companies;
 use backend\modules\customers\models\Customers;
 use backend\modules\judiciary\models\Judiciary;
 use backend\modules\inventoryItems\models\ContractInventoryItem;
+use backend\modules\inventoryItems\models\InventorySerialNumber;
+use backend\modules\inventoryItems\models\StockMovement;
 use backend\modules\loanScheduling\models\LoanScheduling;
 use backend\modules\followUp\helper\ContractCalculations;
 use yii\db;
@@ -412,6 +414,57 @@ class Contracts extends \yii\db\ActiveRecord
             echo '</pre>';
             die();
         }
+    }
+
+    /**
+     * تحرير جميع أصناف المخزون (السيريالات) المرتبطة بعقد مُلغى
+     * وتسجيل حركات إرجاع في سجل حركات المخزون
+     */
+    public static function releaseInventoryOnCancel(int $contractId): int
+    {
+        $contract = self::findOne($contractId);
+        if (!$contract) {
+            return 0;
+        }
+
+        $items = ContractInventoryItem::find()
+            ->where(['contract_id' => $contractId])
+            ->andWhere(['IS NOT', 'serial_number_id', null])
+            ->all();
+
+        $released = 0;
+        foreach ($items as $ci) {
+            $serial = InventorySerialNumber::findOne($ci->serial_number_id);
+            if (!$serial) {
+                continue;
+            }
+
+            if ($serial->status === InventorySerialNumber::STATUS_SOLD) {
+                Yii::$app->db->createCommand()->update(
+                    'os_inventory_serial_numbers',
+                    ['status' => 'available', 'contract_id' => null, 'sold_at' => null],
+                    ['id' => (int)$serial->id]
+                )->execute();
+
+                StockMovement::record($serial->item_id, StockMovement::TYPE_RETURN, 1, [
+                    'reference_type' => 'contract_cancel',
+                    'reference_id'   => $contractId,
+                    'company_id'     => $contract->company_id,
+                    'notes'          => 'إرجاع بسبب إلغاء عقد #' . $contractId . ' — سيريال: ' . $serial->serial_number,
+                ]);
+
+                $released++;
+            }
+        }
+
+        ContractInventoryItem::deleteAll([
+            'contract_id' => $contractId,
+            'serial_number_id' => array_filter(array_map(function ($ci) {
+                return $ci->serial_number_id;
+            }, $items)),
+        ]);
+
+        return $released;
     }
 
     /** @deprecated Status is now computed automatically. Use toggleLegalDepartment() instead. */

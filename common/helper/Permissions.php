@@ -77,6 +77,26 @@ class Permissions
     /** اشعارات الموظفين — للموارد البشرية */
     const EMPLOYEE_NOTIFICATIONS = 'اشعارات الموظفين';
 
+    /** المحاسبة — النظام المحاسبي المتكامل */
+    const ACCOUNTING = 'المحاسبة';
+
+    /* ═══════════════════════════════════════════════════════════════
+     *  صلاحيات الإجراءات — المحاسبة (Action-Level)
+     * ═══════════════════════════════════════════════════════════════ */
+    const ACC_VIEW          = 'المحاسبة: مشاهدة';
+    const ACC_CREATE        = 'المحاسبة: إضافة قيود';
+    const ACC_EDIT          = 'المحاسبة: تعديل';
+    const ACC_DELETE        = 'المحاسبة: حذف';
+    const ACC_POST          = 'المحاسبة: ترحيل قيود';
+    const ACC_REVERSE       = 'المحاسبة: عكس قيود';
+    const ACC_COA_MANAGE    = 'شجرة الحسابات: إدارة';
+    const ACC_FISCAL_MANAGE = 'السنة المالية: إدارة';
+    const ACC_BUDGET_VIEW   = 'الموازنات: مشاهدة';
+    const ACC_BUDGET_MANAGE = 'الموازنات: إدارة';
+    const ACC_REPORTS       = 'التقارير المالية: مشاهدة';
+    const ACC_AR_MANAGE     = 'الذمم المدينة: إدارة';
+    const ACC_AP_MANAGE     = 'الذمم الدائنة: إدارة';
+
     /* ═══════════════════════════════════════════════════════════════
      *  صلاحيات الإجراءات — الحركات المالية (Action-Level)
      * ═══════════════════════════════════════════════════════════════ */
@@ -311,8 +331,26 @@ class Permissions
                 'tab-cases'       => self::JUD_VIEW,
                 'tab-persistence' => self::JUD_VIEW,
                 'tab-legal'       => self::JUD_VIEW,
-                'export-cases-report' => self::JUD_VIEW,
-                'batch-print'     => self::JUD_VIEW,
+                'tab-collection'  => self::JUD_VIEW,
+                'tab-counts'      => self::JUD_VIEW,
+                'export-cases-report'    => self::JUD_VIEW,
+                'export-cases-excel'     => self::JUD_VIEW,
+                'export-cases-pdf'       => self::JUD_VIEW,
+                'export-actions-excel'   => self::JUD_VIEW,
+                'export-actions-pdf'     => self::JUD_VIEW,
+                'batch-print'            => self::JUD_VIEW,
+                'print-case'             => self::JUD_VIEW,
+                'case-timeline'          => self::JUD_VIEW,
+                'deadline-dashboard'     => self::JUD_VIEW,
+                'deadline-dashboard-view' => self::JUD_VIEW,
+                'deadline-refresh'       => self::JUD_VIEW,
+                'correspondence-list'    => self::JUD_VIEW,
+                'generate-request'       => self::JUD_CREATE,
+                'save-generated-request' => self::JUD_CREATE,
+                'update-request-status'  => self::JUD_UPDATE,
+                'entity-search'          => self::JUD_VIEW,
+                'delete-customer-action' => self::JUD_DELETE,
+                'report'                 => self::JUD_VIEW,
             ],
             /* الموظفين */
             'employee/employee' => [
@@ -368,6 +406,92 @@ class Permissions
                 'update'      => self::JOBS_UPDATE,
                 'delete'      => self::JOBS_DELETE,
                 'bulk-delete' => self::JOBS_DELETE,
+            ],
+            /* المحاسبة — شجرة الحسابات */
+            'accounting/chart-of-accounts' => [
+                'index'         => self::ACC_VIEW,
+                'tree'          => self::ACC_VIEW,
+                'view'          => self::ACC_VIEW,
+                'create'        => self::ACC_COA_MANAGE,
+                'update'        => self::ACC_COA_MANAGE,
+                'delete'        => self::ACC_COA_MANAGE,
+                'toggle-status' => self::ACC_COA_MANAGE,
+            ],
+            /* المحاسبة — السنوات المالية */
+            'accounting/fiscal-year' => [
+                'index'        => self::ACC_VIEW,
+                'view'         => self::ACC_VIEW,
+                'create'       => self::ACC_FISCAL_MANAGE,
+                'update'       => self::ACC_FISCAL_MANAGE,
+                'close-period' => self::ACC_FISCAL_MANAGE,
+                'close-year'   => self::ACC_FISCAL_MANAGE,
+            ],
+            /* المحاسبة — مراكز التكلفة */
+            'accounting/cost-center' => [
+                'index'  => self::ACC_VIEW,
+                'create' => self::ACC_COA_MANAGE,
+                'update' => self::ACC_COA_MANAGE,
+                'delete' => self::ACC_COA_MANAGE,
+            ],
+            /* المحاسبة — القيود اليومية */
+            'accounting/journal-entry' => [
+                'index'   => self::ACC_VIEW,
+                'view'    => self::ACC_VIEW,
+                'create'  => self::ACC_CREATE,
+                'update'  => self::ACC_EDIT,
+                'delete'  => self::ACC_DELETE,
+                'post'    => self::ACC_POST,
+                'reverse' => self::ACC_REVERSE,
+            ],
+            /* المحاسبة — الأستاذ العام */
+            'accounting/general-ledger' => [
+                'index'   => [self::ACC_VIEW, self::ACC_REPORTS],
+                'account' => [self::ACC_VIEW, self::ACC_REPORTS],
+            ],
+            /* المحاسبة — لوحة التحكم */
+            'accounting/default' => [
+                'index' => self::ACC_VIEW,
+            ],
+            /* المحاسبة — التحليل الذكي */
+            'accounting/ai-insights' => [
+                'index' => [self::ACC_VIEW, self::ACC_REPORTS],
+            ],
+            /* المحاسبة — التقارير المالية */
+            'accounting/financial-statements' => [
+                'trial-balance'    => [self::ACC_VIEW, self::ACC_REPORTS],
+                'income-statement' => [self::ACC_VIEW, self::ACC_REPORTS],
+                'balance-sheet'    => [self::ACC_VIEW, self::ACC_REPORTS],
+                'cash-flow'        => [self::ACC_VIEW, self::ACC_REPORTS],
+            ],
+            /* المحاسبة — الموازنات */
+            'accounting/budget' => [
+                'index'       => [self::ACC_VIEW, self::ACC_BUDGET_VIEW],
+                'view'        => [self::ACC_VIEW, self::ACC_BUDGET_VIEW],
+                'variance'    => [self::ACC_VIEW, self::ACC_BUDGET_VIEW],
+                'create'      => self::ACC_BUDGET_MANAGE,
+                'update'      => self::ACC_BUDGET_MANAGE,
+                'add-line'    => self::ACC_BUDGET_MANAGE,
+                'remove-line' => self::ACC_BUDGET_MANAGE,
+                'approve'     => self::ACC_BUDGET_MANAGE,
+                'delete'      => self::ACC_DELETE,
+            ],
+            /* المحاسبة — الذمم المدينة */
+            'accounting/accounts-receivable' => [
+                'index'          => [self::ACC_VIEW, self::ACC_AR_MANAGE],
+                'create'         => self::ACC_AR_MANAGE,
+                'update'         => self::ACC_AR_MANAGE,
+                'delete'         => self::ACC_DELETE,
+                'record-payment' => self::ACC_AR_MANAGE,
+                'aging-report'   => [self::ACC_VIEW, self::ACC_AR_MANAGE],
+            ],
+            /* المحاسبة — الذمم الدائنة */
+            'accounting/accounts-payable' => [
+                'index'          => [self::ACC_VIEW, self::ACC_AP_MANAGE],
+                'create'         => self::ACC_AP_MANAGE,
+                'update'         => self::ACC_AP_MANAGE,
+                'delete'         => self::ACC_DELETE,
+                'record-payment' => self::ACC_AP_MANAGE,
+                'aging-report'   => [self::ACC_VIEW, self::ACC_AP_MANAGE],
             ],
         ];
     }
@@ -606,6 +730,18 @@ class Permissions
             'incomeCategory/income-category' => self::getModulePermissions(self::INCOME),
             'items/items' => self::getModulePermissions(self::INVENTORY_ITEMS),
             'divisionsCollection/divisions-collection' => self::getModulePermissions(self::COLLECTION),
+            /* المحاسبة */
+            'accounting/default' => [self::ACC_VIEW],
+            'accounting/ai-insights' => [self::ACC_VIEW, self::ACC_REPORTS],
+            'accounting/chart-of-accounts' => [self::ACC_VIEW, self::ACC_COA_MANAGE],
+            'accounting/fiscal-year' => [self::ACC_VIEW, self::ACC_FISCAL_MANAGE],
+            'accounting/cost-center' => [self::ACC_VIEW, self::ACC_COA_MANAGE],
+            'accounting/journal-entry' => [self::ACC_VIEW, self::ACC_CREATE, self::ACC_POST],
+            'accounting/general-ledger' => [self::ACC_VIEW, self::ACC_REPORTS],
+            'accounting/accounts-receivable' => [self::ACC_VIEW, self::ACC_AR_MANAGE],
+            'accounting/accounts-payable' => [self::ACC_VIEW, self::ACC_AP_MANAGE],
+            'accounting/financial-statements' => [self::ACC_VIEW, self::ACC_REPORTS],
+            'accounting/budget' => [self::ACC_VIEW, self::ACC_BUDGET_VIEW, self::ACC_BUDGET_MANAGE],
             /* تثبيت العناصر — متاح لجميع المستخدمين المسجّلين */
             'pin' => [],
         ];
@@ -682,6 +818,7 @@ class Permissions
             'reports' => [self::REPORTS, self::JUDICIARY, self::JUDICIARY_CUSTOMERS_ACTION, self::COLLECTION],
             'permissions' => [self::PERMISSION, self::ROLE, self::ROUTE, self::ASSIGNMENT],
             'changing' => [self::STATUS, self::Document_STATUS, self::COUSINS, self::CITIZEN, self::BANCKS, self::HEAR_ABOUT_US, self::CITY, self::PAYMENT_TYPE, self::FEELINGS, self::CONTACT_TYPE, self::CONNECTION_RESPONSE, self::DOCYUMENT_TYPE, self::JUDICIARY_ACTION, self::JUDICIARY_TYPE, self::LAWYERS, self::COURT, self::MASSAGING, self::JOBS, self::EXPENSE_CATEGORIES],
+            'accounting' => [self::ACC_VIEW, self::ACC_CREATE, self::ACC_COA_MANAGE, self::ACC_FISCAL_MANAGE, self::ACC_REPORTS, self::ACC_BUDGET_VIEW, self::ACC_AR_MANAGE, self::ACC_AP_MANAGE],
         ];
 
         if (!isset($groups[$group])) {

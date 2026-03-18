@@ -1,14 +1,14 @@
 <?php
 /**
- * الدائرة القانونية — واجهة V2 حديثة ومتجاوبة
- * Legal Department — Modern responsive UI (same philosophy as contracts/index)
+ * الدائرة القانونية — واجهة V3 محسّنة
+ * Legal Department — Enhanced V3 UI
+ * Bootstrap 5 modals, microinteractions, dark mode support
  */
 
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\LinkPager;
-use yii\bootstrap\Modal;
 use common\helper\Permissions;
 use backend\widgets\ExportButtons;
 use backend\modules\contractInstallment\models\ContractInstallment;
@@ -17,8 +17,9 @@ use backend\modules\judiciary\models\Judiciary;
 use backend\helpers\NameHelper;
 
 /* Assets */
-$this->registerCssFile('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css', ['position' => \yii\web\View::POS_HEAD]);
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/legal-department-v3.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-themes.css?v=' . time());
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . time(), [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
@@ -77,38 +78,59 @@ if (!empty($contractIds)) {
     }
 }
 
-/* Pre-fetch jobs (id → name, id → job_type FK) and job types (id → name) */
+/* Pre-fetch jobs */
 $jobsRows = \backend\modules\jobs\models\Jobs::find()->select(['id', 'name', 'job_type'])->asArray()->all();
 $jobsMap = ArrayHelper::map($jobsRows, 'id', 'name');
 $jobToTypeMap = ArrayHelper::map($jobsRows, 'id', 'job_type');
 $jobTypesMap = ArrayHelper::map(
     \backend\modules\jobs\models\JobsType::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name'
 );
+
+/* Stats: sector breakdown by first customer's job_type */
+$totalContracts = $dataCount;
+$sectorCounts = Yii::$app->db->createCommand(
+    "SELECT jt.name AS sector_name, COUNT(DISTINCT c.id) AS cnt
+     FROM os_contracts c
+     INNER JOIN os_contracts_customers cc ON cc.contract_id = c.id
+     INNER JOIN os_customers cust ON cust.id = cc.customer_id AND cust.is_deleted = 0
+     INNER JOIN os_jobs j ON j.id = cust.job_title AND j.is_deleted = 0
+     INNER JOIN os_jobs_type jt ON jt.id = j.job_type
+     WHERE c.status = 'legal_department' AND c.is_deleted = 0
+     GROUP BY jt.id, jt.name
+     ORDER BY cnt DESC"
+)->queryAll();
+$sectorMap = ArrayHelper::map($sectorCounts, 'sector_name', 'cnt');
+$countWithJob = array_sum(array_column($sectorCounts, 'cnt'));
+$countNoJob = $totalContracts - $countWithJob;
 ?>
 
 <?php $isIframe = Yii::$app->request->get('_iframe'); ?>
-<div class="ct-page ct-legal-page<?= $isIframe ? ' ct-iframe-mode' : '' ?>" role="main" aria-label="صفحة الدائرة القانونية">
+<div class="ct-page ld-page<?= $isIframe ? ' ct-iframe-mode' : '' ?>" role="main" aria-label="صفحة الدائرة القانونية">
 
     <!-- Flash messages -->
     <?php foreach (['success' => 'check-circle', 'error' => 'exclamation-circle', 'warning' => 'exclamation-triangle'] as $type => $icon): ?>
         <?php if (Yii::$app->session->hasFlash($type)): ?>
-            <div class="ct-alert ct-alert-<?= $type === 'error' ? 'danger' : $type ?>" role="alert"
-                 x-data="{ show: true }" x-show="show" x-transition x-cloak
-                 x-init="setTimeout(() => show = false, 5000)">
-                <i class="fa fa-<?= $icon ?>"></i>
+            <div class="ld-toast ld-toast-<?= $type === 'error' ? 'danger' : $type ?>" role="alert">
+                <div class="ld-toast-icon"><i class="fa fa-<?= $icon ?>"></i></div>
                 <span><?= Yii::$app->session->getFlash($type) ?></span>
-                <button class="ct-alert-close" @click="show = false" aria-label="إغلاق">&times;</button>
+                <button class="ld-toast-close" onclick="this.parentElement.remove()" aria-label="إغلاق">&times;</button>
             </div>
         <?php endif ?>
     <?php endforeach ?>
 
     <!-- ===== PAGE HEADER ===== -->
-    <div class="ct-page-hdr">
-        <div class="ct-title-area">
-            <h1><i class="fa fa-legal" style="margin-left:8px;opacity:.7"></i>الدائرة القانونية</h1>
-            <span class="ct-count" aria-label="إجمالي العقود"><?= number_format($dataCount) ?></span>
+    <div class="ld-header">
+        <div class="ld-header-main">
+            <div class="ld-header-icon">
+                <i class="fa fa-legal"></i>
+            </div>
+            <div class="ld-header-text">
+                <h1>الدائرة القانونية</h1>
+                <p class="ld-header-sub">إدارة العقود المحولة للقسم القانوني والقضايا المسجلة</p>
+            </div>
+            <span class="ld-badge-count"><?= number_format($dataCount) ?></span>
         </div>
-        <div class="ct-hdr-actions">
+        <div class="ld-header-actions">
             <?php
             $isShowAll = Yii::$app->request->get('show_all');
             $showAllParams = Yii::$app->request->queryParams;
@@ -119,67 +141,101 @@ $jobTypesMap = ArrayHelper::map(
             }
             $showAllUrl = Url::to(array_merge(['index-legal-department'], $showAllParams));
             ?>
-            <a href="<?= $showAllUrl ?>" class="ct-btn ct-btn-outline" id="ctShowAllBtn" aria-label="<?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?>">
+            <a href="<?= $showAllUrl ?>" class="ld-action-btn" id="ctShowAllBtn" aria-label="<?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?>">
                 <i class="fa fa-<?= $isShowAll ? 'list' : 'th-list' ?>"></i>
-                <span class="ct-hide-xs"><?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?></span>
+                <span class="ld-hide-xs"><?= $isShowAll ? 'عرض مرقّم' : 'عرض الجميع' ?></span>
             </a>
             <?= ExportButtons::widget([
                 'excelRoute' => ['export-legal-excel'],
                 'pdfRoute' => ['export-legal-pdf'],
-                'excelBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
-                'pdfBtnClass' => 'ct-btn ct-btn-outline ct-hide-sm',
+                'excelBtnClass' => 'ld-action-btn ld-hide-sm',
+                'pdfBtnClass' => 'ld-action-btn ld-hide-sm',
             ]) ?>
-            <button class="ct-btn ct-btn-ghost ct-show-sm" id="ctFilterToggle" aria-label="فتح الفلاتر">
-                <i class="fa fa-sliders" style="font-size:18px"></i>
+            <button class="ld-action-btn ld-action-icon ld-show-sm" id="ctFilterToggle" aria-label="فتح الفلاتر">
+                <i class="fa fa-sliders"></i>
             </button>
         </div>
     </div>
 
-    <!-- ===== LEGAL SUMMARY CARDS ===== -->
-    <?php
-    $totalContracts = $dataCount;
-    $withCase = (int) Judiciary::find()
-        ->innerJoin('os_contracts c2', 'c2.id = os_judiciary.contract_id')
-        ->where(['c2.status' => 'legal_department', 'c2.is_deleted' => 0, 'os_judiciary.is_deleted' => 0])
-        ->count('DISTINCT os_judiciary.contract_id');
-    $withoutCase = $totalContracts - $withCase;
-    $totalLegalCosts = (int) Yii::$app->db->createCommand(
-        'SELECT COALESCE(SUM(COALESCE(j.case_cost,0) + COALESCE(j.lawyer_cost,0)),0)
-         FROM os_judiciary j INNER JOIN os_contracts c2 ON c2.id = j.contract_id
-         WHERE c2.status = :st AND c2.is_deleted = 0 AND j.is_deleted = 0',
-        [':st' => 'legal_department']
-    )->queryScalar();
-    ?>
-    <div class="ct-legal-stats">
-        <div class="ct-legal-stat-card">
-            <div class="ct-legal-stat-icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-legal"></i></div>
-            <div class="ct-legal-stat-body">
-                <span class="ct-legal-stat-value"><?= number_format($totalContracts) ?></span>
-                <span class="ct-legal-stat-label">إجمالي العقود</span>
+    <!-- ===== STATS DASHBOARD ===== -->
+    <div class="ld-stats">
+        <div class="ld-stat" style="--stat-color: #1565C0; --stat-bg: #E3F2FD; --stat-bg-dark: rgba(21, 101, 192, 0.15)">
+            <div class="ld-stat-visual">
+                <div class="ld-stat-icon"><i class="fa fa-briefcase"></i></div>
+            </div>
+            <div class="ld-stat-body">
+                <span class="ld-stat-value"><?= number_format($totalContracts) ?></span>
+                <span class="ld-stat-label">إجمالي العقود</span>
             </div>
         </div>
-        <div class="ct-legal-stat-card">
-            <div class="ct-legal-stat-icon" style="background:#E8F5E9;color:#2E7D32"><i class="fa fa-check-circle"></i></div>
-            <div class="ct-legal-stat-body">
-                <span class="ct-legal-stat-value"><?= number_format($withCase) ?></span>
-                <span class="ct-legal-stat-label">لديها قضية مسجلة</span>
+        <?php
+        $sectorColors = [
+            ['color' => '#2E7D32', 'bg' => '#E8F5E9', 'dark' => 'rgba(46,125,50,0.15)', 'icon' => 'fa-institution'],
+            ['color' => '#E65100', 'bg' => '#FFF3E0', 'dark' => 'rgba(230,81,0,0.15)', 'icon' => 'fa-building'],
+            ['color' => '#7B1FA2', 'bg' => '#F3E5F5', 'dark' => 'rgba(123,31,162,0.15)', 'icon' => 'fa-users'],
+            ['color' => '#00838F', 'bg' => '#E0F7FA', 'dark' => 'rgba(0,131,143,0.15)', 'icon' => 'fa-industry'],
+        ];
+        $idx = 0;
+        foreach ($sectorCounts as $sector):
+            $sc = $sectorColors[$idx % count($sectorColors)];
+            $pct = $totalContracts > 0 ? round(($sector['cnt'] / $totalContracts) * 100) : 0;
+        ?>
+        <div class="ld-stat" style="--stat-color: <?= $sc['color'] ?>; --stat-bg: <?= $sc['bg'] ?>; --stat-bg-dark: <?= $sc['dark'] ?>">
+            <div class="ld-stat-visual">
+                <div class="ld-stat-icon"><i class="fa <?= $sc['icon'] ?>"></i></div>
+            </div>
+            <div class="ld-stat-body">
+                <span class="ld-stat-value"><?= number_format($sector['cnt']) ?></span>
+                <span class="ld-stat-label"><?= Html::encode($sector['sector_name']) ?></span>
+            </div>
+            <div class="ld-stat-indicator <?= $pct >= 50 ? 'ld-indicator-warning' : 'ld-indicator-success' ?>"><?= $pct ?>%</div>
+        </div>
+        <?php $idx++; endforeach ?>
+        <?php if ($countNoJob > 0): ?>
+        <div class="ld-stat" style="--stat-color: #F57F17; --stat-bg: #FFF8E1; --stat-bg-dark: rgba(245,127,23,0.15)">
+            <div class="ld-stat-visual">
+                <div class="ld-stat-icon"><i class="fa fa-user-times"></i></div>
+            </div>
+            <div class="ld-stat-body">
+                <span class="ld-stat-value"><?= number_format($countNoJob) ?></span>
+                <span class="ld-stat-label">لا يعمل / غير محدد</span>
             </div>
         </div>
-        <div class="ct-legal-stat-card">
-            <div class="ct-legal-stat-icon" style="background:#FFF8E1;color:#F57F17"><i class="fa fa-exclamation-circle"></i></div>
-            <div class="ct-legal-stat-body">
-                <span class="ct-legal-stat-value"><?= number_format($withoutCase) ?></span>
-                <span class="ct-legal-stat-label">بدون قضية (بانتظار التسجيل)</span>
-            </div>
+        <?php endif ?>
+    </div>
+
+    <!-- ===== SECTOR BREAKDOWN BAR ===== -->
+    <?php if (!empty($sectorCounts) && $totalContracts > 0): ?>
+    <div class="ld-progress-wrap">
+        <div class="ld-progress-header">
+            <span>توزيع العقود حسب القطاع</span>
+            <span class="ld-progress-pct"><?= count($sectorCounts) ?> قطاعات</span>
         </div>
-        <div class="ct-legal-stat-card">
-            <div class="ct-legal-stat-icon" style="background:#FCE4EC;color:#C62828"><i class="fa fa-money"></i></div>
-            <div class="ct-legal-stat-body">
-                <span class="ct-legal-stat-value"><?= number_format($totalLegalCosts) ?></span>
-                <span class="ct-legal-stat-label">إجمالي التكاليف القانونية</span>
-            </div>
+        <div class="ld-sector-bar">
+            <?php $cIdx = 0; foreach ($sectorCounts as $sec):
+                $pct = round(($sec['cnt'] / $totalContracts) * 100, 1);
+                $clr = $sectorColors[$cIdx % count($sectorColors)]['color'];
+            ?>
+            <div class="ld-sector-segment" style="width:<?= max($pct, 2) ?>%;background:<?= $clr ?>" title="<?= Html::encode($sec['sector_name']) ?>: <?= $sec['cnt'] ?> (<?= $pct ?>%)"></div>
+            <?php $cIdx++; endforeach ?>
+            <?php if ($countNoJob > 0):
+                $noPct = round(($countNoJob / $totalContracts) * 100, 1);
+            ?>
+            <div class="ld-sector-segment" style="width:<?= max($noPct, 2) ?>%;background:#9E9E9E" title="غير محدد: <?= $countNoJob ?> (<?= $noPct ?>%)"></div>
+            <?php endif ?>
+        </div>
+        <div class="ld-progress-legend">
+            <?php $cIdx = 0; foreach ($sectorCounts as $sec):
+                $clr = $sectorColors[$cIdx % count($sectorColors)]['color'];
+            ?>
+            <span class="ld-legend-item"><i class="fa fa-circle" style="color:<?= $clr ?>"></i> <?= Html::encode($sec['sector_name']) ?> (<?= number_format($sec['cnt']) ?>)</span>
+            <?php $cIdx++; endforeach ?>
+            <?php if ($countNoJob > 0): ?>
+            <span class="ld-legend-item"><i class="fa fa-circle" style="color:#9E9E9E"></i> غير محدد (<?= number_format($countNoJob) ?>)</span>
+            <?php endif ?>
         </div>
     </div>
+    <?php endif ?>
 
     <!-- ===== FILTER SECTION ===== -->
     <div class="ct-filter-wrap" id="ctFilterWrap">
@@ -202,13 +258,15 @@ $jobTypesMap = ArrayHelper::map(
     <div class="ct-chips" id="ctChips" aria-label="الفلاتر النشطة"></div>
 
     <!-- ===== TOOLBAR ===== -->
-    <div class="ct-toolbar">
-        <div class="ct-summary">
+    <div class="ld-toolbar">
+        <div class="ld-toolbar-info">
             <?php if ($dataCount > 0): ?>
-                عرض <strong><?= number_format($begin) ?>–<?= number_format($end) ?></strong>
-                من أصل <strong><?= number_format($dataCount) ?></strong> عقد
+                <span class="ld-toolbar-summary">
+                    عرض <strong><?= number_format($begin) ?>–<?= number_format($end) ?></strong>
+                    من أصل <strong><?= number_format($dataCount) ?></strong> عقد
+                </span>
             <?php else: ?>
-                لا توجد نتائج
+                <span class="ld-toolbar-summary">لا توجد نتائج</span>
             <?php endif ?>
         </div>
         <div class="ct-quick-search">
@@ -219,21 +277,27 @@ $jobTypesMap = ArrayHelper::map(
     </div>
 
     <!-- ===== DATA TABLE ===== -->
-    <div class="ct-table-wrap">
+    <div class="ld-table-container">
         <?php if (empty($models)): ?>
-            <div class="ct-empty">
-                <i class="fa fa-inbox"></i>
-                <p>لا توجد عقود مطابقة لمعايير البحث</p>
-                <a href="<?= Url::to(['legal-department']) ?>" class="ct-btn ct-btn-outline">
+            <div class="ld-empty">
+                <div class="ld-empty-icon">
+                    <i class="fa fa-inbox"></i>
+                </div>
+                <h3>لا توجد عقود مطابقة</h3>
+                <p>لم يتم العثور على عقود تتوافق مع معايير البحث المحددة</p>
+                <a href="<?= Url::to(['legal-department']) ?>" class="ld-action-btn ld-action-primary">
                     <i class="fa fa-refresh"></i> عرض جميع العقود
                 </a>
             </div>
         <?php else: ?>
-            <table class="ct-table" role="grid">
+            <table class="ct-table ld-table" role="grid">
                 <thead>
                     <tr>
-                        <th style="width:40px;text-align:center">
-                            <input type="checkbox" id="ctSelectAll" title="تحديد الكل" style="cursor:pointer;width:18px;height:18px">
+                        <th style="width:44px;text-align:center">
+                            <label class="ld-checkbox-wrap" title="تحديد الكل">
+                                <input type="checkbox" id="ctSelectAll">
+                                <span class="ld-checkbox-mark"></span>
+                            </label>
                         </th>
                         <th class="ct-th-id"><?= $sortLink('id', '#') ?></th>
                         <th><?= $sortLink('customer_name', 'الأطراف') ?></th>
@@ -245,25 +309,22 @@ $jobTypesMap = ArrayHelper::map(
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($models as $m):
-                        /* Parties: names + national IDs */
+                    <?php $rowIndex = 0; foreach ($models as $m):
                         $allParties = $m->customersAndGuarantor;
                         $partiesHtml = [];
                         $firstCustomer = $allParties[0] ?? null;
                         foreach ($allParties as $p) {
                             $line = Html::encode(NameHelper::short($p->name));
-                            if ($p->id_number) $line .= ' <small style="color:#64748b">(' . Html::encode($p->id_number) . ')</small>';
+                            if ($p->id_number) $line .= ' <small class="ld-id-num">(' . Html::encode($p->id_number) . ')</small>';
                             $partiesHtml[] = $line;
                         }
                         $partiesDisplay = implode('<br>', $partiesHtml) ?: '—';
                         $partiesTitle = implode('، ', ArrayHelper::getColumn($allParties, 'name'));
 
-                        /* Total with judiciary costs */
                         $jud = $judiciaryMap[$m->id] ?? null;
                         $total = $m->total_value;
                         if ($jud) $total += ($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0);
 
-                        /* Remaining */
                         $totalForRemain = $m->total_value;
                         if ($jud) {
                             $caseCosts = \backend\modules\expenses\models\Expenses::find()
@@ -273,42 +334,34 @@ $jobTypesMap = ArrayHelper::map(
                         $paid = ContractInstallment::find()->where(['contract_id' => $m->id])->sum('amount') ?? 0;
                         $remaining = $totalForRemain - $paid;
 
-                        /* Job info from first customer: Customer.job_title → Jobs.id → Jobs.job_type → JobsType.id */
                         $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
                         $jobName = $jobId ? ($jobsMap[$jobId] ?? '—') : '—';
                         $jobTypeId = $jobId ? ($jobToTypeMap[$jobId] ?? null) : null;
                         $jobTypeName = $jobTypeId ? ($jobTypesMap[$jobTypeId] ?? '—') : '—';
 
+                        $hasCase = (bool) $jud;
                     ?>
-                    <tr data-id="<?= $m->id ?>">
-                        <td style="text-align:center;vertical-align:middle">
-                            <?php if (!$jud): ?>
-                            <input type="checkbox" class="ct-batch-check" value="<?= $m->id ?>"
-                                   data-remaining="<?= round($remaining, 2) ?>"
-                                   data-customer="<?= Html::encode($partiesTitle) ?>"
-                                   style="cursor:pointer;width:18px;height:18px">
+                    <tr data-id="<?= $m->id ?>" class="ld-row" style="--row-delay: <?= $rowIndex * 0.03 ?>s">
+                        <td style="text-align:center;vertical-align:middle" data-label="">
+                            <?php if (!$hasCase): ?>
+                            <label class="ld-checkbox-wrap">
+                                <input type="checkbox" class="ct-batch-check" value="<?= $m->id ?>"
+                                       data-remaining="<?= round($remaining, 2) ?>"
+                                       data-customer="<?= Html::encode($partiesTitle) ?>">
+                                <span class="ld-checkbox-mark"></span>
+                            </label>
                             <?php else: ?>
-                            <span class="ct-text-muted" title="تم إنشاء القضية"><i class="fa fa-check-circle text-success" style="font-size:16px"></i></span>
+                            <span class="ld-case-check" title="تم إنشاء القضية"><i class="fa fa-check-circle"></i></span>
                             <?php endif ?>
                         </td>
-                        <td class="ct-td-id" data-label="#">
-                            <?= $m->id ?>
-                        </td>
+                        <td class="ct-td-id" data-label="#"><?= $m->id ?></td>
                         <td class="ct-td-customer" data-label="الأطراف" title="<?= Html::encode($partiesTitle) ?>" style="white-space:normal;min-width:180px">
                             <?= $partiesDisplay ?>
                         </td>
-                        <td class="ct-td-money" data-label="الإجمالي">
-                            <?= number_format($total, 0) ?>
-                        </td>
-                        <td class="ct-td-money ct-td-remain" data-label="المتبقي">
-                            <?= number_format($remaining, 0) ?>
-                        </td>
-                        <td data-label="الوظيفة">
-                            <?= Html::encode($jobName) ?>
-                        </td>
-                        <td data-label="نوع الوظيفة">
-                            <?= Html::encode($jobTypeName) ?>
-                        </td>
+                        <td class="ct-td-money" data-label="الإجمالي"><?= number_format($total, 0) ?></td>
+                        <td class="ct-td-money ct-td-remain" data-label="المتبقي"><?= number_format($remaining, 0) ?></td>
+                        <td data-label="الوظيفة"><?= Html::encode($jobName) ?></td>
+                        <td data-label="نوع الوظيفة"><?= Html::encode($jobTypeName) ?></td>
                         <td class="ct-td-actions" data-label="">
                             <div class="ct-act-wrap">
                                 <button class="ct-act-trigger" aria-label="إجراءات العقد <?= $m->id ?>"
@@ -335,7 +388,7 @@ $jobTypesMap = ArrayHelper::map(
                                     <a href="<?= Url::to(['/loanScheduling/loan-scheduling/create', 'contract_id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-calendar text-info"></i> جدولة
                                     </a>
-                                    <?php if ($jud): ?>
+                                    <?php if ($hasCase): ?>
                                     <div class="ct-act-divider"></div>
                                     <a href="<?= Url::to(['/judiciary/judiciary/update', 'id' => $jud->id, 'contract_id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-gavel text-danger"></i> ملف القضية
@@ -362,7 +415,7 @@ $jobTypesMap = ArrayHelper::map(
                             </div>
                         </td>
                     </tr>
-                    <?php endforeach ?>
+                    <?php $rowIndex++; endforeach ?>
                 </tbody>
             </table>
         <?php endif ?>
@@ -383,166 +436,180 @@ $jobTypesMap = ArrayHelper::map(
     </div>
     <?php endif ?>
 
-</div><!-- /.ct-page -->
+</div><!-- /.ld-page -->
 
-<!-- ===== MODALS ===== -->
-<?php Modal::begin([
-    'id' => 'finishContractModal',
-    'header' => '<h4 class="modal-title"><i class="fa fa-check-circle text-success"></i> تأكيد إنهاء العقد</h4>',
-    'size' => Modal::SIZE_SMALL,
-]) ?>
-<div class="ct-modal-body">
-    <p class="lead">هل أنت متأكد من إنهاء هذا العقد؟</p>
-    <p class="text-muted">سيتم تغيير حالة العقد إلى "منتهي"</p>
-    <div class="ct-modal-actions">
-        <a id="finishContractBtn" href="#" class="ct-btn ct-btn-primary" style="background:#28a745;border-color:#28a745">
-            <i class="fa fa-check"></i> نعم، إنهاء
-        </a>
-        <button type="button" class="ct-btn ct-btn-outline" data-dismiss="modal">
-            <i class="fa fa-times"></i> إلغاء
-        </button>
+<!-- ===== BOOTSTRAP 5 MODALS (hidden by default) ===== -->
+<?php if ($isManager): ?>
+<div class="modal fade" id="finishContractModal" tabindex="-1" aria-hidden="true" style="display:none">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content ld-modal-content">
+            <div class="ld-modal-icon ld-modal-icon-success">
+                <i class="fa fa-check-circle"></i>
+            </div>
+            <h4 class="ld-modal-title">تأكيد إنهاء العقد</h4>
+            <p class="ld-modal-text">هل أنت متأكد من إنهاء هذا العقد؟<br><small>سيتم تغيير حالة العقد إلى "منتهي"</small></p>
+            <div class="ld-modal-actions">
+                <a id="finishContractBtn" href="#" class="ld-action-btn ld-action-success">
+                    <i class="fa fa-check"></i> نعم، إنهاء
+                </a>
+                <button type="button" class="ld-action-btn" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>
     </div>
 </div>
-<?php Modal::end() ?>
 
-<?php Modal::begin([
-    'id' => 'cancelContractModal',
-    'header' => '<h4 class="modal-title"><i class="fa fa-ban text-danger"></i> تأكيد إلغاء العقد</h4>',
-    'size' => Modal::SIZE_SMALL,
-]) ?>
-<div class="ct-modal-body">
-    <p class="lead">هل أنت متأكد من إلغاء هذا العقد؟</p>
-    <p class="text-danger"><i class="fa fa-exclamation-triangle"></i> تحذير: لا يمكن التراجع عن هذا الإجراء</p>
-    <div class="ct-modal-actions">
-        <a id="cancelContractBtn" href="#" class="ct-btn ct-btn-primary" style="background:#dc3545;border-color:#dc3545">
-            <i class="fa fa-ban"></i> نعم، إلغاء
-        </a>
-        <button type="button" class="ct-btn ct-btn-outline" data-dismiss="modal">
-            <i class="fa fa-times"></i> تراجع
-        </button>
+<div class="modal fade" id="cancelContractModal" tabindex="-1" aria-hidden="true" style="display:none">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content ld-modal-content">
+            <div class="ld-modal-icon ld-modal-icon-danger">
+                <i class="fa fa-ban"></i>
+            </div>
+            <h4 class="ld-modal-title">تأكيد إلغاء العقد</h4>
+            <p class="ld-modal-text">هل أنت متأكد من إلغاء هذا العقد؟</p>
+            <p class="ld-modal-warning"><i class="fa fa-exclamation-triangle"></i> تحذير: لا يمكن التراجع عن هذا الإجراء</p>
+            <div class="ld-modal-actions">
+                <a id="cancelContractBtn" href="#" class="ld-action-btn ld-action-danger">
+                    <i class="fa fa-ban"></i> نعم، إلغاء
+                </a>
+                <button type="button" class="ld-action-btn" data-bs-dismiss="modal">
+                    <i class="fa fa-times"></i> تراجع
+                </button>
+            </div>
+        </div>
     </div>
 </div>
-<?php Modal::end() ?>
+<?php endif ?>
 
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
-<?php Modal::end() ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true" style="display:none">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--t-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
 
 <!-- ===== BATCH ACTION FLOATING BAR ===== -->
-<div id="ctBatchBar" class="ct-batch-bar"
-     x-data="{ showBar: false, batchCount: 0 }"
-     @update-batch.window="showBar = $event.detail.show; batchCount = $event.detail.count"
-     x-show="showBar" x-transition x-cloak>
-    <div class="ct-batch-bar-inner">
-        <span class="ct-batch-bar-count">
-            <i class="fa fa-check-square-o"></i>
-            تم تحديد <strong id="ctBatchCount" x-text="batchCount">0</strong> عقد
-        </span>
-        <button type="button" id="ctBatchClear" class="ct-btn ct-btn-outline" style="border-color:rgba(255,255,255,.4);color:#fff;padding:6px 16px">
-            <i class="fa fa-times"></i> إلغاء التحديد
-        </button>
-        <form id="ctBatchForm" method="POST" action="<?= Url::to(['/judiciary/judiciary/batch-create']) ?>" style="display:inline">
-            <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
-            <input type="hidden" name="contract_ids" id="ctBatchIds" value="">
-            <button type="submit" class="ct-btn ct-btn-primary" style="padding:8px 24px;font-weight:700;font-size:14px">
-                <i class="fa fa-gavel"></i> تجهيز القضايا
+<div id="ctBatchBar" class="ld-batch-bar" style="display:none">
+    <div class="ld-batch-inner">
+        <div class="ld-batch-info">
+            <div class="ld-batch-icon"><i class="fa fa-check-square-o"></i></div>
+            <span>تم تحديد <strong id="ctBatchCount">0</strong> عقد</span>
+        </div>
+        <div class="ld-batch-actions">
+            <button type="button" id="ctBatchClear" class="ld-action-btn ld-action-ghost">
+                <i class="fa fa-times"></i> إلغاء التحديد
             </button>
-        </form>
+            <form id="ctBatchForm" method="POST" action="<?= Url::to(['/judiciary/judiciary/batch-create']) ?>" style="display:inline">
+                <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
+                <input type="hidden" name="contract_ids" id="ctBatchIds" value="">
+                <button type="submit" class="ld-action-btn ld-action-primary ld-batch-submit">
+                    <i class="fa fa-gavel"></i> تجهيز القضايا
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
 <?php
-$this->registerCss(<<<'CSS'
-/* ═══ Batch Selection Bar ═══ */
-.ct-batch-bar {
-    position: fixed; bottom: 0; left: 0; right: 0; z-index: 1050;
-    background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
-    padding: 12px 20px;
-    animation: ctSlideUp .3s ease;
-}
-@keyframes ctSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.ct-batch-bar-inner {
-    max-width: 1200px; margin: 0 auto;
-    display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;
-}
-.ct-batch-bar-count { color: #fff; font-size: 15px; }
-.ct-batch-bar-count strong { color: #fbbf24; font-size: 18px; margin: 0 4px; }
-/* Checkbox highlight row */
-tr.ct-row-selected { background: #fffbeb !important; }
-tr.ct-row-selected:hover { background: #fef3c7 !important; }
-CSS
-);
-
 $this->registerJs(<<<'JS'
-/* ═══ Batch Selection Logic ═══ */
 (function(){
-    var $bar = $('#ctBatchBar'), $count = $('#ctBatchCount'), $ids = $('#ctBatchIds');
-    var $checkAll = $('#ctSelectAll');
-    var selected = {};
+    var $bar = document.getElementById('ctBatchBar'),
+        $count = document.getElementById('ctBatchCount'),
+        $ids = document.getElementById('ctBatchIds'),
+        $checkAll = document.getElementById('ctSelectAll'),
+        selected = {};
 
     function updateBar() {
-        var keys = Object.keys(selected);
-        var n = keys.length;
-        /* OLD jQuery - replaced by Alpine.js */
-        // $count.text(n);
-        // if (n > 0) { $bar.stop(true).slideDown(300); } else { $bar.stop(true).slideUp(200); }
-        $ids.val(keys.join(','));
-        window.dispatchEvent(new CustomEvent('update-batch',{detail:{show:n>0,count:n}}));
+        var keys = Object.keys(selected), n = keys.length;
+        $count.textContent = n;
+        $ids.value = keys.join(',');
+        $bar.style.display = n > 0 ? '' : 'none';
+        if (n > 0) $bar.classList.add('ld-batch-visible');
+        else $bar.classList.remove('ld-batch-visible');
     }
 
     $(document).on('change', '.ct-batch-check', function(){
-        var id = $(this).val();
-        if (this.checked) {
-            selected[id] = true;
-            $(this).closest('tr').addClass('ct-row-selected');
-        } else {
-            delete selected[id];
-            $(this).closest('tr').removeClass('ct-row-selected');
-        }
+        var id = this.value;
+        if (this.checked) { selected[id] = true; $(this).closest('tr').addClass('ct-row-selected'); }
+        else { delete selected[id]; $(this).closest('tr').removeClass('ct-row-selected'); }
         updateBar();
-        // Update select-all state
-        var total = $('.ct-batch-check').length;
-        var checked = $('.ct-batch-check:checked').length;
-        $checkAll.prop('checked', checked === total && total > 0);
-        $checkAll.prop('indeterminate', checked > 0 && checked < total);
+        var total = document.querySelectorAll('.ct-batch-check').length;
+        var checked = document.querySelectorAll('.ct-batch-check:checked').length;
+        if ($checkAll) { $checkAll.checked = checked === total && total > 0; $checkAll.indeterminate = checked > 0 && checked < total; }
     });
 
-    $checkAll.on('change', function(){
+    if ($checkAll) $checkAll.addEventListener('change', function(){
         var isChecked = this.checked;
-        $('.ct-batch-check').each(function(){
-            this.checked = isChecked;
-            var id = $(this).val();
-            if (isChecked) {
-                selected[id] = true;
-                $(this).closest('tr').addClass('ct-row-selected');
-            } else {
-                delete selected[id];
-                $(this).closest('tr').removeClass('ct-row-selected');
-            }
+        document.querySelectorAll('.ct-batch-check').forEach(function(cb){
+            cb.checked = isChecked;
+            var id = cb.value;
+            if (isChecked) { selected[id] = true; cb.closest('tr').classList.add('ct-row-selected'); }
+            else { delete selected[id]; cb.closest('tr').classList.remove('ct-row-selected'); }
         });
         updateBar();
     });
 
-    $('#ctBatchClear').on('click', function(){
+    document.getElementById('ctBatchClear').addEventListener('click', function(){
         selected = {};
-        $('.ct-batch-check').prop('checked', false);
-        $checkAll.prop('checked', false).prop('indeterminate', false);
-        $('tr.ct-row-selected').removeClass('ct-row-selected');
+        document.querySelectorAll('.ct-batch-check').forEach(function(cb){ cb.checked = false; });
+        if ($checkAll) { $checkAll.checked = false; $checkAll.indeterminate = false; }
+        document.querySelectorAll('tr.ct-row-selected').forEach(function(tr){ tr.classList.remove('ct-row-selected'); });
         updateBar();
     });
 
-    // Validate before submit
-    $('#ctBatchForm').on('submit', function(e){
-        if (Object.keys(selected).length === 0) {
-            e.preventDefault();
-            alert('الرجاء تحديد عقد واحد على الأقل');
+    document.getElementById('ctBatchForm').addEventListener('submit', function(e){
+        if (Object.keys(selected).length === 0) { e.preventDefault(); alert('الرجاء تحديد عقد واحد على الأقل'); }
+    });
+
+    // Row entrance animation via IntersectionObserver
+    if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function(entries){
+            entries.forEach(function(entry){
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('ld-row-visible');
+                    obs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.ld-row').forEach(function(row){ obs.observe(row); });
+    } else {
+        document.querySelectorAll('.ld-row').forEach(function(row){ row.classList.add('ld-row-visible'); });
+    }
+
+    // Stat counter animation
+    document.querySelectorAll('.ld-stat-value').forEach(function(el){
+        var target = parseInt(el.textContent.replace(/,/g, ''), 10);
+        if (isNaN(target) || target === 0) return;
+        var duration = 800, start = 0, startTime = null;
+        function animate(time) {
+            if (!startTime) startTime = time;
+            var progress = Math.min((time - startTime) / duration, 1);
+            var eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.floor(target * eased).toLocaleString('en-US');
+            if (progress < 1) requestAnimationFrame(animate);
+            else el.textContent = target.toLocaleString('en-US');
         }
+        requestAnimationFrame(animate);
+    });
+
+    // Sector bar animation
+    document.querySelectorAll('.ld-sector-segment').forEach(function(seg){
+        var w = seg.style.width;
+        seg.style.width = '0%';
+        setTimeout(function(){ seg.style.width = w; }, 400);
     });
 })();
-
-/* OLD jQuery - replaced by Alpine.js */
-// $('.ct-alert-close').on('click', function(){ $(this).closest('.ct-alert').fadeOut(300); });
-// setTimeout(function(){ $('.ct-alert').fadeOut(500); }, 5000);
 JS
 );
 

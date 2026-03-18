@@ -68,7 +68,9 @@ class JudiciaryController extends Controller
                             'export-report-excel', 'export-report-pdf',
                             'case-timeline',
                             'correspondence-list', 'deadline-dashboard',
+                            'deadline-dashboard-view',
                             'entity-search', 'generate-request',
+                            'save-generated-request',
                             'refresh-deadlines', 'sync-holidays',
                         ],
                         'allow' => true,
@@ -672,6 +674,77 @@ class JudiciaryController extends Controller
                 ];
             }
 
+            // Correspondence entries
+            $corrRows = DiwanCorrespondence::find()
+                ->forCase((int)$id)
+                ->chronological()
+                ->asArray()
+                ->all();
+
+            $corrTypeIcons = [
+                'notification' => 'fa-bell',
+                'outgoing_letter' => 'fa-paper-plane',
+                'incoming_response' => 'fa-reply',
+            ];
+            $corrTypeLabels = [
+                'notification' => 'تبليغ',
+                'outgoing_letter' => 'كتاب صادر',
+                'incoming_response' => 'رد وارد',
+            ];
+            foreach ($corrRows as $cr) {
+                $timeline[] = [
+                    'id' => 'corr-' . $cr['id'],
+                    'action_name' => $corrTypeLabels[$cr['communication_type']] ?? $cr['communication_type'],
+                    'action_nature' => 'correspondence',
+                    'action_type' => $cr['communication_type'],
+                    'customer_id' => (int)($cr['customer_id'] ?? 0),
+                    'customer_name' => '',
+                    'action_date' => $cr['correspondence_date'] ?? '',
+                    'note' => $cr['content_summary'] ?? '',
+                    'request_status' => '',
+                    'decision_text' => '',
+                    'image' => '',
+                    'created_by' => '',
+                    'created_at' => !empty($cr['created_at']) ? date('Y-m-d H:i', $cr['created_at']) : '',
+                    'icon' => $corrTypeIcons[$cr['communication_type']] ?? 'fa-envelope',
+                    'source' => 'correspondence',
+                    'status' => $cr['status'] ?? '',
+                ];
+            }
+
+            // Deadline entries
+            $dlRows = JudiciaryDeadline::find()
+                ->where(['judiciary_id' => (int)$id, 'is_deleted' => 0])
+                ->orderBy(['deadline_date' => SORT_DESC])
+                ->asArray()
+                ->all();
+
+            $dlTypeLabels = JudiciaryDeadline::getTypeLabels();
+            foreach ($dlRows as $dl) {
+                $timeline[] = [
+                    'id' => 'dl-' . $dl['id'],
+                    'action_name' => $dlTypeLabels[$dl['deadline_type']] ?? $dl['deadline_type'],
+                    'action_nature' => 'deadline',
+                    'action_type' => $dl['deadline_type'],
+                    'customer_id' => (int)($dl['customer_id'] ?? 0),
+                    'customer_name' => '',
+                    'action_date' => $dl['deadline_date'] ?? '',
+                    'note' => $dl['notes'] ?? '',
+                    'request_status' => '',
+                    'decision_text' => '',
+                    'image' => '',
+                    'created_by' => '',
+                    'created_at' => '',
+                    'icon' => $dl['status'] === 'expired' ? 'fa-exclamation-circle' : 'fa-clock-o',
+                    'source' => 'deadline',
+                    'status' => $dl['status'] ?? '',
+                ];
+            }
+
+            usort($timeline, function ($a, $b) {
+                return strcmp($b['action_date'] ?? '', $a['action_date'] ?? '');
+            });
+
             $caseInfo = [
                 'id' => $judiciary->id,
                 'contract_id' => $judiciary->contract_id,
@@ -1066,7 +1139,7 @@ class JudiciaryController extends Controller
                 'content' => $this->renderAjax('view', [
                     'model' => $model,
                 ]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary float-start', 'data-bs-dismiss' => "modal"]) .
                     Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary'])
             ];
         }
@@ -1133,7 +1206,7 @@ class JudiciaryController extends Controller
                     'model' => $model,
                     'id' => $id
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                'footer' => Html::button('Close', ['class' => 'btn btn-secondary float-start', 'data-bs-dismiss' => "modal"]) .
                     Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
@@ -1653,6 +1726,39 @@ class JudiciaryController extends Controller
     }
 
     /* ═══════════════════════════════════════════════════════════
+     *  لوحة المواعيد — HTML View
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionDeadlineDashboardView()
+    {
+        JudiciaryDeadlineService::refreshAllStatuses();
+
+        $expired = JudiciaryDeadline::find()
+            ->where(['status' => JudiciaryDeadline::STATUS_EXPIRED])
+            ->orderBy(['deadline_date' => SORT_ASC])
+            ->with(['judiciary'])
+            ->all();
+
+        $approaching = JudiciaryDeadline::find()
+            ->where(['status' => JudiciaryDeadline::STATUS_APPROACHING])
+            ->orderBy(['deadline_date' => SORT_ASC])
+            ->with(['judiciary'])
+            ->all();
+
+        $pending = JudiciaryDeadline::find()
+            ->where(['status' => JudiciaryDeadline::STATUS_PENDING])
+            ->orderBy(['deadline_date' => SORT_ASC])
+            ->with(['judiciary'])
+            ->all();
+
+        return $this->render('deadline_dashboard', [
+            'expired' => $expired,
+            'approaching' => $approaching,
+            'pending' => $pending,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
      *  بحث موحد عن الجهات — Entity Search for Select2
      * ═══════════════════════════════════════════════════════════ */
 
@@ -1681,19 +1787,23 @@ class JudiciaryController extends Controller
     {
         $model = $this->findModel($id);
         $request = Yii::$app->request;
+        $db = Yii::$app->db;
 
         if ($request->isPost) {
             Yii::$app->response->format = Response::FORMAT_JSON;
 
             $templateIds = $request->post('template_ids', []);
-            $defendantName = $request->post('defendant_name', '');
+            if (is_string($templateIds)) {
+                $templateIds = json_decode($templateIds, true) ?: [];
+            }
+            $defendantId = $request->post('defendant_id');
             $representativeId = $request->post('representative_id', $model->lawyer_id);
 
             $context = [
-                'defendant_name' => $defendantName,
+                'defendant_id' => $defendantId,
                 'representative_id' => $representativeId,
-                'employer_name' => $request->post('employer_name', ''),
-                'bank_name' => $request->post('bank_name', ''),
+                'employer_name_override' => $request->post('employer_name_override', ''),
+                'bank_name_override' => $request->post('bank_name_override', ''),
                 'authority_name' => $request->post('authority_name', ''),
                 'amount' => $request->post('amount', ''),
                 'notification_date' => $request->post('notification_date', ''),
@@ -1715,12 +1825,81 @@ class JudiciaryController extends Controller
         $defendants = $model->customersAndGuarantor;
         $lawyers = \backend\modules\lawyers\models\Lawyers::find()->all();
 
+        $defendantProfiles = [];
+        foreach ($defendants as $d) {
+            $employer = '';
+            if ($d->job_title) {
+                $employer = $db->createCommand("SELECT name FROM {{%jobs}} WHERE id=:id", [':id' => $d->job_title])->queryScalar() ?: '';
+            }
+            $bank = '';
+            if ($d->bank_name) {
+                $bank = $db->createCommand("SELECT name FROM {{%bancks}} WHERE id=:id", [':id' => $d->bank_name])->queryScalar() ?: '';
+            }
+            $defendantProfiles[$d->id] = [
+                'name'        => $d->name,
+                'id_number'   => $d->id_number ?: '',
+                'employer'    => $employer,
+                'bank'        => $bank,
+                'bank_branch' => $d->bank_branch ?: '',
+                'account'     => $d->account_number ?: '',
+                'salary'      => (float) ($d->total_salary ?: 0),
+                'phone'       => $d->primary_phone_number ?: '',
+            ];
+        }
+
+        $templateMeta = [];
+        foreach ($templates as $t) {
+            preg_match_all('/\{\{(\w+)\}\}/', $t->template_content, $matches);
+            $templateMeta[$t->id] = [
+                'type' => $t->template_type,
+                'placeholders' => array_unique($matches[1] ?? []),
+            ];
+        }
+
+        $contractAmount = $model->contract ? (float) ($model->contract->total_value ?: 0) : 0;
+
         return $this->render('generate_request', [
             'model' => $model,
             'templates' => $templates,
             'defendants' => $defendants,
             'lawyers' => $lawyers,
+            'defendantProfiles' => $defendantProfiles,
+            'templateMeta' => $templateMeta,
+            'contractAmount' => $contractAmount,
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  حفظ الطلب كإجراء — Save Generated Request as Action
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionSaveGeneratedRequest($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = $this->findModel($id);
+        $request = Yii::$app->request;
+
+        $html = $request->post('html', '');
+        $defendantId = $request->post('defendant_id');
+        $templateIds = $request->post('template_ids', '');
+
+        if (empty($html) || empty($defendantId)) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $jca = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions();
+        $jca->judiciary_id = $model->id;
+        $jca->customers_id = (int) $defendantId;
+        $jca->judiciary_actions_id = 1;
+        $jca->action_date = date('Y-m-d');
+        $jca->note = 'طلب إجرائي — قوالب: ' . $templateIds;
+        $jca->request_status = 'printed';
+
+        if ($jca->save()) {
+            return ['success' => true, 'message' => 'تم حفظ الطلب كإجراء بحالة "مطبوع"', 'action_id' => $jca->id];
+        }
+
+        return ['success' => false, 'message' => 'خطأ في الحفظ: ' . implode(', ', $jca->getFirstErrors())];
     }
 
     /* ═══════════════════════════════════════════════════════════

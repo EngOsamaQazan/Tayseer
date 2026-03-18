@@ -466,6 +466,30 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
         <div class="jv-card-title"><i class="fa fa-envelope" style="color:#0D9488"></i> المراسلات
             <span style="background:#F0FDFA;color:#0D9488;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-right:8px"><?= count($correspondences) ?></span>
         </div>
+        <?php
+        $corrByType = ['all' => $correspondences, 'notification' => [], 'outgoing_letter' => [], 'incoming_response' => []];
+        foreach ($correspondences as $c) {
+            $ct = $c->communication_type;
+            if (isset($corrByType[$ct])) $corrByType[$ct][] = $c;
+        }
+        $filterTabs = [
+            'all' => ['label' => 'الكل', 'icon' => 'fa-list', 'count' => count($correspondences)],
+            'notification' => ['label' => 'تبليغات', 'icon' => 'fa-bell', 'count' => count($corrByType['notification'])],
+            'outgoing_letter' => ['label' => 'كتب صادرة', 'icon' => 'fa-paper-plane', 'count' => count($corrByType['outgoing_letter'])],
+            'incoming_response' => ['label' => 'ردود واردة', 'icon' => 'fa-reply', 'count' => count($corrByType['incoming_response'])],
+        ];
+        ?>
+        <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+            <?php foreach ($filterTabs as $fKey => $fTab): ?>
+                <button type="button" class="jv-corr-filter <?= $fKey === 'all' ? 'active' : '' ?>" data-filter="<?= $fKey ?>"
+                        style="border:1px solid #E2E8F0;background:<?= $fKey === 'all' ? '#0D9488' : '#fff' ?>;color:<?= $fKey === 'all' ? '#fff' : '#64748B' ?>;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .2s">
+                    <i class="fa <?= $fTab['icon'] ?>"></i> <?= $fTab['label'] ?>
+                    <?php if ($fTab['count'] > 0): ?>
+                        <span style="background:rgba(255,255,255,.2);padding:0 6px;border-radius:10px;font-size:10px"><?= $fTab['count'] ?></span>
+                    <?php endif; ?>
+                </button>
+            <?php endforeach; ?>
+        </div>
         <div class="jv-corr-list">
             <?php foreach ($correspondences as $corr):
                 $ctLabel = $corrTypeLabels[$corr->communication_type] ?? $corr->communication_type;
@@ -475,10 +499,11 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                     'responded' => '#0D9488', 'closed' => '#64748B',
                 ];
                 $cClr = $corrStatusClr[$corr->status] ?? '#64748B';
+                $corrIcons = ['notification' => 'fa-bell', 'outgoing_letter' => 'fa-paper-plane', 'incoming_response' => 'fa-reply'];
             ?>
-            <div class="jv-corr-item">
+            <div class="jv-corr-item" data-corr-type="<?= Html::encode($corr->communication_type) ?>">
                 <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-                    <i class="fa fa-paper-plane" style="color:#0D9488;font-size:12px"></i>
+                    <i class="fa <?= $corrIcons[$corr->communication_type] ?? 'fa-envelope' ?>" style="color:#0D9488;font-size:12px"></i>
                     <span style="font-weight:600;font-size:12px;color:#1E293B"><?= Html::encode($corr->purpose ?: $ctLabel) ?></span>
                     <span style="padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;background:<?= $cClr ?>15;color:<?= $cClr ?>"><?= $csLabel ?></span>
                 </div>
@@ -499,31 +524,44 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
             </div>
             <?php endforeach; ?>
         </div>
-        <?= Html::a('<i class="fa fa-list"></i> عرض جميع المراسلات', ['correspondence-list', 'id' => $model->id], [
+        <?= Html::a('<i class="fa fa-list"></i> عرض جميع المراسلات', ['/diwan/diwan/correspondence-index', 'DiwanCorrespondenceSearch[related_record_id]' => $model->id, 'DiwanCorrespondenceSearch[related_module]' => 'judiciary'], [
             'class' => 'btn btn-sm btn-default',
             'style' => 'margin-top:12px;border-radius:8px;font-size:12px;font-weight:600',
         ]) ?>
     </div>
+    <?php $this->registerJs("
+        document.querySelectorAll('.jv-corr-filter').forEach(function(btn){
+            btn.addEventListener('click', function(){
+                document.querySelectorAll('.jv-corr-filter').forEach(function(b){ b.style.background='#fff'; b.style.color='#64748B'; b.classList.remove('active'); });
+                this.style.background='#0D9488'; this.style.color='#fff'; this.classList.add('active');
+                var f = this.getAttribute('data-filter');
+                document.querySelectorAll('.jv-corr-item').forEach(function(item){
+                    item.style.display = (f === 'all' || item.getAttribute('data-corr-type') === f) ? '' : 'none';
+                });
+            });
+        });
+    "); ?>
     <?php endif; ?>
 
-    <!-- ═══ Generate Request Button ═══ -->
+    <!-- ═══ Action Buttons ═══ -->
     <div style="margin-bottom:24px;display:flex;gap:8px;flex-wrap:wrap">
         <?= Html::a('<i class="fa fa-file-text"></i> إنشاء طلب إجرائي', ['generate-request', 'id' => $model->id], [
             'class' => 'btn btn-primary',
             'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px',
         ]) ?>
-        <?= Html::a('<i class="fa fa-clock-o"></i> لوحة المواعيد', ['deadline-dashboard'], [
+        <?= Html::a('<i class="fa fa-clock-o"></i> لوحة المواعيد', ['deadline-dashboard-view'], [
             'class' => 'btn btn-warning',
             'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px;color:#fff',
         ]) ?>
-        <?= Html::a('<i class="fa fa-history"></i> الجدول الزمني', ['case-timeline', 'id' => $model->id], [
-            'class' => 'btn btn-info',
-            'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px;color:#fff',
-        ]) ?>
+        <button type="button" class="btn btn-info jv-timeline-trigger"
+                data-url="<?= Url::to(['case-timeline', 'id' => $model->id]) ?>"
+                data-case-label="<?= Html::encode($model->judiciary_number ?: '#' . $model->id) ?>"
+                style="border-radius:8px;font-size:13px;font-weight:600;padding:10px 24px;color:#fff">
+            <i class="fa fa-history"></i> الجدول الزمني
+        </button>
     </div>
 
     <?php if (isset($actionsDP)):
-        \johnitvn\ajaxcrud\CrudAsset::register($this);
         $actions = $actionsDP->getModels();
         $totalCount = $actionsDP->getTotalCount();
     ?>
@@ -537,8 +575,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                 '<i class="fa fa-plus"></i> إضافة إجراء',
                 ['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $model->contract_id],
                 [
-                    'role' => 'modal-remote',
-                    'class' => 'btn btn-success',
+                    'class' => 'btn btn-success jv-modal-remote',
                     'style' => 'border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600',
                 ]
             ) ?>
@@ -592,10 +629,10 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                         <div class="jca-act-wrap">
                             <button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>
                             <div class="jca-act-menu">
-                                <a href="<?= $editUrl ?>" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>
+                                <a href="<?= $editUrl ?>" class="jv-modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>
                                 <div class="jca-act-divider"></div>
-                                <a href="<?= $delUrl ?>" role="modal-remote" data-request-method="post"
-                                   data-confirm-title="تأكيد الحذف" data-confirm-message="هل أنت متأكد من حذف هذا الإجراء؟">
+                                <a href="<?= $delUrl ?>" class="jv-delete-action"
+                                   data-confirm="هل أنت متأكد من حذف هذا الإجراء؟">
                                     <i class="fa fa-trash text-danger"></i> حذف
                                 </a>
                             </div>
@@ -622,8 +659,11 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
         <?php endif; ?>
     </div>
 
-    <?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
-    <?php \yii\bootstrap\Modal::end() ?>
+    <div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content"><div class="modal-body" id="ajaxCrudModalBody"><div class="text-center p-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div></div>
+        </div>
+    </div>
 
     <?php
     $jcaJs = <<<'JS'
@@ -647,3 +687,180 @@ JS;
     <?php endif ?>
 
 </div>
+
+<!-- Timeline Side Panel -->
+<div class="ctl-overlay" id="ctlOverlayView"></div>
+<div class="ctl-panel" id="ctlPanelView">
+    <div class="ctl-hdr">
+        <h3><i class="fa fa-history"></i> <span id="ctlTitleView">الجدول الزمني</span></h3>
+        <button class="ctl-close" id="ctlCloseView">&times;</button>
+    </div>
+    <div class="ctl-case-info" id="ctlCaseInfoView"></div>
+    <div class="ctl-toolbar">
+        <div class="ctl-filter-chips" id="ctlFilterChipsView">
+            <span class="ctl-chip active" data-filter="all">الكل</span>
+        </div>
+    </div>
+    <div class="ctl-body" id="ctlBodyView">
+        <div class="ctl-loading"><i class="fa fa-spinner"></i><div>جاري التحميل...</div></div>
+    </div>
+</div>
+
+<?php
+$timelineJs = <<<'JS'
+(function(){
+    var $overlay = $('#ctlOverlayView'),
+        $panel   = $('#ctlPanelView'),
+        $body    = $('#ctlBodyView'),
+        $info    = $('#ctlCaseInfoView'),
+        $title   = $('#ctlTitleView'),
+        $chips   = $('#ctlFilterChipsView'),
+        allData  = [],
+        activeFilter = 'all';
+
+    function open(url, label) {
+        $title.text('الجدول الزمني — ' + label);
+        $body.html('<div class="ctl-loading"><i class="fa fa-spinner"></i><div>جاري التحميل...</div></div>');
+        $info.empty();
+        $overlay.addClass('open');
+        $panel.addClass('open');
+
+        $.getJSON(url, function(res) {
+            if (!res.success) {
+                $body.html('<div class="ctl-empty"><i class="fa fa-exclamation-circle"></i><div>' + (res.message || 'خطأ') + '</div></div>');
+                return;
+            }
+            var c = res['case'] || {};
+            $info.html(
+                '<div class="ctl-info-item"><b>' + (c.judiciary_number || '#' + c.id) + '</b></div>' +
+                (c.court ? '<div class="ctl-info-item">المحكمة: <b>' + c.court + '</b></div>' : '') +
+                (c.lawyer ? '<div class="ctl-info-item">المحامي: <b>' + c.lawyer + '</b></div>' : '')
+            );
+
+            var parties = res.parties || [];
+            var chipHtml = '<span class="ctl-chip active" data-filter="all">الكل</span>';
+            parties.forEach(function(p) {
+                chipHtml += '<span class="ctl-chip" data-filter="' + p.id + '">' + p.name.split(' ').slice(0,2).join(' ') + '</span>';
+            });
+            $chips.html(chipHtml);
+            activeFilter = 'all';
+
+            allData = res.timeline || [];
+            renderTimeline();
+        }).fail(function() {
+            $body.html('<div class="ctl-empty"><i class="fa fa-exclamation-circle"></i><div>حدث خطأ في التحميل</div></div>');
+        });
+    }
+
+    function renderTimeline() {
+        var items = allData;
+        if (activeFilter !== 'all') {
+            items = items.filter(function(it) { return String(it.customer_id) === String(activeFilter); });
+        }
+        if (!items.length) {
+            $body.html('<div class="ctl-empty"><i class="fa fa-inbox"></i><div>لا توجد إجراءات</div></div>');
+            return;
+        }
+        var html = '', lastDate = '';
+        var natureColors = { request:'#3B82F6', document:'#8B5CF6', doc_status:'#F59E0B', process:'#10B981', correspondence:'#0D9488', deadline:'#DC2626' };
+        var sourceIcons = { correspondence:'fa-envelope', deadline:'fa-clock-o' };
+        items.forEach(function(it) {
+            var d = (it.action_date || '').substring(0, 10);
+            if (d && d !== lastDate) {
+                html += '<div class="ctl-date-sep"><span>' + d + '</span></div>';
+                lastDate = d;
+            }
+            var nat = it.action_nature || 'process';
+            var src = it.source || 'action';
+            var icon = it.icon || (src === 'correspondence' ? 'fa-envelope' : (src === 'deadline' ? 'fa-clock-o' : ''));
+            var borderColor = natureColors[nat] || natureColors[src] || '#10B981';
+            html += '<div class="ctl-item" data-nature="' + nat + '" style="border-right-color:' + borderColor + '">';
+            html += '<div class="ctl-item-hdr">';
+            if (icon) html += '<i class="fa ' + icon + '" style="color:' + borderColor + ';margin-left:6px"></i>';
+            html += '<span class="ctl-item-action">' + (it.action_name || '') + '</span>';
+            if (it.status) html += '<span style="margin-right:auto;padding:1px 8px;border-radius:4px;font-size:10px;background:' + borderColor + '15;color:' + borderColor + '">' + it.status + '</span>';
+            html += '<span class="ctl-item-date">' + (it.action_date || '') + '</span></div>';
+            if (it.customer_name) {
+                html += '<div class="ctl-item-party"><i class="fa fa-user"></i> ' + it.customer_name + '</div>';
+            }
+            if (it.note) {
+                html += '<div class="ctl-item-note">' + it.note + '</div>';
+            }
+            html += '<div class="ctl-item-meta">';
+            if (it.created_by) html += '<span><i class="fa fa-user-circle-o"></i> ' + it.created_by + '</span>';
+            html += '</div></div>';
+        });
+        $body.html(html);
+    }
+
+    function close() {
+        $overlay.removeClass('open');
+        $panel.removeClass('open');
+    }
+
+    $(document).on('click', '.jv-timeline-trigger', function() {
+        open($(this).data('url'), $(this).data('case-label'));
+    });
+    $('#ctlCloseView, #ctlOverlayView').on('click', close);
+    $chips.on('click', '.ctl-chip', function() {
+        $chips.find('.ctl-chip').removeClass('active');
+        $(this).addClass('active');
+        activeFilter = $(this).data('filter');
+        renderTimeline();
+    });
+})();
+JS;
+$this->registerJs($timelineJs);
+
+$modalJs = <<<'JS'
+(function(){
+    var $modal = document.getElementById('ajaxCrudModal');
+    var $body  = document.getElementById('ajaxCrudModalBody');
+    var bsModal = null;
+
+    function getModal(){
+        if (!bsModal && typeof bootstrap !== 'undefined') {
+            bsModal = new bootstrap.Modal($modal);
+        }
+        return bsModal;
+    }
+
+    function openRemote(url){
+        $body.innerHTML = '<div class="text-center p-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div>';
+        var m = getModal();
+        if(m) m.show(); else $($modal).modal('show');
+
+        fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(function(r){ return r.text(); })
+            .then(function(html){ $body.innerHTML = html; })
+            .catch(function(){ $body.innerHTML = '<div class="alert alert-danger m-3">حدث خطأ في التحميل</div>'; });
+    }
+
+    document.addEventListener('click', function(e){
+        var link = e.target.closest('.jv-modal-remote');
+        if(link){
+            e.preventDefault();
+            openRemote(link.href);
+        }
+        var del = e.target.closest('.jv-delete-action');
+        if(del){
+            e.preventDefault();
+            var msg = del.getAttribute('data-confirm') || 'هل أنت متأكد؟';
+            if(confirm(msg)){
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = del.href;
+                var csrf = document.createElement('input');
+                csrf.type = 'hidden';
+                csrf.name = document.querySelector('meta[name=csrf-param]').getAttribute('content');
+                csrf.value = document.querySelector('meta[name=csrf-token]').getAttribute('content');
+                form.appendChild(csrf);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    });
+})();
+JS;
+$this->registerJs($modalJs);
+?>

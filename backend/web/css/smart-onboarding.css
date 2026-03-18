@@ -110,6 +110,18 @@
     border-color: var(--clr-primary); box-shadow: 0 0 0 3px rgba(128,0,32,.1);
 }
 
+/* ── Soft Warnings (edit mode) ── */
+.form-group.so-warn .form-control,
+.form-group.so-warn .select2-selection {
+    border-color: #f59e0b !important;
+    background: #fffbeb;
+}
+.so-warn-hint {
+    display: block; font-size: 11px; color: #d97706;
+    margin-top: 3px;
+}
+.so-warn-hint i { margin-left: 3px; }
+
 /* ── Navigation Buttons ── */
 .so-nav {
     display: flex; justify-content: space-between; align-items: center;
@@ -414,8 +426,10 @@
     background: var(--clr-primary-700, #70001c) !important;
     transform: translateY(-1px);
 }
-.so-fieldset .panel { border: 1px solid #e8e8e8; border-radius: 8px; margin-bottom: 10px; }
-.so-fieldset .panel-body { padding: 12px 16px; }
+.so-fieldset .panel,
+.so-fieldset .card { border: 1px solid #e8e8e8; border-radius: 8px; margin-bottom: 10px; }
+.so-fieldset .panel-body,
+.so-fieldset .card-body { padding: 12px 16px; }
 .so-fieldset .addrres-remove-item,
 .so-fieldset .phone-numbers-remove-item,
 .so-fieldset .customer-documents-remove-item {

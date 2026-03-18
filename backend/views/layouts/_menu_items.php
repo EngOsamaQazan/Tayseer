@@ -24,7 +24,28 @@ $mainMenuItems = [
     ['label' => 'تقرير المتابعة', 'icon' => 'phone', 'url' => ['/followUpReport/follow-up-report/index'], 'privilege' => Permissions::FOLLOW_UP_REPORT],
 
     // ─── 4. الإدارة المالية ───
-    ['label' => 'الإدارة المالية', 'icon' => 'money', 'url' => ['/financialTransaction/financial-transaction/index'], 'privilege' => [Permissions::FINANCIAL_TRANSACTION, Permissions::INCOME, Permissions::EXPENSES, Permissions::LOAN_SCHEDULING]],
+    [
+        'label' => 'الإدارة المالية',
+        'icon'  => 'money',
+        'privilege' => [Permissions::FINANCIAL_TRANSACTION, Permissions::INCOME, Permissions::EXPENSES, Permissions::LOAN_SCHEDULING, Permissions::ACC_VIEW, Permissions::ACC_COA_MANAGE],
+        'items' => [
+            ['label' => 'الحركات المالية',       'icon' => 'exchange',      'url' => ['/financialTransaction/financial-transaction/index']],
+            ['label' => 'الدخل',                  'icon' => 'arrow-down',    'url' => ['/income/income/income-item-list']],
+            ['label' => 'المصاريف',               'icon' => 'arrow-up',      'url' => ['/expenses/expenses/index']],
+            ['label' => 'التسويات المالية',       'icon' => 'calendar',      'url' => ['/loanScheduling/loan-scheduling/index']],
+            ['label' => 'المحاسبة', 'header' => true],
+            ['label' => 'شجرة الحسابات',         'icon' => 'sitemap',       'url' => ['/accounting/chart-of-accounts/index']],
+            ['label' => 'القيود اليومية',         'icon' => 'pencil-square', 'url' => ['/accounting/journal-entry/index']],
+            ['label' => 'الأستاذ العام',          'icon' => 'book',          'url' => ['/accounting/general-ledger/index']],
+            ['label' => 'الذمم المدينة',          'icon' => 'arrow-circle-down', 'url' => ['/accounting/accounts-receivable/index']],
+            ['label' => 'الذمم الدائنة',          'icon' => 'arrow-circle-up',   'url' => ['/accounting/accounts-payable/index']],
+            ['label' => 'التقارير المالية',       'icon' => 'file-text',     'url' => ['/accounting/financial-statements/trial-balance']],
+            ['label' => 'الموازنات',              'icon' => 'pie-chart',     'url' => ['/accounting/budget/index']],
+            ['label' => 'السنوات المالية',        'icon' => 'calendar-o',    'url' => ['/accounting/fiscal-year/index']],
+            ['label' => 'مراكز التكلفة',          'icon' => 'building-o',    'url' => ['/accounting/cost-center/index']],
+            ['label' => 'التحليل الذكي',          'icon' => 'lightbulb-o',   'url' => ['/accounting/ai-insights/index']],
+        ],
+    ],
 
     // ─── 5. القسم القانوني (يتضمن تبويب قسم الحسم/التحصيل) ───
     ['label' => 'القسم القانوني', 'icon' => 'gavel', 'url' => ['/judiciary/judiciary/index'], 'privilege' => [Permissions::JUDICIARY, Permissions::JUD_VIEW, Permissions::COLLECTION, Permissions::COLL_VIEW, Permissions::COLLECTION_MANAGER]],

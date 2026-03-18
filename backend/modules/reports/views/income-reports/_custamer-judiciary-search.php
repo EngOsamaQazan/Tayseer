@@ -9,7 +9,7 @@ $_by  =   Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], functio
     return Yii::$app->db->createCommand(Yii::$app->params['income_by_query'])->queryAll();
 }, Yii::$app->params['time_duration']);
 ?>
-    <div class="questions-bank box box-primary">
+    <div class="questions-bank card card-body">
 
         <?php
         $form = yii\widgets\ActiveForm::begin([
@@ -35,7 +35,7 @@ $_by  =   Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], functio
             </div>
             <div class="col-lg-6">
                 <?= $form->field($model, '_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map($_by, '_by', '_by'),
+                    'data' => yii\helpers\ArrayHelper::map(array_filter($_by, fn($row) => $row['_by'] !== null), '_by', '_by'),
                     'options' => [
                         'placeholder' => 'Select a customer name.',
                     ],

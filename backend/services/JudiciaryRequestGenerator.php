@@ -77,9 +77,11 @@ class JudiciaryRequestGenerator
 
     /**
      * Build the full placeholders map from judiciary data and context.
+     * If defendant_id is provided, auto-fills employer/bank from the customer record.
      */
     private function buildPlaceholders(Judiciary $judiciary, array $context): array
     {
+        $db = Yii::$app->db;
         $court = $judiciary->court;
         $contract = $judiciary->contract;
         $lawyer = $judiciary->lawyer;
@@ -102,6 +104,38 @@ class JudiciaryRequestGenerator
             }
         }
 
+        $defendantName = '';
+        $employerName = '';
+        $bankName = '';
+
+        if (!empty($context['defendant_id'])) {
+            $customer = \backend\modules\customers\models\Customers::findOne($context['defendant_id']);
+            if ($customer) {
+                $defendantName = $customer->name ?? '';
+                if ($customer->job_title) {
+                    $employerName = $db->createCommand("SELECT name FROM {{%jobs}} WHERE id=:id", [':id' => $customer->job_title])->queryScalar() ?: '';
+                }
+                if ($customer->bank_name) {
+                    $bankName = $db->createCommand("SELECT name FROM {{%bancks}} WHERE id=:id", [':id' => $customer->bank_name])->queryScalar() ?: '';
+                }
+            }
+        }
+
+        if (!empty($context['employer_name_override'])) {
+            $employerName = $context['employer_name_override'];
+        }
+        if (!empty($context['bank_name_override'])) {
+            $bankName = $context['bank_name_override'];
+        }
+        if (!empty($context['defendant_name'])) {
+            $defendantName = $context['defendant_name'];
+        }
+
+        $amount = $context['amount'] ?? '';
+        if (empty($amount) && $contract) {
+            $amount = $contract->total_value ?: '';
+        }
+
         $placeholders = [
             '{{case_number}}'              => $judiciary->judiciary_number ?? '',
             '{{case_year}}'                => $judiciary->year ?? '',
@@ -113,11 +147,11 @@ class JudiciaryRequestGenerator
             '{{representative_signature}}' => $representativeSignature,
             '{{current_date}}'             => date('Y-m-d'),
             '{{notification_date}}'        => $context['notification_date'] ?? '',
-            '{{defendant_name}}'           => $context['defendant_name'] ?? '',
-            '{{employer_name}}'            => $context['employer_name'] ?? '',
-            '{{bank_name}}'                => $context['bank_name'] ?? '',
+            '{{defendant_name}}'           => $defendantName,
+            '{{employer_name}}'            => $employerName,
+            '{{bank_name}}'                => $bankName,
             '{{authority_name}}'           => $context['authority_name'] ?? '',
-            '{{amount}}'                   => $context['amount'] ?? '',
+            '{{amount}}'                   => $amount,
             '{{request_items}}'            => $context['request_items'] ?? '',
         ];
 

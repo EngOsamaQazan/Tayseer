@@ -138,7 +138,13 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
                     <td style="color:#64748b;font-size:12.5px"><?= Html::encode($mv->notes ?: '—') ?></td>
                     <td style="font-size:12px;color:#94a3b8">
                         <?php if ($mv->reference_type && $mv->reference_id): ?>
-                            <?= $mv->reference_type ?> #<?= $mv->reference_id ?>
+                            <?php if (in_array($mv->reference_type, ['contract_sale', 'contract_update_release', 'contract_cancel'])): ?>
+                                <a href="<?= Url::to(['/contracts/contracts/view', 'id' => $mv->reference_id]) ?>" style="color:#0369a1;text-decoration:none;font-weight:600">
+                                    عقد #<?= $mv->reference_id ?>
+                                </a>
+                            <?php else: ?>
+                                <?= $mv->reference_type ?> #<?= $mv->reference_id ?>
+                            <?php endif ?>
                         <?php else: ?>
                             —
                         <?php endif ?>

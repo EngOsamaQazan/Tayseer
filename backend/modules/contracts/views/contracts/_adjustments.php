@@ -120,7 +120,7 @@ $js = <<<JS
         $.getJSON(listUrl, {contract_id: contractId}, function(data) {
             var html = '';
             var total = 0;
-            var _caData = Alpine.$data(document.getElementById('contractAdjustmentsPanel'));
+            var _caData = Alpine.\$data(document.getElementById('contractAdjustmentsPanel'));
             if (!data || data.length === 0) {
                 html = '<div class="ca-empty"><i class="fa fa-info-circle"></i> لا توجد خصومات مسجلة</div>';
                 _caData.hasItems = false;

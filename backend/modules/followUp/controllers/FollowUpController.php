@@ -649,6 +649,7 @@ class FollowUpController extends Controller
         $statusContent = Yii::$app->request->post('statusContent');
 
         if ($statusContent === Contracts::CANCEL_STATUS) {
+            Contracts::releaseInventoryOnCancel((int) $id);
             Contracts::updateAll(['status' => $statusContent], ['id' => $id]);
         } elseif ($statusContent === 'legal_department_toggle') {
             $contract = Contracts::findOne($id);

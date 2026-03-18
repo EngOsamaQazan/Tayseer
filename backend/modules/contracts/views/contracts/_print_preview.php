@@ -29,6 +29,8 @@ $guarantors = $model->guarantor;
 $gCount     = count($guarantors);
 $gLabels    = ['الأول','الثاني','الثالث','الرابع','الخامس'];
 
+$isNewFormat = (!empty($notes) && $notes[0]->created_at >= strtotime('2026-03-18'));
+
 $phones = [];
 $emails = [];
 foreach ($allPeople as $p) {
@@ -231,12 +233,68 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 
 .kmb-pnote{font-size:9px;color:#555;font-style:italic;text-align:center;margin-top:5px}
 
+/* ══════════════════════════════════════════════════════════
+   التنسيق الجديد (v2) — تصميم محسّن يستغل مساحة A4 بالكامل
+   ══════════════════════════════════════════════════════════ */
+
+/* --- صفحة العقد (1) --- */
+.format-v2 .ct-hdr{padding:14px 0 10px}
+.format-v2 .ct-hdr-logo img{width:100px}
+.format-v2 .ct-hdr-center h2{font-size:20px}
+.format-v2 .ct-photos img{width:68px;height:85px;border-radius:5px}
+.format-v2 .ct-no strong{font-size:24px}
+.format-v2 .ct-section{margin-bottom:11px}
+.format-v2 .ct-section-title{font-size:13px;padding-bottom:4px;margin-bottom:8px}
+.format-v2 .ct-party{font-size:12.5px;margin-bottom:4px}
+.format-v2 .ct-terms{font-size:11.5px;line-height:1.7}
+.format-v2 .ct-terms p{margin-bottom:5px}
+.format-v2 .ct-solidarity{padding:6px 10px;margin:6px 0}
+.format-v2 .ct-solidarity p{font-size:11.5px}
+.format-v2 .ct-fin-tbl{font-size:12px;margin:8px 0}
+.format-v2 .ct-fin-tbl th{padding:6px 12px;font-size:11.5px}
+.format-v2 .ct-fin-tbl td{padding:5px 12px}
+.format-v2 .ct-fin-tbl .ct-money{font-size:13px}
+.format-v2 .ct-sig-body{height:62px}
+.format-v2 .ct-stamp{width:82px;height:82px}
+.format-v2 .ct-notes{padding:6px 10px;margin-top:8px}
+
+/* --- صفحات الاتفاقية + الكمبيالة (2-4) --- */
+.format-v2 .agr-frame{padding:14px 18px}
+.format-v2 .agr-ttl{font-size:19px;margin-bottom:10px;padding-bottom:7px}
+.format-v2 .agr-pty{font-size:15px;margin-bottom:5px}
+.format-v2 .agr-txt{font-size:13.5px;line-height:1.75;margin:7px 0}
+.format-v2 .ovl-lbl{font-size:13.5px}
+.format-v2 .ovl-box{min-height:42px}
+.format-v2 .ovl-wrap{margin:8px 0}
+.format-v2 .agr-stbl th{font-size:12.5px;padding:7px 9px}
+.format-v2 .agr-stbl td{padding:6px 9px;height:36px;font-size:12.5px}
+.format-v2 .sep{margin:12px 0}
+.format-v2 .sep-text{font-size:20px;letter-spacing:6px}
+.format-v2 .kmb-inner{padding:12px 14px}
+.format-v2 .kmb-no-val{font-size:18px}
+.format-v2 .kmb-hdr{margin-bottom:9px;padding-bottom:7px}
+.format-v2 .kmb-ptbl td{padding:5px 7px}
+.format-v2 .kmb-ptbl .pr-name{font-size:12.5px}
+.format-v2 .kmb-ptbl .pr-id{font-size:12.5px}
+.format-v2 .kmb-court-box{min-height:36px;width:210px}
+.format-v2 .kmb-pay{font-size:15px}
+.format-v2 .kmb-amt strong{font-size:22px}
+.format-v2 .kmb-amt{padding:5px 18px}
+.format-v2 .kmb-due-box strong{font-size:15px}
+.format-v2 .kmb-main{margin:12px 0}
+.format-v2 .kmb-words{font-size:13.5px;padding:6px 0;margin:6px 0}
+.format-v2 .kmb-p{font-size:12.5px;margin:5px 0}
+.format-v2 .kmb-stbl th{font-size:12.5px;padding:6px 9px}
+.format-v2 .kmb-stbl td{height:36px;font-size:12.5px;padding:5px 9px}
+.format-v2 .kmb-pnote{font-size:9.5px;margin-top:8px}
+
 /* ═══ طباعة / شاشة ═══ */
 @media print{
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff!important}
     .toolbar,.page-sep{display:none!important}
     .print-page{margin:0;padding:0;box-shadow:none;max-width:100%}
     .ct-solidarity{border-color:#333!important}
+    .format-v2 .print-page{min-height:281mm}
 }
 @media screen{
     body{background:#cbd5e1;padding:0}
@@ -244,7 +302,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 }
 </style>
 </head>
-<body>
+<body class="<?= $isNewFormat ? 'format-v2' : '' ?>">
 
 <!-- ═══ شريط الأدوات ═══ -->
 <div class="toolbar">

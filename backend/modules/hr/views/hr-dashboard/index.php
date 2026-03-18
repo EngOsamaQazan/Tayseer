@@ -10,7 +10,7 @@ use yii\helpers\Url;
 $this->title = 'الموارد البشرية';
 
 /* ── Register HR CSS ── */
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/hr.css', ['depends' => [\yii\bootstrap\BootstrapAsset::class]]);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/hr.css', ['depends' => [\yii\bootstrap5\BootstrapAsset::class]]);
 
 /* ── Safe defaults for all variables ── */
 $totalEmployees       = isset($totalEmployees) ? (int) $totalEmployees : 0;

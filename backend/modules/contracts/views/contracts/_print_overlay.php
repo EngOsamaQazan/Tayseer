@@ -18,6 +18,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 $today     = date('Y-m-d');
+$isNewFormat = ($note->created_at >= strtotime('2026-03-18'));
 $allPeople = $model->customersAndGuarantor;
 
 $phones = [];
@@ -221,6 +222,38 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 
 .kmb-pnote{font-size:9px;color:#555;font-style:italic;text-align:center;margin-top:5px}
 
+/* ══════════════════════════════════════════════════════════
+   التنسيق الجديد (v2) — نفس أحجام _print_preview بالضبط
+   ══════════════════════════════════════════════════════════ */
+.format-v2 .agr-frame{padding:14px 18px}
+.format-v2 .agr-ttl{font-size:19px;margin-bottom:10px;padding-bottom:7px}
+.format-v2 .agr-pty{font-size:15px;margin-bottom:5px}
+.format-v2 .agr-txt{font-size:13.5px;line-height:1.75;margin:7px 0}
+.format-v2 .ovl-lbl{font-size:13.5px}
+.format-v2 .ovl-box{min-height:42px}
+.format-v2 .ovl-wrap{margin:8px 0}
+.format-v2 .agr-stbl th{font-size:12.5px;padding:7px 9px}
+.format-v2 .agr-stbl td{padding:6px 9px;height:36px;font-size:12.5px}
+.format-v2 .sep{margin:12px 0}
+.format-v2 .sep-text{font-size:20px;letter-spacing:6px}
+.format-v2 .kmb-inner{padding:12px 14px}
+.format-v2 .kmb-no-val{font-size:18px}
+.format-v2 .kmb-hdr{margin-bottom:9px;padding-bottom:7px}
+.format-v2 .kmb-ptbl td{padding:5px 7px}
+.format-v2 .kmb-ptbl .pr-name{font-size:12.5px}
+.format-v2 .kmb-ptbl .pr-id{font-size:12.5px}
+.format-v2 .kmb-court-box{min-height:36px;width:210px}
+.format-v2 .kmb-pay{font-size:15px}
+.format-v2 .kmb-amt strong{font-size:22px}
+.format-v2 .kmb-amt{padding:5px 18px}
+.format-v2 .kmb-due-box strong{font-size:15px}
+.format-v2 .kmb-main{margin:12px 0}
+.format-v2 .kmb-words{font-size:13.5px;padding:6px 0;margin:6px 0}
+.format-v2 .kmb-p{font-size:12.5px;margin:5px 0}
+.format-v2 .kmb-stbl th{font-size:12.5px;padding:6px 9px}
+.format-v2 .kmb-stbl td{height:36px;font-size:12.5px;padding:5px 9px}
+.format-v2 .kmb-pnote{font-size:9.5px;margin-top:8px}
+
 /* ═══ شريط الأدوات — شاشة فقط ═══ */
 .toolbar{position:sticky;top:0;z-index:1000;background:linear-gradient(135deg,#c62828,#e53935);color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 3px 15px rgba(0,0,0,.25);font-family:'DinNextMedium',sans-serif}
 .toolbar,.toolbar *{color:#fff!important}
@@ -250,7 +283,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 }
 </style>
 </head>
-<body>
+<body class="<?= $isNewFormat ? 'format-v2' : '' ?>">
 
 <!-- ═══ شريط الأدوات — لا يُطبع ═══ -->
 <div class="toolbar">

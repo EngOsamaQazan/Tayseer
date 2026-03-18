@@ -390,15 +390,15 @@ $dataProvider->query->with(['company']);
     <div class="modal-dialog">
         <div class="modal-content fin-modal">
             <div class="modal-header fin-modal-hd">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-sticky-note-o"></i> ملاحظات الحركة</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body" style="padding:20px">
                 <textarea class="form-control js-notes-text" rows="5" placeholder="اكتب ملاحظاتك هنا..." style="resize:vertical;font-size:14px;line-height:1.7;font-family:inherit"></textarea>
                 <input type="hidden" class="js-notes-id">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                 <button type="button" class="btn btn-primary js-save-notes"><i class="fa fa-save"></i> حفظ</button>
             </div>
         </div>

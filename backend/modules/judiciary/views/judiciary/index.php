@@ -97,6 +97,14 @@ $this->registerJs("window.LH_CONFIG = {$lhConfig};", \yii\web\View::POS_HEAD);
         </div>
     </div>
 
+    <?php if ($expiredDeadlineCount > 0): ?>
+    <a href="<?= \yii\helpers\Url::to(['deadline-dashboard-view']) ?>" style="display:flex;align-items:center;gap:8px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:10px 18px;margin-bottom:16px;text-decoration:none;color:#991B1B;font-size:13px;font-weight:600;transition:background .2s">
+        <i class="fa fa-exclamation-circle" style="font-size:16px"></i>
+        <span><?= $expiredDeadlineCount ?> مواعيد متأخرة تحتاج متابعة</span>
+        <i class="fa fa-arrow-left" style="margin-right:auto"></i>
+    </a>
+    <?php endif; ?>
+
     <!-- Tabs -->
     <div class="lh-tabs">
         <button class="lh-tab <?= $activeTab === 'cases' ? 'active' : '' ?>" data-tab="cases">

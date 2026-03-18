@@ -346,4 +346,16 @@
     $('body').css('overflow', '');
   });
 
+  // ── 12. BS3→BS5 COMPATIBILITY SHIM ──
+  // Makes old data-dismiss="modal" work with Bootstrap 5
+  $(document).on('click', '[data-dismiss="modal"]', function (e) {
+    var $m = $(this).closest('.modal');
+    if ($m.length && typeof bootstrap !== 'undefined') {
+      e.preventDefault();
+      var inst = bootstrap.Modal.getInstance($m[0]);
+      if (inst) inst.hide();
+      else $m.modal('hide');
+    }
+  });
+
 })(jQuery);

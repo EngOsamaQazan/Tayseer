@@ -4,15 +4,12 @@
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
+use yii\bootstrap5\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
 use backend\widgets\ExportButtons;
 
 $this->title = 'تقرير الإيرادات';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
-
-CrudAsset::register($this);
 ?>
 
 <?= $this->render('@app/views/layouts/_reports-tabs', ['activeTab' => 'income']) ?>
@@ -91,9 +88,9 @@ CrudAsset::register($this);
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($searchModel, '_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
+                        'data' => yii\helpers\ArrayHelper::map(array_filter(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['income_by_query'])->queryAll();
-                        }, Yii::$app->params['time_duration']), '_by', '_by'),
+                        }, Yii::$app->params['time_duration']), fn($row) => $row['_by'] !== null), '_by', '_by'),
                         'options' => ['placeholder' => 'اختر العميل...'],
                         'pluginOptions' => ['allowClear' => true],
                     ])->label('العميل') ?>
@@ -164,7 +161,7 @@ CrudAsset::register($this);
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>
-                <?= Html::a('<i class="fa fa-eraser"></i> مسح', ['reports/total-customer-payments-index'], ['class' => 'btn btn-default', 'style' => 'border-radius: 8px;']) ?>
+                <?= Html::a('<i class="fa fa-eraser"></i> مسح', ['reports/total-customer-payments-index'], ['class' => 'btn btn-secondary', 'style' => 'border-radius: 8px;']) ?>
             </div>
             <?php yii\widgets\ActiveForm::end() ?>
         </div>
@@ -187,7 +184,7 @@ CrudAsset::register($this);
             'responsive' => true,
             'toolbar' => [
                 ['content' =>
-                    Html::a('<i class="fa fa-repeat"></i>', ['reports/total-customer-payments-index'], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
+                    Html::a('<i class="fa fa-repeat"></i>', ['reports/total-customer-payments-index'], ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => '/reports/reports/export-total-payments-excel',

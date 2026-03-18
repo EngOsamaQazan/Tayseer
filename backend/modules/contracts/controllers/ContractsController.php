@@ -786,16 +786,19 @@ class ContractsController extends Controller
 
     public function actionCancel()
     {
-        $id = Yii::$app->request->post('contract_id');
+        $id = (int) Yii::$app->request->post('contract_id');
+        Contracts::releaseInventoryOnCancel($id);
         Contracts::updateAll(['status' => 'canceled'], ['id' => $id]);
-        Yii::$app->session->addFlash('success', 'تم إلغاء العقد');
+        Yii::$app->session->addFlash('success', 'تم إلغاء العقد وإرجاع الأصناف إلى المخزون');
         return $this->redirect(['index']);
     }
 
     public function actionCancelContract($contract_id)
     {
+        $contract_id = (int) $contract_id;
+        Contracts::releaseInventoryOnCancel($contract_id);
         Contracts::updateAll(['status' => 'canceled'], ['id' => $contract_id]);
-        Yii::$app->session->addFlash('success', 'تم إلغاء العقد');
+        Yii::$app->session->addFlash('success', 'تم إلغاء العقد وإرجاع الأصناف إلى المخزون');
         return $this->redirect(['index']);
     }
 
@@ -1039,6 +1042,7 @@ class ContractsController extends Controller
      */
     private function saveSerialItems($model)
     {
+        $saleTimestamp = $model->Date_of_sale ? strtotime($model->Date_of_sale) : null;
         $serialIds = Yii::$app->request->post('serial_ids', []);
         foreach ($serialIds as $serialId) {
             $serial = InventorySerialNumber::findOne((int)$serialId);
@@ -1053,7 +1057,7 @@ class ContractsController extends Controller
 
             $serial->status = InventorySerialNumber::STATUS_SOLD;
             $serial->contract_id = $model->id;
-            $serial->sold_at = time();
+            $serial->sold_at = $saleTimestamp ?: time();
             $serial->save(false);
 
             StockMovement::record($serial->item_id, StockMovement::TYPE_OUT, 1, [
@@ -1061,6 +1065,7 @@ class ContractsController extends Controller
                 'reference_id'   => $model->id,
                 'company_id'     => $model->company_id,
                 'notes'          => 'بيع عبر عقد #' . $model->id . ' — سيريال: ' . $serial->serial_number,
+                'created_at'     => $saleTimestamp,
             ]);
 
             $this->deductInventoryQuantity($model, $serial->item_id);
@@ -1088,6 +1093,7 @@ class ContractsController extends Controller
      */
     private function updateSerialItems($model)
     {
+        $saleTimestamp = $model->Date_of_sale ? strtotime($model->Date_of_sale) : null;
         $postSerialIds = Yii::$app->request->post('serial_ids');
         $newSerialIds = is_array($postSerialIds) ? array_map('intval', $postSerialIds) : [];
 
@@ -1130,7 +1136,7 @@ class ContractsController extends Controller
 
             $serial->status = InventorySerialNumber::STATUS_SOLD;
             $serial->contract_id = $model->id;
-            $serial->sold_at = time();
+            $serial->sold_at = $saleTimestamp ?: time();
             $serial->save(false);
 
             StockMovement::record($serial->item_id, StockMovement::TYPE_OUT, 1, [
@@ -1138,6 +1144,7 @@ class ContractsController extends Controller
                 'reference_id'   => $model->id,
                 'company_id'     => $model->company_id,
                 'notes'          => 'بيع عبر عقد #' . $model->id . ' — سيريال: ' . $serial->serial_number,
+                'created_at'     => $saleTimestamp,
             ]);
 
             $this->deductInventoryQuantity($model, $serial->item_id);

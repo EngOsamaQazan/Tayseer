@@ -193,8 +193,8 @@ $sortLink = function($attribute, $extraClass = '') use ($sort) {
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header" style="background:var(--fin-primary,#800020);color:#fff;border-radius:8px 8px 0 0">
-                <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.8"><span>&times;</span></button>
                 <h4 class="modal-title" id="loanModalLabel">تسوية جديدة</h4>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="إغلاق"></button>
             </div>
             <div class="modal-body" id="loanModalBody">
                 <div style="text-align:center;padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>

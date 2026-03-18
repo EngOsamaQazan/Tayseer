@@ -271,6 +271,20 @@ class Judiciary extends \yii\db\ActiveRecord
         if ($this->contract_id) {
             Contracts::refreshContractStatus((int)$this->contract_id);
         }
+        if ($insert) {
+            try {
+                $workflow = new \backend\services\JudiciaryWorkflowService();
+                $workflow->initializeDefendantStages($this->id);
+            } catch (\Exception $e) {
+                Yii::warning('Failed to initialize defendant stages: ' . $e->getMessage(), __METHOD__);
+            }
+            try {
+                $deadlineService = new \backend\services\JudiciaryDeadlineService();
+                $deadlineService->createRegistrationCheckDeadline($this->id);
+            } catch (\Exception $e) {
+                Yii::warning('Failed to create registration deadline: ' . $e->getMessage(), __METHOD__);
+            }
+        }
     }
 
     public function afterDelete()
