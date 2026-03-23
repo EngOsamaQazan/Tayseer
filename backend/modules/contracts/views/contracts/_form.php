@@ -71,7 +71,7 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contract-form.js', ['de
             <!-- Type -->
             <div class="col-md-2">
                 <?= $form->field($model, 'type', ['inputOptions' => ['id' => 'cf-type']])->dropDownList(
-                    ['normal' => 'عادي', 'solidarity' => 'تضامني'],
+                    \backend\modules\contracts\models\Contracts::getTypeLabels(),
                     ['class' => 'form-control']
                 )->label('النوع') ?>
             </div>

@@ -99,7 +99,7 @@ $legalContracts = ArrayHelper::map(
         <div class="ct-filter-group" style="width:120px">
             <label>نوع العقد</label>
             <?= $form->field($model, 'type', ['template' => '{input}'])->dropDownList(
-                ['normal' => 'عادي', 'solidarity' => 'تضامني'],
+                \backend\modules\contracts\models\Contracts::getTypeLabels(),
                 ['class' => 'form-control', 'prompt' => '-- الجميع --', 'aria-label' => 'نوع العقد']
             ) ?>
         </div>

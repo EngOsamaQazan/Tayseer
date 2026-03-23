@@ -150,6 +150,9 @@ b,strong,.b{font-family:'DinNextBold',sans-serif!important;}
     <div class="contract-num">
         <small>رقم العقد</small>
         #<?= $model->id ?>
+        <?php if ($model->type !== 'normal'): ?>
+        <small style="margin-top:2px;font-size:11px;opacity:1;letter-spacing:.3px"><?= $model->getTypeLabel() ?></small>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -196,7 +199,7 @@ b,strong,.b{font-family:'DinNextBold',sans-serif!important;}
     <div class="info-box">
         <h4>البيانات المالية</h4>
         <div class="info-row"><span class="lbl">البائع</span><span class="val"><?= $model->seller ? $model->seller->name : '—' ?></span></div>
-        <div class="info-row"><span class="lbl">نوع العقد</span><span class="val"><?= $model->type === 'normal' ? 'فردي' : 'تضامني' ?></span></div>
+        <div class="info-row"><span class="lbl">نوع العقد</span><span class="val"><?= $model->getTypeLabel() ?></span></div>
         <div class="info-row"><span class="lbl">المبلغ الإجمالي</span><span class="val money"><?= number_format($total) ?> د.أ</span></div>
         <div class="info-row"><span class="lbl">الدفعة الأولى</span><span class="val money"><?= number_format($first) ?> د.أ</span></div>
         <div class="info-row"><span class="lbl">المبلغ بعد الدفعة</span><span class="val money"><?= number_format($afterFirst) ?> د.أ</span></div>

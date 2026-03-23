@@ -221,6 +221,7 @@ class Permissions
             self::DIWAN     => [self::DIWAN_VIEW, self::DIWAN_CREATE, self::DIWAN_UPDATE, self::DIWAN_DELETE],
             self::JOBS      => [self::JOBS_VIEW, self::JOBS_CREATE, self::JOBS_UPDATE, self::JOBS_DELETE],
             self::REPORTS   => [self::REP_VIEW, self::REP_EXPORT],
+            self::ACCOUNTING => [self::ACC_VIEW, self::ACC_CREATE, self::ACC_EDIT, self::ACC_DELETE, self::ACC_POST, self::ACC_REVERSE, self::ACC_COA_MANAGE, self::ACC_FISCAL_MANAGE, self::ACC_BUDGET_VIEW, self::ACC_BUDGET_MANAGE, self::ACC_REPORTS, self::ACC_AR_MANAGE, self::ACC_AP_MANAGE],
         ];
     }
 

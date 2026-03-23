@@ -310,6 +310,9 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
     <h1>معاينة الطباعة</h1>
     <span class="tb-info">4 صفحات — العقد + 3 كمبيالات</span>
     <span class="tb-id">#<?= $model->id ?></span>
+    <?php if ($model->type !== 'normal'): ?>
+    <span style="background:#c62828;color:#fff;padding:3px 12px;border-radius:6px;font-size:13px;font-family:'DinNextBold',sans-serif"><?= $model->getTypeLabel() ?></span>
+    <?php endif; ?>
     <button class="tb-btn tb-print" onclick="window.print()">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
         طباعة
@@ -346,6 +349,11 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
                 <small>رقم العقد</small>
                 <strong><?= $model->id ?></strong>
             </div>
+            <?php if ($model->type !== 'normal'): ?>
+            <div style="margin-top:4px;text-align:center;font-family:'DinNextBold',sans-serif;font-size:13px;color:#c62828;letter-spacing:.5px">
+                <?= $model->getTypeLabel() ?>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -389,7 +397,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
                 <tr><td>القسط الشهري</td><td class="ct-money"><?= number_format($monthly) ?> د.أ</td></tr>
                 <tr><td>تاريخ أول قسط</td><td><?= $model->first_installment_date ?></td></tr>
                 <tr><td>تاريخ الاستحقاق النهائي</td><td><b><?= $model->due_date ?></b></td></tr>
-                <tr><td>نوع العقد</td><td><?= $model->type === 'normal' ? 'فردي' : 'تضامني' ?></td></tr>
+                <tr><td>نوع العقد</td><td><?= $model->getTypeLabel() ?></td></tr>
                 <tr><td>البائع</td><td><?= $model->seller ? $model->seller->name : '—' ?></td></tr>
             </tbody>
         </table>

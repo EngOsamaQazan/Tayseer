@@ -32,7 +32,7 @@ $statusMap = [
 ];
 $cs = $statusMap[$model->case_status] ?? $statusMap['open'];
 
-$contractTypes = ['normal' => 'عادي', 'solidarity' => 'تضامني'];
+$contractTypes = \backend\modules\contracts\models\Contracts::getTypeLabels();
 $contractStatuses = [
     'active' => ['label' => 'نشط', 'color' => '#16A34A', 'bg' => '#F0FDF4'],
     'pending' => ['label' => 'معلق', 'color' => '#F59E0B', 'bg' => '#FFFBEB'],

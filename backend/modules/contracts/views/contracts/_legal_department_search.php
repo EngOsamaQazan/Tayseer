@@ -98,7 +98,7 @@ $legalContracts = ArrayHelper::map(
                 ])->label('المتابع') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'type')->dropDownList(['normal' => 'عادي', 'solidarity' => 'تضامني'], ['prompt' => '-- النوع --'])->label('نوع العقد') ?>
+                <?= $form->field($model, 'type')->dropDownList(\backend\modules\contracts\models\Contracts::getTypeLabels(), ['prompt' => '-- النوع --'])->label('نوع العقد') ?>
             </div>
             <div class="col-md-3">
                 <?= $form->field($model, 'job_title')->widget(Select2::class, [

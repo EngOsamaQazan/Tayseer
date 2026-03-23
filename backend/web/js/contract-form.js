@@ -204,6 +204,7 @@ var ContractForm = (function () {
         sync();
     }
 
+
     /* ══════════════════════════════════════════════════
        Scanner — serial number barcode scanning
        ══════════════════════════════════════════════════ */

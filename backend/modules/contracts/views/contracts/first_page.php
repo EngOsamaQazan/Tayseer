@@ -144,7 +144,7 @@ if($primary_company == '') {
                         </div>
                         <div class="form-group">
                             <label>فئة العقد</label>
-                            <span class="padding-6"><?= $model->type == 'normal' ? 'فردي' : 'متضامين ' ?></span>
+                            <span class="padding-6"><?= $model->getTypeLabel() ?></span>
                         </div>
                         <div class="form-group" style="padding-bottom: 20px">
                             <label class="small-fnt">تاريخ الستحقاق أول قسط</label>

@@ -106,7 +106,7 @@ $isJudiciaryPaid = $model->isJudiciaryPaid();
                     <td style="padding:10px 16px;font-weight:700;color:var(--cf-text2);width:140px">رقم العقد</td>
                     <td style="padding:10px 16px;font-weight:600;color:var(--cf-navy)">#<?= $model->id ?></td>
                     <td style="padding:10px 16px;font-weight:700;color:var(--cf-text2);width:140px">النوع</td>
-                    <td style="padding:10px 16px"><?= $model->type === 'solidarity' ? 'تضامني' : 'عادي' ?></td>
+                    <td style="padding:10px 16px"><?= $model->getTypeLabel() ?></td>
                 </tr>
                 <tr style="border-bottom:1px solid #f1f5f9">
                     <td style="padding:10px 16px;font-weight:700;color:var(--cf-text2)">الشركة</td>
