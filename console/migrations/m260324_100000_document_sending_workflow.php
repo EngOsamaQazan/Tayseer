@@ -19,25 +19,12 @@ class m260324_100000_document_sending_workflow extends Migration
             'CASCADE'
         );
 
-        $this->execute("
-            UPDATE {{%judiciary_customers_actions}} jca
-            INNER JOIN {{%judiciary_actions}} ja ON ja.id = jca.judiciary_actions_id
-            SET jca.request_status = 'not_sent'
-            WHERE ja.action_nature = 'document'
-              AND (jca.request_status IS NULL OR jca.request_status = '' OR jca.request_status = 'pending')
-        ");
+        // Documents stay NULL (displayed as "غير مُدخل" in frontend)
+        // No update needed — they are already NULL by default
     }
 
     public function safeDown()
     {
-        $this->execute("
-            UPDATE {{%judiciary_customers_actions}} jca
-            INNER JOIN {{%judiciary_actions}} ja ON ja.id = jca.judiciary_actions_id
-            SET jca.request_status = NULL
-            WHERE ja.action_nature = 'document'
-              AND jca.request_status = 'not_sent'
-        ");
-
         $this->dropForeignKey('fk_jca_correspondence', '{{%judiciary_customers_actions}}');
         $this->dropColumn('{{%judiciary_customers_actions}}', 'correspondence_id');
         $this->dropColumn('{{%diwan_correspondence}}', 'delivery_method');
