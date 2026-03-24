@@ -32,6 +32,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $is_current
  * @property float|null $amount
  * @property string|null $request_target  (judge|accounting|other)
+ * @property int|null $correspondence_id  FK → os_diwan_correspondence
  */
 class JudiciaryCustomersActions extends \yii\db\ActiveRecord
 {
@@ -94,12 +95,13 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             [['image'], 'string'],
             [['image'], 'file', 'skipOnEmpty' => true, 'extensions' => 'png, jpg, jpeg, gif'],
             [['parent_id', 'is_current'], 'integer'],
-            [['request_status'], 'in', 'range' => ['printed', 'submitted', 'pending', 'approved', 'rejected'], 'skipOnEmpty' => true],
+            [['request_status'], 'in', 'range' => ['printed', 'submitted', 'pending', 'approved', 'rejected', 'not_sent', 'sent', 'cancelled'], 'skipOnEmpty' => true],
+            [['correspondence_id'], 'integer'],
             [['request_target'], 'in', 'range' => ['judge', 'accounting', 'other'], 'skipOnEmpty' => true],
             [['decision_text'], 'string'],
             [['decision_file'], 'string', 'max' => 255],
             [['amount'], 'number'],
-            [['parent_id', 'request_status', 'decision_text', 'decision_file', 'is_current', 'amount', 'request_target'], 'safe'],
+            [['parent_id', 'request_status', 'decision_text', 'decision_file', 'is_current', 'amount', 'request_target', 'correspondence_id'], 'safe'],
         ];
     }
 
@@ -111,7 +113,7 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
         if (!parent::beforeSave($insert)) {
             return false;
         }
-        $nullableFields = ['request_status', 'request_target', 'decision_text', 'decision_file', 'parent_id', 'amount'];
+        $nullableFields = ['request_status', 'request_target', 'decision_text', 'decision_file', 'parent_id', 'amount', 'correspondence_id'];
         foreach ($nullableFields as $field) {
             if ($this->$field === '' || $this->$field === null) {
                 $this->$field = null;
@@ -200,6 +202,9 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             'pending'   => 'معلق',
             'approved'  => 'موافقة',
             'rejected'  => 'مرفوض',
+            'not_sent'  => 'غير مُرسل',
+            'sent'      => 'مُرسل',
+            'cancelled' => 'ملغي',
         ];
         return $map[$this->request_status] ?? '';
     }
@@ -215,8 +220,25 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             'pending'   => '#F59E0B',
             'approved'  => '#10B981',
             'rejected'  => '#EF4444',
+            'not_sent'  => '#6B7280',
+            'sent'      => '#3B82F6',
+            'cancelled' => '#EF4444',
         ];
         return $map[$this->request_status] ?? '#6B7280';
+    }
+
+    /**
+     * Check if this action is a document (كتاب / مذكرة)
+     */
+    public function isDocument()
+    {
+        $def = $this->judiciaryActions;
+        return $def && $def->action_nature === 'document';
+    }
+
+    public function getCorrespondence()
+    {
+        return $this->hasOne(\backend\modules\diwan\models\DiwanCorrespondence::class, ['id' => 'correspondence_id']);
     }
 
     /**

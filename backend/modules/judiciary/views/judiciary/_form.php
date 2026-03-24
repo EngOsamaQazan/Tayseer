@@ -24,8 +24,19 @@ $natureStyles = [
     'doc_status' => ['icon' => 'fa-exchange',     'color' => '#EA580C', 'bg' => '#FFF7ED', 'label' => 'حالة كتاب'],
     'process'    => ['icon' => 'fa-cog',          'color' => '#64748B', 'bg' => '#F1F5F9', 'label' => 'إجراء إداري'],
 ];
-$statusColors = ['pending' => '#F59E0B', 'approved' => '#10B981', 'rejected' => '#EF4444'];
-$statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض'];
+$statusColors = [
+    'pending' => '#F59E0B', 'approved' => '#10B981', 'rejected' => '#EF4444',
+    'not_sent' => '#6B7280', 'sent' => '#3B82F6', 'cancelled' => '#EF4444',
+    'printed' => '#6B7280', 'submitted' => '#3B82F6',
+];
+$statusLabels = [
+    'pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض',
+    'not_sent' => 'غير مُرسل', 'sent' => 'مُرسل', 'cancelled' => 'ملغي',
+    'printed' => 'مطبوع', 'submitted' => 'مُقدَّم للمحكمة',
+];
+$deliveryMethodLabels = \backend\modules\diwan\models\DiwanCorrespondence::getDeliveryMethodLabels();
+$purposeLabels = \backend\modules\diwan\models\DiwanCorrespondence::getPurposeLabels();
+$corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatusLabels();
 ?>
 
 <style>
@@ -302,6 +313,30 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
                         </div>
                     </div>
                     <?php endif; ?>
+                    <?php if ($nature === 'document' && $reqStatus === 'not_sent'): ?>
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                        <button type="button" class="btn btn-sm btn-primary jv-send-doc-btn" data-id="<?= $m->id ?>" data-name="<?= Html::encode($def ? $def->name : '') ?>" data-customer-id="<?= $m->customers_id ?>">
+                            <i class="fa fa-paper-plane"></i> إرسال
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger jv-cancel-doc-btn" data-id="<?= $m->id ?>">
+                            <i class="fa fa-ban"></i> إلغاء
+                        </button>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($nature === 'document' && $reqStatus === 'sent' && $m->correspondence_id): ?>
+                    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:#64748B">
+                        <?php
+                        $corr = $m->correspondence;
+                        if ($corr) {
+                            $dm = $deliveryMethodLabels[$corr->delivery_method] ?? $corr->delivery_method;
+                            $corrSL = $corrStatusLabels[$corr->status] ?? $corr->status;
+                        ?>
+                        <span style="background:#3B82F620;color:#3B82F6;padding:2px 8px;border-radius:10px;font-weight:600"><i class="fa fa-truck"></i> <?= Html::encode($dm) ?></span>
+                        <span><i class="fa fa-calendar-check-o"></i> <?= Html::encode($corr->delivery_date ?: $corr->correspondence_date) ?></span>
+                        <span style="background:#8B5CF620;color:#8B5CF6;padding:2px 8px;border-radius:10px"><?= Html::encode($corrSL) ?></span>
+                        <?php } ?>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="jf-action-tools">
                     <div class="jca-act-wrap">
@@ -336,12 +371,80 @@ $statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejecte
     <?php endif; ?>
 </div>
 
+<!-- Send Document Modal -->
+<div class="modal fade" id="sendDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:12px;overflow:hidden">
+            <div class="modal-header" style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;padding:16px 20px">
+                <h5 class="modal-title" style="font-size:16px;font-weight:700;color:#1E293B"><i class="fa fa-paper-plane" style="color:#3B82F6;margin-left:8px"></i> إرسال كتاب / مذكرة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body" style="padding:20px">
+                <input type="hidden" id="sdm-action-id">
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:13px">اسم الكتاب</label>
+                    <div id="sdm-doc-name" style="padding:8px 12px;background:#F1F5F9;border-radius:8px;font-size:14px;color:#334155"></div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:13px">طريقة الإرسال <span class="text-danger">*</span></label>
+                    <select id="sdm-delivery-method" class="form-select" style="border-radius:8px">
+                        <option value="">-- اختر طريقة الإرسال --</option>
+                        <?php foreach ($deliveryMethodLabels as $k => $v): ?>
+                            <option value="<?= $k ?>"><?= $v ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:13px">تاريخ الإرسال</label>
+                    <input type="date" id="sdm-send-date" class="form-control" style="border-radius:8px" value="<?= date('Y-m-d') ?>">
+                </div>
+                <hr style="border-color:#E2E8F0">
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:13px">نوع الجهة المستلمة</label>
+                    <select id="sdm-recipient-type" class="form-select" style="border-radius:8px">
+                        <option value="employer">جهة عمل</option>
+                        <option value="bank">بنك</option>
+                        <option value="administrative">جهة إدارية</option>
+                    </select>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" style="font-size:13px">رقم الكتاب</label>
+                        <input type="text" id="sdm-reference" class="form-control" style="border-radius:8px" placeholder="اختياري">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" style="font-size:13px">الغرض</label>
+                        <select id="sdm-purpose" class="form-select" style="border-radius:8px">
+                            <option value="">-- اختياري --</option>
+                            <?php foreach ($purposeLabels as $k => $v): ?>
+                                <option value="<?= $k ?>"><?= $v ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:13px">ملاحظات</label>
+                    <textarea id="sdm-notes" class="form-control" style="border-radius:8px" rows="2" placeholder="اختياري"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:12px 20px">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px">إلغاء</button>
+                <button type="button" class="btn btn-primary" id="sdm-submit" style="border-radius:8px"><i class="fa fa-paper-plane"></i> إرسال</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
 <?php \yii\bootstrap\Modal::end() ?>
 
 <?php
 $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
+$sendDocUrl = Url::to(['/judiciary/judiciary/send-document']);
+$cancelDocUrl = Url::to(['/judiciary/judiciary/cancel-document']);
 $reqUrlJs = json_encode($updateReqUrl);
+$sendDocUrlJs = json_encode($sendDocUrl);
+$cancelDocUrlJs = json_encode($cancelDocUrl);
 
 $jcaJs = <<<JS
 window.JCA = (function(){
@@ -423,6 +526,85 @@ window.JCA = (function(){
     });
     $(document).on('click', '.jca-act-menu a', function() {
         document.querySelectorAll('.jca-act-wrap.open').forEach(function(w){ w.classList.remove('open'); });
+    });
+
+    // --- Send Document Modal ---
+    var sendDocUrl = {$sendDocUrlJs};
+    var cancelDocUrl = {$cancelDocUrlJs};
+    var $sdm = $('#sendDocModal');
+
+    $(document).on('click', '.jv-send-doc-btn', function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        $('#sdm-action-id').val(id);
+        $('#sdm-doc-name').text(name);
+        $('#sdm-delivery-method').val('');
+        $('#sdm-send-date').val(new Date().toISOString().split('T')[0]);
+        $('#sdm-reference').val('');
+        $('#sdm-purpose').val('');
+        $('#sdm-notes').val('');
+
+        var nameLower = (name || '').toLowerCase();
+        if (nameLower.indexOf('راتب') > -1 || nameLower.indexOf('حسم') > -1) {
+            $('#sdm-recipient-type').val('employer');
+            $('#sdm-purpose').val('salary_deduction');
+        } else if (nameLower.indexOf('بنك') > -1 || nameLower.indexOf('حساب') > -1 || nameLower.indexOf('تجميد') > -1) {
+            $('#sdm-recipient-type').val('bank');
+            $('#sdm-purpose').val('account_freeze');
+        } else {
+            $('#sdm-recipient-type').val('employer');
+        }
+
+        if (typeof bootstrap !== 'undefined') {
+            bootstrap.Modal.getOrCreateInstance($sdm[0]).show();
+        } else {
+            $sdm.modal('show');
+        }
+    });
+
+    $('#sdm-submit').on('click', function() {
+        var $btn = $(this);
+        var method = $('#sdm-delivery-method').val();
+        if (!method) { $('#sdm-delivery-method').addClass('is-invalid'); return; }
+        $('#sdm-delivery-method').removeClass('is-invalid');
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...');
+        var postData = {
+            id: $('#sdm-action-id').val(),
+            delivery_method: method,
+            send_date: $('#sdm-send-date').val(),
+            recipient_type: $('#sdm-recipient-type').val(),
+            reference_number: $('#sdm-reference').val(),
+            purpose: $('#sdm-purpose').val(),
+            notes: $('#sdm-notes').val()
+        };
+        postData[getCsrfParam()] = getCsrfToken();
+        $.post(sendDocUrl, postData, function(res) {
+            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            if (res.success) {
+                if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance($sdm[0]).hide();
+                else $sdm.modal('hide');
+                alert(res.message);
+                location.reload();
+            } else {
+                alert(res.message);
+            }
+        }, 'json').fail(function() {
+            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            alert('حدث خطأ في الاتصال');
+        });
+    });
+
+    $(document).on('click', '.jv-cancel-doc-btn', function() {
+        var id = $(this).data('id');
+        if (!confirm('هل أنت متأكد من إلغاء هذا الكتاب؟')) return;
+        var $btn = $(this);
+        $btn.prop('disabled', true);
+        var postData = {id: id};
+        postData[getCsrfParam()] = getCsrfToken();
+        $.post(cancelDocUrl, postData, function(res) {
+            if (res.success) { location.reload(); }
+            else { $btn.prop('disabled', false); alert(res.message); }
+        }, 'json').fail(function() { $btn.prop('disabled', false); alert('حدث خطأ'); });
     });
 
     return {

@@ -93,7 +93,7 @@ class JudiciaryController extends Controller
                         },
                     ],
                     [
-                        'actions' => ['update', 'update-request-status'],
+                        'actions' => ['update', 'update-request-status', 'send-document', 'cancel-document'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -807,6 +807,150 @@ class JudiciaryController extends Controller
                 'message' => $statusLabels[$status] ?? $status,
                 'new_status' => $status,
             ];
+        }
+
+        return ['success' => false, 'message' => 'فشل في حفظ التغيير'];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  إرسال / إلغاء كتاب أو مذكرة (document actions)
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionSendDocument()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        $id = (int)$request->post('id');
+        $deliveryMethod = $request->post('delivery_method', '');
+        $sendDate = $request->post('send_date', date('Y-m-d'));
+        $recipientType = $request->post('recipient_type', '');
+        $bankId = $request->post('bank_id') ?: null;
+        $jobId = $request->post('job_id') ?: null;
+        $authorityId = $request->post('authority_id') ?: null;
+        $referenceNumber = trim($request->post('reference_number', ''));
+        $purpose = $request->post('purpose', '');
+        $notes = trim($request->post('notes', ''));
+
+        if (!$id || !$deliveryMethod) {
+            return ['success' => false, 'message' => 'يرجى اختيار طريقة الإرسال'];
+        }
+
+        $record = JudiciaryCustomersActions::findOne($id);
+        if (!$record || $record->is_deleted) {
+            return ['success' => false, 'message' => 'الإجراء غير موجود'];
+        }
+
+        $def = $record->judiciaryActions;
+        if (!$def || $def->action_nature !== 'document') {
+            return ['success' => false, 'message' => 'هذا الإجراء ليس كتاباً / مذكرة'];
+        }
+
+        if ($record->request_status === 'sent') {
+            return ['success' => false, 'message' => 'هذا الكتاب مُرسل مسبقاً'];
+        }
+
+        $transaction = Yii::$app->db->beginTransaction();
+        try {
+            $judiciary = $record->judiciary;
+            $customer = $record->customers;
+
+            if (!$recipientType && $customer) {
+                $actionName = mb_strtolower($def->name);
+                if (mb_strpos($actionName, 'راتب') !== false || mb_strpos($actionName, 'حسم') !== false) {
+                    $recipientType = DiwanCorrespondence::RECIPIENT_EMPLOYER;
+                    if (!$jobId && $customer->job_title) {
+                        $jobId = $customer->job_title;
+                    }
+                } elseif (mb_strpos($actionName, 'بنك') !== false || mb_strpos($actionName, 'حساب') !== false || mb_strpos($actionName, 'تجميد') !== false) {
+                    $recipientType = DiwanCorrespondence::RECIPIENT_BANK;
+                    if (!$bankId && $customer->bank_name) {
+                        $bankId = $customer->bank_name;
+                    }
+                } else {
+                    $recipientType = DiwanCorrespondence::RECIPIENT_ADMINISTRATIVE;
+                }
+            }
+
+            $corr = new DiwanCorrespondence();
+            $corr->communication_type = DiwanCorrespondence::TYPE_OUTGOING_LETTER;
+            $corr->related_module = 'judiciary';
+            $corr->related_record_id = $record->judiciary_id;
+            $corr->customer_id = $record->customers_id;
+            $corr->direction = 'outgoing';
+            $corr->recipient_type = $recipientType;
+            $corr->bank_id = $bankId ? (int)$bankId : null;
+            $corr->job_id = $jobId ? (int)$jobId : null;
+            $corr->authority_id = $authorityId ? (int)$authorityId : null;
+            $corr->delivery_method = $deliveryMethod;
+            $corr->delivery_date = $sendDate;
+            $corr->correspondence_date = $sendDate;
+            $corr->reference_number = $referenceNumber ?: null;
+            $corr->purpose = $purpose ?: null;
+            $corr->content_summary = $def->name;
+            $corr->notes = $notes ?: null;
+            $corr->status = DiwanCorrespondence::STATUS_SENT;
+            $corr->company_id = $judiciary ? $judiciary->company_id : null;
+
+            if (!$corr->save(false)) {
+                $transaction->rollBack();
+                return ['success' => false, 'message' => 'فشل في إنشاء سجل المراسلة'];
+            }
+
+            $record->request_status = 'sent';
+            $record->correspondence_id = $corr->id;
+
+            if (!$record->save(false)) {
+                $transaction->rollBack();
+                return ['success' => false, 'message' => 'فشل في تحديث حالة الإجراء'];
+            }
+
+            $transaction->commit();
+
+            $deliveryLabels = DiwanCorrespondence::getDeliveryMethodLabels();
+            return [
+                'success' => true,
+                'message' => 'تم إرسال الكتاب بنجاح',
+                'new_status' => 'sent',
+                'delivery_method' => $deliveryLabels[$deliveryMethod] ?? $deliveryMethod,
+                'correspondence_id' => $corr->id,
+            ];
+        } catch (\Exception $e) {
+            $transaction->rollBack();
+            return ['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()];
+        }
+    }
+
+    public function actionCancelDocument()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        $id = (int)$request->post('id');
+        if (!$id) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $record = JudiciaryCustomersActions::findOne($id);
+        if (!$record || $record->is_deleted) {
+            return ['success' => false, 'message' => 'الإجراء غير موجود'];
+        }
+
+        if ($record->request_status === 'sent') {
+            return ['success' => false, 'message' => 'لا يمكن إلغاء كتاب تم إرساله'];
+        }
+
+        $record->request_status = 'cancelled';
+        if ($record->save(false)) {
+            return ['success' => true, 'message' => 'تم إلغاء الكتاب', 'new_status' => 'cancelled'];
         }
 
         return ['success' => false, 'message' => 'فشل في حفظ التغيير'];

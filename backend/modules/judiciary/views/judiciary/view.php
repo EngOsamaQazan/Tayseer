@@ -50,8 +50,18 @@ $natureStyles = [
     'doc_status' => ['icon' => 'fa-exchange',     'color' => '#EA580C', 'bg' => '#FFF7ED', 'label' => 'حالة كتاب'],
     'process'    => ['icon' => 'fa-cog',          'color' => '#64748B', 'bg' => '#F1F5F9', 'label' => 'إجراء إداري'],
 ];
-$statusColors = ['pending' => '#F59E0B', 'approved' => '#10B981', 'rejected' => '#EF4444'];
-$statusLabels = ['pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض'];
+$statusColors = [
+    'pending' => '#F59E0B', 'approved' => '#10B981', 'rejected' => '#EF4444',
+    'not_sent' => '#6B7280', 'sent' => '#3B82F6', 'cancelled' => '#EF4444',
+    'printed' => '#6B7280', 'submitted' => '#3B82F6',
+];
+$statusLabels = [
+    'pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض',
+    'not_sent' => 'غير مُرسل', 'sent' => 'مُرسل', 'cancelled' => 'ملغي',
+    'printed' => 'مطبوع', 'submitted' => 'مُقدَّم للمحكمة',
+];
+$deliveryMethodLabels = DiwanCorrespondence::getDeliveryMethodLabels();
+$purposeLabels = DiwanCorrespondence::getPurposeLabels();
 
 $assetTypeLabels = JudiciarySeizedAsset::getAssetTypeLabels();
 $assetStatusLabels = JudiciarySeizedAsset::getStatusLabels();
@@ -624,6 +634,30 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                         <?php if (!empty($m->note)): ?>
                             <div class="jv-action-note"><?= Html::encode($m->note) ?></div>
                         <?php endif; ?>
+                        <?php if ($nature === 'document' && $reqStatus === 'not_sent'): ?>
+                        <div class="jv-doc-actions" style="display:flex;gap:8px;margin-top:8px">
+                            <button type="button" class="btn btn-sm btn-primary jv-send-doc-btn" data-id="<?= $m->id ?>" data-name="<?= Html::encode($def ? $def->name : '') ?>" data-customer-id="<?= $m->customers_id ?>">
+                                <i class="fa fa-paper-plane"></i> إرسال
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger jv-cancel-doc-btn" data-id="<?= $m->id ?>">
+                                <i class="fa fa-ban"></i> إلغاء
+                            </button>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($nature === 'document' && $reqStatus === 'sent' && $m->correspondence_id): ?>
+                        <div class="jv-doc-delivery" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:#64748B">
+                            <?php
+                            $corr = $m->correspondence;
+                            if ($corr) {
+                                $dm = $deliveryMethodLabels[$corr->delivery_method] ?? $corr->delivery_method;
+                                $corrStatusLabel = $corrStatusLabels[$corr->status] ?? $corr->status;
+                            ?>
+                            <span style="background:#3B82F620;color:#3B82F6;padding:2px 8px;border-radius:10px;font-weight:600"><i class="fa fa-truck"></i> <?= Html::encode($dm) ?></span>
+                            <span><i class="fa fa-calendar-check-o"></i> <?= Html::encode($corr->delivery_date ?: $corr->correspondence_date) ?></span>
+                            <span style="background:#8B5CF620;color:#8B5CF6;padding:2px 8px;border-radius:10px"><?= Html::encode($corrStatusLabel) ?></span>
+                            <?php } ?>
+                        </div>
+                        <?php endif; ?>
                     </div>
                     <div class="jv-action-tools">
                         <div class="jca-act-wrap">
@@ -659,9 +693,102 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
         <?php endif; ?>
     </div>
 
+    <!-- Send Document Modal -->
+    <div class="modal fade" id="sendDocModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius:12px;overflow:hidden">
+                <div class="modal-header" style="background:#F8FAFC;border-bottom:1px solid #E2E8F0;padding:16px 20px">
+                    <h5 class="modal-title" style="font-size:16px;font-weight:700;color:#1E293B"><i class="fa fa-paper-plane" style="color:#3B82F6;margin-left:8px"></i> إرسال كتاب / مذكرة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body" style="padding:20px">
+                    <input type="hidden" id="sdm-action-id">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:13px">اسم الكتاب</label>
+                        <div id="sdm-doc-name" style="padding:8px 12px;background:#F1F5F9;border-radius:8px;font-size:14px;color:#334155"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:13px">طريقة الإرسال <span class="text-danger">*</span></label>
+                        <select id="sdm-delivery-method" class="form-select" style="border-radius:8px">
+                            <option value="">-- اختر طريقة الإرسال --</option>
+                            <?php foreach ($deliveryMethodLabels as $k => $v): ?>
+                                <option value="<?= $k ?>"><?= $v ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:13px">تاريخ الإرسال</label>
+                        <input type="date" id="sdm-send-date" class="form-control" style="border-radius:8px" value="<?= date('Y-m-d') ?>">
+                    </div>
+                    <hr style="border-color:#E2E8F0">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" style="font-size:13px">نوع الجهة المستلمة</label>
+                        <select id="sdm-recipient-type" class="form-select" style="border-radius:8px">
+                            <option value="employer">جهة عمل</option>
+                            <option value="bank">بنك</option>
+                            <option value="administrative">جهة إدارية</option>
+                        </select>
+                    </div>
+                    <div id="sdm-recipient-fields">
+                        <div class="mb-3 sdm-rf" data-for="bank" style="display:none">
+                            <label class="form-label" style="font-size:13px">البنك</label>
+                            <select id="sdm-bank-id" class="form-select" style="border-radius:8px">
+                                <option value="">-- اختر البنك --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 sdm-rf" data-for="employer" style="display:none">
+                            <label class="form-label" style="font-size:13px">جهة العمل</label>
+                            <select id="sdm-job-id" class="form-select" style="border-radius:8px">
+                                <option value="">-- اختر جهة العمل --</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 sdm-rf" data-for="administrative" style="display:none">
+                            <label class="form-label" style="font-size:13px">الجهة الإدارية</label>
+                            <select id="sdm-authority-id" class="form-select" style="border-radius:8px">
+                                <option value="">-- اختر الجهة --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="font-size:13px">رقم الكتاب</label>
+                            <input type="text" id="sdm-reference" class="form-control" style="border-radius:8px" placeholder="اختياري">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" style="font-size:13px">الغرض</label>
+                            <select id="sdm-purpose" class="form-select" style="border-radius:8px">
+                                <option value="">-- اختياري --</option>
+                                <?php foreach ($purposeLabels as $k => $v): ?>
+                                    <option value="<?= $k ?>"><?= $v ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:13px">ملاحظات</label>
+                        <textarea id="sdm-notes" class="form-control" style="border-radius:8px" rows="2" placeholder="اختياري"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="background:#F8FAFC;border-top:1px solid #E2E8F0;padding:12px 20px">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal" style="border-radius:8px">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="sdm-submit" style="border-radius:8px"><i class="fa fa-paper-plane"></i> إرسال</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content"><div class="modal-body" id="ajaxCrudModalBody"><div class="text-center p-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div></div></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ajaxCrudModalTitle"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body" id="ajaxCrudModalBody">
+                    <div class="text-center p-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div>
+                </div>
+                <div class="modal-footer" id="ajaxCrudModalFooter"></div>
+            </div>
         </div>
     </div>
 
@@ -681,8 +808,126 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
     });
     $(document).on('click', function() { $('.jca-act-wrap.open').removeClass('open'); });
     $(document).on('click', '.jca-act-menu a', function() { $('.jca-act-wrap.open').removeClass('open'); });
+
+    // --- Send Document Modal ---
+    var $sdm = $('#sendDocModal');
+    function showRecipientFields(type) {
+        $('.sdm-rf').hide();
+        $('.sdm-rf[data-for="' + type + '"]').show();
+    }
+    $('#sdm-recipient-type').on('change', function() { showRecipientFields($(this).val()); });
+
+    $(document).on('click', '.jv-send-doc-btn', function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        var custId = $(this).data('customer-id');
+        $('#sdm-action-id').val(id);
+        $('#sdm-doc-name').text(name);
+        $('#sdm-delivery-method').val('');
+        $('#sdm-send-date').val(new Date().toISOString().split('T')[0]);
+        $('#sdm-reference').val('');
+        $('#sdm-purpose').val('');
+        $('#sdm-notes').val('');
+
+        var nameLower = (name || '').toLowerCase();
+        if (nameLower.indexOf('راتب') > -1 || nameLower.indexOf('حسم') > -1) {
+            $('#sdm-recipient-type').val('employer');
+            $('#sdm-purpose').val('salary_deduction');
+        } else if (nameLower.indexOf('بنك') > -1 || nameLower.indexOf('حساب') > -1 || nameLower.indexOf('تجميد') > -1) {
+            $('#sdm-recipient-type').val('bank');
+            $('#sdm-purpose').val('account_freeze');
+        } else if (nameLower.indexOf('مركبة') > -1 || nameLower.indexOf('سيارة') > -1) {
+            $('#sdm-recipient-type').val('administrative');
+            $('#sdm-purpose').val('vehicle_seizure');
+        } else {
+            $('#sdm-recipient-type').val('employer');
+        }
+        showRecipientFields($('#sdm-recipient-type').val());
+
+        var bsModal = bootstrap.Modal.getOrCreateInstance($sdm[0]);
+        bsModal.show();
+    });
+
+    $('#sdm-submit').on('click', function() {
+        var $btn = $(this);
+        var method = $('#sdm-delivery-method').val();
+        if (!method) {
+            $('#sdm-delivery-method').addClass('is-invalid');
+            return;
+        }
+        $('#sdm-delivery-method').removeClass('is-invalid');
+
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...');
+
+        $.post(SEND_DOC_URL, {
+            id: $('#sdm-action-id').val(),
+            delivery_method: method,
+            send_date: $('#sdm-send-date').val(),
+            recipient_type: $('#sdm-recipient-type').val(),
+            bank_id: $('#sdm-bank-id').val(),
+            job_id: $('#sdm-job-id').val(),
+            authority_id: $('#sdm-authority-id').val(),
+            reference_number: $('#sdm-reference').val(),
+            purpose: $('#sdm-purpose').val(),
+            notes: $('#sdm-notes').val(),
+            _csrf: yii.getCsrfToken()
+        }, function(res) {
+            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            if (res.success) {
+                bootstrap.Modal.getInstance($sdm[0]).hide();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'success', title:'تم', text:res.message, timer:1500, showConfirmButton:false});
+                } else {
+                    alert(res.message);
+                }
+                setTimeout(function(){ location.reload(); }, 1200);
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'error', title:'خطأ', text:res.message});
+                } else {
+                    alert(res.message);
+                }
+            }
+        }, 'json').fail(function() {
+            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            alert('حدث خطأ في الاتصال');
+        });
+    });
+
+    // --- Cancel Document ---
+    $(document).on('click', '.jv-cancel-doc-btn', function() {
+        var id = $(this).data('id');
+        var $btn = $(this);
+        var confirmMsg = 'هل أنت متأكد من إلغاء هذا الكتاب؟';
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({title:confirmMsg, icon:'warning', showCancelButton:true, confirmButtonText:'نعم، إلغاء', cancelButtonText:'لا'}).then(function(r) {
+                if (r.isConfirmed) doCancelDoc(id, $btn);
+            });
+        } else if (confirm(confirmMsg)) {
+            doCancelDoc(id, $btn);
+        }
+    });
+
+    function doCancelDoc(id, $btn) {
+        $btn.prop('disabled', true);
+        $.post(CANCEL_DOC_URL, {id: id, _csrf: yii.getCsrfToken()}, function(res) {
+            if (res.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'success', title:'تم', text:res.message, timer:1500, showConfirmButton:false});
+                }
+                setTimeout(function(){ location.reload(); }, 1200);
+            } else {
+                $btn.prop('disabled', false);
+                alert(res.message);
+            }
+        }, 'json').fail(function() { $btn.prop('disabled', false); alert('حدث خطأ'); });
+    }
 JS;
     $this->registerJs($jcaJs);
+
+    $sendDocUrl = json_encode(Url::to(['/judiciary/judiciary/send-document']));
+    $cancelDocUrl = json_encode(Url::to(['/judiciary/judiciary/cancel-document']));
+    $this->registerJs("var SEND_DOC_URL = {$sendDocUrl}; var CANCEL_DOC_URL = {$cancelDocUrl};", \yii\web\View::POS_HEAD);
     ?>
     <?php endif ?>
 
@@ -814,26 +1059,92 @@ $this->registerJs($timelineJs);
 
 $modalJs = <<<'JS'
 (function(){
-    var $modal = document.getElementById('ajaxCrudModal');
-    var $body  = document.getElementById('ajaxCrudModalBody');
-    var bsModal = null;
+    var $modal   = document.getElementById('ajaxCrudModal');
+    var $body    = document.getElementById('ajaxCrudModalBody');
+    var $title   = document.getElementById('ajaxCrudModalTitle');
+    var $footer  = document.getElementById('ajaxCrudModalFooter');
+    var $dialog  = $modal ? $modal.querySelector('.modal-dialog') : null;
+    var bsModal  = null;
 
     function getModal(){
-        if (!bsModal && typeof bootstrap !== 'undefined') {
-            bsModal = new bootstrap.Modal($modal);
+        if (!bsModal && $modal && typeof bootstrap !== 'undefined') {
+            bsModal = bootstrap.Modal.getOrCreateInstance
+                ? bootstrap.Modal.getOrCreateInstance($modal)
+                : new bootstrap.Modal($modal);
         }
         return bsModal;
     }
 
+    function showModal(){ var m = getModal(); if(m) m.show(); }
+    function hideModal(){ var m = getModal(); if(m) m.hide(); }
+
+    function setSize(size){
+        if (!$dialog) return;
+        $dialog.classList.remove('modal-sm','modal-lg','modal-xl');
+        if (size === 'large' || size === 'lg') $dialog.classList.add('modal-lg');
+        else if (size === 'xl') $dialog.classList.add('modal-xl');
+        else if (size === 'small' || size === 'sm') $dialog.classList.add('modal-sm');
+    }
+
+    function renderResponse(data){
+        if (typeof data === 'string') {
+            $body.innerHTML = data;
+            return;
+        }
+        if (data.forceClose) {
+            hideModal();
+            location.reload();
+            return;
+        }
+        if (data.title)   $title.innerHTML = data.title;
+        if (data.content) $body.innerHTML = data.content;
+        if (data.footer)  $footer.innerHTML = data.footer;
+        else              $footer.innerHTML = '';
+        if (data.size)    setSize(data.size);
+        var scripts = $body.querySelectorAll('script');
+        scripts.forEach(function(s){ try { eval(s.text || s.textContent || ''); } catch(ex){} });
+    }
+
     function openRemote(url){
+        $title.innerHTML = '';
         $body.innerHTML = '<div class="text-center p-5"><i class="fa fa-spinner fa-spin fa-2x"></i></div>';
-        var m = getModal();
-        if(m) m.show(); else $($modal).modal('show');
+        $footer.innerHTML = '';
+        showModal();
 
         fetch(url, {headers:{'X-Requested-With':'XMLHttpRequest'}})
             .then(function(r){ return r.text(); })
-            .then(function(html){ $body.innerHTML = html; })
+            .then(function(raw){
+                try { renderResponse(JSON.parse(raw)); }
+                catch(e) { $body.innerHTML = raw; }
+            })
             .catch(function(){ $body.innerHTML = '<div class="alert alert-danger m-3">حدث خطأ في التحميل</div>'; });
+    }
+
+    function submitModalForm(form){
+        var action = form.getAttribute('action');
+        var hasFile = form.querySelector('input[type="file"]') !== null;
+        var submitBtn = $footer.querySelector('[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+        }
+        var opts = {
+            method: 'POST',
+            headers: {'X-Requested-With':'XMLHttpRequest'},
+            body: hasFile ? new FormData(form) : new URLSearchParams(new FormData(form))
+        };
+        if (!hasFile) opts.headers['Content-Type'] = 'application/x-www-form-urlencoded';
+
+        fetch(action, opts)
+            .then(function(r){ return r.text(); })
+            .then(function(raw){
+                try { renderResponse(JSON.parse(raw)); }
+                catch(e) { $body.innerHTML = raw; }
+            })
+            .catch(function(){
+                $body.innerHTML = '<div class="alert alert-danger m-3">حدث خطأ أثناء الحفظ</div>';
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fa fa-save"></i> حفظ'; }
+            });
     }
 
     document.addEventListener('click', function(e){
@@ -841,7 +1152,19 @@ $modalJs = <<<'JS'
         if(link){
             e.preventDefault();
             openRemote(link.href);
+            return;
         }
+
+        if ($modal && $modal.contains(e.target)) {
+            var submitBtn = e.target.closest('[type="submit"]');
+            if (submitBtn) {
+                e.preventDefault();
+                var form = $body.querySelector('form');
+                if (form) submitModalForm(form);
+                return;
+            }
+        }
+
         var del = e.target.closest('.jv-delete-action');
         if(del){
             e.preventDefault();
@@ -860,6 +1183,24 @@ $modalJs = <<<'JS'
             }
         }
     });
+
+    if ($body) {
+        $body.addEventListener('submit', function(e){
+            if (e.target.tagName === 'FORM') {
+                e.preventDefault();
+                submitModalForm(e.target);
+            }
+        });
+    }
+
+    if ($modal) {
+        $modal.addEventListener('hidden.bs.modal', function(){
+            $title.innerHTML = '';
+            $body.innerHTML = '';
+            $footer.innerHTML = '';
+            setSize('');
+        });
+    }
 })();
 JS;
 $this->registerJs($modalJs);

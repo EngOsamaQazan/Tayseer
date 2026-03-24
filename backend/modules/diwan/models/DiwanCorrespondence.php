@@ -22,6 +22,7 @@ use backend\models\JudiciaryDeadline;
  * @property int|null $bank_id
  * @property int|null $job_id
  * @property string|null $notification_method
+ * @property string|null $delivery_method
  * @property string|null $delivery_date
  * @property string|null $notification_result
  * @property string|null $reference_number
@@ -106,6 +107,7 @@ class DiwanCorrespondence extends \yii\db\ActiveRecord
 
             // Notification fields
             [['notification_method'], 'in', 'range' => ['in_person', 'posting', 'electronic', 'by_publication'], 'skipOnEmpty' => true],
+            [['delivery_method'], 'in', 'range' => array_keys(self::getDeliveryMethodLabels()), 'skipOnEmpty' => true],
             [['notification_result'], 'in', 'range' => ['delivered', 'not_delivered', 'refused', 'pending'], 'skipOnEmpty' => true],
             [['delivery_date', 'correspondence_date', 'follow_up_date'], 'date', 'format' => 'php:Y-m-d'],
 
@@ -183,7 +185,6 @@ class DiwanCorrespondence extends \yii\db\ActiveRecord
                 $this->direction = 'outgoing';
                 $this->notification_method = null;
                 $this->notification_result = null;
-                $this->delivery_date = null;
                 $this->response_result = null;
                 $this->response_amount = null;
                 $this->nullUnusedRecipientFks();
@@ -206,7 +207,7 @@ class DiwanCorrespondence extends \yii\db\ActiveRecord
                 break;
         }
 
-        foreach (['reference_number', 'purpose', 'response_result', 'notification_method', 'notification_result', 'content_summary', 'notes'] as $field) {
+        foreach (['reference_number', 'purpose', 'response_result', 'notification_method', 'notification_result', 'delivery_method', 'content_summary', 'notes'] as $field) {
             if ($this->$field === '') {
                 $this->$field = null;
             }
@@ -236,6 +237,7 @@ class DiwanCorrespondence extends \yii\db\ActiveRecord
             'bank_id' => 'البنك',
             'job_id' => 'جهة التوظيف',
             'notification_method' => 'طريقة التبليغ',
+            'delivery_method' => 'طريقة الإرسال',
             'delivery_date' => 'تاريخ التسليم',
             'notification_result' => 'نتيجة التبليغ',
             'reference_number' => 'رقم الكتاب',
@@ -351,6 +353,20 @@ class DiwanCorrespondence extends \yii\db\ActiveRecord
             'valuation'         => 'تخمين',
             'auction'           => 'بيع بالمزاد',
             'other'             => 'أخرى',
+        ];
+    }
+
+    public static function getDeliveryMethodLabels()
+    {
+        return [
+            'bailiff'         => 'محضرين',
+            'aramex'          => 'Aramex',
+            'hand_employee'   => 'باليد - موظف',
+            'hand_contractor' => 'باليد - تعاقد',
+            'whatsapp'        => 'واتساب',
+            'email'           => 'إيميل',
+            'regular_mail'    => 'بريد عادي',
+            'other'           => 'أخرى',
         ];
     }
 

@@ -231,9 +231,10 @@ class JudiciaryCustomersActionsController extends Controller
                     $record->decision_text = $model->decision_text;
                     $record->decision_file = $decisionPath;
 
-                    // Auto-set request_status for new requests
                     if ($actionDef && $actionDef->action_nature === 'request') {
                         $record->request_status = $model->request_status ?: 'pending';
+                    } elseif ($actionDef && $actionDef->action_nature === 'document') {
+                        $record->request_status = $model->request_status ?: 'not_sent';
                     } else {
                         $record->request_status = $model->request_status;
                     }
