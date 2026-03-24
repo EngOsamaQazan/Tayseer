@@ -1550,7 +1550,7 @@
     display: flex;
     gap: 0;
     border-bottom: 2px solid var(--ocp-border);
-    margin-bottom: var(--ocp-space-xl);
+    margin-bottom: 0;
 }
 
 .ocp-tab {
@@ -1570,8 +1570,24 @@
     white-space: nowrap;
 }
 
+.ocp-tab::after {
+    content: '\f107';
+    font-family: FontAwesome;
+    font-size: 12px;
+    margin-right: 2px;
+    transition: transform 0.25s ease;
+    color: var(--ocp-text-muted);
+}
+
+.ocp-tab.active::after {
+    transform: rotate(180deg);
+    color: var(--ocp-primary);
+}
+
 .ocp-tab:hover {
     color: var(--ocp-primary);
+    background: var(--ocp-primary-bg);
+    border-radius: var(--ocp-radius-sm) var(--ocp-radius-sm) 0 0;
 }
 
 .ocp-tab.active {
@@ -1591,6 +1607,23 @@
 .ocp-tab.active .ocp-tab__count {
     background: var(--ocp-primary-bg);
     color: var(--ocp-primary);
+}
+
+/* Collapse/Expand animation for tab content */
+.ocp-tab-content {
+    overflow: hidden;
+}
+
+.ocp-tab-content.ocp-collapsing {
+    transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.ocp-tab-content.ocp-expanding {
+    transition: max-height 0.35s ease-in, opacity 0.25s ease-in;
+    opacity: 1;
+    overflow: hidden;
 }
 
 /* Buttons */

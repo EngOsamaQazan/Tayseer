@@ -46,22 +46,69 @@
         // TABS
         // ═══════════════════════════════════════
         switchTab: function (tabName) {
-            document.querySelectorAll('.ocp-tab').forEach(function (t) {
-                t.classList.toggle('active', t.dataset.tab === tabName);
-            });
-            document.querySelectorAll('.ocp-tab-content').forEach(function (c) {
-                c.classList.toggle('ocp-hidden', c.id !== 'tab-' + tabName);
-            });
-            try { sessionStorage.setItem('ocp_active_tab', tabName); } catch(e) {}
+            var clickedBtn = document.querySelector('.ocp-tab[data-tab="' + tabName + '"]');
+            var isAlreadyActive = clickedBtn && clickedBtn.classList.contains('active');
+
+            if (isAlreadyActive) {
+                clickedBtn.classList.remove('active');
+                var content = document.getElementById('tab-' + tabName);
+                if (content) {
+                    content.style.maxHeight = content.scrollHeight + 'px';
+                    content.offsetHeight; // force reflow
+                    content.style.maxHeight = '0';
+                    content.classList.add('ocp-collapsing');
+                    setTimeout(function () {
+                        content.classList.add('ocp-hidden');
+                        content.classList.remove('ocp-collapsing');
+                        content.style.maxHeight = '';
+                    }, 300);
+                }
+                try { sessionStorage.removeItem('ocp_active_tab'); } catch(e) {}
+            } else {
+                document.querySelectorAll('.ocp-tab').forEach(function (t) {
+                    t.classList.remove('active');
+                });
+                document.querySelectorAll('.ocp-tab-content').forEach(function (c) {
+                    if (!c.classList.contains('ocp-hidden')) {
+                        c.style.maxHeight = c.scrollHeight + 'px';
+                        c.offsetHeight;
+                        c.style.maxHeight = '0';
+                        c.classList.add('ocp-collapsing');
+                        setTimeout(function () {
+                            c.classList.add('ocp-hidden');
+                            c.classList.remove('ocp-collapsing');
+                            c.style.maxHeight = '';
+                        }, 300);
+                    }
+                });
+                if (clickedBtn) clickedBtn.classList.add('active');
+                var target = document.getElementById('tab-' + tabName);
+                if (target) {
+                    target.classList.remove('ocp-hidden');
+                    target.style.maxHeight = '0';
+                    target.offsetHeight;
+                    target.style.maxHeight = target.scrollHeight + 'px';
+                    target.classList.add('ocp-expanding');
+                    setTimeout(function () {
+                        target.classList.remove('ocp-expanding');
+                        target.style.maxHeight = '';
+                    }, 350);
+                }
+                try { sessionStorage.setItem('ocp_active_tab', tabName); } catch(e) {}
+            }
         },
 
         getActiveTab: function () {
-            try { return sessionStorage.getItem('ocp_active_tab') || 'timeline'; } catch(e) { return 'timeline'; }
+            try { return sessionStorage.getItem('ocp_active_tab') || null; } catch(e) { return null; }
         },
 
         restoreTab: function () {
             var tab = this.getActiveTab();
-            if (tab && tab !== 'timeline') this.switchTab(tab);
+            if (tab) {
+                var btn = document.querySelector('.ocp-tab[data-tab="' + tab + '"]');
+                if (btn) btn.classList.remove('active');
+                this.switchTab(tab);
+            }
         },
 
         // ═══════════════════════════════════════
