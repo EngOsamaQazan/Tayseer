@@ -565,75 +565,80 @@ class FollowUpController extends Controller
      */
     private function buildStatementData($contractId)
     {
-        $modelf = new \common\helper\LoanContract();
-        $contractModel = $modelf->findContract($contractId);
-        if (!$contractModel) {
+        try {
+            $modelf = new \common\helper\LoanContract();
+            $contractModel = $modelf->findContract($contractId);
+            if (!$contractModel) {
+                return null;
+            }
+
+            $clientRows = \backend\modules\customers\models\ContractsCustomers::find()
+                ->where(['customer_type' => 'client', 'contract_id' => $contractId])->all();
+            $guarantorRows = \backend\modules\customers\models\ContractsCustomers::find()
+                ->where(['customer_type' => 'guarantor', 'contract_id' => $contractId])->all();
+
+            $clientNames = array_map(function ($c) {
+                $cust = \backend\modules\customers\models\Customers::findOne($c->customer_id);
+                return $cust ? $cust->name : '';
+            }, $clientRows);
+            $guarantorNames = array_map(function ($c) {
+                $cust = \backend\modules\customers\models\Customers::findOne($c->customer_id);
+                return $cust ? $cust->name : '';
+            }, $guarantorRows);
+
+            $judicary = \backend\modules\judiciary\models\Judiciary::find()
+                ->where(['contract_id' => $contractModel->id])->all();
+            $sumCaseCost = 0;
+            if (!empty($judicary)) {
+                foreach (\backend\modules\expenses\models\Expenses::find()
+                    ->where(['contract_id' => $contractModel->id, 'category_id' => 4])->all() as $e) {
+                    $sumCaseCost += $e->amount;
+                }
+                foreach ($judicary as $j) {
+                    $contractModel->total_value += $sumCaseCost + ($j->lawyer_cost ?? 0);
+                }
+            }
+
+            $paidAmount = \backend\modules\contractInstallment\models\ContractInstallment::find()
+                ->where(['contract_id' => $contractModel->id])->sum('amount');
+            $paidAmount = max(0, (float) $paidAmount);
+            $remainingBalance = $contractModel->total_value - $paidAmount;
+
+            $lastIncome = \backend\modules\contractInstallment\models\ContractInstallment::find()
+                ->where(['contract_id' => $contractId])->orderBy(['date' => SORT_DESC])->one();
+
+            $movements = Yii::$app->db->createCommand("
+                SELECT total_value as amount, 'ثمن البضاعة' as description, Date_of_sale as date, 'مدين' as type, '' as notes
+                FROM os_contracts WHERE id = :cid
+                UNION ALL
+                SELECT lawyer_cost, 'اتعاب محاماه', created_at, 'مدين', '' FROM os_judiciary WHERE contract_id = :cid
+                UNION ALL
+                SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid
+                UNION ALL
+                SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid
+                ORDER BY date
+            ", [':cid' => $contractId])->queryAll();
+
+            $company = (new \common\components\CompanyChecked())->findPrimaryCompany();
+            $companyName = $company ? $company->name : (Yii::$app->params['companies_logo'] ?? '');
+
+            return [
+                'companyName'      => $companyName,
+                'clientNames'      => $clientNames,
+                'guarantorNames'   => $guarantorNames,
+                'totalValue'       => $contractModel->total_value,
+                'paidAmount'       => $paidAmount,
+                'remainingBalance' => $remainingBalance,
+                'dateSale'         => $contractModel->Date_of_sale ?? '—',
+                'firstInstDate'    => $contractModel->first_installment_date ?? '—',
+                'lastIncomeDate'   => $lastIncome ? $lastIncome->date : null,
+                'monthlyInst'      => $contractModel->monthly_installment_value,
+                'movements'        => $movements,
+            ];
+        } catch (\Throwable $e) {
+            Yii::error('buildStatementData failed: ' . $e->getMessage(), __METHOD__);
             return null;
         }
-
-        $clientRows = \backend\modules\customers\models\ContractsCustomers::find()
-            ->where(['customer_type' => 'client', 'contract_id' => $contractId])->all();
-        $guarantorRows = \backend\modules\customers\models\ContractsCustomers::find()
-            ->where(['customer_type' => 'guarantor', 'contract_id' => $contractId])->all();
-
-        $clientNames = array_map(function ($c) {
-            return \backend\modules\customers\models\Customers::findOne($c->customer_id)->name ?? '';
-        }, $clientRows);
-        $guarantorNames = array_map(function ($c) {
-            return \backend\modules\customers\models\Customers::findOne($c->customer_id)->name ?? '';
-        }, $guarantorRows);
-
-        $judicary = \backend\modules\judiciary\models\Judiciary::find()
-            ->where(['contract_id' => $contractModel->id])->all();
-        $sumCaseCost = 0;
-        $lawyerCostTotal = 0;
-        if (!empty($judicary)) {
-            foreach (\backend\modules\expenses\models\Expenses::find()
-                ->where(['contract_id' => $contractModel->id, 'category_id' => 4])->all() as $e) {
-                $sumCaseCost += $e->amount;
-            }
-            foreach ($judicary as $j) {
-                $lawyerCostTotal += $j->lawyer_cost;
-                $contractModel->total_value += $sumCaseCost + $j->lawyer_cost;
-            }
-        }
-
-        $paidAmount = \backend\modules\contractInstallment\models\ContractInstallment::find()
-            ->where(['contract_id' => $contractModel->id])->sum('amount');
-        $paidAmount = max(0, (float) $paidAmount);
-        $remainingBalance = $contractModel->total_value - $paidAmount;
-
-        $lastIncome = \backend\modules\contractInstallment\models\ContractInstallment::find()
-            ->where(['contract_id' => $contractId])->orderBy(['date' => SORT_DESC])->one();
-
-        $movements = Yii::$app->db->createCommand("
-            SELECT total_value as amount, 'ثمن البضاعة' as description, Date_of_sale as date, 'مدين' as type, '' as notes
-            FROM os_contracts WHERE id = :cid
-            UNION ALL
-            SELECT lawyer_cost, 'اتعاب محاماه', created_at, 'مدين', '' FROM os_judiciary WHERE contract_id = :cid
-            UNION ALL
-            SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid
-            UNION ALL
-            SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid
-            ORDER BY date
-        ", [':cid' => $contractId])->queryAll();
-
-        $company = (new \common\components\CompanyChecked())->findPrimaryCompany();
-        $companyName = $company ? $company->name : (Yii::$app->params['companies_logo'] ?? '');
-
-        return [
-            'companyName'      => $companyName,
-            'clientNames'      => $clientNames,
-            'guarantorNames'   => $guarantorNames,
-            'totalValue'       => $contractModel->total_value,
-            'paidAmount'       => $paidAmount,
-            'remainingBalance' => $remainingBalance,
-            'dateSale'         => $contractModel->Date_of_sale ?? '—',
-            'firstInstDate'    => $contractModel->first_installment_date ?? '—',
-            'lastIncomeDate'   => $lastIncome ? $lastIncome->date : null,
-            'monthlyInst'      => $contractModel->monthly_installment_value,
-            'movements'        => $movements,
-        ];
     }
 
     /**
