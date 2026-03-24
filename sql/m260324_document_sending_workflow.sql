@@ -1,45 +1,35 @@
 -- ============================================================
 -- تحديث قاعدة البيانات: سير عمل إرسال الكتب والمذكرات
 -- Migration: m260324_100000_document_sending_workflow
--- Date: 2026-03-24
--- ============================================================
--- يُنفَّذ على قواعد البيانات السحابية (jadal / namaa)
--- قبل التنفيذ تأكد من وجود جدول os_diwan_correspondence
+-- Date: 2026-03-24 (idempotent — safe to run multiple times)
 -- ============================================================
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 1) إضافة عمود طريقة الإرسال لجدول المراسلات
-ALTER TABLE `os_diwan_correspondence`
-    ADD COLUMN `delivery_method` VARCHAR(30) NULL DEFAULT NULL
-    AFTER `notification_method`;
+-- 1) إضافة عمود طريقة الإرسال (تخطي إذا موجود)
+SET @col_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'os_diwan_correspondence' AND COLUMN_NAME = 'delivery_method');
+SET @sql1 = IF(@col_exists = 0,
+    'ALTER TABLE `os_diwan_correspondence` ADD COLUMN `delivery_method` VARCHAR(30) NULL DEFAULT NULL AFTER `notification_method`',
+    'SELECT 1');
+PREPARE stmt FROM @sql1; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 2) إضافة عمود ربط المراسلة بالإجراء القضائي
-ALTER TABLE `os_judiciary_customers_actions`
-    ADD COLUMN `correspondence_id` INT(11) NULL DEFAULT NULL
-    AFTER `request_target`;
+-- 2) إضافة عمود ربط المراسلة بالإجراء القضائي (تخطي إذا موجود)
+SET @col_exists2 = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'os_judiciary_customers_actions' AND COLUMN_NAME = 'correspondence_id');
+SET @sql2 = IF(@col_exists2 = 0,
+    'ALTER TABLE `os_judiciary_customers_actions` ADD COLUMN `correspondence_id` INT(11) NULL DEFAULT NULL AFTER `request_target`',
+    'SELECT 1');
+PREPARE stmt FROM @sql2; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 3) إنشاء المفتاح الأجنبي
-ALTER TABLE `os_judiciary_customers_actions`
-    ADD CONSTRAINT `fk_jca_correspondence`
-    FOREIGN KEY (`correspondence_id`)
-    REFERENCES `os_diwan_correspondence` (`id`)
-    ON DELETE SET NULL
-    ON UPDATE CASCADE;
+-- 3) إنشاء المفتاح الأجنبي (تخطي إذا موجود)
+SET @fk_exists = (SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS 
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'os_judiciary_customers_actions' AND CONSTRAINT_NAME = 'fk_jca_correspondence');
+SET @sql3 = IF(@fk_exists = 0,
+    'ALTER TABLE `os_judiciary_customers_actions` ADD CONSTRAINT `fk_jca_correspondence` FOREIGN KEY (`correspondence_id`) REFERENCES `os_diwan_correspondence` (`id`) ON DELETE SET NULL ON UPDATE CASCADE',
+    'SELECT 1');
+PREPARE stmt FROM @sql3; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 4) تحديث حالة الكتب/المذكرات الحالية إلى NULL (تُقرأ كـ "غير مُدخل")
-UPDATE `os_judiciary_customers_actions` jca
-INNER JOIN `os_judiciary_actions` ja ON ja.id = jca.judiciary_actions_id
-SET jca.request_status = NULL
-WHERE ja.action_nature = 'document';
-
--- ============================================================
--- للتراجع (Rollback) في حال الحاجة:
--- ============================================================
--- (لا حاجة للتراجع عن هذه الخطوة — الحالة كانت أصلاً NULL)
---
--- ALTER TABLE os_judiciary_customers_actions DROP FOREIGN KEY fk_jca_correspondence;
--- ALTER TABLE os_judiciary_customers_actions DROP COLUMN correspondence_id;
--- ALTER TABLE os_diwan_correspondence DROP COLUMN delivery_method;
--- ============================================================
+-- Done!
+SELECT 'Document sending workflow SQL applied successfully' AS result;
