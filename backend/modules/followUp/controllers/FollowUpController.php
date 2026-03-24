@@ -557,11 +557,12 @@ class FollowUpController extends Controller
                 'statementData' => $statementData,
             ]);
         } catch (\Throwable $e) {
-            Yii::error('verify-statement error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), __METHOD__);
+            $errorDetail = $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
+            Yii::error('verify-statement error: ' . $errorDetail, __METHOD__);
             return $this->render('verify-statement', [
                 'status'  => 'valid',
                 'label'   => 'فعال',
-                'message' => 'كشف الحساب صالح (تعذر تحميل البيانات التفصيلية).',
+                'message' => 'كشف الحساب صالح (تعذر تحميل التفاصيل: ' . $errorDetail . ').',
                 'contract_id' => (int) $c,
                 'statementDate' => $d,
                 'statementData' => null,
