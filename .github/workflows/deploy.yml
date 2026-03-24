@@ -78,9 +78,32 @@ jobs:
               # Fix permissions
               chown -R www-data:www-data backend/ common/ console/ frontend/ api/ 2>/dev/null || true
               
-              # Run pending migrations
-              echo "  Running migrations..."
-              php yii migrate/up --interactive=0 2>&1 || true
+            # Run pending migrations (skip if fails due to already-applied migrations)
+            echo "  Running migrations..."
+            php yii migrate/up --interactive=0 2>&1 || true
+            
+            # Execute SQL update files if they exist (for manual DB schema updates)
+            if [ -d "sql" ]; then
+              DB_NAME=$(php -r "
+                \$c = require 'common/config/main-local.php';
+                preg_match('/dbname=([^;]+)/', \$c['components']['db']['dsn'], \$m);
+                echo \$m[1] ?? '';
+              " 2>/dev/null)
+              DB_USER=$(php -r "\$c = require 'common/config/main-local.php'; echo \$c['components']['db']['username'] ?? '';" 2>/dev/null)
+              DB_PASS=$(php -r "\$c = require 'common/config/main-local.php'; echo \$c['components']['db']['password'] ?? '';" 2>/dev/null)
+              
+              if [ -n "$DB_NAME" ] && [ -n "$DB_USER" ]; then
+                for sqlfile in sql/*.sql; do
+                  if [ -f "$sqlfile" ]; then
+                    DONE_FLAG="${sqlfile}.done"
+                    if [ ! -f "$DONE_FLAG" ]; then
+                      echo "  Executing SQL: $sqlfile on $DB_NAME..."
+                      mysql -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$sqlfile" 2>&1 && touch "$DONE_FLAG" || echo "  SQL failed (may already be applied)"
+                    fi
+                  fi
+                done
+              fi
+            fi
               
               # Clear caches
               rm -rf backend/runtime/cache/*
