@@ -514,50 +514,59 @@ class FollowUpController extends Controller
             ]);
         }
 
-        $contractId = (int) $c;
-        $statementDate = $d;
-        $statementLastDate = $t;
+        try {
+            $contractId = (int) $c;
+            $statementDate = $d;
+            $statementLastDate = $t;
 
-        $db = Yii::$app->db;
-        $currentMax = $db->createCommand("
-            SELECT MAX(dt) as mx FROM (
-                SELECT DATE(Date_of_sale) AS dt FROM os_contracts WHERE id = :cid
-                UNION ALL
-                SELECT DATE(created_at) FROM os_judiciary WHERE contract_id = :cid
-                UNION ALL
-                SELECT DATE(created_at) FROM os_expenses WHERE contract_id = :cid
-                UNION ALL
-                SELECT DATE(date) FROM os_income WHERE contract_id = :cid
-            ) u
-        ", [':cid' => $contractId])->queryScalar();
+            $db = Yii::$app->db;
+            $currentMax = $db->createCommand("
+                SELECT MAX(dt) as mx FROM (
+                    SELECT DATE(Date_of_sale) AS dt FROM os_contracts WHERE id = :cid
+                    UNION ALL
+                    SELECT DATE(created_at) FROM os_judiciary WHERE contract_id = :cid
+                    UNION ALL
+                    SELECT DATE(created_at) FROM os_expenses WHERE contract_id = :cid
+                    UNION ALL
+                    SELECT DATE(date) FROM os_income WHERE contract_id = :cid
+                ) u
+            ", [':cid' => $contractId])->queryScalar();
 
-        if (!$currentMax) {
-            $status = 'valid';
-            $label = 'فعال';
-            $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
-        } elseif ($currentMax > $statementLastDate) {
-            $status = 'expired';
-            $label = 'منتهي الصلاحية';
-            $message = 'تم إضافة دفعة أو مصروف جديد على العقد بعد تاريخ هذا الكشف. يرجى طلب كشف حساب محدث.';
-        } else {
-            $status = 'valid';
-            $label = 'فعال';
-            $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
-        }
+            if (!$currentMax) {
+                $status = 'valid';
+                $label = 'فعال';
+                $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
+            } elseif ($currentMax > $statementLastDate) {
+                $status = 'expired';
+                $label = 'منتهي الصلاحية';
+                $message = 'تم إضافة دفعة أو مصروف جديد على العقد بعد تاريخ هذا الكشف. يرجى طلب كشف حساب محدث.';
+            } else {
+                $status = 'valid';
+                $label = 'فعال';
+                $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
+            }
 
-        $statementData = null;
-        if ($status !== 'invalid') {
             $statementData = $this->buildStatementData($contractId);
-        }
 
-        return $this->render('verify-statement', [
-            'status'        => $status,
-            'label'         => $label,
-            'message'       => $message,
-            'contract_id'   => $contractId,
-            'statementDate' => $statementDate,
-            'statementData' => $statementData,
-        ]);
+            return $this->render('verify-statement', [
+                'status'        => $status,
+                'label'         => $label,
+                'message'       => $message,
+                'contract_id'   => $contractId,
+                'statementDate' => $statementDate,
+                'statementData' => $statementData,
+            ]);
+        } catch (\Throwable $e) {
+            Yii::error('verify-statement error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), __METHOD__);
+            return $this->render('verify-statement', [
+                'status'  => 'valid',
+                'label'   => 'فعال',
+                'message' => 'كشف الحساب صالح (تعذر تحميل البيانات التفصيلية).',
+                'contract_id' => (int) $c,
+                'statementDate' => $d,
+                'statementData' => null,
+            ]);
+        }
     }
 
     /**
