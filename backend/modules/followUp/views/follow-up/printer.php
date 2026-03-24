@@ -45,6 +45,10 @@ $guarantorInContract = \backend\modules\customers\models\ContractsCustomers::fin
 
 $modelf = new LoanContract;
 $contractModel = $modelf->findContract($contract_id);
+if (!$contractModel) {
+    echo '<div style="text-align:center;padding:60px 20px;font-family:sans-serif;direction:rtl"><h2>العقد غير موجود</h2><p>رقم العقد المطلوب (' . (int)$contract_id . ') غير موجود في النظام.</p></div>';
+    return;
+}
 $total = $contractModel->total_value;
 $judicary_contract = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contractModel->id])->all();
 $sum_case_cost = 0;

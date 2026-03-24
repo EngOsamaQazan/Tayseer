@@ -114,6 +114,11 @@ class RouteAccessBehavior extends Behavior
 
         $rawPathInfo = trim(Yii::$app->request->pathInfo ?? '', '/');
 
+        // تجاهل الملفات الثابتة (صور، CSS، JS، خطوط) التي تمر عبر PHP خطأً
+        if (preg_match('/\.(jpe?g|png|gif|webp|svg|ico|css|js|woff2?|ttf|eot|map|pdf)$/i', $rawPathInfo)) {
+            return;
+        }
+
         foreach (self::$publicRoutes as $public) {
             $p = trim($public, '/');
             if ($rawPathInfo === $p || $rawPathInfo === '' && $p === 'site' || strpos($rawPathInfo . '/', $p . '/') === 0) {
@@ -128,6 +133,7 @@ class RouteAccessBehavior extends Behavior
         /* ── الطبقة 1: فحص مستوى المتحكم (الوحدة) ── */
         $permissions = Permissions::getRequiredPermissionsForRoute($controllerId);
         if ($permissions === null) {
+            Yii::warning("Route not in permission map: {$controllerId} (raw: {$rawPathInfo})", __METHOD__);
             throw new ForbiddenHttpException(Yii::t('yii', 'You are not allowed to perform this action.'));
         }
         if ($permissions === []) {
