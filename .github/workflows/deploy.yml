@@ -51,16 +51,18 @@ jobs:
                 git reset --hard "origin/$BRANCH"
               fi
               
-              # Apply environment-specific local configs (DB credentials, debug mode)
-              echo "  Applying $ENV_DIR environment configs..."
-              for cfg in common/config/main-local.php common/config/params-local.php \
-                         backend/web/index.php frontend/web/index.php \
-                         console/config/main-local.php console/config/params-local.php; do
-                if [ -f "environments/$ENV_DIR/$cfg" ]; then
-                  mkdir -p "$(dirname "$cfg")"
-                  cp -f "environments/$ENV_DIR/$cfg" "$cfg"
-                fi
-              done
+            # Apply environment-specific local configs (DB credentials, debug mode)
+            echo "  Applying $ENV_DIR environment configs..."
+            for cfg in common/config/main-local.php common/config/params-local.php \
+                       backend/web/index.php frontend/web/index.php \
+                       console/config/main-local.php console/config/params-local.php \
+                       yii; do
+              if [ -f "environments/$ENV_DIR/$cfg" ]; then
+                mkdir -p "$(dirname "$cfg")"
+                cp -f "environments/$ENV_DIR/$cfg" "$cfg"
+              fi
+            done
+            chmod +x yii 2>/dev/null || true
               
               # Cookie-key configs: only create if missing (preserve existing sessions)
               for cfg in backend/config/main-local.php backend/config/params-local.php \
