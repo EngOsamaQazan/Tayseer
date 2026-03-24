@@ -110,7 +110,7 @@ var UnifiedSearch = (function () {
         }
 
         function select(item) {
-            el.value = item.title;
+            el.value = item.id ? String(item.id) : item.title;
             hide();
 
             if (cfg.navigateOnSelect && item.url) {

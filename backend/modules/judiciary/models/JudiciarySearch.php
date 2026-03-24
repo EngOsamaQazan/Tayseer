@@ -36,7 +36,7 @@ class JudiciarySearch extends Judiciary
             [['id', 'court_id', 'type_id', 'lawyer_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'number_row', 'case_cost'], 'integer'],
             [['lawyer_cost', 'contract_id'], 'number'],
             [['income_date', 'year', 'from_income_date', 'to_income_date'], 'string'],
-            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number', 'party_name', 'last_party_action'], 'safe']
+            [['from_income_date', 'to_income_date', 'contract_not_in_status', 'company_id', 'judiciary_number', 'party_name', 'last_party_action', 'job_title', 'jobs_type'], 'safe']
         ];
     }
 

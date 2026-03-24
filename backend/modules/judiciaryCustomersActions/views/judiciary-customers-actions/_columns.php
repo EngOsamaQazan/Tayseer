@@ -101,6 +101,38 @@ return [
         'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'التاريخ'],
     ],
 
+    /* حالة الإجراء */
+    [
+        'class' => '\kartik\grid\DataColumn',
+        'attribute' => 'request_status',
+        'label' => 'الحالة',
+        'format' => 'raw',
+        'headerOptions' => ['style' => 'width:90px'],
+        'contentOptions' => ['style' => 'white-space:nowrap;text-align:center', 'data-label' => 'الحالة'],
+        'value' => function ($m) {
+            $label = $m->getRequestStatusLabel();
+            if (!$label) return '<span style="color:#94A3B8">—</span>';
+            $color = $m->getRequestStatusColor();
+            $bgMap = [
+                'printed'   => '#F3F4F6',
+                'submitted' => '#EFF6FF',
+                'pending'   => '#FFFBEB',
+                'approved'  => '#ECFDF5',
+                'rejected'  => '#FEF2F2',
+            ];
+            $bg = $bgMap[$m->request_status] ?? '#F1F5F9';
+            return '<span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:600;background:'
+                . $bg . ';color:' . $color . '">' . Html::encode($label) . '</span>';
+        },
+        'filter' => [
+            'printed'   => 'مطبوع',
+            'submitted' => 'مُقدَّم',
+            'pending'   => 'معلق',
+            'approved'  => 'موافقة',
+            'rejected'  => 'مرفوض',
+        ],
+    ],
+
     /* الإجراءات */
     [
         'class' => 'yii\grid\ActionColumn',

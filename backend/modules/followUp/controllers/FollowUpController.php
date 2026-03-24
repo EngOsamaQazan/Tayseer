@@ -458,7 +458,7 @@ class FollowUpController extends Controller
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_TIMEOUT => 15,
                 CURLOPT_SSL_VERIFYPEER => false,
-                CURLOPT_USERAGENT => 'JadalImageProxy/1.0',
+                CURLOPT_USERAGENT => 'TayseerImageProxy/1.0',
                 CURLOPT_HTTPHEADER => ['Accept: image/*'],
             ]);
             $content = curl_exec($ch);
@@ -484,27 +484,29 @@ class FollowUpController extends Controller
     /**
      * Verify account statement barcode: فعال / منتهي الصلاحية / غير صحيح
      * Statement expires when a new payment (دفعة) or expense (مصروف) is added.
+     * When valid/expired — shows statement snapshot so the verifier can compare.
      */
     public function actionVerifyStatement($c, $d, $t, $s)
     {
-        $secret = Yii::$app->params['statementVerifySecret'] ?? 'jadal-statement-verify-' . (defined('YII_ENV') ? YII_ENV : 'prod');
+        $secret = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
         $payload = $c . '|' . $d . '|' . $t;
         $expectedSig = hash_hmac('sha256', $payload, $secret);
 
-        $status = 'invalid';   // غير صحيح
+        $status = 'invalid';
         $label = 'غير صحيح';
         $message = 'الباركود غير صالح أو تم التلاعب به.';
 
         if (!hash_equals($expectedSig, $s)) {
             return $this->render('verify-statement', [
-                'status' => $status,
-                'label' => $label,
+                'status'  => $status,
+                'label'   => $label,
                 'message' => $message,
             ]);
         }
 
         $contractId = (int) $c;
-        $statementLastDate = $t; // last movement date at statement print time (Y-m-d)
+        $statementDate = $d;
+        $statementLastDate = $t;
 
         $db = Yii::$app->db;
         $currentMax = $db->createCommand("
@@ -533,12 +535,95 @@ class FollowUpController extends Controller
             $message = 'كشف الحساب صالح ولم تُضف حركات جديدة بعد تاريخ إصداره.';
         }
 
+        $statementData = null;
+        if ($status !== 'invalid') {
+            $statementData = $this->buildStatementData($contractId);
+        }
+
         return $this->render('verify-statement', [
-            'status' => $status,
-            'label' => $label,
-            'message' => $message,
-            'contract_id' => $contractId,
+            'status'        => $status,
+            'label'         => $label,
+            'message'       => $message,
+            'contract_id'   => $contractId,
+            'statementDate' => $statementDate,
+            'statementData' => $statementData,
         ]);
+    }
+
+    /**
+     * Build statement snapshot data for verification display.
+     */
+    private function buildStatementData($contractId)
+    {
+        $modelf = new \common\helper\LoanContract();
+        $contractModel = $modelf->findContract($contractId);
+        if (!$contractModel) {
+            return null;
+        }
+
+        $clientRows = \backend\modules\customers\models\ContractsCustomers::find()
+            ->where(['customer_type' => 'client', 'contract_id' => $contractId])->all();
+        $guarantorRows = \backend\modules\customers\models\ContractsCustomers::find()
+            ->where(['customer_type' => 'guarantor', 'contract_id' => $contractId])->all();
+
+        $clientNames = array_map(function ($c) {
+            return \backend\modules\customers\models\Customers::findOne($c->customer_id)->name ?? '';
+        }, $clientRows);
+        $guarantorNames = array_map(function ($c) {
+            return \backend\modules\customers\models\Customers::findOne($c->customer_id)->name ?? '';
+        }, $guarantorRows);
+
+        $judicary = \backend\modules\judiciary\models\Judiciary::find()
+            ->where(['contract_id' => $contractModel->id])->all();
+        $sumCaseCost = 0;
+        $lawyerCostTotal = 0;
+        if (!empty($judicary)) {
+            foreach (\backend\modules\expenses\models\Expenses::find()
+                ->where(['contract_id' => $contractModel->id, 'category_id' => 4])->all() as $e) {
+                $sumCaseCost += $e->amount;
+            }
+            foreach ($judicary as $j) {
+                $lawyerCostTotal += $j->lawyer_cost;
+                $contractModel->total_value += $sumCaseCost + $j->lawyer_cost;
+            }
+        }
+
+        $paidAmount = \backend\modules\contractInstallment\models\ContractInstallment::find()
+            ->where(['contract_id' => $contractModel->id])->sum('amount');
+        $paidAmount = max(0, (float) $paidAmount);
+        $remainingBalance = $contractModel->total_value - $paidAmount;
+
+        $lastIncome = \backend\modules\contractInstallment\models\ContractInstallment::find()
+            ->where(['contract_id' => $contractId])->orderBy(['date' => SORT_DESC])->one();
+
+        $movements = Yii::$app->db->createCommand("
+            SELECT total_value as amount, 'ثمن البضاعة' as description, Date_of_sale as date, 'مدين' as type, '' as notes
+            FROM os_contracts WHERE id = :cid
+            UNION ALL
+            SELECT lawyer_cost, 'اتعاب محاماه', created_at, 'مدين', '' FROM os_judiciary WHERE contract_id = :cid
+            UNION ALL
+            SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid
+            UNION ALL
+            SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid
+            ORDER BY date
+        ", [':cid' => $contractId])->queryAll();
+
+        $company = (new \common\components\CompanyChecked())->findPrimaryCompany();
+        $companyName = $company ? $company->name : (Yii::$app->params['companies_logo'] ?? '');
+
+        return [
+            'companyName'      => $companyName,
+            'clientNames'      => $clientNames,
+            'guarantorNames'   => $guarantorNames,
+            'totalValue'       => $contractModel->total_value,
+            'paidAmount'       => $paidAmount,
+            'remainingBalance' => $remainingBalance,
+            'dateSale'         => $contractModel->Date_of_sale ?? '—',
+            'firstInstDate'    => $contractModel->first_installment_date ?? '—',
+            'lastIncomeDate'   => $lastIncome ? $lastIncome->date : null,
+            'monthlyInst'      => $contractModel->monthly_installment_value,
+            'movements'        => $movements,
+        ];
     }
 
     /**

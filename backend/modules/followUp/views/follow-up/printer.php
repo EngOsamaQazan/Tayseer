@@ -153,7 +153,7 @@ if (!$lastMovementDate) {
     $lastMovementDate = date('Y-m-d');
 }
 $statementDate = date('Y-m-d');
-$secret = Yii::$app->params['statementVerifySecret'] ?? 'jadal-statement-verify-default';
+$secret = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
 $payload = $contract_id . '|' . $statementDate . '|' . $lastMovementDate;
 $signature = hash_hmac('sha256', $payload, $secret);
 $verifyCode = strtoupper(substr($signature, 0, 4) . '-' . substr($signature, 4, 4) . '-' . substr($signature, 8, 4));
@@ -421,7 +421,7 @@ if ($contractModel->status == 'judiciary' || !empty($judicary_contract)) {
         </div>
         <div class="fs-verify__stamp">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            هذا الكشف موثق إلكترونياً عبر نظام جدل ERP ولا يحتاج توقيع.
+            هذا الكشف موثق إلكترونياً عبر نظام تيسير ERP ولا يحتاج توقيع.
         </div>
     </section>
 

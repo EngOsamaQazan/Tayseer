@@ -29,7 +29,7 @@ class JudiciaryCustomersActionsSearch extends JudiciaryCustomersActions {
             [['id', 'judiciary_id', 'customers_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'judiciary_actions_id', 'is_deleted', 'court_name', 'contract_id', 'lawyer_name', 'number_row'], 'integer', 'on' => 'create'],
             [['id', 'judiciary_id', 'customers_id', 'created_at', 'updated_at', 'created_by', 'last_update_by', 'judiciary_actions_id', 'is_deleted', 'court_name', 'contract_id', 'lawyer_name', 'number_row'], 'integer', 'on' => 'update'],
             [['contract_id', 'judiciary_id', 'number_row'], 'integer'],
-            [['note', 'year', 'form_action_date', 'to_action_date', 'court_name', 'lawyer_name', 'contract_not_in_status', 'judiciary_actions_id', 'judiciary_number'], 'safe'],
+            [['note', 'year', 'form_action_date', 'to_action_date', 'court_name', 'lawyer_name', 'contract_not_in_status', 'judiciary_actions_id', 'judiciary_number', 'request_status'], 'safe'],
         ];
     }
 
@@ -104,6 +104,7 @@ class JudiciaryCustomersActionsSearch extends JudiciaryCustomersActions {
         $query->andFilterWhere(['os_judiciary.lawyer_id' => $this->lawyer_name]);
         $query->andFilterWhere(['os_judiciary.contract_id' => $this->contract_id]);
         $query->andFilterWhere(['os_judiciary.judiciary_number' => $this->judiciary_number]);
+        $query->andFilterWhere(['os_judiciary_customers_actions.request_status' => $this->request_status]);
 
         if (!empty($params['JudiciarySearch']['contract_not_in_status'])) {
             $query->andFilterWhere(['<>', 'os_contracts.status', $params['JudiciarySearch']['contract_not_in_status']]);
@@ -160,6 +161,7 @@ class JudiciaryCustomersActionsSearch extends JudiciaryCustomersActions {
         $query->andFilterWhere(['os_judiciary.lawyer_id' => $this->lawyer_name]);
         $query->andFilterWhere(['os_judiciary.contract_id' => $this->contract_id]);
         $query->andFilterWhere(['os_judiciary.judiciary_number' => $this->judiciary_number]);
+        $query->andFilterWhere(['os_judiciary_customers_actions.request_status' => $this->request_status]);
 
         if (!empty($params['JudiciarySearch']['contract_not_in_status'])) {
             $query->andFilterWhere(['<>', 'os_contracts.status', $params['JudiciarySearch']['contract_not_in_status']]);

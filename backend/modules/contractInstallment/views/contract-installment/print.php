@@ -59,7 +59,7 @@ $receiptDate = $model->date;
 $receiptId = $model->id;
 
 // ─── Verification (HMAC signature + QR) ───
-$secret = Yii::$app->params['statementVerifySecret'] ?? 'jadal-statement-verify-default';
+$secret = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
 $payload = $receiptId . '|' . $receiptDate;
 $signature = hash_hmac('sha256', $payload, $secret);
 $verifyCode = strtoupper(substr($signature, 0, 4) . '-' . substr($signature, 4, 4) . '-' . substr($signature, 8, 4));

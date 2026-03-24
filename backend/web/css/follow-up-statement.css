@@ -86,7 +86,7 @@
   unicode-bidi: isolate;
 }
 /* backward compat */
-.fs .jadal-en-num { font-family: var(--font-en), var(--font-ar); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+.fs .tayseer-en-num { font-family: var(--font-en), var(--font-ar); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
 
 
 /* ══════════════════════════════════════════════════════
@@ -836,28 +836,174 @@
 
 
 /* ══════════════════════════════════════════════════════
-   VERIFY PAGE (verify-statement.php) — keep compat
+   VERIFY PAGE (verify-statement.php) — full statement preview
    ══════════════════════════════════════════════════════ */
-.jadal-verify {
-  max-width: 420px;
+.tayseer-verify {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px;
   font-family: 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, sans-serif;
   direction: rtl;
+  color: #1a1d26;
 }
-.jadal-verify__box {
-  text-align: center;
-  padding: 32px 24px;
-  border-radius: 16px;
+.tayseer-verify .en { font-family: 'Inter', 'IBM Plex Sans', monospace; direction: ltr; unicode-bidi: isolate; }
+
+/* ── Status Banner ── */
+.tv-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px;
+  border-radius: 14px;
   border: 2px solid #e4e5e7;
   background: #fff;
+  margin-bottom: 20px;
 }
-.jadal-verify__title { font-size: 18px; color: #7A000C; margin: 0 0 20px; }
-.jadal-verify__label { font-size: 22px; font-weight: 700; margin: 0 0 12px; }
-.jadal-verify__message { font-size: 14px; color: #525866; line-height: 1.7; margin: 0 0 12px; }
-.jadal-verify__meta { font-size: 13px; color: #868c98; margin: 0; }
+.tv-banner__icon { flex-shrink: 0; padding-top: 2px; }
+.tv-banner__content { flex: 1; }
+.tv-banner__title { font-size: 15px; color: #868c98; margin: 0 0 8px; font-weight: 500; }
+.tv-banner__label { font-size: 22px; font-weight: 700; margin: 0 0 8px; }
+.tv-banner__message { font-size: 14px; color: #525866; line-height: 1.7; margin: 0; }
 
-.jadal-verify--valid   .jadal-verify__box { border-color: #0F7B3D; background: #eefbf3; }
-.jadal-verify--valid   .jadal-verify__label { color: #0F7B3D; }
-.jadal-verify--expired .jadal-verify__box { border-color: #d97706; background: #fffbeb; }
-.jadal-verify--expired .jadal-verify__label { color: #b8860b; }
-.jadal-verify--invalid .jadal-verify__box { border-color: #B42318; background: #fef3f2; }
-.jadal-verify--invalid .jadal-verify__label { color: #B42318; }
+.tayseer-verify--valid   .tv-banner { border-color: #0F7B3D; background: #eefbf3; }
+.tayseer-verify--valid   .tv-banner__label { color: #0F7B3D; }
+.tayseer-verify--expired .tv-banner { border-color: #d97706; background: #fffbeb; }
+.tayseer-verify--expired .tv-banner__label { color: #b8860b; }
+.tayseer-verify--invalid .tv-banner { border-color: #B42318; background: #fef3f2; }
+.tayseer-verify--invalid .tv-banner__label { color: #B42318; }
+
+/* ── Verifier Alert ── */
+.tv-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 10px;
+  background: #fff8e1;
+  border: 1.5px solid #f0d060;
+  color: #6d5a00;
+  font-size: 13.5px;
+  line-height: 1.8;
+  margin-bottom: 20px;
+}
+.tv-alert svg { flex-shrink: 0; margin-top: 2px; stroke: #b8860b; }
+.tv-alert p { margin: 0; }
+
+/* ── Statement Header ── */
+.tv-header {
+  text-align: center;
+  padding: 20px;
+  background: #f8f9fb;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #e8eaed;
+}
+.tv-header__company { font-size: 18px; font-weight: 700; color: #1a1d26; margin-bottom: 8px; }
+.tv-header__meta { font-size: 13px; color: #525866; }
+.tv-header__meta strong { color: #1a1d26; }
+.tv-header__sep { margin: 0 10px; color: #d0d3d9; }
+
+/* ── Contract Info ── */
+.tv-info {
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  padding: 4px 0;
+  margin-bottom: 20px;
+}
+.tv-info__group { padding: 0 20px; }
+.tv-info__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f2f3f5;
+  font-size: 14px;
+}
+.tv-info__row:last-child { border-bottom: none; }
+.tv-info__label { color: #868c98; }
+.tv-info__value { font-weight: 600; color: #1a1d26; }
+
+/* ── Financial Cards ── */
+.tv-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.tv-card {
+  text-align: center;
+  padding: 18px 12px;
+  border-radius: 12px;
+  border: 1px solid #e8eaed;
+  background: #fff;
+}
+.tv-card__label { display: block; font-size: 12px; color: #868c98; margin-bottom: 8px; }
+.tv-card__amount { display: block; font-size: 18px; font-weight: 700; }
+.tv-card--neutral .tv-card__amount { color: #1a1d26; }
+.tv-card--success .tv-card__amount { color: #0F7B3D; }
+.tv-card--danger  .tv-card__amount { color: #B42318; }
+
+/* ── Movements Section ── */
+.tv-section { margin-bottom: 20px; }
+.tv-section__title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1d26;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e8eaed;
+}
+
+.tv-table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid #e8eaed; }
+.tv-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tv-table thead { background: #f8f9fb; }
+.tv-table th {
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #525866;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1.5px solid #e8eaed;
+}
+.tv-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid #f2f3f5;
+  vertical-align: middle;
+}
+.tv-table tr:last-child td { border-bottom: none; }
+.tv-table small { color: #868c98; }
+
+.tv-summary {
+  text-align: left;
+  padding: 14px 16px;
+  margin-top: 10px;
+  background: #f8f9fb;
+  border-radius: 10px;
+  border: 1px solid #e8eaed;
+  font-size: 14px;
+  color: #525866;
+  direction: rtl;
+}
+.tv-summary strong { color: #1a1d26; font-size: 16px; }
+
+/* ── Footer ── */
+.tv-footer {
+  text-align: center;
+  padding: 16px;
+  font-size: 12px;
+  color: #868c98;
+  line-height: 1.8;
+  border-top: 1px solid #e8eaed;
+}
+.tv-footer p { margin: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 540px) {
+  .tayseer-verify { padding: 12px 8px; }
+  .tv-cards { grid-template-columns: 1fr; }
+  .tv-banner { flex-direction: column; align-items: center; text-align: center; }
+  .tv-info__row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .tv-header__meta { display: flex; flex-direction: column; gap: 4px; }
+  .tv-header__sep { display: none; }
+}

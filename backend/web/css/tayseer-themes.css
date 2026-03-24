@@ -1634,7 +1634,13 @@ a:hover { color: var(--t-primary-hover); }
 [data-bs-theme="dark"] .fs-table__td--credit { color: #4ade80; }
 [data-bs-theme="dark"] .fs-table-summary__value--debit { color: #f87171; }
 [data-bs-theme="dark"] .fs-table-summary__value--credit { color: #4ade80; }
-[data-bs-theme="dark"] .jadal-verify__box { background: var(--clr-surface); border-color: var(--clr-border); }
+[data-bs-theme="dark"] .tv-banner { background: var(--clr-surface); border-color: var(--clr-border); }
+[data-bs-theme="dark"] .tv-header { background: var(--clr-surface); border-color: var(--clr-border); }
+[data-bs-theme="dark"] .tv-info { background: var(--clr-surface); border-color: var(--clr-border); }
+[data-bs-theme="dark"] .tv-card { background: var(--clr-surface); border-color: var(--clr-border); }
+[data-bs-theme="dark"] .tv-table-wrap { border-color: var(--clr-border); }
+[data-bs-theme="dark"] .tv-table thead { background: var(--clr-surface); }
+[data-bs-theme="dark"] .tv-summary { background: var(--clr-surface); border-color: var(--clr-border); }
 
 /* ============================================================
    OCP — Dark Mode (scoped :root variables override)

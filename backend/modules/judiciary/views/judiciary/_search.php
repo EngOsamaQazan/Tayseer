@@ -11,6 +11,8 @@ use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
+use backend\modules\jobs\models\Jobs;
+use backend\modules\jobs\models\JobsType;
 
 $cache = Yii::$app->cache;
 $courts  = $cache->getOrSet('lookup_courts', fn() => ArrayHelper::map(Court::find()->asArray()->all(), 'id', 'name'), 3600);
@@ -20,7 +22,12 @@ $judActions = $cache->getOrSet('lookup_judiciary_actions_all', fn() => ArrayHelp
     JudiciaryActions::find()->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])->orderBy(['name' => SORT_ASC])->asArray()->all(),
     'id', 'name'
 ), 3600);
-$hasFilters = $model->judiciary_number || $model->contract_id || $model->court_id || $model->type_id || $model->lawyer_id || $model->year || $model->from_income_date || $model->to_income_date || $model->party_name || $model->last_party_action;
+$jobs = $cache->getOrSet('lookup_jobs', fn() => ArrayHelper::map(
+    Jobs::find()->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])->orderBy(['name' => SORT_ASC])->asArray()->all(),
+    'id', 'name'
+), 3600);
+$jobsTypes = $cache->getOrSet('lookup_jobs_types', fn() => ArrayHelper::map(JobsType::find()->asArray()->all(), 'id', 'name'), 3600);
+$hasFilters = $model->judiciary_number || $model->contract_id || $model->court_id || $model->type_id || $model->lawyer_id || $model->year || $model->from_income_date || $model->to_income_date || $model->party_name || $model->last_party_action || $model->job_title || $model->jobs_type;
 ?>
 
 <div class="jud-search <?= $hasFilters ? '' : '' ?>">
@@ -88,6 +95,22 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
                     'data' => $judActions, 'options' => ['placeholder' => 'الكل'],
                     'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
                 ])->label('آخر إجراء على الأطراف') ?>
+            </div>
+        </div>
+
+        <!-- الصف الثالث: وظيفة + نوع وظيفة + أزرار -->
+        <div class="jud-filter-row">
+            <div class="jud-filter-col-wide">
+                <?= $form->field($model, 'job_title')->widget(Select2::class, [
+                    'data' => $jobs, 'options' => ['placeholder' => 'الكل'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                ])->label('جهة العمل') ?>
+            </div>
+            <div class="jud-filter-col-wide">
+                <?= $form->field($model, 'jobs_type')->widget(Select2::class, [
+                    'data' => $jobsTypes, 'options' => ['placeholder' => 'الكل'],
+                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                ])->label('نوع الوظيفة') ?>
             </div>
             <div class="jud-search-actions">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>

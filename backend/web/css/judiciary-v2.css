@@ -346,6 +346,7 @@
 .jud-filter-col .form-group, .jud-filter-col-wide .form-group { margin-bottom: 0; }
 .jud-filter-col label, .jud-filter-col-wide label { font-size: 10px; color: var(--clr-text-muted); font-weight: 600; margin-bottom: 2px; letter-spacing: .3px; }
 .jud-filter-col .form-control, .jud-filter-col-wide .form-control { font-size: 12px !important; height: 32px; padding: 4px 8px; border-radius: var(--radius-sm); }
+.select2-container--open { z-index: 99999 !important; }
 .jud-filter-col .select2-container, .jud-filter-col-wide .select2-container { font-size: 12px !important; }
 .jud-filter-col .select2-container .select2-selection--single,
 .jud-filter-col-wide .select2-container .select2-selection--single { height: 32px !important; min-height: 32px !important; border-radius: var(--radius-sm) !important; }

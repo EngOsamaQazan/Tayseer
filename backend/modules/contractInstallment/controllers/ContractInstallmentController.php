@@ -167,7 +167,7 @@ class  ContractInstallmentController extends Controller
     {
         $this->layout = '/print-template-1';
 
-        $secret = Yii::$app->params['statementVerifySecret'] ?? 'jadal-statement-verify-default';
+        $secret = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
         $payload = $rid . '|' . $d;
         $expectedSig = hash_hmac('sha256', $payload, $secret);
 
