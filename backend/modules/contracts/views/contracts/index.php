@@ -222,6 +222,7 @@ $end   = $begin + count($models) - 1;
 
                         $customerFullNames = implode('، ', array_map(fn($c) => $c->name, $m->customers)) ?: '—';
                         $customerNames = implode('، ', array_map(fn($c) => NameHelper::short($c->name), $m->customers)) ?: '—';
+                        $customerIdNumbers = array_filter(array_map(fn($c) => $c->id_number, $m->customers));
                         $sellerName = isset($m->seller->name) ? NameHelper::short($m->seller->name) : '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
                     ?>
@@ -234,6 +235,9 @@ $end   = $begin + count($models) - 1;
                         </td>
                         <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerFullNames) ?>">
                             <?= Html::encode($customerNames) ?>
+                            <?php if ($customerIdNumbers): ?>
+                                <span class="ct-id-nums"><?= Html::encode(implode(' | ', $customerIdNumbers)) ?></span>
+                            <?php endif ?>
                         </td>
                         <td class="ct-td-money ct-td-due" data-label="المستحق">
                             <?= number_format($deserved, 0) ?>
