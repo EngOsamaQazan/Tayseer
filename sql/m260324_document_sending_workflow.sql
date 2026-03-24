@@ -28,20 +28,16 @@ ALTER TABLE `os_judiciary_customers_actions`
     ON DELETE SET NULL
     ON UPDATE CASCADE;
 
--- 4) تحديث حالة الكتب/المذكرات الحالية إلى "غير مُرسل"
+-- 4) تحديث حالة الكتب/المذكرات الحالية إلى NULL (تُقرأ كـ "غير مُدخل")
 UPDATE `os_judiciary_customers_actions` jca
 INNER JOIN `os_judiciary_actions` ja ON ja.id = jca.judiciary_actions_id
-SET jca.request_status = 'not_sent'
-WHERE ja.action_nature = 'document'
-  AND (jca.request_status IS NULL OR jca.request_status = '' OR jca.request_status = 'pending');
+SET jca.request_status = NULL
+WHERE ja.action_nature = 'document';
 
 -- ============================================================
 -- للتراجع (Rollback) في حال الحاجة:
 -- ============================================================
--- UPDATE os_judiciary_customers_actions jca
--- INNER JOIN os_judiciary_actions ja ON ja.id = jca.judiciary_actions_id
--- SET jca.request_status = NULL
--- WHERE ja.action_nature = 'document' AND jca.request_status = 'not_sent';
+-- (لا حاجة للتراجع عن هذه الخطوة — الحالة كانت أصلاً NULL)
 --
 -- ALTER TABLE os_judiciary_customers_actions DROP FOREIGN KEY fk_jca_correspondence;
 -- ALTER TABLE os_judiciary_customers_actions DROP COLUMN correspondence_id;

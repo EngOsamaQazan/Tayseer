@@ -281,6 +281,8 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
                         <?php if ($reqStatus): ?>
                             <?php $rc = $statusColors[$reqStatus] ?? '#6B7280'; $rl = $statusLabels[$reqStatus] ?? $reqStatus; ?>
                             <span class="jf-action-badge jf-status-badge-<?= $m->id ?>" style="background:<?= $rc ?>20;color:<?= $rc ?>"><?= $rl ?></span>
+                        <?php elseif ($nature === 'document' && $reqStatus === null): ?>
+                            <span class="jf-action-badge jf-status-badge-<?= $m->id ?>" style="background:#94A3B820;color:#94A3B8">غير مُدخل</span>
                         <?php endif; ?>
                     </div>
                     <div class="jf-action-meta">
@@ -313,7 +315,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
                         </div>
                     </div>
                     <?php endif; ?>
-                    <?php if ($nature === 'document' && $reqStatus === 'not_sent'): ?>
+                    <?php if ($nature === 'document' && ($reqStatus === 'not_sent' || $reqStatus === null)): ?>
                     <?php
                         $cust = $m->customers;
                         $custJobId = $cust ? $cust->job_title : null;

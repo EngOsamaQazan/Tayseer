@@ -206,6 +206,9 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             'sent'      => 'مُرسل',
             'cancelled' => 'ملغي',
         ];
+        if ($this->request_status === null && $this->isDocument()) {
+            return 'غير مُدخل';
+        }
         return $map[$this->request_status] ?? '';
     }
 
@@ -224,6 +227,9 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             'sent'      => '#3B82F6',
             'cancelled' => '#EF4444',
         ];
+        if ($this->request_status === null && $this->isDocument()) {
+            return '#94A3B8';
+        }
         return $map[$this->request_status] ?? '#6B7280';
     }
 
