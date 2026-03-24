@@ -635,8 +635,31 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                             <div class="jv-action-note"><?= Html::encode($m->note) ?></div>
                         <?php endif; ?>
                         <?php if ($nature === 'document' && $reqStatus === 'not_sent'): ?>
+                        <?php
+                            $cust = $m->customers;
+                            $custJobId = $cust ? $cust->job_title : null;
+                            $custJobName = '';
+                            if ($custJobId) {
+                                $jobModel = \backend\modules\jobs\models\Jobs::findOne($custJobId);
+                                $custJobName = $jobModel ? $jobModel->name : '';
+                            }
+                            $custBankId = $cust ? $cust->bank_name : null;
+                            $custBankName = '';
+                            if ($custBankId) {
+                                $bankModel = \backend\modules\bancks\models\Bancks::findOne($custBankId);
+                                $custBankName = $bankModel ? $bankModel->name : '';
+                            }
+                        ?>
                         <div class="jv-doc-actions" style="display:flex;gap:8px;margin-top:8px">
-                            <button type="button" class="btn btn-sm btn-primary jv-send-doc-btn" data-id="<?= $m->id ?>" data-name="<?= Html::encode($def ? $def->name : '') ?>" data-customer-id="<?= $m->customers_id ?>">
+                            <button type="button" class="btn btn-sm btn-primary jv-send-doc-btn"
+                                data-id="<?= $m->id ?>"
+                                data-name="<?= Html::encode($def ? $def->name : '') ?>"
+                                data-customer-id="<?= $m->customers_id ?>"
+                                data-customer-name="<?= Html::encode($cust ? $cust->name : '') ?>"
+                                data-job-id="<?= $custJobId ?>"
+                                data-job-name="<?= Html::encode($custJobName) ?>"
+                                data-bank-id="<?= $custBankId ?>"
+                                data-bank-name="<?= Html::encode($custBankName) ?>">
                                 <i class="fa fa-paper-plane"></i> إرسال
                             </button>
                             <button type="button" class="btn btn-sm btn-outline-danger jv-cancel-doc-btn" data-id="<?= $m->id ?>">
@@ -730,24 +753,31 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                         </select>
                     </div>
                     <div id="sdm-recipient-fields">
+                        <input type="hidden" id="sdm-bank-id">
+                        <input type="hidden" id="sdm-job-id">
+                        <input type="hidden" id="sdm-authority-id">
+                        <div class="mb-3 sdm-rf" data-for="employer">
+                            <label class="form-label" style="font-size:13px">جهة العمل</label>
+                            <div id="sdm-job-display" style="padding:8px 12px;background:#F1F5F9;border-radius:8px;font-size:14px;color:#334155;display:flex;align-items:center;gap:8px">
+                                <i class="fa fa-building" style="color:#3B82F6"></i>
+                                <span id="sdm-job-name">—</span>
+                            </div>
+                        </div>
                         <div class="mb-3 sdm-rf" data-for="bank" style="display:none">
                             <label class="form-label" style="font-size:13px">البنك</label>
-                            <select id="sdm-bank-id" class="form-select" style="border-radius:8px">
-                                <option value="">-- اختر البنك --</option>
-                            </select>
-                        </div>
-                        <div class="mb-3 sdm-rf" data-for="employer" style="display:none">
-                            <label class="form-label" style="font-size:13px">جهة العمل</label>
-                            <select id="sdm-job-id" class="form-select" style="border-radius:8px">
-                                <option value="">-- اختر جهة العمل --</option>
-                            </select>
+                            <div id="sdm-bank-display" style="padding:8px 12px;background:#F1F5F9;border-radius:8px;font-size:14px;color:#334155;display:flex;align-items:center;gap:8px">
+                                <i class="fa fa-university" style="color:#3B82F6"></i>
+                                <span id="sdm-bank-name">—</span>
+                            </div>
                         </div>
                         <div class="mb-3 sdm-rf" data-for="administrative" style="display:none">
                             <label class="form-label" style="font-size:13px">الجهة الإدارية</label>
-                            <select id="sdm-authority-id" class="form-select" style="border-radius:8px">
-                                <option value="">-- اختر الجهة --</option>
-                            </select>
+                            <input type="text" id="sdm-authority-name" class="form-control" style="border-radius:8px" placeholder="اسم الجهة الإدارية">
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:13px"><i class="fa fa-user" style="color:#64748B;margin-left:4px"></i> المحكوم عليه</label>
+                        <div id="sdm-customer-name" style="padding:8px 12px;background:#F1F5F9;border-radius:8px;font-size:14px;color:#334155"></div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
@@ -818,18 +848,32 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
     $('#sdm-recipient-type').on('change', function() { showRecipientFields($(this).val()); });
 
     $(document).on('click', '.jv-send-doc-btn', function() {
-        var id = $(this).data('id');
-        var name = $(this).data('name');
-        var custId = $(this).data('customer-id');
+        var $btn = $(this);
+        var id = $btn.data('id');
+        var name = $btn.data('name');
+        var custName = $btn.data('customer-name') || '';
+        var jobId = $btn.data('job-id') || '';
+        var jobName = $btn.data('job-name') || '';
+        var bankId = $btn.data('bank-id') || '';
+        var bankName = $btn.data('bank-name') || '';
+
         $('#sdm-action-id').val(id);
         $('#sdm-doc-name').text(name);
+        $('#sdm-customer-name').text(custName);
         $('#sdm-delivery-method').val('');
         $('#sdm-send-date').val(new Date().toISOString().split('T')[0]);
         $('#sdm-reference').val('');
         $('#sdm-purpose').val('');
         $('#sdm-notes').val('');
 
-        var nameLower = (name || '').toLowerCase();
+        $('#sdm-job-id').val(jobId);
+        $('#sdm-job-name').text(jobName || '— غير محدد —');
+        $('#sdm-bank-id').val(bankId);
+        $('#sdm-bank-name').text(bankName || '— غير محدد —');
+        $('#sdm-authority-id').val('');
+        $('#sdm-authority-name').val('');
+
+        var nameLower = (name || '');
         if (nameLower.indexOf('راتب') > -1 || nameLower.indexOf('حسم') > -1) {
             $('#sdm-recipient-type').val('employer');
             $('#sdm-purpose').val('salary_deduction');
@@ -840,7 +884,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
             $('#sdm-recipient-type').val('administrative');
             $('#sdm-purpose').val('vehicle_seizure');
         } else {
-            $('#sdm-recipient-type').val('employer');
+            $('#sdm-recipient-type').val(jobId ? 'employer' : (bankId ? 'bank' : 'employer'));
         }
         showRecipientFields($('#sdm-recipient-type').val());
 
