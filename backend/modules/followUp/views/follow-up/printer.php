@@ -95,19 +95,19 @@ $provider = new \yii\data\SqlDataProvider([
                 os_contracts.Date_of_sale as date,
                 'مدين' as type,
                 '' as notes
-              FROM os_contracts WHERE os_contracts.id = :cid
+              FROM os_contracts WHERE os_contracts.id = :cid1
               UNION
               SELECT os_judiciary.id, os_judiciary.lawyer_cost as amount, 'اتعاب محاماه' as description,
                      os_judiciary.created_at as date, 'مدين' as type, '' as notes
-              FROM os_judiciary WHERE os_judiciary.contract_id = :cid
+              FROM os_judiciary WHERE os_judiciary.contract_id = :cid2
               UNION
               SELECT os_expenses.id, os_expenses.amount, description, os_expenses.created_at AS date, 'مدين' as type, notes
-              FROM os_expenses WHERE os_expenses.contract_id = :cid
+              FROM os_expenses WHERE os_expenses.contract_id = :cid3
               UNION
               SELECT os_income.id, os_income.amount, _by as description, os_income.date as date, 'دائن' as type, notes
-              FROM os_income WHERE os_income.contract_id = :cid
+              FROM os_income WHERE os_income.contract_id = :cid4
               ORDER BY date",
-    'params' => [':cid' => $contract_id],
+    'params' => [':cid1' => $contract_id, ':cid2' => $contract_id, ':cid3' => $contract_id, ':cid4' => $contract_id],
     'totalCount' => 200,
     'pagination' => ['pageSize' => 200],
 ]);

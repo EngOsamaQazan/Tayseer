@@ -522,15 +522,15 @@ class FollowUpController extends Controller
             $db = Yii::$app->db;
             $currentMax = $db->createCommand("
                 SELECT MAX(dt) as mx FROM (
-                    SELECT DATE(Date_of_sale) AS dt FROM os_contracts WHERE id = :cid
+                    SELECT DATE(Date_of_sale) AS dt FROM os_contracts WHERE id = :cid1
                     UNION ALL
-                    SELECT DATE(created_at) FROM os_judiciary WHERE contract_id = :cid
+                    SELECT DATE(created_at) FROM os_judiciary WHERE contract_id = :cid2
                     UNION ALL
-                    SELECT DATE(created_at) FROM os_expenses WHERE contract_id = :cid
+                    SELECT DATE(created_at) FROM os_expenses WHERE contract_id = :cid3
                     UNION ALL
-                    SELECT DATE(date) FROM os_income WHERE contract_id = :cid
+                    SELECT DATE(date) FROM os_income WHERE contract_id = :cid4
                 ) u
-            ", [':cid' => $contractId])->queryScalar();
+            ", [':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId, ':cid4' => $contractId])->queryScalar();
 
             if (!$currentMax) {
                 $status = 'valid';
@@ -557,12 +557,11 @@ class FollowUpController extends Controller
                 'statementData' => $statementData,
             ]);
         } catch (\Throwable $e) {
-            $errorDetail = $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
-            Yii::error('verify-statement error: ' . $errorDetail, __METHOD__);
+            Yii::error('verify-statement error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine(), __METHOD__);
             return $this->render('verify-statement', [
                 'status'  => 'valid',
                 'label'   => 'فعال',
-                'message' => 'كشف الحساب صالح (تعذر تحميل التفاصيل: ' . $errorDetail . ').',
+                'message' => 'كشف الحساب صالح (تعذر تحميل البيانات التفصيلية).',
                 'contract_id' => (int) $c,
                 'statementDate' => $d,
                 'statementData' => null,
@@ -619,15 +618,15 @@ class FollowUpController extends Controller
 
             $movements = Yii::$app->db->createCommand("
                 SELECT total_value as amount, 'ثمن البضاعة' as description, Date_of_sale as date, 'مدين' as type, '' as notes
-                FROM os_contracts WHERE id = :cid
+                FROM os_contracts WHERE id = :cid1
                 UNION ALL
-                SELECT lawyer_cost, 'اتعاب محاماه', created_at, 'مدين', '' FROM os_judiciary WHERE contract_id = :cid
+                SELECT lawyer_cost, 'اتعاب محاماه', created_at, 'مدين', '' FROM os_judiciary WHERE contract_id = :cid2
                 UNION ALL
-                SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid
+                SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid3
                 UNION ALL
-                SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid
+                SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid4
                 ORDER BY date
-            ", [':cid' => $contractId])->queryAll();
+            ", [':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId, ':cid4' => $contractId])->queryAll();
 
             $company = (new \common\components\CompanyChecked())->findPrimaryCompany();
             $companyName = $company ? $company->name : (Yii::$app->params['companies_logo'] ?? '');
