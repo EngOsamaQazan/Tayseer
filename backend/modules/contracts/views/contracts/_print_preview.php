@@ -5,8 +5,12 @@
  *   الصفحة 1 : عقد البيع بالتقسيط
  *   الصفحات 2-4 : اتفاقية الموطن المختار + كمبيالة تنفيذية (×3)
  *
- * @var $model   backend\modules\contracts\models\Contracts
- * @var $notes   backend\modules\contracts\models\PromissoryNote[]
+ * @var $model      backend\modules\contracts\models\Contracts
+ * @var $notes      backend\modules\contracts\models\PromissoryNote[]
+ * @var $allPeople  backend\modules\contracts\models\Customers[]  (buyers first, then guarantors)
+ * @var $guarantors backend\modules\contracts\models\Customers[]
+ * @var $pCount     int
+ * @var $density    string  'normal'|'tight'
  */
 use common\components\CompanyChecked;
 use yii\helpers\Html;
@@ -24,10 +28,9 @@ $monthly    = $model->monthly_installment_value ?: 0;
 $afterFirst = $total - $first;
 $today      = date('Y-m-d');
 
-$allPeople  = $model->customersAndGuarantor;
-$guarantors = $model->guarantor;
-$gCount     = count($guarantors);
-$gLabels    = ['الأول','الثاني','الثالث','الرابع','الخامس'];
+$gCount      = count($guarantors);
+$buyerCount  = $pCount - $gCount;
+$gLabels     = ['الأول','الثاني','الثالث','الرابع','الخامس'];
 
 $phones = [];
 $emails = [];
@@ -46,11 +49,8 @@ $allNames = implode(' و ', $peopleNames);
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>طباعة عقد #<?= $model->id ?></title>
+<link rel="stylesheet" href="/css-new/style.css" media="all">
 <style>
-/* ═══ خطوط ═══ */
-@font-face{font-family:'DinNextRegular';src:url('/css-new/fonts/din-next/regular/DinNextRegular.woff2') format('woff2'),url('/css-new/fonts/din-next/regular/DinNextRegular.woff') format('woff'),url('/css-new/fonts/din-next/regular/DinNextRegular.ttf') format('truetype')}
-@font-face{font-family:'DinNextBold';src:url('/css-new/fonts/din-next/bold/DinNextBold.woff2') format('woff2'),url('/css-new/fonts/din-next/bold/DinNextBold.woff') format('woff'),url('/css-new/fonts/din-next/bold/DinNextBold.ttf') format('truetype')}
-@font-face{font-family:'DinNextMedium';src:url('/css-new/fonts/din-next/medium/DinNextMedium.woff2') format('woff2'),url('/css-new/fonts/din-next/medium/DinNextMedium.woff') format('woff'),url('/css-new/fonts/din-next/medium/DinNextMedium.ttf') format('truetype')}
 b,strong{font-family:'DinNextBold',sans-serif!important}
 
 /* ═══ أساسيات ═══ */
@@ -90,7 +90,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 .ct-photos{display:flex;gap:6px;justify-content:center;margin:8px 0;flex-wrap:wrap}
 .ct-photos img{width:68px;height:85px;object-fit:cover;border:1.5px solid #ccc;border-radius:5px}
 .ct-section{margin-bottom:12px}
-.ct-section-title{font-family:'DinNextBold',sans-serif;font-size:13.5px;color:#1a365d;border-bottom:2.5px solid #1a365d;padding-bottom:4px;margin-bottom:8px}
+.ct-section-title{font-family:'DinNextBold',sans-serif;font-size:13.5px;color:#1a365d;border-bottom:2.5px solid #1a365d;padding-bottom:4px;margin-bottom:8px;text-align:center}
 .ct-party{display:flex;gap:5px;margin-bottom:5px;font-size:13px}
 .ct-party-label{font-family:'DinNextBold',sans-serif;color:#1a365d;min-width:130px}
 .ct-party-sub{font-size:11.5px;color:#555;margin-right:8px}
@@ -106,14 +106,13 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 .ct-fin-tbl td:last-child{font-family:'DinNextBold',sans-serif;text-align:center;color:#1a365d}
 .ct-fin-tbl tr:nth-child(even){background:#f8f9fa}
 .ct-fin-tbl .ct-money{color:#c62828;font-size:14px}
-.ct-sigs{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.ct-sig{flex:1;min-width:110px;border:1px solid #999;border-radius:5px;text-align:center;overflow:hidden}
-.ct-sig-hd{background:#f0f4f8;font-family:'DinNextBold',sans-serif;font-size:11px;padding:5px;border-bottom:1px solid #999;color:#1a365d}
-.ct-sig-name{font-size:10px;color:#555;padding:3px 5px;border-bottom:1px dashed #ddd}
-.ct-sig-body{height:70px}
-.ct-stamp{width:90px;height:90px;border:2px dashed #999;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#999;text-align:center;font-family:'DinNextMedium',sans-serif;line-height:1.3}
-.ct-sig-row{display:flex;gap:12px;align-items:flex-end}
-.ct-sig-row .ct-sigs{flex:1}
+.ct-sig-tbl{width:100%;border-collapse:collapse;margin-top:8px}
+.ct-sig-tbl th{font-family:'DinNextBold',sans-serif;font-size:11.5px;color:#1a365d;padding:5px 8px;border-bottom:2px solid #1a365d;text-align:center}
+.ct-sig-tbl .ct-sig-tbl-names td{font-size:10.5px;color:#333;padding:4px 6px;text-align:center;border-bottom:1px dashed #ccc;font-family:'DinNextMedium',sans-serif}
+.ct-sig-tbl .ct-sig-tbl-signs td{height:50px;border-bottom:1.5px solid #999}
+.ct-sig-tbl .ct-sig-tbl-stamp{width:70px}
+.ct-sig-tbl .ct-sig-tbl-stamp-cell{vertical-align:middle;text-align:center;border-bottom:none}
+.ct-stamp{width:60px;height:60px;border:2px dashed #999;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9px;color:#999;text-align:center;font-family:'DinNextMedium',sans-serif;line-height:1.3}
 .ct-notes{font-size:11.5px;color:#555;border:1px solid #eee;border-radius:5px;padding:8px 12px;margin-top:10px}
 .ct-notes b{color:#333}
 
@@ -144,20 +143,24 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
     min-height:40px;width:100%;background:#fff;
 }
 
-/* جدول توقيع الاتفاقية — أسطر أفقية واضحة */
+/* جدول توقيع الاتفاقية — أفقي */
 .agr-stbl{width:100%;border-collapse:collapse;margin:10px 0}
 .agr-stbl th{
-    font-family:'DinNextBold',sans-serif;font-size:13px;color:#1a1a1a;
-    padding:7px 10px;border-bottom:2.5px solid #1a1a1a;text-align:center;
+    font-family:'DinNextBold',sans-serif;font-size:12px;color:#1a1a1a;
+    padding:5px 8px;border-bottom:2px solid #1a1a1a;text-align:center;
 }
-.agr-stbl td{
-    padding:6px 10px;border-bottom:1px solid #888;font-size:13px;
-    text-align:center;height:36px;font-family:'DinNextMedium',sans-serif;
+.agr-stbl .agr-stbl-name{
+    padding:5px 6px;font-size:11.5px;text-align:center;
+    font-family:'DinNextMedium',sans-serif;border-bottom:1px dashed #ccc;
 }
-.agr-stbl td.ovl-td{border-bottom:2px dashed #555}
+.agr-stbl .agr-stbl-id{font-size:10px;color:#555}
+.agr-stbl .agr-stbl-sig-row td{height:40px;border-bottom:1.5px solid #888}
+
+/* ─── فاصل اتفاقية/كمبيالة ─── */
+.agr-kmb-divider{border:none;border-top:2px solid #888;margin:10px 0}
 
 /* ─── الفاصل البصري ─── */
-.sep{display:flex;align-items:center;margin:14px 0}
+.sep{display:flex;align-items:center;margin:6px 0 8px}
 .sep::before,.sep::after{content:'';flex:1;height:3px;background:#1a1a1a}
 .sep-text{
     padding:2px 28px;font-family:'DinNextBold',sans-serif;
@@ -216,25 +219,98 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 /* نصوص */
 .kmb-p{font-size:13px;margin:5px 0;font-family:'DinNextMedium',sans-serif}
 
-/* جدول توقيع الكمبيالة */
+/* جدول توقيع الكمبيالة — أفقي */
 .kmb-stbl{width:100%;border-collapse:collapse;margin:8px 0}
 .kmb-stbl th{
-    font-family:'DinNextBold',sans-serif;font-size:13px;color:#1a1a1a;
-    padding:6px 10px;border-bottom:2.5px solid #1a1a1a;text-align:center;
+    font-family:'DinNextBold',sans-serif;font-size:12px;color:#1a1a1a;
+    padding:5px 8px;border-bottom:2px solid #1a1a1a;text-align:center;
 }
-.kmb-stbl td{
-    padding:5px 10px;border-bottom:1.5px solid #555;
-    text-align:center;font-size:13px;height:36px;font-family:'DinNextMedium',sans-serif;
+.kmb-stbl .kmb-stbl-name{
+    padding:4px 6px;font-size:11.5px;text-align:center;
+    font-family:'DinNextMedium',sans-serif;border-bottom:1px dashed #ccc;
 }
+.kmb-stbl .kmb-stbl-id{font-size:10px;color:#555}
+.kmb-stbl .kmb-stbl-sig-row td{height:36px;border-bottom:1.5px solid #555}
 
 .kmb-pnote{font-size:10px;color:#555;font-style:italic;text-align:center;margin-top:6px}
+
+/* ═══════════════════════════════════════════════════════
+   الطبقة 1: parties-N — حسب عدد الأطراف
+   ═══════════════════════════════════════════════════════ */
+.parties-1 .ct-sig-tbl .ct-sig-tbl-signs td{height:60px}
+.parties-1 .ct-photos img {width:75px;height:94px}
+.parties-1 .ct-section    {margin-bottom:14px}
+.parties-1 .ct-hdr        {padding:14px 0 12px}
+
+.parties-2 .ct-sig-tbl .ct-sig-tbl-signs td{height:55px}
+.parties-2 .ct-photos img {width:70px;height:88px}
+.parties-2 .ct-section    {margin-bottom:12px}
+
+.parties-3 .ct-sig-tbl .ct-sig-tbl-signs td{height:45px}
+.parties-3 .ct-photos img {width:60px;height:75px}
+.parties-3 .ct-section    {margin-bottom:10px}
+
+.parties-4 .ct-sig-tbl .ct-sig-tbl-signs td{height:40px}
+.parties-4 .ct-photos img {width:55px;height:68px}
+.parties-4 .ct-section    {margin-bottom:8px}
+.parties-4 .ct-hdr        {padding:10px 0 8px}
+
+.parties-5 .ct-sig-tbl .ct-sig-tbl-signs td{height:35px}
+.parties-5 .ct-photos img {width:50px;height:62px}
+.parties-5 .ct-section    {margin-bottom:6px}
+.parties-5 .ct-hdr        {padding:8px 0 6px}
+
+/* ═══════════════════════════════════════════════════════
+   الطبقة 2: density — كثافة المحتوى
+   ═══════════════════════════════════════════════════════ */
+.density-normal .ct-terms      {font-size:12.5px;line-height:1.75}
+.density-normal .ct-fin-tbl td {padding:6px 14px}
+.density-normal .agr-txt       {font-size:14px;line-height:1.75}
+.density-normal .agr-pty       {font-size:15px;margin-bottom:5px}
+.density-normal .ct-party      {margin-bottom:5px}
+
+.density-tight .ct-terms       {font-size:11.5px;line-height:1.55}
+.density-tight .ct-fin-tbl td  {padding:4px 10px}
+.density-tight .ct-fin-tbl th  {padding:5px 10px;font-size:11.5px}
+.density-tight .agr-txt        {font-size:12.5px;line-height:1.55}
+.density-tight .agr-pty        {font-size:13px;margin-bottom:3px}
+.density-tight .ct-party       {margin-bottom:2px;font-size:12px}
+.density-tight .ct-section-title{font-size:12.5px;margin-bottom:5px;padding-bottom:3px}
+.density-tight .ct-solidarity  {padding:5px 10px;margin:4px 0}
+.density-tight .ct-solidarity p{font-size:11.5px}
+.density-tight .ct-notes       {padding:5px 10px;font-size:10.5px}
+.density-tight .agr-ttl        {font-size:17px;margin:0 0 8px;padding-bottom:6px}
+.density-tight .agr-frame      {padding:12px 16px}
+.density-tight .sep            {margin:4px 0 6px}
+.density-tight .sep-text       {font-size:17px;letter-spacing:4px;padding:2px 20px}
+.density-tight .agr-kmb-divider{margin:6px 0}
+.density-tight .kmb-inner      {padding:8px 10px}
+.density-tight .kmb-ptbl td    {padding:3px 5px;font-size:12px}
+.density-tight .kmb-stbl .kmb-stbl-name{font-size:10.5px;padding:3px 5px}
+.density-tight .kmb-stbl .kmb-stbl-sig-row td{height:30px}
+.density-tight .kmb-stbl th   {font-size:11px;padding:4px 6px}
+.density-tight .ct-sig-tbl .ct-sig-tbl-signs td{height:35px}
+.density-tight .ct-sig-tbl th {font-size:10.5px;padding:4px 5px}
+.density-tight .agr-stbl .agr-stbl-sig-row td{height:32px}
+.density-tight .agr-stbl th   {font-size:11px;padding:4px 6px}
+.density-tight .kmb-words      {font-size:13px;padding:4px 0;margin:4px 0}
+.density-tight .kmb-p          {font-size:12px;margin:3px 0}
+.density-tight .ovl-wrap       {margin:5px 0}
 
 /* ═══ طباعة / شاشة ═══ */
 @media print{
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff!important}
     .toolbar,.page-sep{display:none!important}
-    .print-page{margin:0;padding:0;box-shadow:none;max-width:100%;page-break-inside:avoid}
+    .print-page{
+        margin:0;padding:0;box-shadow:none;max-width:100%;
+        page-break-after:always;page-break-inside:avoid;
+    }
+    .print-page:last-child{page-break-after:auto}
     .ct-solidarity{border-color:#333!important}
+
+    .ovl-box{min-height:34px!important}
+    .kmb-court-box{min-width:200px!important;min-height:30px!important}
+    .kmb-outer{page-break-inside:avoid}
 }
 @media screen{
     body{background:#cbd5e1;padding:0}
@@ -242,7 +318,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 }
 </style>
 </head>
-<body>
+<body class="parties-<?= $pCount ?> density-<?= $density ?>">
 
 <!-- ═══ شريط الأدوات ═══ -->
 <div class="toolbar">
@@ -303,13 +379,10 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
             <span class="ct-party-label">الطرف الأول (البائع):</span>
             <span><?= $companyName ?></span>
         </div>
-        <?php foreach ($allPeople as $i => $c): ?>
         <div class="ct-party">
-            <span class="ct-party-label"><?= $i === 0 ? 'الطرف الثاني (المشتري):' : 'الكفيل ' . ($gLabels[$i-1] ?? $i) . ':' ?></span>
-            <span><?= $c->name ?></span>
-            <span class="ct-party-sub">الرقم الوطني: <?= $c->id_number ?></span>
+            <span class="ct-party-label">الطرف الثاني:</span>
+            <span><?= $allNames ?></span>
         </div>
-        <?php endforeach; ?>
     </div>
 
     <div class="ct-section">
@@ -338,35 +411,39 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
                 <tr><td>تاريخ أول قسط</td><td><?= $model->first_installment_date ?></td></tr>
                 <tr><td>تاريخ الاستحقاق النهائي</td><td><b><?= $model->due_date ?></b></td></tr>
                 <tr><td>نوع العقد</td><td><?= $model->getTypeLabel() ?></td></tr>
-                <tr><td>البائع</td><td><?= $model->seller ? $model->seller->name : '—' ?></td></tr>
+                <tr><td>البائع</td><td><?= $sellerName ?: '—' ?></td></tr>
             </tbody>
         </table>
     </div>
 
     <div class="ct-section">
         <div class="ct-section-title">التوقيعات والإقرار</div>
-        <div class="ct-sig-row">
-            <div class="ct-sigs">
-                <div class="ct-sig">
-                    <div class="ct-sig-hd">المدين (المشتري)</div>
-                    <div class="ct-sig-name"><?= $allPeople[0]->name ?? '' ?></div>
-                    <div class="ct-sig-body"></div>
-                </div>
-                <?php for ($i = 0; $i < $gCount && $i < 5; $i++): ?>
-                <div class="ct-sig">
-                    <div class="ct-sig-hd">الكفيل <?= $gLabels[$i] ?></div>
-                    <div class="ct-sig-name"><?= $guarantors[$i]->name ?? '' ?></div>
-                    <div class="ct-sig-body"></div>
-                </div>
-                <?php endfor; ?>
-                <div class="ct-sig">
-                    <div class="ct-sig-hd">البائع</div>
-                    <div class="ct-sig-name"><?= $model->seller ? $model->seller->name : '' ?></div>
-                    <div class="ct-sig-body"></div>
-                </div>
-            </div>
-            <div class="ct-stamp">ختم<br>الشركة</div>
-        </div>
+        <table class="ct-sig-tbl">
+            <thead>
+                <tr>
+                    <?php foreach ($allPeople as $c): ?>
+                    <th>مدين</th>
+                    <?php endforeach; ?>
+                    <th>البائع</th>
+                    <th class="ct-sig-tbl-stamp">ختم</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="ct-sig-tbl-names">
+                    <?php foreach ($allPeople as $c): ?>
+                    <td><?= $c->name ?></td>
+                    <?php endforeach; ?>
+                    <td><?= $sellerName ?></td>
+                    <td rowspan="2" class="ct-sig-tbl-stamp-cell"><div class="ct-stamp">ختم<br>الشركة</div></td>
+                </tr>
+                <tr class="ct-sig-tbl-signs">
+                    <?php foreach ($allPeople as $c): ?>
+                    <td></td>
+                    <?php endforeach; ?>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <div class="ct-notes">
@@ -427,43 +504,38 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
             بعد طباعة الكمبيالة رقم <b><?= $note->getDisplayNumber() ?></b> والاطلاع والموافقة على جميع بياناتها. تم التوقيع بتاريخ <b><?= $today ?></b>.
         </p>
 
-        <!-- جدول توقيع الاتفاقية — أسطر أفقية واضحة -->
         <table class="agr-stbl">
             <thead>
                 <tr>
-                    <th style="width:28%">الصفة / الاسم</th>
-                    <th style="width:18%">الرقم الوطني</th>
-                    <th style="width:30%">العنوان</th>
-                    <th style="width:24%">التوقيع</th>
+                    <?php foreach ($allPeople as $c): ?>
+                    <th>مدين</th>
+                    <?php endforeach; ?>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($allPeople as $pi => $c): ?>
                 <tr>
-                    <td><?= $pi === 0 ? 'المدين' : 'كفيل' ?> — <?= $c->name ?></td>
-                    <td><?= $c->id_number ?></td>
-                    <td class="ovl-td"></td>
-                    <td></td>
+                    <?php foreach ($allPeople as $c): ?>
+                    <td class="agr-stbl-name"><?= $c->name ?><br><span class="agr-stbl-id"><?= $c->id_number ?></span></td>
+                    <?php endforeach; ?>
                 </tr>
-                <?php endforeach; ?>
+                <tr class="agr-stbl-sig-row">
+                    <?php foreach ($allPeople as $c): ?>
+                    <td></td>
+                    <?php endforeach; ?>
+                </tr>
             </tbody>
         </table>
 
     </div><!-- .agr-frame -->
 
-    <!-- ════════════════════════════════════════════════════
-         الفاصل البصري — شريط أفقي بسمك متوسط
-         ════════════════════════════════════════════════════ -->
-    <div class="sep">
-        <span class="sep-text">كمبيالة</span>
-    </div>
+    <hr class="agr-kmb-divider">
 
-    <!-- ════════════════════════════════════════════════════
-         الجزء السفلي — كمبيالة تنفيذية رسمية
-         إطار مزدوج (خارجي سميك + داخلي رفيع)
-         ════════════════════════════════════════════════════ -->
     <div class="kmb-outer">
         <div class="kmb-inner">
+
+            <div class="sep">
+                <span class="sep-text">كمبيالة</span>
+            </div>
 
             <!-- رأس الكمبيالة — رقم الكمبيالة فقط -->
             <div class="kmb-hdr">
@@ -477,7 +549,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
             <table class="kmb-ptbl">
                 <?php foreach ($allPeople as $pi => $c): ?>
                 <tr>
-                    <td class="pr-role"><?= $pi === 0 ? 'المدين' : 'كفيل' ?></td>
+                    <td class="pr-role">مدين</td>
                     <td class="pr-name"><?= $c->name ?></td>
                     <td class="pr-id-lbl">الرقم الوطني</td>
                     <td class="pr-id"><?= $c->id_number ?></td>
@@ -510,23 +582,25 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
             <p class="kmb-p"><b>أدفع لأمر:</b> <?= $companyName ?></p>
             <p class="kmb-p">القيمة وصلتنا <b>بضاعة</b> بعد المعاينة والاختبار والقبول، تحريراً في <b><?= $today ?></b></p>
 
-            <!-- جدول التوقيع — أسطر أفقية واضحة -->
             <table class="kmb-stbl">
                 <thead>
                     <tr>
-                        <th style="width:30%">الصفة / الاسم</th>
-                        <th style="width:22%">الرقم الوطني</th>
-                        <th style="width:48%">التوقيع</th>
+                        <?php foreach ($allPeople as $c): ?>
+                        <th>مدين</th>
+                        <?php endforeach; ?>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($allPeople as $pi => $c): ?>
                     <tr>
-                        <td><?= $pi === 0 ? 'المدين' : 'كفيل' ?> — <?= $c->name ?></td>
-                        <td><?= $c->id_number ?></td>
-                        <td></td>
+                        <?php foreach ($allPeople as $c): ?>
+                        <td class="kmb-stbl-name"><?= $c->name ?><br><span class="kmb-stbl-id"><?= $c->id_number ?></span></td>
+                        <?php endforeach; ?>
                     </tr>
-                    <?php endforeach; ?>
+                    <tr class="kmb-stbl-sig-row">
+                        <?php foreach ($allPeople as $c): ?>
+                        <td></td>
+                        <?php endforeach; ?>
+                    </tr>
                 </tbody>
             </table>
 
@@ -548,24 +622,33 @@ $(function(){
     $('.kmb-words-text').text(words);
 });
 
-window.addEventListener('load', function(){
-    var ruler = document.createElement('div');
-    ruler.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:281mm;visibility:hidden;pointer-events:none';
-    document.body.appendChild(ruler);
-    var PAGE_H = ruler.offsetHeight;
-    document.body.removeChild(ruler);
+(function(){
+    function fitPages(){
+        var ruler = document.createElement('div');
+        ruler.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:281mm;visibility:hidden;pointer-events:none';
+        document.body.appendChild(ruler);
+        var pageH = ruler.offsetHeight;
+        document.body.removeChild(ruler);
 
-    document.querySelectorAll('.print-page').forEach(function(page){
-        page.style.zoom = '';
-        var cs = getComputedStyle(page);
-        var padV = (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0);
-        var contentH = page.scrollHeight - padV;
+        document.querySelectorAll('.print-page').forEach(function(page){
+            page.style.zoom = '';
+            var h = page.scrollHeight;
+            if(h > pageH){
+                var scale = Math.max(0.88, pageH / h);
+                page.style.zoom = scale.toFixed(4);
+            }
+        });
+    }
 
-        if(contentH > PAGE_H){
-            page.style.zoom = String((PAGE_H / contentH).toFixed(4));
-        }
+    window.addEventListener('load', fitPages);
+    window.addEventListener('beforeprint', fitPages);
+    window.addEventListener('afterprint', function(){
+        document.querySelectorAll('.print-page').forEach(function(page){
+            page.style.zoom = '';
+        });
+        setTimeout(function(){ fitPages(); }, 50);
     });
-});
+})();
 </script>
 </body>
 </html>

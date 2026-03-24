@@ -934,13 +934,35 @@ class ContractsController extends Controller
         $this->layout = false;
         $model = $this->findModel($id);
 
-        /* إنشاء 3 كمبيالات للعقد تلقائياً إذا لم تكن موجودة */
         $kambAmount = ($model->total_value ?: 0) * 1.15;
         $notes = PromissoryNote::ensureNotesExist($model->id, $kambAmount, $model->due_date);
 
+        $buyers     = $model->customers;
+        $guarantors = $model->guarantor;
+        $allPeople  = array_merge($buyers, $guarantors);
+        $pCount     = count($allPeople);
+
+        $maxNameLen = 0;
+        foreach ($allPeople as $p) {
+            $len = mb_strlen($p->name, 'UTF-8');
+            if ($len > $maxNameLen) $maxNameLen = $len;
+        }
+        $density = ($pCount >= 4 || $maxNameLen > 30) ? 'tight' : 'normal';
+
+        $sellerName = '';
+        if ($model->seller_id) {
+            $profile = \dektrium\user\models\Profile::findOne(['user_id' => $model->seller_id]);
+            $sellerName = $profile ? $profile->name : ($model->seller->username ?? '');
+        }
+
         return $this->renderPartial('_print_preview', [
-            'model' => $model,
-            'notes' => $notes,
+            'model'      => $model,
+            'notes'      => $notes,
+            'allPeople'  => $allPeople,
+            'guarantors' => $guarantors,
+            'pCount'     => $pCount,
+            'density'    => $density,
+            'sellerName' => $sellerName,
         ]);
     }
 
