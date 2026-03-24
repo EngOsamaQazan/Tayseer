@@ -29,8 +29,6 @@ $guarantors = $model->guarantor;
 $gCount     = count($guarantors);
 $gLabels    = ['الأول','الثاني','الثالث','الرابع','الخامس'];
 
-$isNewFormat = (!empty($notes) && $notes[0]->created_at >= strtotime('2026-03-18'));
-
 $phones = [];
 $emails = [];
 foreach ($allPeople as $p) {
@@ -78,45 +76,45 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 /* ══════════════════════════════════════════════════════════
    صفحة العقد (1)
    ══════════════════════════════════════════════════════════ */
-.ct-bar{height:4px;background:#1a365d;border-radius:2px}
-.ct-hdr{display:flex;align-items:flex-start;padding:10px 0 8px;gap:12px}
-.ct-hdr-logo{width:90px;flex-shrink:0}
-.ct-hdr-logo img{width:90px;height:auto}
+.ct-bar{height:5px;background:#1a365d;border-radius:2px}
+.ct-hdr{display:flex;align-items:flex-start;padding:14px 0 12px;gap:14px}
+.ct-hdr-logo{width:100px;flex-shrink:0}
+.ct-hdr-logo img{width:100px;height:auto}
 .ct-hdr-center{flex:1;text-align:center}
-.ct-hdr-center h2{font-family:'DinNextBold',sans-serif;font-size:18px;color:#1a365d;margin:0 0 2px}
-.ct-hdr-center .ct-date{font-size:11px;color:#555;margin-top:2px}
-.ct-hdr-info{text-align:left;min-width:120px}
-.ct-no{border:2.5px solid #c62828;border-radius:6px;padding:4px 14px;text-align:center;display:inline-block}
-.ct-no small{display:block;font-size:8px;color:#888;font-family:'DinNextRegular',sans-serif}
-.ct-no strong{display:block;font-size:22px;color:#c62828;font-family:'DinNextBold',sans-serif;letter-spacing:1px;line-height:1.2}
-.ct-photos{display:flex;gap:5px;justify-content:center;margin:6px 0;flex-wrap:wrap}
-.ct-photos img{width:60px;height:75px;object-fit:cover;border:1.5px solid #ccc;border-radius:4px}
-.ct-section{margin-bottom:8px}
-.ct-section-title{font-family:'DinNextBold',sans-serif;font-size:12px;color:#1a365d;border-bottom:2px solid #1a365d;padding-bottom:3px;margin-bottom:6px}
-.ct-party{display:flex;gap:4px;margin-bottom:3px;font-size:12px}
-.ct-party-label{font-family:'DinNextBold',sans-serif;color:#1a365d;min-width:120px}
-.ct-party-sub{font-size:10.5px;color:#555;margin-right:8px}
-.ct-terms{font-size:11px;line-height:1.6}
-.ct-terms p{margin-bottom:4px;text-align:justify}
+.ct-hdr-center h2{font-family:'DinNextBold',sans-serif;font-size:21px;color:#1a365d;margin:0 0 3px}
+.ct-hdr-center .ct-date{font-size:12px;color:#555;margin-top:3px}
+.ct-hdr-info{text-align:left;min-width:130px}
+.ct-no{border:2.5px solid #c62828;border-radius:6px;padding:5px 16px;text-align:center;display:inline-block}
+.ct-no small{display:block;font-size:9px;color:#888;font-family:'DinNextRegular',sans-serif}
+.ct-no strong{display:block;font-size:24px;color:#c62828;font-family:'DinNextBold',sans-serif;letter-spacing:1px;line-height:1.2}
+.ct-photos{display:flex;gap:6px;justify-content:center;margin:8px 0;flex-wrap:wrap}
+.ct-photos img{width:68px;height:85px;object-fit:cover;border:1.5px solid #ccc;border-radius:5px}
+.ct-section{margin-bottom:12px}
+.ct-section-title{font-family:'DinNextBold',sans-serif;font-size:13.5px;color:#1a365d;border-bottom:2.5px solid #1a365d;padding-bottom:4px;margin-bottom:8px}
+.ct-party{display:flex;gap:5px;margin-bottom:5px;font-size:13px}
+.ct-party-label{font-family:'DinNextBold',sans-serif;color:#1a365d;min-width:130px}
+.ct-party-sub{font-size:11.5px;color:#555;margin-right:8px}
+.ct-terms{font-size:12.5px;line-height:1.75}
+.ct-terms p{margin-bottom:6px;text-align:justify}
 .ct-terms .ct-num{font-family:'DinNextBold',sans-serif;color:#1a365d}
-.ct-solidarity{border:1.5px solid #1a365d;border-radius:4px;padding:5px 8px;margin:4px 0;background:#f0f4f8}
-.ct-solidarity p{margin:0;font-size:11px}
-.ct-fin-tbl{width:100%;border-collapse:collapse;margin:6px 0;font-size:11.5px}
-.ct-fin-tbl th{background:#1a365d;color:#fff;font-family:'DinNextBold',sans-serif;padding:5px 10px;text-align:center;font-size:11px;border:1px solid #1a365d}
-.ct-fin-tbl td{border:1px solid #ccc;padding:4px 10px}
+.ct-solidarity{border:1.5px solid #1a365d;border-radius:5px;padding:7px 12px;margin:6px 0;background:#f0f4f8}
+.ct-solidarity p{margin:0;font-size:12.5px}
+.ct-fin-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+.ct-fin-tbl th{background:#1a365d;color:#fff;font-family:'DinNextBold',sans-serif;padding:7px 14px;text-align:center;font-size:12.5px;border:1px solid #1a365d}
+.ct-fin-tbl td{border:1px solid #ccc;padding:6px 14px}
 .ct-fin-tbl td:first-child{font-family:'DinNextMedium',sans-serif;color:#333;width:45%}
 .ct-fin-tbl td:last-child{font-family:'DinNextBold',sans-serif;text-align:center;color:#1a365d}
 .ct-fin-tbl tr:nth-child(even){background:#f8f9fa}
-.ct-fin-tbl .ct-money{color:#c62828;font-size:12.5px}
-.ct-sigs{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-.ct-sig{flex:1;min-width:100px;border:1px solid #999;border-radius:4px;text-align:center;overflow:hidden}
-.ct-sig-hd{background:#f0f4f8;font-family:'DinNextBold',sans-serif;font-size:10px;padding:4px;border-bottom:1px solid #999;color:#1a365d}
-.ct-sig-name{font-size:9px;color:#555;padding:2px 4px;border-bottom:1px dashed #ddd}
-.ct-sig-body{height:50px}
-.ct-stamp{width:75px;height:75px;border:2px dashed #999;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:8px;color:#999;text-align:center;font-family:'DinNextMedium',sans-serif;line-height:1.3}
-.ct-sig-row{display:flex;gap:10px;align-items:flex-end}
+.ct-fin-tbl .ct-money{color:#c62828;font-size:14px}
+.ct-sigs{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.ct-sig{flex:1;min-width:110px;border:1px solid #999;border-radius:5px;text-align:center;overflow:hidden}
+.ct-sig-hd{background:#f0f4f8;font-family:'DinNextBold',sans-serif;font-size:11px;padding:5px;border-bottom:1px solid #999;color:#1a365d}
+.ct-sig-name{font-size:10px;color:#555;padding:3px 5px;border-bottom:1px dashed #ddd}
+.ct-sig-body{height:70px}
+.ct-stamp{width:90px;height:90px;border:2px dashed #999;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:9px;color:#999;text-align:center;font-family:'DinNextMedium',sans-serif;line-height:1.3}
+.ct-sig-row{display:flex;gap:12px;align-items:flex-end}
 .ct-sig-row .ct-sigs{flex:1}
-.ct-notes{font-size:10px;color:#555;border:1px solid #eee;border-radius:4px;padding:5px 8px;margin-top:6px}
+.ct-notes{font-size:11.5px;color:#555;border:1px solid #eee;border-radius:5px;padding:8px 12px;margin-top:10px}
 .ct-notes b{color:#333}
 
 /* ══════════════════════════════════════════════════════════
@@ -126,175 +124,117 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 
 /* ─── إطار الاتفاقية ─── */
 .agr-frame{
-    border:1px solid #888;padding:12px 16px;border-radius:2px;
+    border:1px solid #888;padding:16px 20px;border-radius:2px;
 }
 .agr-ttl{
     text-align:center;font-family:'DinNextBold',sans-serif;
-    font-size:18px;color:#1a1a1a;margin:0 0 8px;
-    letter-spacing:.5px;padding-bottom:6px;
-    border-bottom:2px solid #333;
+    font-size:20px;color:#1a1a1a;margin:0 0 12px;
+    letter-spacing:.5px;padding-bottom:8px;
+    border-bottom:2.5px solid #333;
 }
-.agr-pty{font-size:14px;margin-bottom:4px;font-family:'DinNextBold',sans-serif}
+.agr-pty{font-size:15px;margin-bottom:5px;font-family:'DinNextBold',sans-serif}
 .agr-pty b{color:#1a1a1a}
-.agr-txt{font-size:13px;line-height:1.65;text-align:justify;margin:5px 0;font-family:'DinNextMedium',sans-serif}
+.agr-txt{font-size:14px;line-height:1.75;text-align:justify;margin:7px 0;font-family:'DinNextMedium',sans-serif}
 
 /* صناديق Overlay — منقطة، مهيأة لطباعة لاحقة بخط 16px Bold */
-.ovl-wrap{margin:6px 0}
-.ovl-lbl{font-size:13px;font-family:'DinNextBold',sans-serif;color:#1a1a1a;margin-bottom:3px}
+.ovl-wrap{margin:8px 0}
+.ovl-lbl{font-size:14px;font-family:'DinNextBold',sans-serif;color:#1a1a1a;margin-bottom:3px}
 .ovl-box{
     border:2px dashed #555;border-radius:3px;
-    min-height:34px;width:100%;background:#fff;
-    /* الارتفاع يتسع لخط 16px Bold عند الطباعة اللاحقة */
+    min-height:40px;width:100%;background:#fff;
 }
 
 /* جدول توقيع الاتفاقية — أسطر أفقية واضحة */
-.agr-stbl{width:100%;border-collapse:collapse;margin:8px 0}
+.agr-stbl{width:100%;border-collapse:collapse;margin:10px 0}
 .agr-stbl th{
-    font-family:'DinNextBold',sans-serif;font-size:12px;color:#1a1a1a;
-    padding:6px 8px;border-bottom:2.5px solid #1a1a1a;text-align:center;
+    font-family:'DinNextBold',sans-serif;font-size:13px;color:#1a1a1a;
+    padding:7px 10px;border-bottom:2.5px solid #1a1a1a;text-align:center;
 }
 .agr-stbl td{
-    padding:5px 8px;border-bottom:1px solid #888;font-size:12px;
-    text-align:center;height:30px;font-family:'DinNextMedium',sans-serif;
+    padding:6px 10px;border-bottom:1px solid #888;font-size:13px;
+    text-align:center;height:36px;font-family:'DinNextMedium',sans-serif;
 }
 .agr-stbl td.ovl-td{border-bottom:2px dashed #555}
 
 /* ─── الفاصل البصري ─── */
-.sep{display:flex;align-items:center;margin:10px 0}
+.sep{display:flex;align-items:center;margin:14px 0}
 .sep::before,.sep::after{content:'';flex:1;height:3px;background:#1a1a1a}
 .sep-text{
-    padding:2px 24px;font-family:'DinNextBold',sans-serif;
-    font-size:18px;letter-spacing:5px;color:#1a1a1a;white-space:nowrap;
+    padding:2px 28px;font-family:'DinNextBold',sans-serif;
+    font-size:20px;letter-spacing:6px;color:#1a1a1a;white-space:nowrap;
 }
 
 /* ─── الكمبيالة — إطار مزدوج رسمي ─── */
 .kmb-outer{border:2.5px solid #1a1a1a;padding:3px}
-.kmb-inner{border:1px solid #1a1a1a;padding:10px 12px}
+.kmb-inner{border:1px solid #1a1a1a;padding:12px 14px}
 
 /* رأس الكمبيالة */
 .kmb-hdr{
     display:flex;justify-content:space-between;align-items:center;
-    margin-bottom:8px;padding-bottom:6px;border-bottom:1.5px solid #ccc;
+    margin-bottom:10px;padding-bottom:7px;border-bottom:1.5px solid #ccc;
 }
 .kmb-no-box{
-    border:2px solid #1a1a1a;border-radius:3px;padding:3px 16px;text-align:center;
+    border:2px solid #1a1a1a;border-radius:3px;padding:4px 18px;text-align:center;
 }
-.kmb-no-lbl{display:block;font-size:8px;color:#555;font-family:'DinNextMedium',sans-serif}
-.kmb-no-val{font-family:'DinNextBold',sans-serif;font-size:16px;color:#1a1a1a}
+.kmb-no-lbl{display:block;font-size:9px;color:#555;font-family:'DinNextMedium',sans-serif}
+.kmb-no-val{font-family:'DinNextBold',sans-serif;font-size:18px;color:#1a1a1a}
 /* تاريخ الاستحقاق — محاذى يسار، بجانب المبلغ، إطار أحمر */
 .kmb-due-box{
     margin-right:auto;text-align:center;
-    border:2.5px solid #c62828;border-radius:4px;padding:3px 14px;
+    border:2.5px solid #c62828;border-radius:4px;padding:4px 16px;
 }
-.kmb-due-box small{display:block;font-size:8px;color:#555;font-family:'DinNextMedium',sans-serif}
-.kmb-due-box strong{font-family:'DinNextBold',sans-serif;font-size:14px;color:#c62828;display:block;line-height:1.2}
+.kmb-due-box small{display:block;font-size:9px;color:#555;font-family:'DinNextMedium',sans-serif}
+.kmb-due-box strong{font-family:'DinNextBold',sans-serif;font-size:15px;color:#c62828;display:block;line-height:1.2}
 
 /* جدول بيانات الأطراف — اسم | رقم وطني | موطن مختار (overlay) */
-.kmb-ptbl{width:100%;border-collapse:collapse;margin:6px 0;font-size:12px}
-.kmb-ptbl td{padding:4px 6px;border-bottom:1px solid #ccc;vertical-align:middle}
-.kmb-ptbl .pr-role{font-family:'DinNextBold',sans-serif;color:#1a1a1a;width:8%;white-space:nowrap;font-size:12px}
-.kmb-ptbl .pr-name{width:22%;font-family:'DinNextBold',sans-serif;font-size:12px}
-.kmb-ptbl .pr-id-lbl{font-family:'DinNextBold',sans-serif;color:#333;width:10%;font-size:10px;white-space:nowrap}
-.kmb-ptbl .pr-id{width:16%;text-align:center;font-family:'DinNextBold',sans-serif;font-size:12px}
-.kmb-ptbl .pr-addr-lbl{font-family:'DinNextBold',sans-serif;color:#333;width:10%;font-size:10px;white-space:nowrap}
+.kmb-ptbl{width:100%;border-collapse:collapse;margin:8px 0;font-size:13px}
+.kmb-ptbl td{padding:5px 7px;border-bottom:1px solid #ccc;vertical-align:middle}
+.kmb-ptbl .pr-role{font-family:'DinNextBold',sans-serif;color:#1a1a1a;width:8%;white-space:nowrap;font-size:13px}
+.kmb-ptbl .pr-name{width:22%;font-family:'DinNextBold',sans-serif;font-size:13px}
+.kmb-ptbl .pr-id-lbl{font-family:'DinNextBold',sans-serif;color:#333;width:10%;font-size:11px;white-space:nowrap}
+.kmb-ptbl .pr-id{width:16%;text-align:center;font-family:'DinNextBold',sans-serif;font-size:13px}
+.kmb-ptbl .pr-addr-lbl{font-family:'DinNextBold',sans-serif;color:#333;width:10%;font-size:11px;white-space:nowrap}
 .kmb-ptbl .pr-addr{border-bottom:2px dashed #555!important}
 
 /* الصف الرئيسي — Court(overlay) | والدفع بها | المبلغ | الاستحقاق */
-.kmb-main{display:flex;align-items:center;gap:10px;margin:10px 0}
-/* صندوق المحكمة — بحجم يتسع لـ"قصر العدل عمان" بخط 16px Bold فقط */
-.kmb-court-box{width:200px;flex-shrink:0;border:2px dashed #555;min-height:30px;border-radius:2px}
-.kmb-pay{font-family:'DinNextBold',sans-serif;font-size:14px;white-space:nowrap}
+.kmb-main{display:flex;align-items:center;gap:12px;margin:12px 0}
+.kmb-court-box{width:210px;flex-shrink:0;border:2px dashed #555;min-height:34px;border-radius:2px}
+.kmb-pay{font-family:'DinNextBold',sans-serif;font-size:15px;white-space:nowrap}
 .kmb-amt{
-    border:2.5px solid #c62828;border-radius:4px;padding:4px 16px;
-    text-align:center;min-width:120px;
+    border:2.5px solid #c62828;border-radius:4px;padding:5px 18px;
+    text-align:center;min-width:130px;
 }
 .kmb-amt small{display:block;font-size:8px;color:#555}
-.kmb-amt strong{font-family:'DinNextBold',sans-serif;font-size:20px;color:#c62828;display:block;line-height:1.2}
+.kmb-amt strong{font-family:'DinNextBold',sans-serif;font-size:22px;color:#c62828;display:block;line-height:1.2}
 /* المبلغ كتابة */
 .kmb-words{
-    font-size:13px;margin:5px 0;padding:5px 0;
+    font-size:14px;margin:6px 0;padding:6px 0;
     border-bottom:1px solid #ddd;font-family:'DinNextBold',sans-serif;
 }
 .kmb-words b{color:#c62828;font-family:'DinNextBold',sans-serif}
 
 /* نصوص */
-.kmb-p{font-size:12px;margin:4px 0;font-family:'DinNextMedium',sans-serif}
+.kmb-p{font-size:13px;margin:5px 0;font-family:'DinNextMedium',sans-serif}
 
 /* جدول توقيع الكمبيالة */
-.kmb-stbl{width:100%;border-collapse:collapse;margin:6px 0}
+.kmb-stbl{width:100%;border-collapse:collapse;margin:8px 0}
 .kmb-stbl th{
-    font-family:'DinNextBold',sans-serif;font-size:12px;color:#1a1a1a;
-    padding:5px 8px;border-bottom:2.5px solid #1a1a1a;text-align:center;
+    font-family:'DinNextBold',sans-serif;font-size:13px;color:#1a1a1a;
+    padding:6px 10px;border-bottom:2.5px solid #1a1a1a;text-align:center;
 }
 .kmb-stbl td{
-    padding:4px 8px;border-bottom:1.5px solid #555;
-    text-align:center;font-size:12px;height:30px;font-family:'DinNextMedium',sans-serif;
+    padding:5px 10px;border-bottom:1.5px solid #555;
+    text-align:center;font-size:13px;height:36px;font-family:'DinNextMedium',sans-serif;
 }
 
-.kmb-pnote{font-size:9px;color:#555;font-style:italic;text-align:center;margin-top:5px}
-
-/* ══════════════════════════════════════════════════════════
-   التنسيق الجديد (v2) — تصميم محسّن يستغل مساحة A4 بالكامل
-   ══════════════════════════════════════════════════════════ */
-
-/* --- صفحة العقد (1) --- */
-.format-v2 .ct-hdr{padding:14px 0 10px}
-.format-v2 .ct-hdr-logo img{width:100px}
-.format-v2 .ct-hdr-center h2{font-size:20px}
-.format-v2 .ct-photos img{width:68px;height:85px;border-radius:5px}
-.format-v2 .ct-no strong{font-size:24px}
-.format-v2 .ct-section{margin-bottom:11px}
-.format-v2 .ct-section-title{font-size:13px;padding-bottom:4px;margin-bottom:8px}
-.format-v2 .ct-party{font-size:12.5px;margin-bottom:4px}
-.format-v2 .ct-terms{font-size:11.5px;line-height:1.7}
-.format-v2 .ct-terms p{margin-bottom:5px}
-.format-v2 .ct-solidarity{padding:6px 10px;margin:6px 0}
-.format-v2 .ct-solidarity p{font-size:11.5px}
-.format-v2 .ct-fin-tbl{font-size:12px;margin:8px 0}
-.format-v2 .ct-fin-tbl th{padding:6px 12px;font-size:11.5px}
-.format-v2 .ct-fin-tbl td{padding:5px 12px}
-.format-v2 .ct-fin-tbl .ct-money{font-size:13px}
-.format-v2 .ct-sig-body{height:62px}
-.format-v2 .ct-stamp{width:82px;height:82px}
-.format-v2 .ct-notes{padding:6px 10px;margin-top:8px}
-
-/* --- صفحات الاتفاقية + الكمبيالة (2-4) --- */
-.format-v2 .agr-frame{padding:14px 18px}
-.format-v2 .agr-ttl{font-size:19px;margin-bottom:10px;padding-bottom:7px}
-.format-v2 .agr-pty{font-size:15px;margin-bottom:5px}
-.format-v2 .agr-txt{font-size:13.5px;line-height:1.75;margin:7px 0}
-.format-v2 .ovl-lbl{font-size:13.5px}
-.format-v2 .ovl-box{min-height:42px}
-.format-v2 .ovl-wrap{margin:8px 0}
-.format-v2 .agr-stbl th{font-size:12.5px;padding:7px 9px}
-.format-v2 .agr-stbl td{padding:6px 9px;height:36px;font-size:12.5px}
-.format-v2 .sep{margin:12px 0}
-.format-v2 .sep-text{font-size:20px;letter-spacing:6px}
-.format-v2 .kmb-inner{padding:12px 14px}
-.format-v2 .kmb-no-val{font-size:18px}
-.format-v2 .kmb-hdr{margin-bottom:9px;padding-bottom:7px}
-.format-v2 .kmb-ptbl td{padding:5px 7px}
-.format-v2 .kmb-ptbl .pr-name{font-size:12.5px}
-.format-v2 .kmb-ptbl .pr-id{font-size:12.5px}
-.format-v2 .kmb-court-box{min-height:36px;width:210px}
-.format-v2 .kmb-pay{font-size:15px}
-.format-v2 .kmb-amt strong{font-size:22px}
-.format-v2 .kmb-amt{padding:5px 18px}
-.format-v2 .kmb-due-box strong{font-size:15px}
-.format-v2 .kmb-main{margin:12px 0}
-.format-v2 .kmb-words{font-size:13.5px;padding:6px 0;margin:6px 0}
-.format-v2 .kmb-p{font-size:12.5px;margin:5px 0}
-.format-v2 .kmb-stbl th{font-size:12.5px;padding:6px 9px}
-.format-v2 .kmb-stbl td{height:36px;font-size:12.5px;padding:5px 9px}
-.format-v2 .kmb-pnote{font-size:9.5px;margin-top:8px}
+.kmb-pnote{font-size:10px;color:#555;font-style:italic;text-align:center;margin-top:6px}
 
 /* ═══ طباعة / شاشة ═══ */
 @media print{
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff!important}
     .toolbar,.page-sep{display:none!important}
-    .print-page{margin:0;padding:0;box-shadow:none;max-width:100%}
+    .print-page{margin:0;padding:0;box-shadow:none;max-width:100%;page-break-inside:avoid}
     .ct-solidarity{border-color:#333!important}
-    .format-v2 .print-page{min-height:281mm}
 }
 @media screen{
     body{background:#cbd5e1;padding:0}
@@ -302,7 +242,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 }
 </style>
 </head>
-<body class="<?= $isNewFormat ? 'format-v2' : '' ?>">
+<body>
 
 <!-- ═══ شريط الأدوات ═══ -->
 <div class="toolbar">
@@ -606,6 +546,25 @@ $(function(){
     var amt = <?= (int)round(($notes[0]->amount ?? 0)) ?>;
     var words = tafqeet(amt) + ' دينار أردني فقط لا غير';
     $('.kmb-words-text').text(words);
+});
+
+window.addEventListener('load', function(){
+    var ruler = document.createElement('div');
+    ruler.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:281mm;visibility:hidden;pointer-events:none';
+    document.body.appendChild(ruler);
+    var PAGE_H = ruler.offsetHeight;
+    document.body.removeChild(ruler);
+
+    document.querySelectorAll('.print-page').forEach(function(page){
+        page.style.zoom = '';
+        var cs = getComputedStyle(page);
+        var padV = (parseFloat(cs.paddingTop)||0) + (parseFloat(cs.paddingBottom)||0);
+        var contentH = page.scrollHeight - padV;
+
+        if(contentH > PAGE_H){
+            page.style.zoom = String((PAGE_H / contentH).toFixed(4));
+        }
+    });
 });
 </script>
 </body>
