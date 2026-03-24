@@ -488,15 +488,25 @@ class FollowUpController extends Controller
      */
     public function actionVerifyStatement($c, $d, $t, $s)
     {
-        $secret = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
+        $configSecret = Yii::$app->params['statementVerifySecret'] ?? null;
+        $secrets = $configSecret
+            ? [$configSecret]
+            : ['tayseer-statement-verify-default', 'jadal-statement-verify-default'];
+
         $payload = $c . '|' . $d . '|' . $t;
-        $expectedSig = hash_hmac('sha256', $payload, $secret);
+        $matched = false;
+        foreach ($secrets as $secret) {
+            if (hash_equals(hash_hmac('sha256', $payload, $secret), $s)) {
+                $matched = true;
+                break;
+            }
+        }
 
         $status = 'invalid';
         $label = 'غير صحيح';
         $message = 'الباركود غير صالح أو تم التلاعب به.';
 
-        if (!hash_equals($expectedSig, $s)) {
+        if (!$matched) {
             return $this->render('verify-statement', [
                 'status'  => $status,
                 'label'   => $label,

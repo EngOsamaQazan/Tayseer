@@ -167,11 +167,21 @@ class  ContractInstallmentController extends Controller
     {
         $this->layout = '/print-template-1';
 
-        $secret = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
-        $payload = $rid . '|' . $d;
-        $expectedSig = hash_hmac('sha256', $payload, $secret);
+        $configSecret = Yii::$app->params['statementVerifySecret'] ?? null;
+        $secrets = $configSecret
+            ? [$configSecret]
+            : ['tayseer-statement-verify-default', 'jadal-statement-verify-default'];
 
-        if (!hash_equals($expectedSig, $s)) {
+        $payload = $rid . '|' . $d;
+        $matched = false;
+        foreach ($secrets as $secret) {
+            if (hash_equals(hash_hmac('sha256', $payload, $secret), $s)) {
+                $matched = true;
+                break;
+            }
+        }
+
+        if (!$matched) {
             return $this->render('verify-receipt', [
                 'status'  => 'invalid',
                 'label'   => 'غير صحيح',
