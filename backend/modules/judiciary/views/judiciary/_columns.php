@@ -56,6 +56,9 @@ $columns = [
                     $jobName = $jobCache[$jid];
                 }
                 $nameHtml = '<span style="font-weight:600;color:#1E293B;font-size:11px" title="' . Html::encode($full) . '">' . Html::encode($short) . '</span>';
+                if (!empty($c->id_number)) {
+                    $nameHtml .= ' <span style="font-size:10px;color:#6B7280;direction:ltr;unicode-bidi:embed;letter-spacing:.3px">(' . Html::encode($c->id_number) . ')</span>';
+                }
                 if ($jobName) {
                     $nameHtml .= ' <span style="display:inline-block;padding:0 5px;border-radius:4px;font-size:9px;font-weight:600;background:#F0FDF4;color:#15803D;vertical-align:middle">' . Html::encode($jobName) . '</span>';
                 }
