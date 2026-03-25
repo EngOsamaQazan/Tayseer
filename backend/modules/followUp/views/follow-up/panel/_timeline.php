@@ -71,7 +71,7 @@ $typeMap = [
                         </span>
                     </div>
                     
-                    <div class="ocp-timeline-event__content ocp-timeline-event__content--collapsed" id="event-content-<?= $i ?>">
+                    <div class="ocp-timeline-event__content" id="event-content-<?= $i ?>">
                         <?= nl2br(Html::encode($event['content'] ?? '')) ?>
                         <?php if (!empty($event['promise_date'])): ?>
                             <br><strong style="color:var(--ocp-event-promise)">موعد الوعد: <?= Html::encode($event['promise_date']) ?></strong>
@@ -81,7 +81,7 @@ $typeMap = [
                         <?php endif; ?>
                     </div>
                     
-                    <button class="ocp-timeline-event__expand" style="display:none" onclick="OCP.toggleEventExpand(<?= $i ?>)">عرض المزيد</button>
+                    <button class="ocp-timeline-event__expand" onclick="OCP.toggleEventExpand(<?= $i ?>)"><i class="fa fa-chevron-up"></i> طي</button>
 
                     <?php if ($hasAttachments): ?>
                     <div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">

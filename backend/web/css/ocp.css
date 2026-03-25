@@ -820,13 +820,25 @@
     font-size: var(--ocp-font-size-sm);
     color: var(--ocp-text);
     line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
 .ocp-timeline-event__content--collapsed {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
+    max-height: 100px;
     overflow: hidden;
+    position: relative;
+}
+
+.ocp-timeline-event__content--collapsed::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    height: 35px;
+    background: linear-gradient(to bottom, transparent, var(--ocp-surface));
+    pointer-events: none;
 }
 
 .ocp-timeline-event__expand {
@@ -835,9 +847,14 @@
     color: var(--ocp-primary);
     font-size: var(--ocp-font-size-xs);
     cursor: pointer;
-    padding: 0;
+    padding: 2px 0;
     font-weight: 600;
-    margin-top: 2px;
+    margin-top: 4px;
+    display: none;
+}
+
+.ocp-timeline-event__expand:hover {
+    text-decoration: underline;
 }
 
 .ocp-timeline-event__pinned {

@@ -141,10 +141,13 @@
         toggleEventExpand: function (index) {
             var el = document.getElementById('event-content-' + index);
             if (el) {
+                var isCollapsed = el.classList.contains('ocp-timeline-event__content--collapsed');
                 el.classList.toggle('ocp-timeline-event__content--collapsed');
                 var btn = el.nextElementSibling;
                 if (btn && btn.classList.contains('ocp-timeline-event__expand')) {
-                    btn.textContent = el.classList.contains('ocp-timeline-event__content--collapsed') ? 'عرض المزيد' : 'عرض أقل';
+                    btn.innerHTML = isCollapsed
+                        ? '<i class="fa fa-chevron-up"></i> طي'
+                        : '<i class="fa fa-chevron-down"></i> عرض المزيد';
                 }
             }
         },
@@ -157,10 +160,16 @@
         },
 
         checkTimelineOverflow: function () {
-            document.querySelectorAll('.ocp-timeline-event__content--collapsed').forEach(function (el) {
+            var THRESHOLD = 100;
+            document.querySelectorAll('.ocp-timeline-event__content').forEach(function (el) {
                 var btn = el.nextElementSibling;
                 if (btn && btn.classList.contains('ocp-timeline-event__expand')) {
-                    btn.style.display = (el.scrollHeight > el.clientHeight) ? '' : 'none';
+                    if (el.scrollHeight > THRESHOLD) {
+                        btn.style.display = '';
+                        btn.innerHTML = '<i class="fa fa-chevron-up"></i> طي';
+                    } else {
+                        btn.style.display = 'none';
+                    }
                 }
             });
         },
