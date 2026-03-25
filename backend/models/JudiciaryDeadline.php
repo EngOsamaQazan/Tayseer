@@ -113,6 +113,14 @@ class JudiciaryDeadline extends \yii\db\ActiveRecord
             self::TYPE_PROPERTY_7CD        => 'إخطار عقار (7 أيام)',
             self::TYPE_SALARY_3M           => 'إعادة كتاب راتب (3 أشهر)',
             self::TYPE_CUSTOM              => 'مخصص',
+            // Legacy keys without suffix (data inserted by judiciary-v3 or older code)
+            'registration'         => 'فحص بعد التسجيل',
+            'notification_check'   => 'فحص التبليغ',
+            'notification'         => 'مدة التبليغ',
+            'request_decision'     => 'قرار القاضي',
+            'correspondence'       => 'رد جهة',
+            'property'             => 'إخطار عقار',
+            'salary'               => 'إعادة كتاب راتب',
         ];
     }
 
