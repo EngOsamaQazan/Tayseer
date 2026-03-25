@@ -119,6 +119,18 @@ jobs:
             deploy_site "/var/www/namaa.aqssat.co" "prod_namaa"
             deploy_site "/var/www/watar.aqssat.co" "prod_watar"
             
+            # Deploy landing page to root domain aqssat.co
+            echo "=== Deploying landing page to aqssat.co ==="
+            LANDING_SRC="/var/www/jadal.aqssat.co/landing/index.html"
+            LANDING_DST="/var/www/html/index.html"
+            if [ -f "$LANDING_SRC" ]; then
+              cp -f "$LANDING_SRC" "$LANDING_DST"
+              chown www-data:www-data "$LANDING_DST" 2>/dev/null || true
+              echo "  Landing page deployed to $LANDING_DST"
+            else
+              echo "  Warning: landing/index.html not found in repo"
+            fi
+            
             # Clear OPcache + PHP-FPM by restarting services
             echo "=== Clearing OPcache ==="
             PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "8.5")
