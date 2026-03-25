@@ -117,6 +117,7 @@ jobs:
             # Deploy main domains
             deploy_site "/var/www/jadal.aqssat.co" "prod_jadal"
             deploy_site "/var/www/namaa.aqssat.co" "prod_namaa"
+            deploy_site "/var/www/watar.aqssat.co" "prod_watar"
             
             # Clear OPcache + PHP-FPM by restarting services
             echo "=== Clearing OPcache ==="
@@ -125,7 +126,7 @@ jobs:
             systemctl reload apache2 2>/dev/null || systemctl restart apache2 2>/dev/null || true
             
             # Flush Yii2 caches
-            for site_dir in /var/www/jadal.aqssat.co /var/www/namaa.aqssat.co; do
+            for site_dir in /var/www/jadal.aqssat.co /var/www/namaa.aqssat.co /var/www/watar.aqssat.co; do
               cd "$site_dir" && php yii cache/flush-all 2>/dev/null || true
             done
             
