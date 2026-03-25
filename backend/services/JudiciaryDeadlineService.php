@@ -209,6 +209,48 @@ class JudiciaryDeadlineService
         return $deadline->save() ? $deadline : null;
     }
 
+    /* ─── Auto-complete milestone deadlines when new action is added ─── */
+
+    /**
+     * Milestone deadline types that get auto-completed when any new action
+     * is added to the case (تجهيز، رسوم، تسجيل).
+     * Does NOT include task-specific deadlines like correspondence replies,
+     * judge decisions, notification periods, etc.
+     */
+    private static $milestoneTypes = [
+        JudiciaryDeadline::TYPE_REGISTRATION_3WD,
+    ];
+
+    /**
+     * Mark milestone-stage deadlines as completed when new action is added.
+     * Only affects registration/preparation type deadlines, NOT:
+     * - correspondence_10wd (رد جهة على كتاب)
+     * - request_decision_3wd (قرار القاضي على طلب)
+     * - notification_check_3wd / notification_16cd (تبليغ)
+     * - property_7cd / salary_3m (إخطارات)
+     */
+    public static function completeMilestoneDeadlines(int $judiciaryId, ?string $notes = null): int
+    {
+        $attrs = ['status' => JudiciaryDeadline::STATUS_COMPLETED];
+        if ($notes) {
+            $attrs['notes'] = $notes;
+        }
+
+        return JudiciaryDeadline::updateAll(
+            $attrs,
+            ['AND',
+                ['judiciary_id' => $judiciaryId],
+                ['in', 'deadline_type', self::$milestoneTypes],
+                ['in', 'status', [
+                    JudiciaryDeadline::STATUS_PENDING,
+                    JudiciaryDeadline::STATUS_APPROACHING,
+                    JudiciaryDeadline::STATUS_EXPIRED,
+                ]],
+                ['is_deleted' => 0],
+            ]
+        );
+    }
+
     /* ─── Deadline status refresh ─── */
 
     /**

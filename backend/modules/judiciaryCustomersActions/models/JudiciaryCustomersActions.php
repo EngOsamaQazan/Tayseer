@@ -123,6 +123,27 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
     }
 
     /**
+     * Auto-complete pending deadlines when a new action is added to a case.
+     */
+    public function afterSave($insert, $changedAttributes)
+    {
+        parent::afterSave($insert, $changedAttributes);
+
+        if ($insert && $this->judiciary_id) {
+            try {
+                $actionDef = $this->judiciaryActions;
+                $actionName = $actionDef ? $actionDef->name : '';
+                \backend\services\JudiciaryDeadlineService::completeMilestoneDeadlines(
+                    $this->judiciary_id,
+                    'تم إنجازه تلقائياً — إجراء جديد: ' . $actionName
+                );
+            } catch (\Exception $e) {
+                Yii::warning('Failed to auto-complete deadlines: ' . $e->getMessage(), __METHOD__);
+            }
+        }
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function attributeLabels()
