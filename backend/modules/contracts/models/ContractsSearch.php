@@ -59,6 +59,8 @@ class ContractsSearch extends Contracts
      * Apply unified search (q) to query — splits words for flexible name matching
      * Uses SQL REPLACE for Arabic normalization (ة↔ه, أإآ→ا, ى→ي)
      */
+    private static $cwIdx = 0;
+
     private function applyUnifiedSearch($query)
     {
         if (empty($this->q)) return;
@@ -68,28 +70,34 @@ class ContractsSearch extends Contracts
         $normNoSpace = "REPLACE($normExpr, ' ', '')";
         $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
 
-        $nameParts = [];
-        $qLike = '%' . $q . '%';
-        $params = [
-            ':qIntContract' => (int)$q,
-            ':qIntCustomer' => (int)$q,
-            ':qLikeId'      => $qLike,
-            ':qLikePhone'   => $qLike,
-        ];
-        foreach ($words as $i => $w) {
-            $p1 = ':nw' . $i . 'a';
-            $p2 = ':nw' . $i . 'b';
-            $wNorm = '%' . self::arabicNormalize($w) . '%';
-            $nameParts[] = "($normExpr LIKE $p1 OR $normNoSpace LIKE $p2)";
-            $params[$p1] = $wNorm;
-            $params[$p2] = $wNorm;
-        }
-        $nameClause = implode(' AND ', $nameParts);
+        foreach ($words as $w) {
+            $wNorm = self::arabicNormalize($w);
+            $idx = self::$cwIdx++;
 
-        $query->andWhere(
-            "os_contracts.id = :qIntContract OR c.id = :qIntCustomer OR ($nameClause) OR c.id_number LIKE :qLikeId OR c.primary_phone_number LIKE :qLikePhone",
-            $params
-        );
+            if (is_numeric($w)) {
+                $len = strlen($w);
+                if ($len <= 4) {
+                    $query->andWhere(['or',
+                        ['=', 'os_contracts.id', (int)$w],
+                        ['=', 'c.id', (int)$w],
+                    ]);
+                } else {
+                    $query->andWhere(['or',
+                        ['like', 'c.id_number', $w . '%', false],
+                        ['like', 'c.primary_phone_number', $w . '%', false],
+                    ]);
+                }
+            } else {
+                $p1 = ':nw' . $idx . 'a';
+                $p2 = ':nw' . $idx . 'b';
+                $likeVal = '%' . $wNorm . '%';
+                $nameExpr = new \yii\db\Expression(
+                    "($normExpr LIKE $p1 OR $normNoSpace LIKE $p2)",
+                    [$p1 => $likeVal, $p2 => $likeVal]
+                );
+                $query->andWhere($nameExpr);
+            }
+        }
     }
 
     /**

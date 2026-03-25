@@ -205,28 +205,35 @@ class CustomersSearch extends Customers
             $wNorm = str_replace('ة', 'ه', $wNorm);
             $wNorm = str_replace('ى', 'ي', $wNorm);
             $idx = self::$cwIdx++;
-            $p1 = ':cw' . $idx . 'a';
-            $p2 = ':cw' . $idx . 'b';
-            $likeVal = '%' . $wNorm . '%';
-            $nameExpr = new \yii\db\Expression(
-                "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)",
-                [$p1 => $likeVal, $p2 => $likeVal]
-            );
-            $or = ['or', $nameExpr,
-                ['like', 'os_customers.id_number', $w],
-                ['like', 'os_customers.primary_phone_number', $w],
-            ];
+
             if (is_numeric($w)) {
-                $or[] = ['=', 'os_customers.id', (int)$w];
+                $len = strlen($w);
+                if ($len <= 4) {
+                    $query->andWhere(['=', 'os_customers.id', (int)$w]);
+                } else {
+                    $query->andWhere(['or',
+                        ['like', 'os_customers.id_number', $w . '%', false],
+                        ['like', 'os_customers.primary_phone_number', $w . '%', false],
+                    ]);
+                }
+            } else {
+                $p1 = ':cw' . $idx . 'a';
+                $p2 = ':cw' . $idx . 'b';
+                $likeVal = '%' . $wNorm . '%';
+                $nameExpr = new \yii\db\Expression(
+                    "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)",
+                    [$p1 => $likeVal, $p2 => $likeVal]
+                );
+                $or = ['or', $nameExpr];
+                if (!$hasJobJoin) {
+                    $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
+                    $hasJobJoin = true;
+                }
+                $jobNorm = "REPLACE(REPLACE(REPLACE(REPLACE(qj.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+                $jp = ':jw' . (self::$cwIdx);
+                $or[] = new \yii\db\Expression("$jobNorm LIKE $jp", [$jp => '%' . $wNorm . '%']);
+                $query->andWhere($or);
             }
-            if (!$hasJobJoin) {
-                $query->leftJoin('{{%jobs}} qj', 'qj.id = os_customers.job_title');
-                $hasJobJoin = true;
-            }
-            $jobNorm = "REPLACE(REPLACE(REPLACE(REPLACE(qj.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
-            $jp = ':jw' . (self::$cwIdx);
-            $or[] = new \yii\db\Expression("$jobNorm LIKE $jp", [$jp => '%' . $wNorm . '%']);
-            $query->andWhere($or);
         }
     }
 }

@@ -66,22 +66,30 @@ class FollowUpReportSearch extends FollowUpReport
         foreach ($words as $w) {
             $wNorm = self::arabicNormalize($w);
             $idx = self::$cwIdx++;
-            $p1 = ':cw' . $idx . 'a';
-            $p2 = ':cw' . $idx . 'b';
-            $likeVal = '%' . $wNorm . '%';
-            $nameExpr = new \yii\db\Expression(
-                "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)",
-                [$p1 => $likeVal, $p2 => $likeVal]
-            );
-            $or = ['or', $nameExpr,
-                ['like', 'c.id_number', $w],
-                ['like', 'c.primary_phone_number', $w],
-            ];
+
             if (is_numeric($w)) {
-                $or[] = ['=', 'os_follow_up_report.id', (int)$w];
-                $or[] = ['=', 'c.id', (int)$w];
+                $len = strlen($w);
+                if ($len <= 4) {
+                    $query->andWhere(['or',
+                        ['=', 'os_follow_up_report.id', (int)$w],
+                        ['=', 'c.id', (int)$w],
+                    ]);
+                } else {
+                    $query->andWhere(['or',
+                        ['like', 'c.id_number', $w . '%', false],
+                        ['like', 'c.primary_phone_number', $w . '%', false],
+                    ]);
+                }
+            } else {
+                $p1 = ':cw' . $idx . 'a';
+                $p2 = ':cw' . $idx . 'b';
+                $likeVal = '%' . $wNorm . '%';
+                $nameExpr = new \yii\db\Expression(
+                    "($nameNorm LIKE $p1 OR $nameNormNoSpace LIKE $p2)",
+                    [$p1 => $likeVal, $p2 => $likeVal]
+                );
+                $query->andWhere($nameExpr);
             }
-            $query->andWhere($or);
         }
     }
 
