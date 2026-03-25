@@ -583,7 +583,7 @@ window.JCA = (function(){
     // --- Send Document Modal ---
     var sendDocUrl = {$sendDocUrlJs};
     var cancelDocUrl = {$cancelDocUrlJs};
-    var $sdm = $('#sendDocModal');
+    var sdmEl = $('#sendDocModal');
 
     function showRecipientFields(type) {
         $('.sdm-rf').hide();
@@ -592,14 +592,14 @@ window.JCA = (function(){
     $('#sdm-recipient-type').on('change', function() { showRecipientFields($(this).val()); });
 
     $(document).on('click', '.jv-send-doc-btn', function() {
-        var $btn = $(this);
-        var id = $btn.data('id');
-        var name = $btn.data('name');
-        var custName = $btn.data('customer-name') || '';
-        var jobId = $btn.data('job-id') || '';
-        var jobName = $btn.data('job-name') || '';
-        var bankId = $btn.data('bank-id') || '';
-        var bankName = $btn.data('bank-name') || '';
+        var btnEl = $(this);
+        var id = btnEl.data('id');
+        var name = btnEl.data('name');
+        var custName = btnEl.data('customer-name') || '';
+        var jobId = btnEl.data('job-id') || '';
+        var jobName = btnEl.data('job-name') || '';
+        var bankId = btnEl.data('bank-id') || '';
+        var bankName = btnEl.data('bank-name') || '';
 
         $('#sdm-action-id').val(id);
         $('#sdm-doc-name').text(name);
@@ -630,18 +630,18 @@ window.JCA = (function(){
         showRecipientFields($('#sdm-recipient-type').val());
 
         if (typeof bootstrap !== 'undefined') {
-            bootstrap.Modal.getOrCreateInstance($sdm[0]).show();
+            bootstrap.Modal.getOrCreateInstance(sdmEl[0]).show();
         } else {
-            $sdm.modal('show');
+            sdmEl.modal('show');
         }
     });
 
     $('#sdm-submit').on('click', function() {
-        var $btn = $(this);
+        var btnEl = $(this);
         var method = $('#sdm-delivery-method').val();
         if (!method) { $('#sdm-delivery-method').addClass('is-invalid'); return; }
         $('#sdm-delivery-method').removeClass('is-invalid');
-        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...');
+        btnEl.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...');
         var postData = {
             id: $('#sdm-action-id').val(),
             delivery_method: method,
@@ -653,17 +653,17 @@ window.JCA = (function(){
         };
         postData[getCsrfParam()] = getCsrfToken();
         $.post(sendDocUrl, postData, function(res) {
-            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            btnEl.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
             if (res.success) {
-                if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance($sdm[0]).hide();
-                else $sdm.modal('hide');
+                if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(sdmEl[0]).hide();
+                else sdmEl.modal('hide');
                 alert(res.message);
                 location.reload();
             } else {
                 alert(res.message);
             }
         }, 'json').fail(function() {
-            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            btnEl.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
             alert('حدث خطأ في الاتصال');
         });
     });
@@ -671,14 +671,14 @@ window.JCA = (function(){
     $(document).on('click', '.jv-cancel-doc-btn', function() {
         var id = $(this).data('id');
         if (!confirm('هل أنت متأكد من إلغاء هذا الكتاب؟')) return;
-        var $btn = $(this);
-        $btn.prop('disabled', true);
+        var btnEl = $(this);
+        btnEl.prop('disabled', true);
         var postData = {id: id};
         postData[getCsrfParam()] = getCsrfToken();
         $.post(cancelDocUrl, postData, function(res) {
             if (res.success) { location.reload(); }
-            else { $btn.prop('disabled', false); alert(res.message); }
-        }, 'json').fail(function() { $btn.prop('disabled', false); alert('حدث خطأ'); });
+            else { btnEl.prop('disabled', false); alert(res.message); }
+        }, 'json').fail(function() { btnEl.prop('disabled', false); alert('حدث خطأ'); });
     });
 
     return {

@@ -636,6 +636,18 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                         <?php if (!empty($m->note)): ?>
                             <div class="jv-action-note"><?= Html::encode($m->note) ?></div>
                         <?php endif; ?>
+                        <?php if ($nature === 'request' && ($reqStatus === 'pending' || $reqStatus === null || $reqStatus === '')): ?>
+                        <div class="jv-req-decision" style="display:flex;gap:8px;align-items:center;margin-top:8px">
+                            <button type="button" class="btn btn-sm jv-approve-req-btn" data-id="<?= $m->id ?>"
+                                style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:8px;font-size:12px;font-weight:600;padding:5px 14px">
+                                <i class="fa fa-check-circle"></i> موافقة
+                            </button>
+                            <button type="button" class="btn btn-sm jv-reject-req-btn" data-id="<?= $m->id ?>"
+                                style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;font-size:12px;font-weight:600;padding:5px 14px">
+                                <i class="fa fa-times-circle"></i> رفض
+                            </button>
+                        </div>
+                        <?php endif; ?>
                         <?php if ($nature === 'document' && ($reqStatus === 'not_sent' || $reqStatus === null)): ?>
                         <?php
                             $cust = $m->customers;
@@ -968,12 +980,83 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
             }
         }, 'json').fail(function() { $btn.prop('disabled', false); alert('حدث خطأ'); });
     }
+
+    // --- Approve / Reject Request ---
+    $(document).on('click', '.jv-approve-req-btn', function() {
+        var id = $(this).data('id');
+        var row = $(this).closest('.jv-action-row');
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تأكيد الموافقة',
+                text: 'هل تريد الموافقة على هذا الطلب؟',
+                input: 'textarea',
+                inputPlaceholder: 'نص القرار (اختياري)',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'موافقة',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#059669'
+            }).then(function(r) {
+                if (r.isConfirmed) doUpdateReqStatus(id, 'approved', r.value || '', row);
+            });
+        } else {
+            var txt = prompt('نص القرار (اختياري):') || '';
+            doUpdateReqStatus(id, 'approved', txt, row);
+        }
+    });
+
+    $(document).on('click', '.jv-reject-req-btn', function() {
+        var id = $(this).data('id');
+        var row = $(this).closest('.jv-action-row');
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تأكيد الرفض',
+                text: 'هل تريد رفض هذا الطلب؟',
+                input: 'textarea',
+                inputPlaceholder: 'سبب الرفض (اختياري)',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'رفض',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#DC2626'
+            }).then(function(r) {
+                if (r.isConfirmed) doUpdateReqStatus(id, 'rejected', r.value || '', row);
+            });
+        } else {
+            var txt = prompt('سبب الرفض (اختياري):') || '';
+            doUpdateReqStatus(id, 'rejected', txt, row);
+        }
+    });
+
+    function doUpdateReqStatus(id, status, decisionText, row) {
+        var btns = row.find('.jv-approve-req-btn, .jv-reject-req-btn');
+        btns.prop('disabled', true);
+        $.post(UPDATE_REQ_URL, {id: id, status: status, decision_text: decisionText, _csrf: yii.getCsrfToken()}, function(res) {
+            if (res.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'success', title:'تم', text:res.message, timer:1500, showConfirmButton:false});
+                }
+                setTimeout(function(){ location.reload(); }, 1200);
+            } else {
+                btns.prop('disabled', false);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'error', title:'خطأ', text:res.message});
+                } else {
+                    alert(res.message);
+                }
+            }
+        }, 'json').fail(function() {
+            btns.prop('disabled', false);
+            alert('حدث خطأ في الاتصال');
+        });
+    }
 JS;
     $this->registerJs($jcaJs);
 
     $sendDocUrl = json_encode(Url::to(['/judiciary/judiciary/send-document']));
     $cancelDocUrl = json_encode(Url::to(['/judiciary/judiciary/cancel-document']));
-    $this->registerJs("var SEND_DOC_URL = {$sendDocUrl}; var CANCEL_DOC_URL = {$cancelDocUrl};", \yii\web\View::POS_HEAD);
+    $updateReqUrl = json_encode(Url::to(['/judiciary/judiciary/update-request-status']));
+    $this->registerJs("var SEND_DOC_URL = {$sendDocUrl}; var CANCEL_DOC_URL = {$cancelDocUrl}; var UPDATE_REQ_URL = {$updateReqUrl};", \yii\web\View::POS_HEAD);
     ?>
     <?php endif ?>
 

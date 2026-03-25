@@ -80,20 +80,24 @@ foreach ($allActions as $a) {
     }
 }
 
-// ─── All requests (approved + pending) + existing documents for linking ───
+// ─── All requests + existing documents for linking ───
 $approvedRequests = [];
 $existingDocuments = [];
 if ($judiciary) {
+    $statusLabelsMap = [
+        'pending' => 'معلق', 'approved' => 'موافقة', 'rejected' => 'مرفوض',
+        'cancelled' => 'ملغي',
+    ];
     $reqRows = (new \yii\db\Query())
         ->select(['jca.id', 'jca.action_date', 'jca.customers_id', 'jca.request_status', 'ja.name as aname', 'c.name as cname'])
         ->from('os_judiciary_customers_actions jca')
         ->innerJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
         ->leftJoin('os_customers c', 'c.id = jca.customers_id')
         ->where(['jca.judiciary_id' => $judiciary->id, 'jca.is_deleted' => 0, 'ja.action_nature' => 'request'])
-        ->andWhere(['in', 'jca.request_status', ['approved', 'pending']])
         ->all();
     foreach ($reqRows as $r) {
-        $statusBadge = ($r['request_status'] === 'pending') ? ' [قيد الانتظار]' : '';
+        $st = $r['request_status'];
+        $statusBadge = ($st && isset($statusLabelsMap[$st])) ? ' [' . $statusLabelsMap[$st] . ']' : '';
         $approvedRequests[$r['id']] = $r['aname'] . ($r['action_date'] ? ' · ' . substr($r['action_date'], 0, 10) : '') . ($r['cname'] ? ' — ' . $r['cname'] : '') . $statusBadge;
     }
 
@@ -266,7 +270,7 @@ $showReqTarget = (!$isNew && (int)$model->judiciary_actions_id === 55) ? 'true' 
 <?php endif; ?>
 <?= Html::activeHiddenInput($model, 'judiciary_actions_id', ['id' => 'jaf-action-id']) ?>
 <?= Html::activeHiddenInput($model, 'parent_id', ['id' => 'jaf-parent-id']) ?>
-<?= Html::activeHiddenInput($model, 'request_status', ['id' => 'jaf-request-status', 'value' => $isNew ? 'pending' : $model->request_status]) ?>
+<?= Html::activeHiddenInput($model, 'request_status', ['id' => 'jaf-request-status', 'value' => $isNew ? '' : $model->request_status]) ?>
 <?= Html::activeHiddenInput($model, 'is_current', ['id' => 'jaf-is-current', 'value' => $model->is_current ?: 1]) ?>
 <?= Html::activeHiddenInput($model, 'amount', ['id' => 'jaf-amount']) ?>
 <?= Html::activeHiddenInput($model, 'request_target', ['id' => 'jaf-request-target']) ?>
@@ -411,10 +415,34 @@ $showReqTarget = (!$isNew && (int)$model->judiciary_actions_id === 55) ? 'true' 
     </div>
 </div>
 
-<!-- ═══ 5. Contextual: Link to Parent (for documents) ═══ -->
+<!-- ═══ 5. Contextual: Link to Parent + Status (for documents) ═══ -->
 <div class="jaf-ctx" id="ctx-document"
      x-show="activeContext === 'document'" x-cloak
      x-transition.opacity.duration.200ms>
+    <?php if (!$isNew): ?>
+    <div class="jaf-ctx-title"><i class="fa fa-exchange" style="color:#8B5CF6"></i> حالة الكتاب / المذكرة</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <?php foreach ([
+            'not_sent'  => ['غير مُرسل',  '#6B7280', '#F3F4F6',  'fa-circle-o'],
+            'printed'   => ['مطبوع',       '#6B7280', '#F3F4F6',  'fa-print'],
+            'submitted' => ['مُقدَّم',     '#3B82F6', '#EFF6FF',  'fa-check-square-o'],
+            'sent'      => ['مُرسل',       '#3B82F6', '#EFF6FF',  'fa-paper-plane'],
+            'pending'   => ['معلق',        '#F59E0B', '#FFFBEB',  'fa-clock-o'],
+            'approved'  => ['موافقة',      '#10B981', '#ECFDF5',  'fa-check-circle'],
+            'rejected'  => ['مرفوض',       '#EF4444', '#FEF2F2',  'fa-times-circle'],
+            'cancelled' => ['ملغي',        '#EF4444', '#FEF2F2',  'fa-ban'],
+        ] as $dk => $dv): ?>
+        <label class="jaf-party" style="border-width:2px;padding:5px 10px;<?= $model->request_status === $dk ? 'border-color:'.$dv[1].';background:'.$dv[2] : '' ?>" data-doc-status="<?= $dk ?>" onclick="JAF.setDocumentStatus('<?= $dk ?>')">
+            <i class="fa <?= $dv[3] ?>" style="color:<?= $dv[1] ?>;font-size:13px"></i>
+            <span style="font-weight:600;color:<?= $dv[1] ?>;font-size:12px"><?= $dv[0] ?></span>
+        </label>
+        <?php endforeach; ?>
+    </div>
+    <?php else: ?>
+    <div class="jaf-status-hint" style="background:#F5F3FF;color:#7C3AED;margin-bottom:10px">
+        <i class="fa fa-info-circle"></i> سيُحفظ بحالة "غير مُرسل" — يمكنك إرساله لاحقاً من صفحة القضية
+    </div>
+    <?php endif; ?>
     <div class="jaf-ctx-title"><i class="fa fa-link" style="color:#8B5CF6"></i> ربط بالطلب</div>
     <div id="jaf-approved-req-wrap">
     <?php if (!empty($approvedRequests)): ?>
@@ -782,6 +810,19 @@ window.JAF = (function() {
         $('[data-status="' + status + '"]').css({ borderColor: colors[status][0], background: colors[status][1] });
     }
 
+    function setDocumentStatus(status) {
+        $('#jaf-request-status').val(status);
+        var colors = {
+            not_sent: ['#6B7280','#F3F4F6'], printed: ['#6B7280','#F3F4F6'],
+            submitted: ['#3B82F6','#EFF6FF'], sent: ['#3B82F6','#EFF6FF'],
+            pending: ['#F59E0B','#FFFBEB'], approved: ['#10B981','#ECFDF5'],
+            rejected: ['#EF4444','#FEF2F2'], cancelled: ['#EF4444','#FEF2F2']
+        };
+        $('[data-doc-status]').css({ borderColor: '#E2E8F0', background: '#fff' });
+        var c = colors[status] || ['#6B7280','#F3F4F6'];
+        $('[data-doc-status="' + status + '"]').css({ borderColor: c[0], background: c[1] });
+    }
+
     function clearFile() {
         $('#jaf-file-input').val('');
         $('#jaf-previews .jaf-new-preview').remove();
@@ -870,6 +911,7 @@ window.JAF = (function() {
         toggleNature: toggleNature,
         selectAction: selectAction,
         setRequestStatus: setRequestStatus,
+        setDocumentStatus: setDocumentStatus,
         clearFile: clearFile,
         removeExisting: removeExisting,
         quickAddRequest: quickAddRequest
