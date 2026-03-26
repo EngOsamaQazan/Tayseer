@@ -26,7 +26,7 @@ class SiteController extends Controller
 
     public function beforeAction($action)
     {
-        if (in_array($action->id, ['test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection'])) {
+        if (in_array($action->id, ['test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'test-whatsapp-message'])) {
             $this->enableCsrfValidation = false;
         }
         return parent::beforeAction($action);
@@ -43,7 +43,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'test-whatsapp-message', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -364,7 +364,7 @@ class SiteController extends Controller
                     'app_id'             => trim($post['wa_app_id'] ?? ''),
                     'app_secret'         => trim($post['wa_app_secret'] ?? ''),
                     'webhook_verify_token' => trim($post['wa_webhook_verify_token'] ?? ''),
-                    'api_version'        => trim($post['wa_api_version'] ?? 'v21.0'),
+                    'api_version'        => trim($post['wa_api_version'] ?? 'v22.0'),
                 ];
 
                 if ($data['access_token'] === '' || $data['access_token'] === '••••••••••') {
@@ -667,7 +667,7 @@ class SiteController extends Controller
 
         $phoneNumberId = SystemSettings::get('whatsapp_api', 'phone_number_id', '');
         $accessToken   = SystemSettings::get('whatsapp_api', 'access_token', '');
-        $apiVersion    = SystemSettings::get('whatsapp_api', 'api_version', 'v21.0');
+        $apiVersion    = SystemSettings::get('whatsapp_api', 'api_version', 'v22.0');
 
         if (empty($accessToken) || empty($phoneNumberId)) {
             return ['success' => false, 'error' => 'لم يتم إعداد Access Token أو Phone Number ID بعد'];
@@ -708,6 +708,91 @@ class SiteController extends Controller
                 $hint = ' — Access Token منتهي الصلاحية أو غير صالح';
             } elseif ($errorCode == 100) {
                 $hint = ' — Phone Number ID غير صحيح';
+            }
+
+            return ['success' => false, 'error' => "فشل: {$errorMsg}{$hint}"];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * إرسال رسالة WhatsApp تجريبية (AJAX)
+     */
+    public function actionTestWhatsappMessage()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        if (!Yii::$app->request->isAjax) {
+            return ['success' => false, 'error' => 'طلب غير صالح'];
+        }
+
+        $phone = trim(Yii::$app->request->post('phone', ''));
+        $phone = preg_replace('/[^0-9]/', '', $phone);
+
+        if (empty($phone) || strlen($phone) < 10) {
+            return ['success' => false, 'error' => 'رقم الهاتف غير صالح — أدخل الرقم مع رمز الدولة (مثال: 962791234567)'];
+        }
+
+        $phoneNumberId = SystemSettings::get('whatsapp_api', 'phone_number_id', '');
+        $accessToken   = SystemSettings::get('whatsapp_api', 'access_token', '');
+        $apiVersion    = SystemSettings::get('whatsapp_api', 'api_version', 'v22.0');
+
+        if (empty($accessToken) || empty($phoneNumberId)) {
+            return ['success' => false, 'error' => 'لم يتم إعداد Access Token أو Phone Number ID — احفظ الإعدادات أولاً'];
+        }
+
+        try {
+            $url = "https://graph.facebook.com/{$apiVersion}/{$phoneNumberId}/messages";
+            $payload = json_encode([
+                'messaging_product' => 'whatsapp',
+                'to' => $phone,
+                'type' => 'text',
+                'text' => [
+                    'body' => "✅ رسالة تجريبية من نظام تيسير\n\nتم إرسال هذه الرسالة بنجاح عبر WhatsApp Business API.\n\n🕐 " . date('Y-m-d H:i:s'),
+                ],
+            ]);
+
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_TIMEOUT        => 15,
+                CURLOPT_SSL_VERIFYPEER => !YII_DEBUG,
+                CURLOPT_POST           => true,
+                CURLOPT_POSTFIELDS     => $payload,
+                CURLOPT_HTTPHEADER     => [
+                    "Authorization: Bearer {$accessToken}",
+                    'Content-Type: application/json',
+                ],
+            ]);
+            $response  = curl_exec($ch);
+            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($curlError) {
+                return ['success' => false, 'error' => "خطأ في الاتصال: {$curlError}"];
+            }
+
+            $data = json_decode($response, true);
+
+            if ($httpCode === 200 && !empty($data['messages'][0]['id'])) {
+                $msgId = $data['messages'][0]['id'];
+                return [
+                    'success' => true,
+                    'message' => "تم الإرسال بنجاح! معرّف الرسالة: {$msgId}",
+                ];
+            }
+
+            $errorMsg = $data['error']['message'] ?? "HTTP {$httpCode}";
+            $errorCode = $data['error']['code'] ?? '';
+            $hint = '';
+            if ($errorCode == 131030) {
+                $hint = ' — الرقم غير مسجل في WhatsApp';
+            } elseif ($errorCode == 190) {
+                $hint = ' — Access Token منتهي الصلاحية';
+            } elseif ($errorCode == 131051) {
+                $hint = ' — تحتاج قالب رسالة معتمد لإرسال الرسالة الأولى';
             }
 
             return ['success' => false, 'error' => "فشل: {$errorMsg}{$hint}"];

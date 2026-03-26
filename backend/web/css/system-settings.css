@@ -2192,3 +2192,576 @@
     .bk-info-grid { grid-template-columns: 1fr; }
     .bk-folders-grid { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   META DEVELOPER CONSOLE — WhatsApp Business API
+   ============================================================ */
+
+.mc-console-mockup {
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    border: 1px solid #dddfe2;
+    box-shadow: var(--shadow-md);
+    margin-bottom: 20px;
+    background: #fff;
+}
+
+.mc-console-topbar {
+    background: #1877f2;
+    color: white;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+}
+
+.mc-console-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.mc-console-logo svg {
+    flex-shrink: 0;
+}
+
+.mc-console-breadcrumb {
+    color: rgba(255,255,255,.7);
+    font-size: 12px;
+}
+
+.mc-console-content {
+    display: flex;
+    min-height: 220px;
+}
+
+.mc-console-sidebar-mini {
+    width: 180px;
+    background: #f0f2f5;
+    border-left: 1px solid #dddfe2;
+    padding: 8px 0;
+    flex-shrink: 0;
+}
+
+.mc-sidebar-item {
+    padding: 9px 14px;
+    font-size: 12px;
+    color: #606770;
+    cursor: default;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mc-sidebar-item i {
+    width: 16px;
+    text-align: center;
+    font-size: 13px;
+}
+
+.mc-sidebar-item.active-item {
+    background: #e7f3ff;
+    color: #1877f2;
+    font-weight: 600;
+    border-right: 3px solid #1877f2;
+}
+
+.mc-console-main {
+    flex: 1;
+    padding: 16px 20px;
+    max-width: calc(100% - 180px);
+}
+
+.mc-console-title-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.mc-console-page-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1c1e21;
+}
+
+.mc-mock-form {
+    max-width: 400px;
+}
+
+.mc-mock-field {
+    margin-bottom: 14px;
+    position: relative;
+}
+
+.mc-mock-field label {
+    display: block;
+    font-size: 11px;
+    color: #606770;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.mc-mock-input {
+    padding: 8px 12px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #1c1e21;
+    background: #fff;
+    font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+    direction: ltr;
+    text-align: left;
+}
+
+.mc-mock-input.highlight {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+
+.mc-mock-btn {
+    padding: 8px 20px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: default;
+    background: #fff;
+    color: #606770;
+}
+
+.mc-mock-btn.primary {
+    background: #1877f2;
+    color: white;
+    border-color: #1877f2;
+}
+
+.mc-mock-btn.success {
+    background: #42b72a;
+    color: white;
+    border-color: #42b72a;
+}
+
+.mc-mock-btn-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.mc-mock-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-size: 12px;
+    direction: rtl;
+}
+
+.mc-highlight-text {
+    color: #1877f2;
+    font-weight: 600;
+}
+
+.mc-mock-token-box {
+    padding: 10px 14px;
+    border: 1px solid #dddfe2;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1c1e21;
+    background: #f0f2f5;
+    font-family: 'Courier New', monospace;
+    direction: ltr;
+    text-align: left;
+    word-break: break-all;
+    line-height: 1.6;
+}
+
+.mc-mock-token-box.highlight {
+    border-color: #1877f2;
+    background: #e7f3ff;
+}
+
+.mc-mock-id-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: #f0f2f5;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.mc-mock-id-row.highlight {
+    background: #e7f3ff;
+    border: 1px solid #b0d4f1;
+}
+
+.mc-mock-id-label {
+    font-size: 11px;
+    color: #606770;
+    min-width: 140px;
+    direction: ltr;
+    text-align: left;
+}
+
+.mc-mock-id-value {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    color: #1877f2;
+    font-weight: 600;
+    direction: ltr;
+}
+
+.mc-mock-copy-btn {
+    font-size: 11px;
+    padding: 3px 10px;
+    border: 1px solid #dddfe2;
+    border-radius: 4px;
+    background: #fff;
+    color: #606770;
+    cursor: default;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.mc-product-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid #dddfe2;
+    border-radius: 8px;
+    background: #fff;
+    margin-bottom: 8px;
+    cursor: default;
+}
+
+.mc-product-card.highlight {
+    border-color: #42b72a;
+    background: #f0fff4;
+}
+
+.mc-product-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.mc-product-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.mc-product-card-info strong {
+    display: block;
+    font-size: 14px;
+    color: #1c1e21;
+}
+
+.mc-product-card-info p {
+    font-size: 12px;
+    color: #606770;
+    margin: 2px 0 0;
+    line-height: 1.4;
+}
+
+.mc-product-card-action {
+    font-size: 12px;
+    padding: 6px 14px;
+    border: 1px solid #1877f2;
+    border-radius: 6px;
+    background: #fff;
+    color: #1877f2;
+    font-weight: 600;
+    cursor: default;
+}
+
+.mc-product-card.highlight .mc-product-card-action {
+    background: #42b72a;
+    border-color: #42b72a;
+    color: #fff;
+}
+
+.mc-permission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.mc-permission-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #f0f2f5;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1c1e21;
+    direction: ltr;
+    text-align: left;
+}
+
+.mc-permission-item.checked {
+    background: #e7f3ff;
+    border: 1px solid #b0d4f1;
+}
+
+.mc-permission-item i {
+    font-size: 14px;
+}
+
+.mc-permission-item.checked i {
+    color: #42b72a;
+}
+
+.mc-arrow-blink {
+    animation: gcArrowBlink 1.2s ease-in-out infinite;
+    color: #1877f2;
+}
+
+/* ── Webhook Config Card ── */
+.wa-webhook-card {
+    margin-top: 20px;
+}
+
+.wa-webhook-url {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+}
+
+.wa-webhook-url code {
+    flex: 1;
+    font-size: 13px;
+    font-family: 'Courier New', monospace;
+    color: #1877f2;
+    direction: ltr;
+    text-align: left;
+    word-break: break-all;
+}
+
+.wa-webhook-copy-btn {
+    padding: 6px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #fff;
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all .2s;
+    flex-shrink: 0;
+}
+
+.wa-webhook-copy-btn:hover {
+    background: #1877f2;
+    color: #fff;
+    border-color: #1877f2;
+}
+
+.wa-webhook-events {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.wa-webhook-event {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f0f2f5;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1c1e21;
+}
+
+.wa-webhook-event i {
+    color: #42b72a;
+    font-size: 14px;
+}
+
+/* ── Message Templates Card ── */
+.wa-templates-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.wa-template-item {
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    transition: all .15s;
+}
+
+.wa-template-item:hover {
+    border-color: #1877f2;
+    box-shadow: 0 2px 8px rgba(24, 119, 242, .1);
+}
+
+.wa-template-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.wa-template-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1c1e21;
+    font-family: 'Courier New', monospace;
+    direction: ltr;
+}
+
+.wa-template-badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.wa-template-badge.approved {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.wa-template-badge.pending {
+    background: #fff8e1;
+    color: #f57f17;
+}
+
+.wa-template-desc {
+    font-size: 12px;
+    color: #606770;
+    line-height: 1.5;
+}
+
+.wa-template-category {
+    font-size: 11px;
+    color: #1877f2;
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+/* ── Test Message Section ── */
+.wa-test-msg-card {
+    border: 2px solid #42b72a;
+}
+
+.wa-test-msg-card .sys-card-header {
+    background: linear-gradient(135deg, #e8f5e9 0%, #fff 100%);
+}
+
+.wa-test-phone-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.wa-test-phone-row .sys-field {
+    flex: 1;
+}
+
+.wa-test-send-btn {
+    padding: 10px 24px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: #25d366;
+    color: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all .2s;
+    white-space: nowrap;
+    height: 42px;
+}
+
+.wa-test-send-btn:hover {
+    background: #128c7e;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, .3);
+}
+
+.wa-test-send-btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.wa-test-result {
+    margin-top: 12px;
+    min-height: 20px;
+}
+
+/* ── Pricing Info Card ── */
+.wa-pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.wa-pricing-item {
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.wa-pricing-item strong {
+    display: block;
+    font-size: 13px;
+    color: #1c1e21;
+    margin-bottom: 4px;
+}
+
+.wa-pricing-item span {
+    font-size: 12px;
+    color: #606770;
+    line-height: 1.5;
+}
+
+.wa-pricing-item .wa-pricing-free {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 1px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+    .mc-console-sidebar-mini { display: none; }
+    .mc-console-main { max-width: 100% !important; }
+    .wa-webhook-events { grid-template-columns: 1fr; }
+    .wa-templates-grid { grid-template-columns: 1fr; }
+    .wa-pricing-grid { grid-template-columns: 1fr; }
+    .wa-test-phone-row { flex-direction: column; }
+    .mc-mock-id-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+}

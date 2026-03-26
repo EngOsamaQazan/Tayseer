@@ -15,6 +15,7 @@ $shouldPaid = $financials['should_paid'] ?? 0;
 $overdueInstallments = $financials['overdue_installments'] ?? 0;
 $remainingInstallments = $financials['remaining_installments'] ?? 0;
 $complianceRate = $financials['compliance_rate'] ?? 0;
+$monthlyInstallment = $financials['monthly_installment'] ?? 0;
 $paidRatio = $total > 0 ? round(($paid / $total) * 100) : 0;
 $overdueRatio = $total > 0 ? round(($overdue / $total) * 100) : 0;
 $shouldPaidRatio = $total > 0 ? round(($shouldPaid / $total) * 100) : 0;
@@ -64,6 +65,12 @@ $commitmentDiscount = $financials['commitment_discount'] ?? 0;
             <div class="ocp-fin-card__value"><?= number_format($total) ?></div>
             <div class="ocp-fin-card__label">إجمالي العقد</div>
             <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:100%;background:var(--ocp-primary)"></div></div>
+        </div>
+
+        <div class="ocp-fin-card">
+            <div class="ocp-fin-card__icon" style="background:#EDE7F6;color:#5E35B1"><i class="fa fa-credit-card"></i></div>
+            <div class="ocp-fin-card__value" style="color:#5E35B1"><?= number_format($monthlyInstallment) ?></div>
+            <div class="ocp-fin-card__label">القسط الشهري</div>
         </div>
 
         <div class="ocp-fin-card">

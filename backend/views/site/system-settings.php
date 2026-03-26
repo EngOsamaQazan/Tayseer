@@ -1616,13 +1616,55 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="gc-step-dot" data-step="w6"><span>6</span></div>
                             </div>
 
-                            <!-- Step 1: Create Meta Business Account -->
+                            <!-- ──── Step 1: Create Meta Business Account ──── -->
                             <div class="gc-step active" id="wa-step-1">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">1</div>
                                     <div>
                                         <h3>إنشاء حساب Meta Business</h3>
                                         <p>تحتاج حساب أعمال في Meta (Facebook) لاستخدام WhatsApp Business API</p>
+                                    </div>
+                                </div>
+
+                                <!-- Meta Business Suite Console Mockup -->
+                                <div class="mc-console-mockup">
+                                    <div class="mc-console-topbar">
+                                        <div class="mc-console-logo">
+                                            <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="18" fill="#fff"/><path d="M18 6.6C11.7 6.6 6.6 11.7 6.6 18S11.7 29.4 18 29.4 29.4 24.3 29.4 18 24.3 6.6 18 6.6z" fill="#1877F2"/><path d="M20.7 19.5h2.7l.4-3h-3.1v-1.7c0-1.2.4-2.3 1.7-2.3h1.5V10c-.3 0-1-.2-2.2-.2-2.7 0-4.2 1.4-4.2 4.6v2.1h-2.8v3h2.8v8.3a11.4 11.4 0 003.2 0v-8.3z" fill="#fff"/></svg>
+                                            <span>Meta Business Suite</span>
+                                        </div>
+                                        <div class="mc-console-breadcrumb">Business Settings → Business Info</div>
+                                    </div>
+                                    <div class="mc-console-content">
+                                        <div class="mc-console-sidebar-mini">
+                                            <div class="mc-sidebar-item"><i class="fa fa-home"></i> Overview</div>
+                                            <div class="mc-sidebar-item active-item"><i class="fa fa-building"></i> Business Info</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-users"></i> People</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-shield"></i> Security</div>
+                                        </div>
+                                        <div class="mc-console-main">
+                                            <div class="mc-console-title-bar">
+                                                <span class="mc-console-page-title">Create a Business Account</span>
+                                            </div>
+                                            <div class="mc-mock-form">
+                                                <div class="mc-mock-field">
+                                                    <label>Business name *</label>
+                                                    <div class="mc-mock-input highlight">شركة تيسير للتقسيط</div>
+                                                </div>
+                                                <div class="mc-mock-field">
+                                                    <label>Your name *</label>
+                                                    <div class="mc-mock-input">اسم المسؤول</div>
+                                                </div>
+                                                <div class="mc-mock-field">
+                                                    <label>Business email *</label>
+                                                    <div class="mc-mock-input">admin@tayseer.com</div>
+                                                </div>
+                                                <div class="mc-mock-btn-row">
+                                                    <button class="mc-mock-btn primary" type="button">Create</button>
+                                                    <button class="mc-mock-btn" type="button">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1637,11 +1679,11 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                     </div>
                                     <div class="gc-instruction-item">
                                         <span class="gc-inst-num">3</span>
-                                        <span>أكمل عملية التحقق من النشاط التجاري (Business Verification) — قد تستغرق 1-3 أيام</span>
+                                        <span>(اختياري) أكمل عملية <a href="https://business.facebook.com/settings/security" target="_blank" class="gc-link">التحقق من النشاط التجاري (Business Verification)</a> لرفع حدود الإرسال</span>
                                     </div>
                                     <div class="gc-instruction-item gc-note-item">
                                         <i class="fa fa-info-circle"></i>
-                                        <span>التحقق مطلوب لإرسال رسائل لأرقام غير محفوظة وللحصول على حصة إرسال أعلى</span>
+                                        <span>التحقق <strong>غير إلزامي</strong> للبداية — بدونه تحصل على 250 محادثة/يوم. مع التحقق ترتفع إلى 1,000+ محادثة/يوم</span>
                                     </div>
                                 </div>
 
@@ -1651,13 +1693,100 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 </div>
                             </div>
 
-                            <!-- Step 2: Create App in Meta Developers -->
+                            <!-- ──── Step 2: Create App in Meta Developers ──── -->
                             <div class="gc-step" id="wa-step-2">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">2</div>
                                     <div>
                                         <h3>إنشاء تطبيق في Meta for Developers</h3>
-                                        <p>أنشئ تطبيقاً من نوع "Business" لربط WhatsApp API</p>
+                                        <p>أنشئ تطبيقاً من نوع "Business" وأضف منتج WhatsApp</p>
+                                    </div>
+                                </div>
+
+                                <!-- Meta Developers Console Mockup - Create App -->
+                                <div class="mc-console-mockup">
+                                    <div class="mc-console-topbar">
+                                        <div class="mc-console-logo">
+                                            <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="18" fill="#fff"/><path d="M18 6.6C11.7 6.6 6.6 11.7 6.6 18S11.7 29.4 18 29.4 29.4 24.3 29.4 18 24.3 6.6 18 6.6z" fill="#1877F2"/><path d="M20.7 19.5h2.7l.4-3h-3.1v-1.7c0-1.2.4-2.3 1.7-2.3h1.5V10c-.3 0-1-.2-2.2-.2-2.7 0-4.2 1.4-4.2 4.6v2.1h-2.8v3h2.8v8.3a11.4 11.4 0 003.2 0v-8.3z" fill="#fff"/></svg>
+                                            <span>Meta for Developers</span>
+                                        </div>
+                                        <div class="mc-console-breadcrumb">My Apps → Create App</div>
+                                    </div>
+                                    <div class="mc-console-content">
+                                        <div class="mc-console-sidebar-mini">
+                                            <div class="mc-sidebar-item active-item"><i class="fa fa-th-large"></i> My Apps</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-book"></i> Docs</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-wrench"></i> Tools</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-life-ring"></i> Support</div>
+                                        </div>
+                                        <div class="mc-console-main">
+                                            <div class="mc-console-title-bar">
+                                                <span class="mc-console-page-title">Create an App</span>
+                                            </div>
+                                            <div class="mc-mock-form">
+                                                <div class="mc-mock-field">
+                                                    <label>Add an app name *</label>
+                                                    <div class="mc-mock-input highlight">Tayseer WhatsApp</div>
+                                                    <div class="mc-mock-hint">
+                                                        <i class="fa fa-arrow-up mc-arrow-blink"></i>
+                                                        <span class="mc-highlight-text">اسم التطبيق — يمكنك تسميته كما تريد</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mc-mock-field">
+                                                    <label>App type *</label>
+                                                    <div class="mc-mock-input highlight" style="font-weight:600">Business</div>
+                                                    <div class="mc-mock-hint">
+                                                        <i class="fa fa-arrow-up mc-arrow-blink"></i>
+                                                        <span class="mc-highlight-text">مهم! اختر نوع "Business"</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mc-mock-field">
+                                                    <label>Business portfolio</label>
+                                                    <div class="mc-mock-input">شركة تيسير للتقسيط</div>
+                                                </div>
+                                                <div class="mc-mock-btn-row">
+                                                    <button class="mc-mock-btn primary" type="button">Create App</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Add WhatsApp Product Mockup -->
+                                <div class="mc-console-mockup" style="margin-top:16px">
+                                    <div class="mc-console-topbar">
+                                        <div class="mc-console-logo">
+                                            <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="18" fill="#fff"/><path d="M18 6.6C11.7 6.6 6.6 11.7 6.6 18S11.7 29.4 18 29.4 29.4 24.3 29.4 18 24.3 6.6 18 6.6z" fill="#1877F2"/><path d="M20.7 19.5h2.7l.4-3h-3.1v-1.7c0-1.2.4-2.3 1.7-2.3h1.5V10c-.3 0-1-.2-2.2-.2-2.7 0-4.2 1.4-4.2 4.6v2.1h-2.8v3h2.8v8.3a11.4 11.4 0 003.2 0v-8.3z" fill="#fff"/></svg>
+                                            <span>Meta for Developers</span>
+                                        </div>
+                                        <div class="mc-console-breadcrumb">Tayseer WhatsApp → Add Products</div>
+                                    </div>
+                                    <div class="mc-console-content" style="min-height:auto">
+                                        <div class="mc-console-main" style="max-width:100%;padding:20px">
+                                            <div class="mc-console-title-bar">
+                                                <span class="mc-console-page-title">Add Products to Your App</span>
+                                            </div>
+                                            <div class="mc-product-card highlight">
+                                                <div class="mc-product-card-icon" style="background:#25d366">
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                                </div>
+                                                <div class="mc-product-card-info">
+                                                    <strong>WhatsApp</strong>
+                                                    <p>Send and receive messages using the WhatsApp Business Platform</p>
+                                                </div>
+                                                <span class="mc-product-card-action">Set Up</span>
+                                            </div>
+                                            <div class="mc-product-card" style="opacity:.5">
+                                                <div class="mc-product-card-icon" style="background:#0084ff">
+                                                    <i class="fa fa-comment" style="color:#fff;font-size:18px"></i>
+                                                </div>
+                                                <div class="mc-product-card-info">
+                                                    <strong>Messenger</strong>
+                                                    <p>Build messaging experiences for Messenger</p>
+                                                </div>
+                                                <span class="mc-product-card-action" style="opacity:.4">Set Up</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1686,13 +1815,58 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 </div>
                             </div>
 
-                            <!-- Step 3: Add Phone Number -->
+                            <!-- ──── Step 3: Add Phone Number ──── -->
                             <div class="gc-step" id="wa-step-3">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">3</div>
                                     <div>
                                         <h3>إضافة رقم هاتف</h3>
                                         <p>ربط رقم هاتف بحساب WhatsApp Business</p>
+                                    </div>
+                                </div>
+
+                                <!-- WhatsApp Getting Started Mockup -->
+                                <div class="mc-console-mockup">
+                                    <div class="mc-console-topbar">
+                                        <div class="mc-console-logo">
+                                            <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="18" fill="#fff"/><path d="M18 6.6C11.7 6.6 6.6 11.7 6.6 18S11.7 29.4 18 29.4 29.4 24.3 29.4 18 24.3 6.6 18 6.6z" fill="#1877F2"/><path d="M20.7 19.5h2.7l.4-3h-3.1v-1.7c0-1.2.4-2.3 1.7-2.3h1.5V10c-.3 0-1-.2-2.2-.2-2.7 0-4.2 1.4-4.2 4.6v2.1h-2.8v3h2.8v8.3a11.4 11.4 0 003.2 0v-8.3z" fill="#fff"/></svg>
+                                            <span>Meta for Developers</span>
+                                        </div>
+                                        <div class="mc-console-breadcrumb">Tayseer WhatsApp → WhatsApp → Getting Started</div>
+                                    </div>
+                                    <div class="mc-console-content">
+                                        <div class="mc-console-sidebar-mini">
+                                            <div class="mc-sidebar-item"><i class="fa fa-tachometer"></i> Dashboard</div>
+                                            <div class="mc-sidebar-item active-item"><i class="fa fa-whatsapp" style="color:#25d366"></i> WhatsApp</div>
+                                            <div class="mc-sidebar-item" style="padding-right:30px;font-size:11px">Getting Started</div>
+                                            <div class="mc-sidebar-item" style="padding-right:30px;font-size:11px">API Setup</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-cog"></i> App Settings</div>
+                                        </div>
+                                        <div class="mc-console-main">
+                                            <div class="mc-console-title-bar">
+                                                <span class="mc-console-page-title">Getting Started</span>
+                                            </div>
+                                            <div class="mc-mock-form">
+                                                <div class="mc-mock-field">
+                                                    <label>Select a phone number</label>
+                                                    <div class="mc-mock-input" style="display:flex;justify-content:space-between;align-items:center">
+                                                        <span style="color:#606770">Test Number: +1 555-XXX-XXXX</span>
+                                                        <span style="font-size:10px;color:#42b72a;font-weight:600">Connected</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mc-mock-btn-row" style="margin-top:12px">
+                                                    <button class="mc-mock-btn primary" type="button"><i class="fa fa-plus" style="margin-left:6px"></i> Add Phone Number</button>
+                                                </div>
+                                                <div class="mc-mock-field" style="margin-top:16px">
+                                                    <label>Your phone number *</label>
+                                                    <div class="mc-mock-input highlight" style="direction:ltr">+962 7XX XXX XXX</div>
+                                                    <div class="mc-mock-hint">
+                                                        <i class="fa fa-arrow-up mc-arrow-blink"></i>
+                                                        <span class="mc-highlight-text">أدخل رقم الهاتف الذي تريد إرسال رسائل WhatsApp منه</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1721,7 +1895,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 </div>
                             </div>
 
-                            <!-- Step 4: Get Access Token -->
+                            <!-- ──── Step 4: Get Permanent Access Token ──── -->
                             <div class="gc-step" id="wa-step-4">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">4</div>
@@ -1731,32 +1905,88 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                     </div>
                                 </div>
 
+                                <!-- System User & Token Generation Mockup -->
+                                <div class="mc-console-mockup">
+                                    <div class="mc-console-topbar">
+                                        <div class="mc-console-logo">
+                                            <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="18" fill="#fff"/><path d="M18 6.6C11.7 6.6 6.6 11.7 6.6 18S11.7 29.4 18 29.4 29.4 24.3 29.4 18 24.3 6.6 18 6.6z" fill="#1877F2"/><path d="M20.7 19.5h2.7l.4-3h-3.1v-1.7c0-1.2.4-2.3 1.7-2.3h1.5V10c-.3 0-1-.2-2.2-.2-2.7 0-4.2 1.4-4.2 4.6v2.1h-2.8v3h2.8v8.3a11.4 11.4 0 003.2 0v-8.3z" fill="#fff"/></svg>
+                                            <span>Meta Business Suite</span>
+                                        </div>
+                                        <div class="mc-console-breadcrumb">Business Settings → System Users</div>
+                                    </div>
+                                    <div class="mc-console-content">
+                                        <div class="mc-console-sidebar-mini">
+                                            <div class="mc-sidebar-item"><i class="fa fa-users"></i> People</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-handshake-o"></i> Partners</div>
+                                            <div class="mc-sidebar-item active-item"><i class="fa fa-user-secret"></i> System Users</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-key"></i> Data Sources</div>
+                                        </div>
+                                        <div class="mc-console-main">
+                                            <div class="mc-console-title-bar">
+                                                <span class="mc-console-page-title">System Users</span>
+                                                <button class="mc-mock-btn primary" type="button" style="font-size:12px;padding:6px 16px">+ Add</button>
+                                            </div>
+
+                                            <div class="mc-mock-id-row highlight">
+                                                <div>
+                                                    <strong style="font-size:13px;color:#1c1e21">Tayseer API Bot</strong>
+                                                    <div style="font-size:11px;color:#606770;margin-top:2px">Admin · Created Mar 2026</div>
+                                                </div>
+                                                <button class="mc-mock-btn primary" type="button" style="font-size:11px;padding:5px 14px;margin-right:auto">Generate Token</button>
+                                            </div>
+
+                                            <div style="margin-top:16px">
+                                                <label style="font-size:12px;color:#606770;font-weight:600;display:block;margin-bottom:8px">Select permissions:</label>
+                                                <div class="mc-permission-list">
+                                                    <div class="mc-permission-item checked">
+                                                        <i class="fa fa-check-square"></i>
+                                                        <code style="font-size:12px">whatsapp_business_management</code>
+                                                    </div>
+                                                    <div class="mc-permission-item checked">
+                                                        <i class="fa fa-check-square"></i>
+                                                        <code style="font-size:12px">whatsapp_business_messaging</code>
+                                                    </div>
+                                                    <div class="mc-permission-item" style="opacity:.5">
+                                                        <i class="fa fa-square-o"></i>
+                                                        <code style="font-size:12px">business_management</code>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div style="margin-top:14px">
+                                                <label style="font-size:11px;color:#606770;display:block;margin-bottom:6px">Generated Access Token:</label>
+                                                <div class="mc-mock-token-box highlight">
+                                                    EAAMx7Z...kQBwZDZD
+                                                </div>
+                                                <div class="mc-mock-hint">
+                                                    <i class="fa fa-arrow-up mc-arrow-blink"></i>
+                                                    <span class="mc-highlight-text">انسخ هذا الرمز فوراً — لن يظهر مرة أخرى!</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div class="gc-step-instructions">
                                     <div class="gc-instruction-item">
                                         <span class="gc-inst-num">1</span>
-                                        <span>من لوحة التطبيق → <strong>WhatsApp</strong> → <strong>API Setup</strong></span>
+                                        <span>اذهب إلى <a href="https://business.facebook.com/settings/system-users" target="_blank" class="gc-link">Business Settings → System Users</a></span>
                                     </div>
                                     <div class="gc-instruction-item">
                                         <span class="gc-inst-num">2</span>
-                                        <span>ستجد <strong>Temporary Access Token</strong> — هذا صالح لـ 24 ساعة فقط (للاختبار)</span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">3</span>
-                                        <span>للحصول على <strong>Permanent Token</strong>:
-                                            اذهب إلى <a href="https://business.facebook.com/settings/system-users" target="_blank" class="gc-link">Business Settings → System Users</a>
-                                        </span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">4</span>
                                         <span>أنشئ <strong>System User</strong> جديد → اختر صلاحية <strong>Admin</strong></span>
                                     </div>
                                     <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">5</span>
-                                        <span>اضغط <strong>Generate New Token</strong> → اختر التطبيق → فعّل صلاحيات: <code>whatsapp_business_management</code> و <code>whatsapp_business_messaging</code></span>
+                                        <span class="gc-inst-num">3</span>
+                                        <span>اضغط <strong>Generate Token</strong> → اختر التطبيق → فعّل صلاحيات: <code>whatsapp_business_management</code> و <code>whatsapp_business_messaging</code></span>
                                     </div>
                                     <div class="gc-instruction-item gc-note-item gc-warning-item">
                                         <i class="fa fa-exclamation-triangle"></i>
-                                        <span>انسخ Token فوراً — <strong>لن يظهر مرة أخرى!</strong></span>
+                                        <span>انسخ Token فوراً — <strong>لن يظهر مرة أخرى!</strong> هذا الرمز دائم ولا ينتهي</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span>الرمز المؤقت (Temporary) من صفحة API Setup صالح <strong>24 ساعة فقط</strong> — للإنتاج استخدم Permanent Token من System User</span>
                                     </div>
                                 </div>
 
@@ -1766,19 +1996,67 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 </div>
                             </div>
 
-                            <!-- Step 5: Get IDs -->
+                            <!-- ──── Step 5: Get Phone Number ID & WABA ID ──── -->
                             <div class="gc-step" id="wa-step-5">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">5</div>
                                     <div>
                                         <h3>نسخ المعرّفات المطلوبة</h3>
-                                        <p>استخرج Phone Number ID و WhatsApp Business Account ID</p>
+                                        <p>استخرج Phone Number ID و WhatsApp Business Account ID و App Secret</p>
+                                    </div>
+                                </div>
+
+                                <!-- API Setup Mockup -->
+                                <div class="mc-console-mockup">
+                                    <div class="mc-console-topbar">
+                                        <div class="mc-console-logo">
+                                            <svg width="20" height="20" viewBox="0 0 36 36" fill="none"><circle cx="18" cy="18" r="18" fill="#fff"/><path d="M18 6.6C11.7 6.6 6.6 11.7 6.6 18S11.7 29.4 18 29.4 29.4 24.3 29.4 18 24.3 6.6 18 6.6z" fill="#1877F2"/><path d="M20.7 19.5h2.7l.4-3h-3.1v-1.7c0-1.2.4-2.3 1.7-2.3h1.5V10c-.3 0-1-.2-2.2-.2-2.7 0-4.2 1.4-4.2 4.6v2.1h-2.8v3h2.8v8.3a11.4 11.4 0 003.2 0v-8.3z" fill="#fff"/></svg>
+                                            <span>Meta for Developers</span>
+                                        </div>
+                                        <div class="mc-console-breadcrumb">Tayseer WhatsApp → WhatsApp → API Setup</div>
+                                    </div>
+                                    <div class="mc-console-content">
+                                        <div class="mc-console-sidebar-mini">
+                                            <div class="mc-sidebar-item"><i class="fa fa-tachometer"></i> Dashboard</div>
+                                            <div class="mc-sidebar-item active-item"><i class="fa fa-whatsapp" style="color:#25d366"></i> WhatsApp</div>
+                                            <div class="mc-sidebar-item" style="padding-right:30px;font-size:11px">Getting Started</div>
+                                            <div class="mc-sidebar-item" style="padding-right:30px;font-size:11px;color:#1877f2;font-weight:600">API Setup</div>
+                                            <div class="mc-sidebar-item"><i class="fa fa-cog"></i> App Settings</div>
+                                        </div>
+                                        <div class="mc-console-main">
+                                            <div class="mc-console-title-bar">
+                                                <span class="mc-console-page-title">API Setup</span>
+                                            </div>
+                                            <div class="mc-mock-id-row highlight">
+                                                <span class="mc-mock-id-label">Phone Number ID</span>
+                                                <span class="mc-mock-id-value">106XXXXXXXXX</span>
+                                                <span class="mc-mock-copy-btn"><i class="fa fa-copy"></i> Copy</span>
+                                            </div>
+                                            <div class="mc-mock-id-row highlight">
+                                                <span class="mc-mock-id-label">WhatsApp Business Account ID</span>
+                                                <span class="mc-mock-id-value">209XXXXXXXXX</span>
+                                                <span class="mc-mock-copy-btn"><i class="fa fa-copy"></i> Copy</span>
+                                            </div>
+                                            <div style="margin-top:16px;padding-top:12px;border-top:1px solid #dddfe2">
+                                                <div style="font-size:12px;color:#606770;margin-bottom:6px;font-weight:600">From App Settings → Basic:</div>
+                                                <div class="mc-mock-id-row">
+                                                    <span class="mc-mock-id-label">App ID</span>
+                                                    <span class="mc-mock-id-value">478XXXXXXXXX</span>
+                                                    <span class="mc-mock-copy-btn"><i class="fa fa-copy"></i> Copy</span>
+                                                </div>
+                                                <div class="mc-mock-id-row">
+                                                    <span class="mc-mock-id-label">App Secret</span>
+                                                    <span class="mc-mock-id-value">a1b2c3d4e5f6...</span>
+                                                    <span class="mc-mock-copy-btn"><i class="fa fa-eye"></i> Show</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <!-- Field Mapping -->
                                 <div class="gc-field-mapping">
-                                    <div class="gc-mapping-title"><i class="fa fa-exchange"></i> ربط الحقول من لوحة Meta</div>
+                                    <div class="gc-mapping-title"><i class="fa fa-exchange"></i> ربط الحقول — من لوحة Meta إلى إعدادات تيسير</div>
                                     <div class="gc-mapping-grid">
                                         <div class="gc-mapping-row">
                                             <div class="gc-mapping-from">
@@ -1786,7 +2064,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                                 <code>Phone Number ID</code>
                                             </div>
                                             <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
-                                            <div class="gc-mapping-to">من صفحة API Setup → القسم العلوي</div>
+                                            <div class="gc-mapping-to">WhatsApp → API Setup → القسم العلوي</div>
                                         </div>
                                         <div class="gc-mapping-row">
                                             <div class="gc-mapping-from">
@@ -1794,35 +2072,32 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                                 <code>WABA ID</code>
                                             </div>
                                             <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
-                                            <div class="gc-mapping-to">WhatsApp Business Account ID — من API Setup</div>
+                                            <div class="gc-mapping-to">WhatsApp Business Account ID — من نفس الصفحة</div>
                                         </div>
                                         <div class="gc-mapping-row">
                                             <div class="gc-mapping-from">
                                                 <span class="gc-mapping-num">3</span>
-                                                <code>App ID</code>
+                                                <code>Access Token</code>
                                             </div>
                                             <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
-                                            <div class="gc-mapping-to">من Settings → Basic في لوحة التطبيق</div>
+                                            <div class="gc-mapping-to">من الخطوة السابقة (System User → Generate Token)</div>
                                         </div>
                                         <div class="gc-mapping-row">
                                             <div class="gc-mapping-from">
                                                 <span class="gc-mapping-num">4</span>
+                                                <code>App ID</code>
+                                            </div>
+                                            <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
+                                            <div class="gc-mapping-to">App Settings → Basic في لوحة التطبيق</div>
+                                        </div>
+                                        <div class="gc-mapping-row">
+                                            <div class="gc-mapping-from">
+                                                <span class="gc-mapping-num">5</span>
                                                 <code>App Secret</code>
                                             </div>
                                             <i class="fa fa-long-arrow-left gc-mapping-arrow"></i>
-                                            <div class="gc-mapping-to">من Settings → Basic → App Secret (اضغط Show)</div>
+                                            <div class="gc-mapping-to">App Settings → Basic → App Secret (اضغط Show)</div>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-instructions">
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">1</span>
-                                        <span>من <strong>WhatsApp → API Setup</strong>: انسخ <strong>Phone Number ID</strong> و <strong>WhatsApp Business Account ID</strong></span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">2</span>
-                                        <span>من <strong>App Settings → Basic</strong>: انسخ <strong>App ID</strong> و <strong>App Secret</strong></span>
                                     </div>
                                 </div>
 
@@ -1832,7 +2107,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 </div>
                             </div>
 
-                            <!-- Step 6: Fill & Save -->
+                            <!-- ──── Step 6: Fill & Save ──── -->
                             <div class="gc-step" id="wa-step-6">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">6</div>
@@ -1875,6 +2150,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="sys-field">
                                     <label class="sys-label" for="wa_phone_number_id">
                                         <i class="fa fa-phone"></i> معرّف رقم الهاتف (Phone Number ID)
+                                        <span class="gc-json-field-tag" style="background:#e7f3ff;color:#1877f2">من API Setup</span>
                                     </label>
                                     <input type="text" class="sys-input" id="wa_phone_number_id" name="wa_phone_number_id"
                                            value="<?= Html::encode($waSettings['phone_number_id'] ?? '') ?>"
@@ -1886,6 +2162,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="sys-field">
                                     <label class="sys-label" for="wa_waba_id">
                                         <i class="fa fa-building"></i> معرّف حساب الأعمال (WABA ID)
+                                        <span class="gc-json-field-tag" style="background:#e7f3ff;color:#1877f2">من API Setup</span>
                                     </label>
                                     <input type="text" class="sys-input" id="wa_waba_id" name="wa_waba_id"
                                            value="<?= Html::encode($waSettings['waba_id'] ?? '') ?>"
@@ -1897,6 +2174,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="sys-field sys-field-full">
                                     <label class="sys-label" for="wa_access_token">
                                         <i class="fa fa-ticket"></i> رمز الوصول (Access Token)
+                                        <span class="gc-json-field-tag" style="background:#fff3e0;color:#e65100">من System User</span>
                                     </label>
                                     <div class="sys-key-wrapper">
                                         <textarea class="sys-textarea" id="wa_access_token" name="wa_access_token"
@@ -1915,6 +2193,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="sys-field">
                                     <label class="sys-label" for="wa_app_id">
                                         <i class="fa fa-cube"></i> معرّف التطبيق (App ID)
+                                        <span class="gc-json-field-tag" style="background:#e7f3ff;color:#1877f2">من App Settings</span>
                                     </label>
                                     <input type="text" class="sys-input" id="wa_app_id" name="wa_app_id"
                                            value="<?= Html::encode($waSettings['app_id'] ?? '') ?>"
@@ -1926,6 +2205,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="sys-field">
                                     <label class="sys-label" for="wa_app_secret">
                                         <i class="fa fa-shield"></i> سر التطبيق (App Secret)
+                                        <span class="gc-json-field-tag" style="background:#e7f3ff;color:#1877f2">من App Settings</span>
                                     </label>
                                     <input type="text" class="sys-input" id="wa_app_secret" name="wa_app_secret"
                                            value="<?= !empty($waSettings['has_app_secret']) ? '••••••••••' : '' ?>"
@@ -1956,7 +2236,8 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                         <i class="fa fa-code-fork"></i> إصدار API (API Version)
                                     </label>
                                     <select class="sys-input" id="wa_api_version" name="wa_api_version">
-                                        <option value="v21.0" <?= ($waSettings['api_version'] ?? 'v21.0') === 'v21.0' ? 'selected' : '' ?>>v21.0 (مستقر)</option>
+                                        <option value="v22.0" <?= ($waSettings['api_version'] ?? 'v22.0') === 'v22.0' ? 'selected' : '' ?>>v22.0 (الأحدث)</option>
+                                        <option value="v21.0" <?= ($waSettings['api_version'] ?? '') === 'v21.0' ? 'selected' : '' ?>>v21.0 (مستقر)</option>
                                         <option value="v20.0" <?= ($waSettings['api_version'] ?? '') === 'v20.0' ? 'selected' : '' ?>>v20.0</option>
                                         <option value="v19.0" <?= ($waSettings['api_version'] ?? '') === 'v19.0' ? 'selected' : '' ?>>v19.0</option>
                                     </select>
@@ -1976,6 +2257,198 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </button>
                     </div>
                 </form>
+
+                    <!-- ═══════════ Send Test Message ═══════════ -->
+                    <div class="sys-card wa-test-msg-card" style="margin-top:20px">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-paper-plane"></i> إرسال رسالة تجريبية
+                            </div>
+                            <span class="sys-card-badge" style="background:#e8f5e9;color:#2e7d32"><i class="fa fa-whatsapp"></i> WhatsApp</span>
+                        </div>
+                        <div class="sys-card-body">
+                            <p style="font-size:13px;color:var(--clr-text-muted);margin:0 0 16px;line-height:1.6">
+                                أرسل رسالة تجريبية للتأكد من عمل الخدمة. يجب حفظ الإعدادات أولاً واجتياز اختبار الاتصال.
+                            </p>
+                            <div class="wa-test-phone-row">
+                                <div class="sys-field">
+                                    <label class="sys-label" for="wa_test_phone">
+                                        <i class="fa fa-mobile"></i> رقم الهاتف (مع رمز الدولة)
+                                    </label>
+                                    <input type="text" class="sys-input" id="wa_test_phone"
+                                           placeholder="962791234567"
+                                           dir="ltr" style="font-family:var(--font-family)">
+                                </div>
+                                <button type="button" class="wa-test-send-btn" id="btn-wa-test-send" onclick="sendWaTestMessage()">
+                                    <i class="fa fa-whatsapp"></i> إرسال رسالة تجريبية
+                                </button>
+                            </div>
+                            <div class="wa-test-result" id="wa-test-result"></div>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Webhook Configuration ═══════════ -->
+                    <div class="sys-card wa-webhook-card">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-plug"></i> إعداد Webhook
+                            </div>
+                            <span class="sys-card-badge"><i class="fa fa-info-circle"></i> اختياري</span>
+                        </div>
+                        <div class="sys-card-body">
+                            <p style="font-size:13px;color:var(--clr-text-muted);margin:0 0 16px;line-height:1.6">
+                                لاستقبال الرسائل الواردة وحالات التسليم، أضف Webhook URL التالي في لوحة Meta Developers:
+                            </p>
+
+                            <?php
+                            $webhookUrl = Yii::$app->request->hostInfo . '/api/whatsapp/webhook';
+                            $verifyToken = $waSettings['webhook_verify_token'] ?? 'YOUR_VERIFY_TOKEN';
+                            ?>
+
+                            <div style="margin-bottom:16px">
+                                <label style="font-size:12px;font-weight:600;color:var(--clr-text);display:block;margin-bottom:6px">
+                                    <i class="fa fa-link" style="color:#1877f2;margin-left:4px"></i> Callback URL
+                                </label>
+                                <div class="wa-webhook-url">
+                                    <code id="wa-webhook-url-text"><?= Html::encode($webhookUrl) ?></code>
+                                    <button type="button" class="wa-webhook-copy-btn" onclick="copyWaWebhookUrl()">
+                                        <i class="fa fa-copy"></i> نسخ
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:16px">
+                                <label style="font-size:12px;font-weight:600;color:var(--clr-text);display:block;margin-bottom:6px">
+                                    <i class="fa fa-check-square" style="color:#1877f2;margin-left:4px"></i> Verify Token
+                                </label>
+                                <div class="wa-webhook-url">
+                                    <code id="wa-verify-token-text"><?= Html::encode($verifyToken) ?></code>
+                                    <button type="button" class="wa-webhook-copy-btn" onclick="copyWaVerifyToken()">
+                                        <i class="fa fa-copy"></i> نسخ
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--clr-text);display:block;margin-bottom:8px">
+                                    <i class="fa fa-bell" style="color:#1877f2;margin-left:4px"></i> الأحداث المشترك بها (Subscribed Fields)
+                                </label>
+                                <div class="wa-webhook-events">
+                                    <div class="wa-webhook-event"><i class="fa fa-check-circle"></i> <code>messages</code> — الرسائل الواردة</div>
+                                    <div class="wa-webhook-event"><i class="fa fa-check-circle"></i> <code>message_deliveries</code> — حالة التسليم</div>
+                                    <div class="wa-webhook-event"><i class="fa fa-check-circle"></i> <code>message_reads</code> — حالة القراءة</div>
+                                    <div class="wa-webhook-event"><i class="fa fa-check-circle"></i> <code>message_template_status_update</code> — حالة القوالب</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Message Templates ═══════════ -->
+                    <div class="sys-card" style="margin-top:20px">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-file-text-o"></i> قوالب الرسائل (Message Templates)
+                            </div>
+                            <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank"
+                               style="font-size:12px;color:#1877f2;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px">
+                                <i class="fa fa-external-link"></i> إدارة القوالب في Meta
+                            </a>
+                        </div>
+                        <div class="sys-card-body">
+                            <p style="font-size:13px;color:var(--clr-text-muted);margin:0 0 16px;line-height:1.6">
+                                لإرسال رسائل WhatsApp للعملاء خارج نافذة الـ 24 ساعة، تحتاج قوالب رسائل معتمدة من Meta. أنشئها من لوحة Meta Business:
+                            </p>
+                            <div class="wa-templates-grid">
+                                <div class="wa-template-item">
+                                    <div class="wa-template-header">
+                                        <span class="wa-template-name">payment_reminder</span>
+                                        <span class="wa-template-badge approved">معتمد</span>
+                                    </div>
+                                    <div class="wa-template-desc">تذكير بموعد القسط المستحق مع تفاصيل المبلغ والتاريخ</div>
+                                    <div class="wa-template-category">UTILITY — رسائل خدمية</div>
+                                </div>
+                                <div class="wa-template-item">
+                                    <div class="wa-template-header">
+                                        <span class="wa-template-name">payment_confirmation</span>
+                                        <span class="wa-template-badge approved">معتمد</span>
+                                    </div>
+                                    <div class="wa-template-desc">تأكيد استلام الدفعة مع رقم الإيصال والرصيد المتبقي</div>
+                                    <div class="wa-template-category">UTILITY — رسائل خدمية</div>
+                                </div>
+                                <div class="wa-template-item">
+                                    <div class="wa-template-header">
+                                        <span class="wa-template-name">overdue_notice</span>
+                                        <span class="wa-template-badge pending">قيد المراجعة</span>
+                                    </div>
+                                    <div class="wa-template-desc">إشعار بتأخر سداد القسط مع عدد أيام التأخير</div>
+                                    <div class="wa-template-category">UTILITY — رسائل خدمية</div>
+                                </div>
+                                <div class="wa-template-item">
+                                    <div class="wa-template-header">
+                                        <span class="wa-template-name">welcome_customer</span>
+                                        <span class="wa-template-badge approved">معتمد</span>
+                                    </div>
+                                    <div class="wa-template-desc">رسالة ترحيبية للعميل الجديد مع تفاصيل العقد</div>
+                                    <div class="wa-template-category">MARKETING — رسائل تسويقية</div>
+                                </div>
+                            </div>
+
+                            <div class="gc-step-instructions" style="margin-top:16px;margin-bottom:0">
+                                <div class="gc-instruction-item gc-note-item">
+                                    <i class="fa fa-info-circle"></i>
+                                    <span>هذه أمثلة على القوالب المقترحة. أنشئ قوالبك الخاصة من
+                                        <a href="https://business.facebook.com/wa/manage/message-templates/" target="_blank" class="gc-link">
+                                            لوحة إدارة القوالب
+                                        </a>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Pricing Info ═══════════ -->
+                    <div class="sys-card" style="margin-top:20px">
+                        <div class="sys-card-header">
+                            <div class="sys-card-title">
+                                <i class="fa fa-money"></i> تسعير المحادثات
+                            </div>
+                            <a href="https://developers.facebook.com/docs/whatsapp/pricing/" target="_blank"
+                               style="font-size:12px;color:#1877f2;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px">
+                                <i class="fa fa-external-link"></i> التفاصيل الكاملة
+                            </a>
+                        </div>
+                        <div class="sys-card-body">
+                            <div class="wa-pricing-grid">
+                                <div class="wa-pricing-item">
+                                    <strong><i class="fa fa-wrench" style="color:#1877f2;margin-left:6px"></i> Utility</strong>
+                                    <span>تأكيدات الدفع، تذكير بالأقساط، تحديثات الحساب</span>
+                                    <span class="wa-pricing-free">1,000 محادثة/شهر مجاناً</span>
+                                </div>
+                                <div class="wa-pricing-item">
+                                    <strong><i class="fa fa-check-circle" style="color:#42b72a;margin-left:6px"></i> Authentication</strong>
+                                    <span>رموز التحقق OTP، تأكيد الهوية</span>
+                                    <span class="wa-pricing-free">1,000 محادثة/شهر مجاناً</span>
+                                </div>
+                                <div class="wa-pricing-item">
+                                    <strong><i class="fa fa-bullhorn" style="color:#f57c00;margin-left:6px"></i> Marketing</strong>
+                                    <span>عروض ترويجية، حملات تسويقية، رسائل إعلانية</span>
+                                    <span style="font-size:11px;color:#606770;display:block;margin-top:4px">تُحسب حسب البلد</span>
+                                </div>
+                                <div class="wa-pricing-item">
+                                    <strong><i class="fa fa-headphones" style="color:#7b1fa2;margin-left:6px"></i> Service</strong>
+                                    <span>ردود على استفسارات العملاء (نافذة 24 ساعة)</span>
+                                    <span class="wa-pricing-free">1,000 محادثة/شهر مجاناً</span>
+                                </div>
+                            </div>
+                            <div class="gc-step-instructions" style="margin-top:12px;margin-bottom:0">
+                                <div class="gc-instruction-item gc-note-item gc-success-item">
+                                    <i class="fa fa-gift"></i>
+                                    <span>أول <strong>1,000 محادثة خدمية شهرياً مجانية</strong> — كافية لمعظم شركات التقسيط الصغيرة والمتوسطة</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div><!-- /g-panel-whatsapp -->
 
             </div><!-- /tab-messaging -->
@@ -2418,6 +2891,7 @@ $testUrl = Url::to(['test-google-connection']);
 $testMapsUrl = Url::to(['test-maps-connection']);
 $testSmsUrl = Url::to(['test-sms-connection']);
 $testWhatsappUrl = Url::to(['test-whatsapp-connection']);
+$testWaMessageUrl = Url::to(['test-whatsapp-message']);
 $googleStatsUrl = Url::to(['/customers/smart-media/google-stats']);
 $js = <<<JS
 // دليل خريطة Google — طيّ/فتح
@@ -3066,6 +3540,63 @@ $('#wa_app_secret').on('focus', function() {
 }).on('blur', function() {
     if ($(this).val().trim() === '') $(this).val('••••••••••');
 });
+
+// ── Copy Webhook URL ──
+window.copyWaWebhookUrl = function() {
+    var text = document.getElementById('wa-webhook-url-text').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = document.querySelector('.wa-webhook-card .wa-webhook-copy-btn');
+        btn.innerHTML = '<i class="fa fa-check"></i> تم النسخ!';
+        setTimeout(function() { btn.innerHTML = '<i class="fa fa-copy"></i> نسخ'; }, 2000);
+    });
+};
+
+window.copyWaVerifyToken = function() {
+    var text = document.getElementById('wa-verify-token-text').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        var btns = document.querySelectorAll('.wa-webhook-card .wa-webhook-copy-btn');
+        if (btns[1]) {
+            btns[1].innerHTML = '<i class="fa fa-check"></i> تم النسخ!';
+            setTimeout(function() { btns[1].innerHTML = '<i class="fa fa-copy"></i> نسخ'; }, 2000);
+        }
+    });
+};
+
+// ── Send Test WhatsApp Message ──
+window.sendWaTestMessage = function() {
+    var phone = document.getElementById('wa_test_phone').value.trim();
+    var btn = document.getElementById('btn-wa-test-send');
+    var resultDiv = document.getElementById('wa-test-result');
+    if (!phone) {
+        resultDiv.innerHTML = '<div class="sys-status-indicator error" style="margin-top:8px"><i class="fa fa-exclamation-circle"></i><div><strong>أدخل رقم الهاتف</strong><p>أدخل رقم الهاتف مع رمز الدولة (مثال: 962791234567)</p></div></div>';
+        return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...';
+    resultDiv.innerHTML = '';
+
+    fetch('{$testWaMessageUrl}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'phone=' + encodeURIComponent(phone),
+        credentials: 'same-origin'
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(res) {
+        if (res.success) {
+            resultDiv.innerHTML = '<div class="sys-status-indicator connected" style="margin-top:8px"><i class="fa fa-check-circle fa-lg"></i><div><strong>تم الإرسال بنجاح!</strong><p>' + (res.message || 'تم إرسال رسالة تجريبية') + '</p></div></div>';
+        } else {
+            resultDiv.innerHTML = '<div class="sys-status-indicator error" style="margin-top:8px"><i class="fa fa-times-circle fa-lg"></i><div><strong>فشل الإرسال</strong><p>' + (res.error || 'خطأ غير معروف') + '</p></div></div>';
+        }
+    })
+    .catch(function(err) {
+        resultDiv.innerHTML = '<div class="sys-status-indicator error" style="margin-top:8px"><i class="fa fa-times-circle fa-lg"></i><div><strong>خطأ في الاتصال</strong><p>' + err.message + '</p></div></div>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa fa-whatsapp"></i> إرسال رسالة تجريبية';
+    });
+};
 JS;
 $this->registerJs($js);
 ?>

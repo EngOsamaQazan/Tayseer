@@ -359,6 +359,7 @@ class ContractCalculations
             'contract_value' => $this->getContractTotal(),
             'total_adjustments' => $this->totalAdjustments(),
             'commitment_discount' => $this->commitmentDiscount(),
+            'monthly_installment' => $this->effectiveInstallment(),
         ];
     }
 
