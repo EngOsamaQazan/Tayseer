@@ -219,6 +219,7 @@ class JudiciaryDeadlineService
      */
     private static $milestoneTypes = [
         JudiciaryDeadline::TYPE_REGISTRATION_3WD,
+        'registration',
     ];
 
     /**
@@ -293,7 +294,7 @@ class JudiciaryDeadlineService
                    SELECT 1 FROM {$prefix}judiciary_customers_actions a
                    WHERE a.judiciary_id = d.judiciary_id
                      AND (a.is_deleted = 0 OR a.is_deleted IS NULL)
-                     AND a.created_at > d.created_at
+                     AND a.action_date > d.start_date
                )"
         )->queryColumn();
 

@@ -122,9 +122,22 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
         return true;
     }
 
-    /**
-     * Auto-complete pending deadlines when a new action is added to a case.
-     */
+    private static $actionTypeToStage = [
+        'case_preparation'     => 'case_preparation',
+        'fee_registration'     => 'case_registration',
+        'notification'         => 'notification',
+        'procedural_requests'  => 'procedural_requests',
+        'correspondence'       => 'correspondence',
+        'follow_up'            => 'follow_up',
+        'settlement_closure'   => 'payment_settlement',
+        'appeal_cancellation'  => 'follow_up',
+        'case_registration'    => 'case_registration',
+        'salary_deduction'     => 'correspondence',
+        'arrest_detention'     => 'follow_up',
+        'asset_seizure'        => 'follow_up',
+        'court_decision'       => 'procedural_requests',
+    ];
+
     public function afterSave($insert, $changedAttributes)
     {
         parent::afterSave($insert, $changedAttributes);
@@ -133,12 +146,32 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
             try {
                 $actionDef = $this->judiciaryActions;
                 $actionName = $actionDef ? $actionDef->name : '';
+
                 \backend\services\JudiciaryDeadlineService::completeMilestoneDeadlines(
                     $this->judiciary_id,
                     'تم إنجازه تلقائياً — إجراء جديد: ' . $actionName
                 );
+
+                if ($actionDef && $this->customers_id) {
+                    $targetStage = self::$actionTypeToStage[$actionDef->action_type] ?? null;
+                    if ($targetStage) {
+                        $ds = \backend\models\JudiciaryDefendantStage::find()
+                            ->where(['judiciary_id' => $this->judiciary_id, 'customer_id' => $this->customers_id])
+                            ->one();
+                        if (!$ds) {
+                            $ds = new \backend\models\JudiciaryDefendantStage([
+                                'judiciary_id' => $this->judiciary_id,
+                                'customer_id' => $this->customers_id,
+                                'current_stage' => 'case_preparation',
+                                'stage_updated_at' => date('Y-m-d H:i:s'),
+                            ]);
+                            $ds->save(false);
+                        }
+                        $ds->advanceTo($targetStage);
+                    }
+                }
             } catch (\Exception $e) {
-                Yii::warning('Failed to auto-complete deadlines: ' . $e->getMessage(), __METHOD__);
+                Yii::warning('Failed in afterSave hooks: ' . $e->getMessage(), __METHOD__);
             }
         }
     }

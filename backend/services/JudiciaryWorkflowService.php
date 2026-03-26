@@ -110,4 +110,76 @@ class JudiciaryWorkflowService
             ['judiciary_id' => $judiciaryId, 'customer_id' => $customerId, 'is_deleted' => 0]
         );
     }
+
+    private static $actionTypeToStage = [
+        'case_preparation'     => Judiciary::STAGE_CASE_PREPARATION,
+        'fee_registration'     => Judiciary::STAGE_CASE_REGISTRATION,
+        'notification'         => Judiciary::STAGE_NOTIFICATION,
+        'procedural_requests'  => Judiciary::STAGE_PROCEDURAL_REQUESTS,
+        'correspondence'       => Judiciary::STAGE_CORRESPONDENCE,
+        'follow_up'            => Judiciary::STAGE_FOLLOW_UP,
+        'settlement_closure'   => Judiciary::STAGE_PAYMENT_SETTLEMENT,
+        'appeal_cancellation'  => Judiciary::STAGE_FOLLOW_UP,
+        'case_registration'    => Judiciary::STAGE_CASE_REGISTRATION,
+        'salary_deduction'     => Judiciary::STAGE_CORRESPONDENCE,
+        'arrest_detention'     => Judiciary::STAGE_FOLLOW_UP,
+        'asset_seizure'        => Judiciary::STAGE_FOLLOW_UP,
+        'court_decision'       => Judiciary::STAGE_PROCEDURAL_REQUESTS,
+    ];
+
+    /**
+     * Recalculate defendant stages from existing actions for a given case.
+     * Scans all non-deleted actions and advances each defendant to the
+     * highest implied stage based on action_type mapping.
+     */
+    public function refreshStagesFromActions(int $judiciaryId)
+    {
+        $db = \Yii::$app->db;
+        $prefix = $db->tablePrefix;
+
+        $rows = $db->createCommand(
+            "SELECT jca.customers_id, ja.action_type
+             FROM {$prefix}judiciary_customers_actions jca
+             INNER JOIN {$prefix}judiciary_actions ja ON ja.id = jca.judiciary_actions_id
+             WHERE jca.judiciary_id = :jid
+               AND (jca.is_deleted = 0 OR jca.is_deleted IS NULL)
+             ORDER BY jca.action_date ASC",
+            [':jid' => $judiciaryId]
+        )->queryAll();
+
+        $customerMaxStage = [];
+        foreach ($rows as $r) {
+            $cid = $r['customers_id'];
+            $targetStage = self::$actionTypeToStage[$r['action_type']] ?? null;
+            if (!$targetStage) continue;
+
+            $targetRank = Judiciary::getStageRank($targetStage);
+            if (!isset($customerMaxStage[$cid]) || $targetRank > $customerMaxStage[$cid]['rank']) {
+                $customerMaxStage[$cid] = ['stage' => $targetStage, 'rank' => $targetRank];
+            }
+        }
+
+        foreach ($customerMaxStage as $cid => $info) {
+            $ds = JudiciaryDefendantStage::find()
+                ->where(['judiciary_id' => $judiciaryId, 'customer_id' => $cid])
+                ->one();
+
+            if (!$ds) {
+                $ds = new JudiciaryDefendantStage([
+                    'judiciary_id' => $judiciaryId,
+                    'customer_id' => $cid,
+                    'current_stage' => Judiciary::STAGE_CASE_PREPARATION,
+                    'stage_updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                $ds->save(false);
+            }
+
+            $ds->advanceTo($info['stage']);
+        }
+
+        $judiciary = Judiciary::findOne($judiciaryId);
+        if ($judiciary) {
+            $judiciary->refreshCaseStages();
+        }
+    }
 }
