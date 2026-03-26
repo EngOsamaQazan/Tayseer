@@ -203,79 +203,67 @@ class IncomeSearch extends Income
 
     public function totalCustomerPayments($params)
     {
-        $query = Income::find()->innerJoin('{{%contracts}}', '{{%contracts}}.id = {{%income}}.contract_id');
+        $query = Income::find()
+            ->innerJoin('{{%vw_income_contract_summary}} ics', 'ics.income_id = {{%income}}.id');
 
-
-        $judSubquery = '(SELECT DISTINCT contract_id FROM {{%judiciary}} WHERE is_deleted = 0 OR is_deleted IS NULL)';
-        if ( !empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 1) {
-            $query ->andWhere(['not in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
+        if (!empty($params['IncomeSearch']['income_status']) && $params['IncomeSearch']['income_status'] == 1) {
+            $query->andWhere(['ics.has_judiciary' => 0]);
         }
-        if (!empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 2) {
-            $query ->andWhere(['in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
-
+        if (!empty($params['IncomeSearch']['income_status']) && $params['IncomeSearch']['income_status'] == 2) {
+            $query->andWhere(['ics.has_judiciary' => 1]);
         }
 
 
 
         $this->load($params);
 
-        if ((!empty($params['IncomeSearch']['from_date']))) {
-            $query->andFilterWhere(['>=', '{{%contracts}}.Date_of_sale', $params['IncomeSearch']['from_date']]);
-
+        if (!empty($params['IncomeSearch']['from_date'])) {
+            $query->andFilterWhere(['>=', 'ics.Date_of_sale', $params['IncomeSearch']['from_date']]);
         }
-        if ((!empty($params['IncomeSearch']['to_date']))) {
-            $query->andFilterWhere(['<=', '{{%contracts}}.Date_of_sale', $params['IncomeSearch']['to_date']]);
+        if (!empty($params['IncomeSearch']['to_date'])) {
+            $query->andFilterWhere(['<=', 'ics.Date_of_sale', $params['IncomeSearch']['to_date']]);
         }
-
-
 
         $query->andFilterWhere([
-            'id' => $this->id,
-            'contract_id' => $this->contract_id,
-            'date' => $this->date,
-            'amount' => $this->amount,
+            '{{%income}}.id' => $this->id,
+            '{{%income}}.contract_id' => $this->contract_id,
+            '{{%income}}.date' => $this->date,
+            '{{%income}}.amount' => $this->amount,
             '{{%income}}.created_by' => $this->created_by,
-            'financial_transaction_id' => $this->financial_transaction_id,
-            'document_number' => $this->document_number,
         ]);
 
-        $query->andFilterWhere(['like', 'payment_type', $this->payment_type])
-            ->andFilterWhere(['like', '_by', $this->_by])
-            ->andFilterWhere(['like', 'receipt_bank', $this->receipt_bank])
-            ->andFilterWhere(['like', 'payment_purpose', $this->payment_purpose])
-            ->andFilterWhere(['like', 'notes', $this->notes]);
+        $query->andFilterWhere(['like', '{{%income}}.payment_type', $this->payment_type])
+            ->andFilterWhere(['like', '{{%income}}._by', $this->_by])
+            ->andFilterWhere(['like', '{{%income}}.notes', $this->notes]);
         if (!empty($params['IncomeSearch']['company_id'])) {
-            $query->andFilterWhere(['{{%contracts}}.company_id' => $params['IncomeSearch']['company_id']]);
+            $query->andFilterWhere(['ics.company_id' => $params['IncomeSearch']['company_id']]);
         }
         if (!empty($params['IncomeSearch']['payment_type'])) {
-            $query->andFilterWhere(['=', 'payment_type', $params['IncomeSearch']['payment_type']]);
+            $query->andFilterWhere(['=', '{{%income}}.payment_type', $params['IncomeSearch']['payment_type']]);
         }
 
-
-        if ((empty($this->date_to) and empty($this->date_from) and empty($params['IncomeSearch']['_by']))) {
-            $query->andFilterWhere(['=', 'date', '1000-01-01']);
+        if (empty($this->date_to) && empty($this->date_from) && empty($params['IncomeSearch']['_by'])) {
+            $query->andFilterWhere(['=', '{{%income}}.date', '1000-01-01']);
         }
 
         if (!empty($params['IncomeSearch']['followed_by'])) {
             if (!empty($params['IncomeSearch']['created_by'])) {
                 $query->andWhere(['=', '{{%income}}.created_by', $params['IncomeSearch']['created_by']]);
             }
-            $query->where(['followed_by' => $params['IncomeSearch']['followed_by']]);
-        }
-        else {
-
+            $query->andWhere(['ics.followed_by' => $params['IncomeSearch']['followed_by']]);
+        } else {
             if (!empty($params['IncomeSearch']['created_by'])) {
                 $query->andWhere(['=', '{{%income}}.created_by', $params['IncomeSearch']['created_by']]);
             }
         }
 
         if (!empty('_by') && $this->_by != null) {
-            $query->where(['=', '_by', $this->_by]);
+            $query->andWhere(['=', '{{%income}}._by', $this->_by]);
         }
         if (!empty($params['IncomeSearch']['type'])) {
             $query->andFilterWhere(['in', '{{%income}}.type', $params['IncomeSearch']['type']]);
         }
-        $this->amount_sum = $query->sum('amount');
+        $this->amount_sum = $query->sum('{{%income}}.amount');
 
         if (!empty($params['IncomeSearch']['number_row'])) {
             $dataProvider = new ActiveDataProvider([
@@ -304,111 +292,71 @@ class IncomeSearch extends Income
     }
     public function sumTotalCustomerPayments($params)
     {
-        $query = Income::find()->innerJoin('{{%contracts}}', '{{%contracts}}.id = {{%income}}.contract_id');
+        $query = Income::find()
+            ->innerJoin('{{%vw_income_contract_summary}} ics2', 'ics2.income_id = {{%income}}.id');
 
-        $judSubquery = '(SELECT DISTINCT contract_id FROM {{%judiciary}} WHERE is_deleted = 0 OR is_deleted IS NULL)';
-        if ( !empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 1) {
-            $query ->andWhere(['not in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
+        if (!empty($params['IncomeSearch']['income_status']) && $params['IncomeSearch']['income_status'] == 1) {
+            $query->andWhere(['ics2.has_judiciary' => 0]);
         }
-        if (!empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 2) {
-            $query ->andWhere(['in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
-
+        if (!empty($params['IncomeSearch']['income_status']) && $params['IncomeSearch']['income_status'] == 2) {
+            $query->andWhere(['ics2.has_judiciary' => 1]);
         }
-
-
 
         $this->load($params);
 
-        // if ($this->validate()) {
-        //     // uncomment the following line if you do not want to return any records when validation fails
-        //     // $query->where('0=1');
-        //     return $dataProvider;
-        // }
-        if ((!empty($params['IncomeSearch']['from_date']))) {
-            $query->andFilterWhere(['>=', '{{%contracts}}.Date_of_sale', $params['IncomeSearch']['from_date']]);
-
+        if (!empty($params['IncomeSearch']['from_date'])) {
+            $query->andFilterWhere(['>=', 'ics2.Date_of_sale', $params['IncomeSearch']['from_date']]);
         }
-        if ((!empty($params['IncomeSearch']['to_date']))) {
-            $query->andFilterWhere(['<=', '{{%contracts}}.Date_of_sale', $params['IncomeSearch']['to_date']]);
+        if (!empty($params['IncomeSearch']['to_date'])) {
+            $query->andFilterWhere(['<=', 'ics2.Date_of_sale', $params['IncomeSearch']['to_date']]);
         }
         $query->andFilterWhere([
-            'id' => $this->id,
-            'contract_id' => $this->contract_id,
-            'date' => $this->date,
-            'amount' => $this->amount,
+            '{{%income}}.id' => $this->id,
+            '{{%income}}.contract_id' => $this->contract_id,
+            '{{%income}}.date' => $this->date,
+            '{{%income}}.amount' => $this->amount,
             '{{%income}}.created_by' => $this->created_by,
-            'financial_transaction_id' => $this->financial_transaction_id,
-            'document_number' => $this->document_number,
         ]);
 
-        $query->andFilterWhere(['like', 'payment_type', $this->payment_type])
-            ->andFilterWhere(['like', '_by', $this->_by])
-            ->andFilterWhere(['like', 'receipt_bank', $this->receipt_bank])
-            ->andFilterWhere(['like', 'payment_purpose', $this->payment_purpose])
-            ->andFilterWhere(['like', 'notes', $this->notes]);
+        $query->andFilterWhere(['like', '{{%income}}.payment_type', $this->payment_type])
+            ->andFilterWhere(['like', '{{%income}}._by', $this->_by])
+            ->andFilterWhere(['like', '{{%income}}.notes', $this->notes]);
         if (!empty($params['IncomeSearch']['company_id'])) {
-            $query->andFilterWhere(['{{%contracts}}.company_id' => $params['IncomeSearch']['company_id']]);
+            $query->andFilterWhere(['ics2.company_id' => $params['IncomeSearch']['company_id']]);
         }
         if (!empty($params['IncomeSearch']['payment_type'])) {
-            $query->andFilterWhere(['=', 'payment_type', $params['IncomeSearch']['payment_type']]);
+            $query->andFilterWhere(['=', '{{%income}}.payment_type', $params['IncomeSearch']['payment_type']]);
         }
 
-
-        if ((empty($this->date_to) and empty($this->date_from) and empty($params['IncomeSearch']['_by']))) {
-            $query->andFilterWhere(['=', 'date', '1000-01-01']);
+        if (empty($this->date_to) && empty($this->date_from) && empty($params['IncomeSearch']['_by'])) {
+            $query->andFilterWhere(['=', '{{%income}}.date', '1000-01-01']);
         }
 
         if (!empty($params['IncomeSearch']['followed_by'])) {
             if (!empty($params['IncomeSearch']['created_by'])) {
                 $query->andWhere(['=', '{{%income}}.created_by', $params['IncomeSearch']['created_by']]);
             }
-            $query->where(['followed_by' => $params['IncomeSearch']['followed_by']]);
-        }
-        else {
-
+            $query->andWhere(['ics2.followed_by' => $params['IncomeSearch']['followed_by']]);
+        } else {
             if (!empty($params['IncomeSearch']['created_by'])) {
                 $query->andWhere(['=', '{{%income}}.created_by', $params['IncomeSearch']['created_by']]);
             }
         }
 
         if (!empty('_by') && $this->_by != null) {
-            $query->where(['=', '_by', $this->_by]);
+            $query->andWhere(['=', '{{%income}}._by', $this->_by]);
         }
         if (!empty($params['IncomeSearch']['type'])) {
             $query->andFilterWhere(['in', '{{%income}}.type', $params['IncomeSearch']['type']]);
         }
-        // $query->andFilterWhere(['=', '{{%contracts}}.is_deleted', 0]);
-        $this->amount_sum = $query->sum('amount');
-        /*  if((!empty($this->date_to) or  !empty($this->date_from)) and  $params['IncomeSearch']['income_status'] == 1 ){
-              $query->andWhere(['=','os_contracts.status' ,'active']);
 
-          } if((!empty($this->date_to) or  !empty($this->date_from)) and  $params['IncomeSearch']['income_status'] == 2 ){
-          $query->andWhere(['=','os_contracts.status' ,'judiciary']);
-      }*/
-
-        if (!empty($params['IncomeSearch']['number_row'])) {
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-                'pagination' => [
-                    'pageSize' => $params['IncomeSearch']['number_row'],
-                ],
-            ]);
+        if (!empty($this->date_from)) {
+            $query->andFilterWhere(['>=', '{{%income}}.date', $this->date_from]);
         }
-        else {
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-            ]);
+        if (!empty($this->date_to)) {
+            $query->andFilterWhere(['<=', '{{%income}}.date', $this->date_to]);
         }
-
-        if ((!empty($this->date_from))) {
-
-            $query->andFilterWhere(['>=', 'date', $this->date_from]);
-        }
-        if ((!empty($this->date_to))) {
-
-            $query->andFilterWhere(['<=', 'date', $this->date_to]);
-        }
-        return $query->sum('os_income.amount');
+        return $query->sum('{{%income}}.amount');
     }
 
     public function totalJudiciaryCustomerPayments($params)

@@ -74,14 +74,10 @@ class CustomersSearch extends Customers
             }
         }
         if (!empty($params['CustomersSearch']['job_Type'])) {
-
-            $query->innerJoin("`os_jobs` ",' os_jobs.id = job_title') ;
-            $query->innerJoin("`os_jobs_type` ",' os_jobs_type.id = os_jobs.job_type' );
-            $query->where(['=','job_type',$params['CustomersSearch']['job_Type']]);
-
+            $query->innerJoin('{{%vw_customers_directory}} vcd', 'vcd.id = os_customers.id');
+            $query->andWhere(['vcd.job_type_id' => $params['CustomersSearch']['job_Type']]);
         }
-        if(!empty($params['CustomersSearch']['number_row'])){
-
+        if (!empty($params['CustomersSearch']['number_row'])) {
             $dataProvider = new ActiveDataProvider([
                 'query' => $query,
                 'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
@@ -89,7 +85,7 @@ class CustomersSearch extends Customers
                     'pageSize' => $params['CustomersSearch']['number_row'],
                 ],
             ]);
-        }else{
+        } else {
             $dataProvider = new ActiveDataProvider([
                 'query' => $query,
                 'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
@@ -150,11 +146,8 @@ class CustomersSearch extends Customers
             }
         }
         if (!empty($params['CustomersSearch']['job_Type'])) {
-
-            $query->innerJoin("`os_jobs` ",' os_jobs.id = job_title') ;
-            $query->innerJoin("`os_jobs_type` ",' os_jobs_type.id = os_jobs.job_type' );
-            $query->where(['=','job_type',$params['CustomersSearch']['job_Type']]);
-
+            $query->innerJoin('{{%vw_customers_directory}} vcd', 'vcd.id = os_customers.id');
+            $query->andWhere(['vcd.job_type_id' => $params['CustomersSearch']['job_Type']]);
         }
 
         $dataProvider = new ActiveDataProvider([
@@ -164,11 +157,9 @@ class CustomersSearch extends Customers
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
-    $query->andFilterWhere(['=', 'os_customers.status', $this->status]);
+        $query->andFilterWhere(['=', 'os_customers.status', $this->status]);
 
         $query->andFilterWhere(['=', 'city', $this->city])
             ->andFilterWhere(['=', 'job_title', $this->job_title])

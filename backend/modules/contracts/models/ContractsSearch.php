@@ -334,8 +334,7 @@ class ContractsSearch extends Contracts
 
         $query->leftJoin('os_jobs j', 'c.job_title = j.id');
         $query->leftJoin('os_jobs_type jt', 'j.job_type = jt.id');
-
-        $paidSubquery = '(SELECT COALESCE(SUM(amount),0) FROM os_contract_installment WHERE contract_id = os_contracts.id)';
+        $query->leftJoin('{{%vw_contract_balance}} vcb', 'vcb.contract_id = os_contracts.id');
 
         if (!empty($params['ContractsSearch']['number_row'])) {
 
@@ -376,10 +375,9 @@ class ContractsSearch extends Contracts
             'asc' => ['jt.name' => SORT_ASC],
             'desc' => ['jt.name' => SORT_DESC],
         ];
-        $remainingExpr = "(os_contracts.total_value - $paidSubquery)";
         $dataProvider->sort->attributes['remaining'] = [
-            'asc'  => [$remainingExpr => SORT_ASC],
-            'desc' => [$remainingExpr => SORT_DESC],
+            'asc'  => ['vcb.remaining_balance' => SORT_ASC],
+            'desc' => ['vcb.remaining_balance' => SORT_DESC],
         ];
 
         $this->load($params);

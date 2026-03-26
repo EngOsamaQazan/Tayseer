@@ -209,55 +209,47 @@ class JudiciarySearch extends Judiciary
 
     public function reportSearch($params)
     {
-        $query = Judiciary::find();
-        $query->joinWith('contract');
-        $query->joinWith('lawyer');
-        $query->joinWith('court');
+        $query = Judiciary::find()
+            ->alias('j')
+            ->with(['contract', 'lawyer', 'court']);
 
-        if (!empty($params['JudiciarySearch']['number_row'])) {
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-                'pagination' => [
-                    'pageSize' => $params['JudiciarySearch']['number_row'],
-                ],
-            ]);
-        } else {
-            $dataProvider = new ActiveDataProvider([
-                'query' => $query,
-            ]);
-        }
+        $pageSize = !empty($params['JudiciarySearch']['number_row'])
+            ? (int)$params['JudiciarySearch']['number_row'] : 20;
+
+        $dataProvider = new ActiveDataProvider([
+            'query' => $query,
+            'pagination' => ['pageSize' => $pageSize],
+            'sort' => ['defaultOrder' => ['id' => SORT_DESC]],
+        ]);
+
         $this->load($params);
-
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
+            return ['dataProvider' => $dataProvider, 'count' => 0];
         }
+
         $query->andFilterWhere([
-            'id' => $this->id,
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
-            'created_by' => $this->created_by,
-            'last_update_by' => $this->last_update_by,
+            'j.id' => $this->id,
+            'j.year' => $this->year,
+            'j.type_id' => $this->type_id,
+            'j.case_cost' => $this->case_cost,
+            'j.contract_id' => $this->contract_id,
+            'j.lawyer_cost' => $this->lawyer_cost,
+            'j.lawyer_id' => $this->lawyer_id,
+            'j.judiciary_number' => $this->judiciary_number,
+            'j.court_id' => $this->court_id,
         ]);
 
         if (!empty($params['JudiciarySearch']['from_income_date'])) {
-            $query->where(['>=', 'income_date', $params['JudiciarySearch']['from_income_date']]);
+            $query->andWhere(['>=', 'j.income_date', $params['JudiciarySearch']['from_income_date']]);
         }
         if (!empty($params['JudiciarySearch']['to_income_date'])) {
-            $query->where(['<=', 'income_date', $params['JudiciarySearch']['to_income_date']]);
+            $query->andWhere(['<=', 'j.income_date', $params['JudiciarySearch']['to_income_date']]);
         }
-        $query->andFilterWhere(['year' => $this->year]);
-        $query->andFilterWhere(['type_id' => $this->type_id]);
-        $query->andFilterWhere(['case_cost' => $this->case_cost]);
-        $query->andFilterWhere(['contract_id' => $this->contract_id]);
-        $query->andFilterWhere(['lawyer_cost' => $this->lawyer_cost]);
-        $query->andFilterWhere(['lawyer_id' => $this->lawyer_id]);
-        $query->andFilterWhere(['judiciary_number' => $this->judiciary_number]);
-        $query->andFilterWhere(['court_id' => $this->court_id]);
-        $query->andWhere(['os_judiciary.is_deleted' => false]);
-        $query->where(['!=', 'judiciary_number', ' ']);
-        return ['dataProvider' => $dataProvider, 'count' => $query->count()];
+
+        $query->andWhere(['j.is_deleted' => false]);
+        $query->andWhere(['!=', 'j.judiciary_number', ' ']);
+
+        return ['dataProvider' => $dataProvider, 'count' => $dataProvider->totalCount];
     }
 
     /**
@@ -269,78 +261,50 @@ class JudiciarySearch extends Judiciary
      */
     public function report()
     {
+        $p = Yii::$app->db->tablePrefix;
 
-        $query = "SELECT
-            `os_judiciary`.`contract_id` as contract_id ,
-            `os_court`.`name` as court_name,
-            CONCAT(`os_judiciary`.`judiciary_number`,'-',`os_judiciary`.`year`) as judiciary_number ,
-            `os_judiciary`.`lawyer_cost` as lawyer_cost,
-            `os_lawyers`.`name` as lawyer_name,
-            `c`.`name` as customer_name,
-            `os_judiciary_actions`.`name` as action_name,
-            `jcc`.`action_date` as customer_date
-            FROM
-            `os_judiciary`
-            LEFT JOIN `os_court` ON(
-            `os_judiciary`.`court_id` = `os_court`.`id`
-            ) AND(`os_court`.`is_deleted` = FALSE)
-            LEFT JOIN `os_lawyers` ON(
-            `os_judiciary`.`lawyer_id` = `os_lawyers`.`id`
-            ) AND(`os_lawyers`.`is_deleted` = FALSE)
-            LEFT JOIN `os_contracts` ON `os_judiciary`.`contract_id` = `os_contracts`.`id` AND(
-            `os_contracts`.`status` NOT IN('finished', 'canceld', 'pending')
-            )
-            LEFT JOIN `os_judiciary_customers_actions` AS `jcc`
-            ON
-            `jcc`.`judiciary_id` = `os_judiciary`.`id` AND(`jcc`.`is_deleted` = FALSE)
-            LEFT JOIN `os_customers` AS c
-            ON
-            `jcc`.`customers_id` = `c`.`id`
-            LEFT JOIN `os_judiciary_actions` ON `os_judiciary_actions`.`id` = `jcc`.`judiciary_actions_id`
-            WHERE
-            (`jcc`.`is_deleted` = FALSE) AND(`os_judiciary`.`is_deleted` = FALSE) AND(
-            `jcc`.`action_date` =(
-            SELECT
-            MAX(action_date)
-            FROM
-            os_judiciary_customers_actions
-            WHERE
-            os_judiciary_customers_actions.customers_id = c.id AND os_judiciary_customers_actions.judiciary_id = os_judiciary.id AND os_judiciary_customers_actions.is_deleted = FALSE
-            )
-            )
-            ORDER BY
-            `jcc`.`action_date`
-        DESC";
-        $count = Yii::$app->db->createCommand("SELECT
-                    count(`os_judiciary`.`contract_id`)
-                     FROM `os_judiciary`
-                    LEFT JOIN `os_court` ON (`os_judiciary`.`court_id` = `os_court`.`id`) AND(`os_court`.`is_deleted` = FALSE)
-                    LEFT JOIN `os_lawyers` ON (`os_judiciary`.`lawyer_id` = `os_lawyers`.`id`) AND(`os_lawyers`.`is_deleted` = FALSE)
-                    LEFT JOIN `os_contracts` ON `os_judiciary`.`contract_id` = `os_contracts`.`id` AND(`os_contracts`.`status` NOT IN('finished', 'canceld', 'pending'))
-                    LEFT JOIN `os_judiciary_customers_actions` as `jcc` ON `jcc`.`judiciary_id` = `os_judiciary`.`id` AND(`jcc`.`is_deleted` = FALSE)
-                    LEFT JOIN `os_customers` as c ON `jcc`.`customers_id` = `c`.`id`
-                    LEFT JOIN `os_judiciary_actions` ON `os_judiciary_actions`.`id` = `jcc`.`judiciary_actions_id`
-                    WHERE (`jcc`.`is_deleted`=FALSE)
-                    AND(`os_judiciary`.`is_deleted` = FALSE)
-                    AND(`jcc`.`action_date`=(
-                     SELECT MAX(action_date)
-                          FROM os_judiciary_customers_actions
-                          WHERE os_judiciary_customers_actions.customers_id = c.id
-                          AND os_judiciary_customers_actions.judiciary_id = os_judiciary.id
-                         AND os_judiciary_customers_actions.is_deleted =FALSE
-                    )
-                       )  
-                ORDER BY `jcc`.`action_date`  DESC")->queryScalar();;
+        $sql = "SELECT
+                af.contract_id,
+                af.court_name,
+                CONCAT(af.judiciary_number, '-', j.year) AS judiciary_number,
+                j.lawyer_cost,
+                af.lawyer_name,
+                af.customer_name,
+                af.action_name,
+                af.action_date AS customer_date
+            FROM {$p}vw_judiciary_actions_feed af
+            INNER JOIN {$p}judiciary j ON j.id = af.judiciary_id
+            WHERE (af.action_is_deleted = 0 OR af.action_is_deleted IS NULL)
+              AND j.is_deleted = 0
+              AND af.action_date = (
+                  SELECT MAX(a2.action_date)
+                  FROM {$p}judiciary_customers_actions a2
+                  WHERE a2.judiciary_id = af.judiciary_id
+                    AND a2.customers_id = af.customers_id
+                    AND a2.is_deleted = 0
+              )
+            ORDER BY af.action_date DESC";
+
+        $countSql = "SELECT COUNT(*)
+            FROM {$p}vw_judiciary_actions_feed af
+            INNER JOIN {$p}judiciary j ON j.id = af.judiciary_id
+            WHERE (af.action_is_deleted = 0 OR af.action_is_deleted IS NULL)
+              AND j.is_deleted = 0
+              AND af.action_date = (
+                  SELECT MAX(a2.action_date)
+                  FROM {$p}judiciary_customers_actions a2
+                  WHERE a2.judiciary_id = af.judiciary_id
+                    AND a2.customers_id = af.customers_id
+                    AND a2.is_deleted = 0
+              )";
+
+        $count = Yii::$app->db->createCommand($countSql)->queryScalar();
+
         $dataProvider = new SqlDataProvider([
-            'sql' => $query,
+            'sql' => $sql,
+            'totalCount' => (int)$count,
         ]);
 
-        if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
-            return $dataProvider;
-        }
-
-        return ['dataProvider' => $dataProvider, 'count' => $count];
+        return ['dataProvider' => $dataProvider, 'count' => (int)$count];
     }
 }

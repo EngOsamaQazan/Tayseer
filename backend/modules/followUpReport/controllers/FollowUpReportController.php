@@ -145,48 +145,38 @@ class FollowUpReportController extends Controller
      */
     public function actionIndex()
     {
-        // ═══ بيانات البحث ═══
         $searchModel = new FollowUpReportSearch();
-        // إذا لم يحدد المستخدم فلتر is_can_not_contact يدوياً، الافتراضي = 0 (عقود عادية)
         $params = Yii::$app->request->queryParams;
         if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
             $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
         }
         $dataProvider = $searchModel->search($params);
-        $dataCount = $searchModel->searchCounter($params);
+        $dataCount = $dataProvider->getTotalCount();
 
-        // Save filtered contract IDs in session for panel navigation
-        // Uses DataProvider's getModels() which correctly handles sorting + JOIN deduplication
-        $idSearchModel = new FollowUpReportSearch();
-        $idDP = $idSearchModel->search($params);
-        $idDP->pagination = false;
-        $filteredIds = array_map(function($m) { return (int)$m->id; }, $idDP->getModels());
-        Yii::$app->session->set('followup_report_ids', $filteredIds);
+        $filteredIds = $dataProvider->query
+            ->select('os_follow_up_report.id')
+            ->distinct()
+            ->column();
+        Yii::$app->session->set('followup_report_ids', array_map('intval', $filteredIds));
 
-        // ═══ إحصائيات البطاقات ═══
         $db = Yii::$app->db;
-        // إجمالي العقود للمتابعة (باستثناء المؤجلين لبعد اليوم + باستثناء بدون تواصل)
-        $activeCount = $db->createCommand(
-            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND (reminder IS NULL OR reminder <= CURDATE() OR never_followed = 1)"
-        )->queryScalar();
-        $neverFollowedCount = $db->createCommand(
-            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND never_followed = 1"
-        )->queryScalar();
-        $overduePromiseCount = $db->createCommand(
-            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE() AND due_amount > 0"
-        )->queryScalar();
-        $noContactCount = $db->createCommand(
-            "SELECT COUNT(*) FROM os_follow_up_report WHERE is_can_not_contact = 1"
-        )->queryScalar();
+        $cardStats = $db->createCommand("
+            SELECT
+                SUM(CASE WHEN is_can_not_contact = 0 AND (reminder IS NULL OR reminder <= CURDATE() OR never_followed = 1) THEN 1 ELSE 0 END) AS active_count,
+                SUM(CASE WHEN is_can_not_contact = 0 AND never_followed = 1 THEN 1 ELSE 0 END) AS never_followed_count,
+                SUM(CASE WHEN is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE() AND due_amount > 0 THEN 1 ELSE 0 END) AS overdue_promise_count,
+                SUM(CASE WHEN is_can_not_contact = 1 THEN 1 ELSE 0 END) AS no_contact_count
+            FROM {{%follow_up_report}}
+        ")->queryOne();
 
         return $this->render('index', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount' => $dataCount,
-            'activeCount' => (int)$activeCount,
-            'neverFollowedCount' => (int)$neverFollowedCount,
-            'overduePromiseCount' => (int)$overduePromiseCount,
-            'noContactCount' => (int)$noContactCount,
+            'activeCount' => (int)($cardStats['active_count'] ?? 0),
+            'neverFollowedCount' => (int)($cardStats['never_followed_count'] ?? 0),
+            'overduePromiseCount' => (int)($cardStats['overdue_promise_count'] ?? 0),
+            'noContactCount' => (int)($cardStats['no_contact_count'] ?? 0),
         ]);
     }
 
