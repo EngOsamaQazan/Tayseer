@@ -1307,6 +1307,7 @@ class JudiciaryController extends Controller
             ->scalar();
 
         (new JudiciaryWorkflowService())->refreshStagesFromActions($model->id);
+        $model->refresh();
         $defendantStages = $model->getDefendantStages()->with('customer')->all();
         JudiciaryDeadlineService::refreshAllStatuses();
         $activeDeadlines = $model->getActiveDeadlines()
