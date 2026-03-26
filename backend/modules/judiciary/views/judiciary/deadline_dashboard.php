@@ -10,37 +10,15 @@ $this->params['breadcrumbs'][] = $this->title;
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . time());
 
 $typeLabels = JudiciaryDeadline::getTypeLabels();
-$statusLabels = JudiciaryDeadline::getStatusLabels();
 
-$sections = [
-    [
-        'title' => 'مواعيد متأخرة',
-        'icon' => 'fa-exclamation-circle',
-        'items' => $expired,
-        'color' => '#DC2626',
-        'bg' => '#FEF2F2',
-        'border' => '#FECACA',
-        'emptyText' => 'لا توجد مواعيد متأخرة',
-    ],
-    [
-        'title' => 'مواعيد تقترب',
-        'icon' => 'fa-warning',
-        'items' => $approaching,
-        'color' => '#D97706',
-        'bg' => '#FFFBEB',
-        'border' => '#FDE68A',
-        'emptyText' => 'لا توجد مواعيد قريبة',
-    ],
-    [
-        'title' => 'مواعيد قائمة',
-        'icon' => 'fa-hourglass-half',
-        'items' => $pending,
-        'color' => '#64748B',
-        'bg' => '#F8FAFC',
-        'border' => '#E2E8F0',
-        'emptyText' => 'لا توجد مواعيد قائمة',
-    ],
+$tabs = [
+    'expired'     => ['label' => 'متأخرة',  'icon' => 'fa-exclamation-circle', 'color' => '#DC2626', 'bg' => '#FEF2F2', 'border' => '#FECACA'],
+    'approaching' => ['label' => 'تقترب',   'icon' => 'fa-warning',            'color' => '#D97706', 'bg' => '#FFFBEB', 'border' => '#FDE68A'],
+    'pending'     => ['label' => 'قائمة',   'icon' => 'fa-hourglass-half',     'color' => '#64748B', 'bg' => '#F8FAFC', 'border' => '#E2E8F0'],
 ];
+$active = $tabs[$activeTab];
+$startRecord = ($page - 1) * $perPage + 1;
+$endRecord   = min($page * $perPage, $counts[$activeTab]);
 ?>
 
 <div class="jv-page">
@@ -52,59 +30,56 @@ $sections = [
             </div>
         </div>
         <div class="jv-actions" style="display:flex;gap:8px">
-            <?= Html::a('<i class="fa fa-refresh"></i> تحديث', ['deadline-dashboard-view'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
+            <?= Html::a('<i class="fa fa-refresh"></i> تحديث', ['deadline-dashboard-view', 'tab' => $activeTab], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
             <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
         </div>
     </div>
 
+    <!-- Summary Cards -->
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
-        <div style="background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px">
-            <div style="width:42px;height:42px;border-radius:10px;background:#DC2626;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fa fa-exclamation-circle"></i></div>
+        <?php foreach ($tabs as $key => $t): ?>
+        <a href="<?= Url::to(['deadline-dashboard-view', 'tab' => $key]) ?>" style="text-decoration:none;background:<?= $t['bg'] ?>;border:1px solid <?= $t['border'] ?>;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;transition:box-shadow .2s,transform .15s<?= $key === $activeTab ? ';box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateY(-1px)' : '' ?>"
+           onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';this.style.transform='translateY(-1px)'"
+           onmouseout="<?= $key === $activeTab ? '' : "this.style.boxShadow='';this.style.transform=''" ?>">
+            <div style="width:42px;height:42px;border-radius:10px;background:<?= $t['color'] ?>;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fa <?= $t['icon'] ?>"></i></div>
             <div>
-                <div style="font-size:22px;font-weight:700;color:#DC2626"><?= count($expired) ?></div>
-                <div style="font-size:12px;color:#991B1B">متأخرة</div>
+                <div style="font-size:22px;font-weight:700;color:<?= $t['color'] ?>"><?= number_format($counts[$key]) ?></div>
+                <div style="font-size:12px;color:<?= $t['color'] ?>;font-weight:<?= $key === $activeTab ? '700' : '400' ?>"><?= $t['label'] ?></div>
             </div>
-        </div>
-        <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px">
-            <div style="width:42px;height:42px;border-radius:10px;background:#D97706;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fa fa-warning"></i></div>
-            <div>
-                <div style="font-size:22px;font-weight:700;color:#D97706"><?= count($approaching) ?></div>
-                <div style="font-size:12px;color:#92400E">تقترب</div>
-            </div>
-        </div>
-        <div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px">
-            <div style="width:42px;height:42px;border-radius:10px;background:#64748B;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fa fa-hourglass-half"></i></div>
-            <div>
-                <div style="font-size:22px;font-weight:700;color:#64748B"><?= count($pending) ?></div>
-                <div style="font-size:12px;color:#64748B">قائمة</div>
-            </div>
-        </div>
+        </a>
+        <?php endforeach; ?>
     </div>
 
-    <?php foreach ($sections as $sec): ?>
+    <!-- Active Tab Content -->
     <div class="jv-card" style="margin-bottom:20px">
-        <div class="jv-card-title">
-            <i class="fa <?= $sec['icon'] ?>" style="color:<?= $sec['color'] ?>"></i>
-            <?= $sec['title'] ?>
-            <span style="background:<?= $sec['bg'] ?>;color:<?= $sec['color'] ?>;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;margin-right:8px"><?= count($sec['items']) ?></span>
+        <div class="jv-card-title" style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+                <i class="fa <?= $active['icon'] ?>" style="color:<?= $active['color'] ?>"></i>
+                <?= $active['label'] ?>
+                <span style="background:<?= $active['bg'] ?>;color:<?= $active['color'] ?>;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;margin-right:8px"><?= number_format($counts[$activeTab]) ?></span>
+            </div>
+            <?php if ($counts[$activeTab] > 0): ?>
+            <div style="font-size:12px;color:#94A3B8"><?= $startRecord ?> – <?= $endRecord ?> من <?= number_format($counts[$activeTab]) ?></div>
+            <?php endif; ?>
         </div>
-        <?php if (empty($sec['items'])): ?>
+
+        <?php if (empty($items)): ?>
             <div style="text-align:center;padding:30px;color:#94A3B8">
                 <i class="fa fa-check-circle" style="font-size:24px;display:block;margin-bottom:8px;color:#D1FAE5"></i>
-                <?= $sec['emptyText'] ?>
+                لا توجد مواعيد <?= $active['label'] ?>
             </div>
         <?php else: ?>
             <div class="jv-deadline-grid">
-                <?php foreach ($sec['items'] as $dl):
+                <?php foreach ($items as $dl):
                     $typeLabel = $typeLabels[$dl['deadline_type']] ?? $dl['deadline_type'];
                     $daysRemaining = !empty($dl['deadline_date']) ? (int)((strtotime($dl['deadline_date']) - time()) / 86400) : null;
                     $caseNum = !empty($dl['judiciary_number']) ? $dl['judiciary_number'] : '#' . $dl['judiciary_id'];
                 ?>
-                <div class="jv-deadline-card" style="background:<?= $sec['bg'] ?>;border:1px solid <?= $sec['border'] ?>">
+                <div class="jv-deadline-card" style="background:<?= $active['bg'] ?>;border:1px solid <?= $active['border'] ?>">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                         <div style="display:flex;align-items:center;gap:6px">
-                            <i class="fa <?= $sec['icon'] ?>" style="color:<?= $sec['color'] ?>;font-size:14px"></i>
-                            <span style="font-weight:700;font-size:12px;color:<?= $sec['color'] ?>"><?= Html::encode($typeLabel) ?></span>
+                            <i class="fa <?= $active['icon'] ?>" style="color:<?= $active['color'] ?>;font-size:14px"></i>
+                            <span style="font-weight:700;font-size:12px;color:<?= $active['color'] ?>"><?= Html::encode($typeLabel) ?></span>
                         </div>
                         <?= Html::a('قضية ' . Html::encode($caseNum), ['view', 'id' => $dl['judiciary_id']], [
                             'style' => 'font-size:11px;font-weight:600;color:#2563EB;text-decoration:none',
@@ -113,13 +88,13 @@ $sections = [
                     <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
                         <span style="color:#64748B"><i class="fa fa-calendar"></i> <?= Html::encode($dl['deadline_date'] ?: '—') ?></span>
                         <?php if ($daysRemaining !== null): ?>
-                            <span style="font-weight:700;color:<?= $sec['color'] ?>">
+                            <span style="font-weight:700;color:<?= $active['color'] ?>">
                                 <?php if ($daysRemaining < 0): ?>
-                                    متأخر <?= abs($daysRemaining) ?> يوم
+                                    متأخر <?= number_format(abs($daysRemaining)) ?> يوم
                                 <?php elseif ($daysRemaining === 0): ?>
                                     اليوم!
                                 <?php else: ?>
-                                    باقي <?= $daysRemaining ?> يوم
+                                    باقي <?= number_format($daysRemaining) ?> يوم
                                 <?php endif; ?>
                             </span>
                         <?php endif; ?>
@@ -139,7 +114,51 @@ $sections = [
                 </div>
                 <?php endforeach; ?>
             </div>
+
+            <!-- Pagination -->
+            <?php if ($totalPages > 1): ?>
+            <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding:16px 0;margin-top:12px;border-top:1px solid #E2E8F0">
+                <?php if ($page > 1): ?>
+                    <?= Html::a('<i class="fa fa-chevron-right"></i>', ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $page - 1], [
+                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:12px;transition:all .15s',
+                        'title' => 'الصفحة السابقة',
+                    ]) ?>
+                <?php endif; ?>
+
+                <?php
+                $range = 2;
+                $start = max(1, $page - $range);
+                $end   = min($totalPages, $page + $range);
+                if ($start > 1) {
+                    echo Html::a('1', ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => 1], [
+                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:13px;font-weight:600',
+                    ]);
+                    if ($start > 2) echo '<span style="color:#94A3B8;font-size:12px">…</span>';
+                }
+                for ($i = $start; $i <= $end; $i++):
+                    $isActive = $i === $page;
+                ?>
+                    <?= Html::a($i, ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $i], [
+                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;text-decoration:none;transition:all .15s;'
+                            . ($isActive ? 'background:#2563EB;color:#fff;border:1px solid #2563EB' : 'border:1px solid #E2E8F0;color:#475569'),
+                    ]) ?>
+                <?php endfor;
+                if ($end < $totalPages) {
+                    if ($end < $totalPages - 1) echo '<span style="color:#94A3B8;font-size:12px">…</span>';
+                    echo Html::a($totalPages, ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $totalPages], [
+                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:13px;font-weight:600',
+                    ]);
+                }
+                ?>
+
+                <?php if ($page < $totalPages): ?>
+                    <?= Html::a('<i class="fa fa-chevron-left"></i>', ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $page + 1], [
+                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:12px;transition:all .15s',
+                        'title' => 'الصفحة التالية',
+                    ]) ?>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
         <?php endif; ?>
     </div>
-    <?php endforeach; ?>
 </div>

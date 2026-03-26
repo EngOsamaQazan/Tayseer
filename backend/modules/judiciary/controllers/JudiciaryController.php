@@ -1880,12 +1880,25 @@ class JudiciaryController extends Controller
 
     public function actionDeadlineDashboardView()
     {
-        $data = JudiciaryDeadlineService::getDashboardData();
+        $tab     = Yii::$app->request->get('tab', 'expired');
+        $page    = max(1, (int) Yii::$app->request->get('page', 1));
+        $perPage = 50;
+
+        if (!in_array($tab, ['expired', 'approaching', 'pending'])) {
+            $tab = 'expired';
+        }
+
+        $counts = JudiciaryDeadlineService::getDashboardCounts();
+        $items  = JudiciaryDeadlineService::getDashboardPage($tab, $page, $perPage);
+        $totalPages = max(1, (int) ceil($counts[$tab] / $perPage));
 
         return $this->render('deadline_dashboard', [
-            'expired'     => $data['expired'],
-            'approaching' => $data['approaching'],
-            'pending'     => $data['pending'],
+            'counts'     => $counts,
+            'items'      => $items,
+            'activeTab'  => $tab,
+            'page'       => $page,
+            'perPage'    => $perPage,
+            'totalPages' => $totalPages,
         ]);
     }
 

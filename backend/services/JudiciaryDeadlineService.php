@@ -512,12 +512,32 @@ class JudiciaryDeadlineService
      * Query the live VIEW for dashboard data.
      * Returns ['expired' => [...], 'approaching' => [...], 'pending' => [...]]
      */
-    public static function getDashboardData(): array
+    public static function getDashboardCounts(): array
+    {
+        self::ensureLiveView();
+
+        $p = \Yii::$app->db->tablePrefix;
+        $rows = \Yii::$app->db->createCommand("
+            SELECT live_status, COUNT(*) AS cnt
+            FROM {$p}v_deadline_live
+            WHERE live_status IN ('expired','approaching','pending')
+            GROUP BY live_status
+        ")->queryAll();
+
+        $counts = ['expired' => 0, 'approaching' => 0, 'pending' => 0];
+        foreach ($rows as $r) {
+            $counts[$r['live_status']] = (int) $r['cnt'];
+        }
+        return $counts;
+    }
+
+    public static function getDashboardPage(string $status, int $page = 1, int $perPage = 50): array
     {
         self::ensureLiveView();
 
         $p = \Yii::$app->db->tablePrefix;
         $db = \Yii::$app->db;
+        $offset = ($page - 1) * $perPage;
 
         $rows = $db->createCommand("
             SELECT v.*, v.live_status,
@@ -529,17 +549,17 @@ class JudiciaryDeadlineService
             LEFT JOIN {$p}judiciary_customers_actions jca ON jca.id = v.related_customer_action_id
             LEFT JOIN {$p}judiciary_actions ca_action ON ca_action.id = jca.judiciary_actions_id
             LEFT JOIN {$p}customers ca_cust ON ca_cust.id = jca.customers_id
-            WHERE v.live_status IN ('expired','approaching','pending')
+            WHERE v.live_status = :status
             ORDER BY v.deadline_date ASC
-        ")->queryAll();
+            LIMIT :limit OFFSET :offset
+        ", [':status' => $status, ':limit' => $perPage, ':offset' => $offset])->queryAll();
 
-        $result = ['expired' => [], 'approaching' => [], 'pending' => []];
-        foreach ($rows as $r) {
+        foreach ($rows as &$r) {
             $r['status'] = $r['live_status'];
-            $result[$r['live_status']][] = $r;
         }
+        unset($r);
 
-        return $result;
+        return $rows;
     }
 
     private static function doRefreshAllStatuses(): int
