@@ -255,12 +255,58 @@ class JudiciaryDeadlineService
 
     /**
      * Refresh statuses for all active deadlines (call via cron or admin action).
+     * 1) Auto-complete deadlines whose related action was deleted
+     * 2) Auto-complete milestone deadlines when a subsequent action exists on the case
+     * 3) Mark overdue deadlines as expired
+     * 4) Mark deadlines within 3 days as approaching
      */
     public static function refreshAllStatuses(): int
     {
+        $db = \Yii::$app->db;
+        $prefix = $db->tablePrefix;
+        $updated = 0;
+
+        // --- Check A: complete deadlines whose related action was soft-deleted ---
+        $deletedActionIds = $db->createCommand(
+            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+             INNER JOIN {$prefix}judiciary_customers_actions a ON a.id = d.related_customer_action_id
+             WHERE d.related_customer_action_id IS NOT NULL
+               AND d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND a.is_deleted = 1"
+        )->queryColumn();
+
+        if (!empty($deletedActionIds)) {
+            $updated += JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — الإجراء المرتبط محذوف'],
+                ['id' => $deletedActionIds]
+            );
+        }
+
+        // --- Check B: complete milestone deadlines when subsequent actions exist ---
+        $milestoneIds = $db->createCommand(
+            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+             WHERE d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND d.deadline_type IN ('" . implode("','", self::$milestoneTypes) . "')
+               AND EXISTS (
+                   SELECT 1 FROM {$prefix}judiciary_customers_actions a
+                   WHERE a.judiciary_id = d.judiciary_id
+                     AND (a.is_deleted = 0 OR a.is_deleted IS NULL)
+                     AND a.created_at > d.created_at
+               )"
+        )->queryColumn();
+
+        if (!empty($milestoneIds)) {
+            $updated += JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه تلقائياً — يوجد إجراء لاحق'],
+                ['id' => $milestoneIds]
+            );
+        }
+
+        // --- Mark overdue as expired ---
         $today = date('Y-m-d');
         $approaching = date('Y-m-d', strtotime('+3 days'));
-        $updated = 0;
 
         $updated += JudiciaryDeadline::updateAll(
             ['status' => JudiciaryDeadline::STATUS_EXPIRED],
@@ -271,6 +317,7 @@ class JudiciaryDeadlineService
             ]
         );
 
+        // --- Mark approaching ---
         $updated += JudiciaryDeadline::updateAll(
             ['status' => JudiciaryDeadline::STATUS_APPROACHING],
             ['AND',

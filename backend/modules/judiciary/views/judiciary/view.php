@@ -395,7 +395,10 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                 $statusLabel = $deadlineStatusLabels[$dlStatus] ?? $dlStatus;
                 $daysRemaining = $dl->deadline_date ? (int)((strtotime($dl->deadline_date) - time()) / 86400) : null;
             ?>
-            <div class="jv-deadline-card" style="background:<?= $dc['bg'] ?>;border:1px solid <?= $dc['border'] ?>">
+            <a href="<?= Url::to(['deadline-dashboard-view']) ?>" style="text-decoration:none;display:block;cursor:pointer">
+            <div class="jv-deadline-card" style="background:<?= $dc['bg'] ?>;border:1px solid <?= $dc['border'] ?>;transition:box-shadow .2s,transform .15s"
+                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.1)';this.style.transform='translateY(-1px)'"
+                 onmouseout="this.style.boxShadow='';this.style.transform=''">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
                     <div style="display:flex;align-items:center;gap:6px">
                         <i class="fa <?= $dc['icon'] ?>" style="color:<?= $dc['color'] ?>;font-size:14px"></i>
@@ -421,6 +424,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                     <div style="font-size:11px;color:#64748B;margin-top:6px;background:rgba(255,255,255,.6);padding:4px 8px;border-radius:4px"><?= Html::encode($dl->notes) ?></div>
                 <?php endif; ?>
             </div>
+            </a>
             <?php endforeach; ?>
         </div>
     </div>

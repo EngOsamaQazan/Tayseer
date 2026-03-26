@@ -1307,6 +1307,7 @@ class JudiciaryController extends Controller
             ->scalar();
 
         $defendantStages = $model->getDefendantStages()->with('customer')->all();
+        JudiciaryDeadlineService::refreshAllStatuses();
         $activeDeadlines = $model->getActiveDeadlines()->orderBy(['deadline_date' => SORT_ASC])->all();
         $seizedAssets = $model->getSeizedAssets()->with('authority')->all();
         $correspondences = $model->getCorrespondences()->orderBy(['correspondence_date' => SORT_DESC])->limit(10)->all();
