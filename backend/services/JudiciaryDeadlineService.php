@@ -406,6 +406,17 @@ class JudiciaryDeadlineService
             );
         }
 
+        // --- Check E: auto-complete any deadline expired > 180 days (stale beyond practical use) ---
+        $staleCutoff = date('Y-m-d', strtotime('-180 days'));
+        $updated += JudiciaryDeadline::updateAll(
+            ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'],
+            ['AND',
+                ['status' => JudiciaryDeadline::STATUS_EXPIRED],
+                ['<', 'deadline_date', $staleCutoff],
+                ['is_deleted' => 0],
+            ]
+        );
+
         // --- Mark overdue as expired ---
         $today = date('Y-m-d');
         $approaching = date('Y-m-d', strtotime('+3 days'));
