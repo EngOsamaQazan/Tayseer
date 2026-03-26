@@ -178,8 +178,31 @@ class JudiciaryWorkflowService
         }
 
         $judiciary = Judiciary::findOne($judiciaryId);
-        if ($judiciary) {
-            $judiciary->refreshCaseStages();
+        if (!$judiciary) {
+            return;
         }
+
+        // If contract is fully paid, advance all defendants to closure
+        $contract = $judiciary->contract;
+        if ($contract) {
+            try {
+                if ($contract->isJudiciaryPaid()) {
+                    $allDs = JudiciaryDefendantStage::find()
+                        ->where(['judiciary_id' => $judiciaryId])
+                        ->all();
+                    foreach ($allDs as $ds) {
+                        $ds->advanceTo(Judiciary::STAGE_CASE_CLOSURE);
+                    }
+                    if ($judiciary->case_status !== 'closed' && $judiciary->case_status !== 'archived') {
+                        $judiciary->case_status = 'closed';
+                        $judiciary->save(false, ['case_status']);
+                    }
+                }
+            } catch (\Exception $e) {
+                \Yii::warning('Failed to check contract payment: ' . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        $judiciary->refreshCaseStages();
     }
 }
