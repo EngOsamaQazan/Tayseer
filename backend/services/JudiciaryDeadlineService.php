@@ -224,7 +224,7 @@ class JudiciaryDeadlineService
      * Safe to call multiple times — skips duplicates.
      * Processes in batches of $batchSize per call to avoid request timeout.
      */
-    public static function generateMissingDeadlines(int $batchSize = 500): int
+    public static function generateMissingDeadlines(): int
     {
         $cache = \Yii::$app->cache;
         $cacheKey = 'deadline_gen_done';
@@ -234,13 +234,30 @@ class JudiciaryDeadlineService
 
         $db     = \Yii::$app->db;
         $prefix = $db->tablePrefix;
-        $svc    = new self();
-        $count  = 0;
         $now    = time();
+        $count  = 0;
+        $reqType  = JudiciaryDeadline::TYPE_REQUEST_DECISION;
+        $regType  = JudiciaryDeadline::TYPE_REGISTRATION_3WD;
 
-        // 1) Request-decision deadlines for request actions without one
-        $reqActions = $db->createCommand(
-            "SELECT jca.id, jca.judiciary_id, jca.customers_id, jca.action_date, jca.created_at
+        // 1) Request-decision deadlines — pure SQL INSERT ... SELECT (no PHP loop)
+        $count += (int)$db->createCommand(
+            "INSERT INTO {$prefix}judiciary_deadlines
+                (judiciary_id, customer_id, deadline_type, day_type, label,
+                 start_date, deadline_date, status,
+                 related_communication_id, related_customer_action_id,
+                 notes, is_deleted, created_at, updated_at)
+             SELECT
+                jca.judiciary_id,
+                jca.customers_id,
+                '{$reqType}',
+                'working',
+                'قرار القاضي على الطلب',
+                COALESCE(jca.action_date, FROM_UNIXTIME(jca.created_at, '%Y-%m-%d')),
+                DATE_ADD(COALESCE(jca.action_date, FROM_UNIXTIME(jca.created_at, '%Y-%m-%d')), INTERVAL 5 DAY),
+                'pending',
+                NULL,
+                jca.id,
+                NULL, 0, {$now}, {$now}
              FROM {$prefix}judiciary_customers_actions jca
              INNER JOIN {$prefix}judiciary_actions ja ON ja.id = jca.judiciary_actions_id
              WHERE ja.action_nature = 'request'
@@ -248,89 +265,37 @@ class JudiciaryDeadlineService
                AND NOT EXISTS (
                    SELECT 1 FROM {$prefix}judiciary_deadlines dl
                    WHERE dl.related_customer_action_id = jca.id
-                     AND dl.deadline_type IN ('" . JudiciaryDeadline::TYPE_REQUEST_DECISION . "', 'request_decision')
+                     AND dl.deadline_type IN ('{$reqType}', 'request_decision')
                      AND dl.is_deleted = 0
-               )
-             LIMIT {$batchSize}"
-        )->queryAll();
+               )"
+        )->execute();
 
-        if (!empty($reqActions)) {
-            $rows = [];
-            foreach ($reqActions as $a) {
-                $startDate = $a['action_date'] ?: date('Y-m-d', is_numeric($a['created_at']) ? (int)$a['created_at'] : strtotime($a['created_at']));
-                $deadlineDate = $svc->addWorkingDays($startDate, 3);
-                $rows[] = [
-                    (int)$a['judiciary_id'],
-                    $a['customers_id'] ? (int)$a['customers_id'] : null,
-                    JudiciaryDeadline::TYPE_REQUEST_DECISION,
-                    JudiciaryDeadline::DAY_WORKING,
-                    'قرار القاضي على الطلب',
-                    $startDate,
-                    $deadlineDate,
-                    JudiciaryDeadline::STATUS_PENDING,
-                    null,
-                    (int)$a['id'],
-                    null,
-                    0,
-                    $now,
-                    $now,
-                ];
-            }
-            $db->createCommand()->batchInsert(
-                JudiciaryDeadline::tableName(),
-                ['judiciary_id', 'customer_id', 'deadline_type', 'day_type', 'label',
-                 'start_date', 'deadline_date', 'status', 'related_communication_id',
-                 'related_customer_action_id', 'notes', 'is_deleted', 'created_at', 'updated_at'],
-                $rows
-            )->execute();
-            $count += count($rows);
-        }
-
-        // 2) Registration-check deadline for cases without one
-        $casesWithout = $db->createCommand(
-            "SELECT j.id, j.created_at
+        // 2) Registration-check deadline — pure SQL INSERT ... SELECT
+        $count += (int)$db->createCommand(
+            "INSERT INTO {$prefix}judiciary_deadlines
+                (judiciary_id, customer_id, deadline_type, day_type, label,
+                 start_date, deadline_date, status,
+                 related_communication_id, related_customer_action_id,
+                 notes, is_deleted, created_at, updated_at)
+             SELECT
+                j.id,
+                NULL,
+                '{$regType}',
+                'working',
+                'فحص حالة التبليغ بعد التسجيل',
+                FROM_UNIXTIME(j.created_at, '%Y-%m-%d'),
+                DATE_ADD(FROM_UNIXTIME(j.created_at, '%Y-%m-%d'), INTERVAL 5 DAY),
+                'pending',
+                NULL, NULL, NULL, 0, {$now}, {$now}
              FROM {$prefix}judiciary j
              WHERE (j.is_deleted = 0 OR j.is_deleted IS NULL)
                AND NOT EXISTS (
                    SELECT 1 FROM {$prefix}judiciary_deadlines dl
                    WHERE dl.judiciary_id = j.id
-                     AND dl.deadline_type IN ('" . JudiciaryDeadline::TYPE_REGISTRATION_3WD . "', 'registration')
+                     AND dl.deadline_type IN ('{$regType}', 'registration')
                      AND dl.is_deleted = 0
-               )
-             LIMIT {$batchSize}"
-        )->queryAll();
-
-        if (!empty($casesWithout)) {
-            $rows = [];
-            foreach ($casesWithout as $c) {
-                $startDate = date('Y-m-d', is_numeric($c['created_at']) ? (int)$c['created_at'] : strtotime($c['created_at']));
-                $deadlineDate = $svc->addWorkingDays($startDate, 3);
-                $rows[] = [
-                    (int)$c['id'],
-                    null,
-                    JudiciaryDeadline::TYPE_REGISTRATION_3WD,
-                    JudiciaryDeadline::DAY_WORKING,
-                    'فحص حالة التبليغ بعد التسجيل',
-                    $startDate,
-                    $deadlineDate,
-                    JudiciaryDeadline::STATUS_PENDING,
-                    null,
-                    null,
-                    null,
-                    0,
-                    $now,
-                    $now,
-                ];
-            }
-            $db->createCommand()->batchInsert(
-                JudiciaryDeadline::tableName(),
-                ['judiciary_id', 'customer_id', 'deadline_type', 'day_type', 'label',
-                 'start_date', 'deadline_date', 'status', 'related_communication_id',
-                 'related_customer_action_id', 'notes', 'is_deleted', 'created_at', 'updated_at'],
-                $rows
-            )->execute();
-            $count += count($rows);
-        }
+               )"
+        )->execute();
 
         if ($count === 0 && $cache) {
             $cache->set($cacheKey, true, 3600);
