@@ -68,7 +68,7 @@ class JudiciaryController extends Controller
                             'export-report-excel', 'export-report-pdf',
                             'case-timeline',
                             'correspondence-list', 'deadline-dashboard',
-                            'deadline-dashboard-view',
+                            'deadline-dashboard-view', 'deadline-dashboard-ajax',
                             'entity-search', 'generate-request',
                             'save-generated-request',
                             'refresh-deadlines', 'sync-holidays',
