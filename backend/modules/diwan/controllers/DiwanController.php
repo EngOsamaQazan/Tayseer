@@ -82,27 +82,22 @@ class DiwanController extends Controller
     {
         $db = Yii::$app->db;
 
-        /* إحصائيات عامة */
-        $totalDocuments = (int)$db->createCommand('SELECT COUNT(*) FROM os_diwan_document_tracker')->queryScalar();
-        $totalTransactions = (int)$db->createCommand('SELECT COUNT(*) FROM os_diwan_transactions')->queryScalar();
+        $totalDocuments = (int)$db->createCommand('SELECT COUNT(*) FROM {{%diwan_document_tracker}}')->queryScalar();
+        $totalTransactions = (int)$db->createCommand('SELECT COUNT(*) FROM {{%diwan_transactions}}')->queryScalar();
 
         $todayStart = date('Y-m-d 00:00:00');
-        $todayTransactions = (int)$db->createCommand(
-            'SELECT COUNT(*) FROM os_diwan_transactions WHERE transaction_date >= :today',
-            [':today' => $todayStart]
-        )->queryScalar();
+        $todayRow = $db->createCommand("
+            SELECT COUNT(*) AS cnt,
+                   SUM(CASE WHEN transaction_type = 'استلام' THEN 1 ELSE 0 END) AS receive_cnt,
+                   SUM(CASE WHEN transaction_type = 'تسليم' THEN 1 ELSE 0 END) AS deliver_cnt
+            FROM {{%diwan_transactions}}
+            WHERE transaction_date >= :today
+        ", [':today' => $todayStart])->queryOne();
 
-        $todayReceive = (int)$db->createCommand(
-            "SELECT COUNT(*) FROM os_diwan_transactions WHERE transaction_date >= :today AND transaction_type = 'استلام'",
-            [':today' => $todayStart]
-        )->queryScalar();
+        $todayTransactions = (int)($todayRow['cnt'] ?? 0);
+        $todayReceive     = (int)($todayRow['receive_cnt'] ?? 0);
+        $todayDeliver     = (int)($todayRow['deliver_cnt'] ?? 0);
 
-        $todayDeliver = (int)$db->createCommand(
-            "SELECT COUNT(*) FROM os_diwan_transactions WHERE transaction_date >= :today AND transaction_type = 'تسليم'",
-            [':today' => $todayStart]
-        )->queryScalar();
-
-        /* آخر 10 معاملات */
         $recentTransactions = DiwanTransaction::find()
             ->with(['fromEmployee', 'toEmployee', 'details'])
             ->orderBy(['id' => SORT_DESC])
@@ -315,35 +310,39 @@ class DiwanController extends Controller
             SELECT
                 COUNT(*) as total_transactions,
                 SUM(CASE WHEN transaction_type = 'استلام' THEN 1 ELSE 0 END) as total_receive,
-                SUM(CASE WHEN transaction_type = 'تسليم' THEN 1 ELSE 0 END) as total_deliver
-            FROM os_diwan_transactions
+                SUM(CASE WHEN transaction_type = 'تسليم' THEN 1 ELSE 0 END) as total_deliver,
+                SUM(contract_count) as total_contracts_moved
+            FROM {{%vw_diwan_transaction_search}}
             WHERE transaction_date >= :dateFrom
         ", [':dateFrom' => $dateFrom])->queryOne();
 
         $totalContracts = (int)$db->createCommand("
             SELECT COUNT(DISTINCT d.contract_number)
-            FROM os_diwan_transaction_details d
-            INNER JOIN os_diwan_transactions t ON t.id = d.transaction_id
+            FROM {{%diwan_transaction_details}} d
+            INNER JOIN {{%diwan_transactions}} t ON t.id = d.transaction_id
             WHERE t.transaction_date >= :dateFrom
         ", [':dateFrom' => $dateFrom])->queryScalar();
 
-        /* إحصائيات الموظفين */
         $employeeStats = $db->createCommand("
-            SELECT
-                u.username as employee_name,
-                COUNT(CASE WHEN t.transaction_type = 'استلام' AND t.to_employee_id = u.id THEN 1 END) as received,
-                COUNT(CASE WHEN t.transaction_type = 'تسليم' AND t.from_employee_id = u.id THEN 1 END) as delivered
-            FROM os_user u
-            INNER JOIN (
-                SELECT from_employee_id as uid FROM os_diwan_transactions WHERE transaction_date >= :df1
-                UNION
-                SELECT to_employee_id as uid FROM os_diwan_transactions WHERE transaction_date >= :df2
-            ) active ON active.uid = u.id
-            LEFT JOIN os_diwan_transactions t ON (t.from_employee_id = u.id OR t.to_employee_id = u.id)
-                AND t.transaction_date >= :df3
-            GROUP BY u.id, u.username
-            ORDER BY (COUNT(CASE WHEN t.transaction_type = 'استلام' AND t.to_employee_id = u.id THEN 1 END) + COUNT(CASE WHEN t.transaction_type = 'تسليم' AND t.from_employee_id = u.id THEN 1 END)) DESC
-        ", [':df1' => $dateFrom, ':df2' => $dateFrom, ':df3' => $dateFrom])->queryAll();
+            SELECT employee_name, received, delivered
+            FROM (
+                SELECT
+                    COALESCE(from_employee_name, to_employee_name) AS employee_name,
+                    SUM(CASE WHEN transaction_type = 'استلام' THEN 1 ELSE 0 END) AS received,
+                    SUM(CASE WHEN transaction_type = 'تسليم' THEN 1 ELSE 0 END) AS delivered
+                FROM (
+                    SELECT from_employee_name, NULL AS to_employee_name, transaction_type
+                    FROM {{%vw_diwan_transaction_search}}
+                    WHERE transaction_date >= :df1 AND from_employee_name IS NOT NULL
+                    UNION ALL
+                    SELECT NULL, to_employee_name, transaction_type
+                    FROM {{%vw_diwan_transaction_search}}
+                    WHERE transaction_date >= :df2 AND to_employee_name IS NOT NULL
+                ) emp
+                GROUP BY employee_name
+            ) summary
+            ORDER BY (received + delivered) DESC
+        ", [':df1' => $dateFrom, ':df2' => $dateFrom])->queryAll();
 
         /* آخر المعاملات في الفترة */
         $transactions = DiwanTransaction::find()

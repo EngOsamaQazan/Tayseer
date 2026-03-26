@@ -614,3 +614,70 @@ SELECT
 FROM os_hr_attendance a
 WHERE a.is_deleted = 0
 GROUP BY a.user_id, YEAR(a.attendance_date), MONTH(a.attendance_date);
+
+-- ═══════════════════════════════════════════════════════════════
+-- Phase 4: المخزون والديوان
+-- ═══════════════════════════════════════════════════════════════
+
+-- 4.1 رصيد كل صنف مخزون
+CREATE OR REPLACE VIEW os_vw_inventory_item_balance AS
+SELECT
+    i.id AS item_id,
+    i.item_name,
+    i.item_barcode,
+    i.serial_number,
+    i.category,
+    i.status,
+    i.supplier_id,
+    i.company_id,
+    i.is_deleted,
+    i.created_at,
+
+    COALESCE(q.total_in, 0) AS total_quantity_in,
+    COALESCE(s.total_out, 0) AS total_quantity_out,
+    COALESCE(q.total_in, 0) - COALESCE(s.total_out, 0) AS remaining_amount
+
+FROM os_inventory_items i
+LEFT JOIN (
+    SELECT item_id, COUNT(item_id) AS total_in
+    FROM os_inventory_item_quantities
+    GROUP BY item_id
+) q ON q.item_id = i.id
+LEFT JOIN (
+    SELECT item_id, COUNT(item_id) AS total_out
+    FROM os_contract_inventory_item
+    GROUP BY item_id
+) s ON s.item_id = i.id;
+
+-- 4.2 بحث معاملات الديوان مع أسماء الموظفين وعدد العقود
+CREATE OR REPLACE VIEW os_vw_diwan_transaction_search AS
+SELECT
+    t.id,
+    t.transaction_type,
+    t.receipt_number,
+    t.transaction_date,
+    t.notes,
+    t.from_employee_id,
+    t.to_employee_id,
+    t.created_by,
+    t.created_at,
+
+    fe.username AS from_employee_name,
+    te.username AS to_employee_name,
+    cb.username AS created_by_name,
+
+    COALESCE(dc.contract_count, 0) AS contract_count,
+    dc.contract_numbers
+
+FROM os_diwan_transactions t
+LEFT JOIN os_user fe ON fe.id = t.from_employee_id
+LEFT JOIN os_user te ON te.id = t.to_employee_id
+LEFT JOIN os_user cb ON cb.id = t.created_by
+LEFT JOIN (
+    SELECT
+        transaction_id,
+        COUNT(*) AS contract_count,
+        GROUP_CONCAT(contract_number ORDER BY id SEPARATOR ', ') AS contract_numbers
+    FROM os_diwan_transaction_details
+    GROUP BY transaction_id
+) dc ON dc.transaction_id = t.id;

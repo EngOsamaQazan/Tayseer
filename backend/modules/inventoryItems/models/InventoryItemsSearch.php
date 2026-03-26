@@ -88,31 +88,18 @@ class InventoryItemsSearch extends InventoryItems
 
     public function itemQuery($params)
     {
-        $query = InventoryItems::find()->select(" {{%inventory_items}}.*,((SELECT
-        COUNT(`item_id`)
-    FROM
-        {{%inventory_item_quantities}}
-    WHERE
-        item_id = {{%inventory_items}}.id
-) - (
-    SELECT
-        COUNT(`item_id`)
-    FROM
-        {{%contract_inventory_item}}
-    WHERE
-        item_id = {{%inventory_items}}.id
-)) AS remaining_amount");
+        $query = InventoryItems::find()
+            ->select(['{{%inventory_items}}.*', 'COALESCE(vb.remaining_amount, 0) AS remaining_amount'])
+            ->leftJoin('{{%vw_inventory_item_balance}} vb', 'vb.item_id = {{%inventory_items}}.id');
 
         $provider = new ActiveDataProvider([
-            'query' =>$query,
+            'query' => $query,
             'pagination' => [
                 'pageSize' => 10,
             ],
-
         ]);
 
         return $provider;
-
     }
 
     public function searchCounter($params)
