@@ -359,6 +359,53 @@ class JudiciaryDeadlineService
             );
         }
 
+        // --- Check C: complete request_decision deadlines when the related request was decided ---
+        $reqDecisionTypes = [
+            JudiciaryDeadline::TYPE_REQUEST_DECISION,
+            'request_decision',
+        ];
+        $decidedReqIds = $db->createCommand(
+            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+             INNER JOIN {$prefix}judiciary_customers_actions a ON a.id = d.related_customer_action_id
+             WHERE d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND d.deadline_type IN ('" . implode("','", $reqDecisionTypes) . "')
+               AND d.related_customer_action_id IS NOT NULL
+               AND a.request_status IN ('approved', 'rejected')"
+        )->queryColumn();
+
+        if (!empty($decidedReqIds)) {
+            $updated += JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — تم البت في الطلب'],
+                ['id' => $decidedReqIds]
+            );
+        }
+
+        // --- Check D: complete request_decision/correspondence deadlines when subsequent actions exist ---
+        $taskDeadlineTypes = array_merge($reqDecisionTypes, [
+            JudiciaryDeadline::TYPE_CORRESPONDENCE_10WD,
+            'correspondence',
+        ]);
+        $staleTaskIds = $db->createCommand(
+            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+             WHERE d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND d.deadline_type IN ('" . implode("','", $taskDeadlineTypes) . "')
+               AND EXISTS (
+                   SELECT 1 FROM {$prefix}judiciary_customers_actions a
+                   WHERE a.judiciary_id = d.judiciary_id
+                     AND (a.is_deleted = 0 OR a.is_deleted IS NULL)
+                     AND a.action_date > d.deadline_date
+               )"
+        )->queryColumn();
+
+        if (!empty($staleTaskIds)) {
+            $updated += JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — يوجد إجراءات لاحقة بعد انتهاء المهلة'],
+                ['id' => $staleTaskIds]
+            );
+        }
+
         // --- Mark overdue as expired ---
         $today = date('Y-m-d');
         $approaching = date('Y-m-d', strtotime('+3 days'));
