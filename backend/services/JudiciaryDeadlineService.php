@@ -256,6 +256,7 @@ class JudiciaryDeadlineService
 
     /**
      * Refresh statuses for all active deadlines (call via cron or admin action).
+     * 0) Auto-complete ALL deadlines for closed/archived cases
      * 1) Auto-complete deadlines whose related action was deleted
      * 2) Auto-complete milestone deadlines when a subsequent action exists on the case
      * 3) Mark overdue deadlines as expired
@@ -266,6 +267,59 @@ class JudiciaryDeadlineService
         $db = \Yii::$app->db;
         $prefix = $db->tablePrefix;
         $updated = 0;
+
+        // --- Check 0a: complete ALL deadlines for closed/archived cases ---
+        $closedCaseIds = $db->createCommand(
+            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+             INNER JOIN {$prefix}judiciary j ON j.id = d.judiciary_id
+             WHERE d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND j.case_status IN ('closed', 'archived')"
+        )->queryColumn();
+
+        if (!empty($closedCaseIds)) {
+            $updated += JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — القضية مغلقة / مؤرشفة'],
+                ['id' => $closedCaseIds]
+            );
+        }
+
+        // --- Check 0b: complete ALL deadlines for fully-paid judiciary contracts ---
+        $paidJudiciaryIds = $db->createCommand(
+            "SELECT DISTINCT d.judiciary_id FROM {$prefix}judiciary_deadlines d
+             INNER JOIN {$prefix}judiciary j ON j.id = d.judiciary_id
+             WHERE d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND (j.case_status IS NULL OR j.case_status NOT IN ('closed', 'archived'))"
+        )->queryColumn();
+
+        if (!empty($paidJudiciaryIds)) {
+            $paidDeadlineIds = [];
+            foreach ($paidJudiciaryIds as $jid) {
+                $judiciary = \backend\modules\judiciary\models\Judiciary::findOne($jid);
+                if ($judiciary && $judiciary->contract) {
+                    try {
+                        if ($judiciary->contract->isJudiciaryPaid()) {
+                            $ids = $db->createCommand(
+                                "SELECT id FROM {$prefix}judiciary_deadlines
+                                 WHERE judiciary_id = :jid AND is_deleted = 0
+                                   AND status IN ('pending', 'approaching', 'expired')",
+                                [':jid' => $jid]
+                            )->queryColumn();
+                            $paidDeadlineIds = array_merge($paidDeadlineIds, $ids);
+                        }
+                    } catch (\Exception $e) {
+                        // skip if calculation fails
+                    }
+                }
+            }
+            if (!empty($paidDeadlineIds)) {
+                $updated += JudiciaryDeadline::updateAll(
+                    ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — العقد مسدد بالكامل'],
+                    ['id' => $paidDeadlineIds]
+                );
+            }
+        }
 
         // --- Check A: complete deadlines whose related action was soft-deleted ---
         $deletedActionIds = $db->createCommand(
