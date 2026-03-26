@@ -70,6 +70,7 @@ mysql_data/
 
 # Database dumps (large files)
 *.sql
+!sql/*.sql
 
 # Temporary scripts
 /scripts/temp/
