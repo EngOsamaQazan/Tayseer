@@ -386,6 +386,162 @@ class JudiciaryDeadlineService
         }
     }
 
+    /* ─── Live-status VIEW (replaces refreshAllStatuses for reads) ─── */
+
+    public static function ensureLiveView(): void
+    {
+        $cache = \Yii::$app->cache;
+        $cacheKey = 'deadline_view_created';
+        if ($cache && $cache->get($cacheKey)) {
+            return;
+        }
+
+        $p = \Yii::$app->db->tablePrefix;
+
+        \Yii::$app->db->createCommand("
+            CREATE OR REPLACE VIEW {$p}v_deadline_live AS
+            SELECT
+                d.id,
+                d.judiciary_id,
+                d.customer_id,
+                d.deadline_type,
+                d.day_type,
+                d.label,
+                d.start_date,
+                d.deadline_date,
+                d.related_communication_id,
+                d.related_customer_action_id,
+                d.notes,
+                d.is_deleted,
+                d.created_at,
+                d.updated_at,
+                d.created_by,
+
+                CASE
+                    WHEN j.case_status IN ('closed','archived')
+                        THEN 'completed'
+
+                    WHEN j.contract_id IS NOT NULL
+                         AND cc.c_status = 'judiciary'
+                         AND cc.remaining <= 0
+                        THEN 'completed'
+
+                    WHEN d.related_customer_action_id IS NOT NULL
+                         AND ra.is_deleted = 1
+                        THEN 'completed'
+
+                    WHEN d.deadline_type IN ('registration_3wd','registration')
+                         AND EXISTS (
+                             SELECT 1 FROM {$p}judiciary_customers_actions s
+                             WHERE s.judiciary_id = d.judiciary_id
+                               AND (s.is_deleted = 0 OR s.is_deleted IS NULL)
+                               AND s.action_date > d.start_date
+                         )
+                        THEN 'completed'
+
+                    WHEN d.deadline_type IN ('request_decision_3wd','request_decision')
+                         AND d.related_customer_action_id IS NOT NULL
+                         AND ra.request_status IN ('approved','rejected')
+                        THEN 'completed'
+
+                    WHEN d.deadline_type IN ('request_decision_3wd','request_decision')
+                         AND d.related_customer_action_id IS NOT NULL
+                         AND EXISTS (
+                             SELECT 1 FROM {$p}judiciary_customers_actions ch
+                             WHERE ch.parent_id = d.related_customer_action_id
+                               AND (ch.is_deleted = 0 OR ch.is_deleted IS NULL)
+                         )
+                        THEN 'completed'
+
+                    WHEN d.deadline_type IN ('correspondence_10wd','correspondence')
+                         AND EXISTS (
+                             SELECT 1 FROM {$p}judiciary_customers_actions s2
+                             WHERE s2.judiciary_id = d.judiciary_id
+                               AND (s2.is_deleted = 0 OR s2.is_deleted IS NULL)
+                               AND s2.action_date > d.deadline_date
+                         )
+                        THEN 'completed'
+
+                    WHEN d.deadline_date < CURDATE()
+                        THEN 'expired'
+
+                    WHEN d.deadline_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
+                        THEN 'approaching'
+
+                    ELSE 'pending'
+                END AS live_status
+
+            FROM {$p}judiciary_deadlines d
+            LEFT JOIN {$p}judiciary j ON j.id = d.judiciary_id
+            LEFT JOIN {$p}judiciary_customers_actions ra
+                   ON ra.id = d.related_customer_action_id
+            LEFT JOIN (
+                SELECT
+                    co.id,
+                    co.status AS c_status,
+                    GREATEST(0,
+                        co.total_value
+                        + COALESCE(ex.t,0)
+                        + COALESCE(lw.t,0)
+                        - COALESCE(ic.t,0)
+                        - COALESCE(ad.t,0)
+                    ) AS remaining
+                FROM {$p}contracts co
+                LEFT JOIN (SELECT contract_id, SUM(amount) t FROM {$p}expenses
+                           WHERE is_deleted=0 OR is_deleted IS NULL
+                           GROUP BY contract_id) ex ON ex.contract_id = co.id
+                LEFT JOIN (SELECT contract_id, SUM(lawyer_cost) t FROM {$p}judiciary
+                           WHERE is_deleted=0 OR is_deleted IS NULL
+                           GROUP BY contract_id) lw ON lw.contract_id = co.id
+                LEFT JOIN (SELECT contract_id, SUM(amount) t FROM {$p}income
+                           GROUP BY contract_id) ic ON ic.contract_id = co.id
+                LEFT JOIN (SELECT contract_id, SUM(amount) t FROM {$p}contract_adjustments
+                           WHERE is_deleted=0
+                           GROUP BY contract_id) ad ON ad.contract_id = co.id
+            ) cc ON cc.id = j.contract_id
+
+            WHERE d.is_deleted = 0
+        ")->execute();
+
+        if ($cache) {
+            $cache->set($cacheKey, true, 86400);
+        }
+    }
+
+    /**
+     * Query the live VIEW for dashboard data.
+     * Returns ['expired' => [...], 'approaching' => [...], 'pending' => [...]]
+     */
+    public static function getDashboardData(): array
+    {
+        self::ensureLiveView();
+
+        $p = \Yii::$app->db->tablePrefix;
+        $db = \Yii::$app->db;
+
+        $rows = $db->createCommand("
+            SELECT v.*, v.live_status,
+                   j.judiciary_number,
+                   ca_action.name AS action_name,
+                   ca_cust.name   AS customer_name
+            FROM {$p}v_deadline_live v
+            LEFT JOIN {$p}judiciary j ON j.id = v.judiciary_id
+            LEFT JOIN {$p}judiciary_customers_actions jca ON jca.id = v.related_customer_action_id
+            LEFT JOIN {$p}judiciary_actions ca_action ON ca_action.id = jca.judiciary_actions_id
+            LEFT JOIN {$p}customers ca_cust ON ca_cust.id = jca.customers_id
+            WHERE v.live_status IN ('expired','approaching','pending')
+            ORDER BY v.deadline_date ASC
+        ")->queryAll();
+
+        $result = ['expired' => [], 'approaching' => [], 'pending' => []];
+        foreach ($rows as $r) {
+            $r['status'] = $r['live_status'];
+            $result[$r['live_status']][] = $r;
+        }
+
+        return $result;
+    }
+
     private static function doRefreshAllStatuses(): int
     {
         $db = \Yii::$app->db;

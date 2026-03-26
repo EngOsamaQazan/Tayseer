@@ -52,7 +52,7 @@ $sections = [
             </div>
         </div>
         <div class="jv-actions" style="display:flex;gap:8px">
-            <?= Html::a('<i class="fa fa-refresh"></i> تحديث البيانات', ['deadline-dashboard-view', 'refresh' => 1], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
+            <?= Html::a('<i class="fa fa-refresh"></i> تحديث', ['deadline-dashboard-view'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
             <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
         </div>
     </div>
@@ -96,9 +96,9 @@ $sections = [
         <?php else: ?>
             <div class="jv-deadline-grid">
                 <?php foreach ($sec['items'] as $dl):
-                    $typeLabel = $typeLabels[$dl->deadline_type] ?? $dl->deadline_type;
-                    $daysRemaining = $dl->deadline_date ? (int)((strtotime($dl->deadline_date) - time()) / 86400) : null;
-                    $caseNum = $dl->judiciary ? ($dl->judiciary->judiciary_number ?: '#' . $dl->judiciary_id) : '#' . $dl->judiciary_id;
+                    $typeLabel = $typeLabels[$dl['deadline_type']] ?? $dl['deadline_type'];
+                    $daysRemaining = !empty($dl['deadline_date']) ? (int)((strtotime($dl['deadline_date']) - time()) / 86400) : null;
+                    $caseNum = !empty($dl['judiciary_number']) ? $dl['judiciary_number'] : '#' . $dl['judiciary_id'];
                 ?>
                 <div class="jv-deadline-card" style="background:<?= $sec['bg'] ?>;border:1px solid <?= $sec['border'] ?>">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -106,12 +106,12 @@ $sections = [
                             <i class="fa <?= $sec['icon'] ?>" style="color:<?= $sec['color'] ?>;font-size:14px"></i>
                             <span style="font-weight:700;font-size:12px;color:<?= $sec['color'] ?>"><?= Html::encode($typeLabel) ?></span>
                         </div>
-                        <?= Html::a('قضية ' . Html::encode($caseNum), ['view', 'id' => $dl->judiciary_id], [
+                        <?= Html::a('قضية ' . Html::encode($caseNum), ['view', 'id' => $dl['judiciary_id']], [
                             'style' => 'font-size:11px;font-weight:600;color:#2563EB;text-decoration:none',
                         ]) ?>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
-                        <span style="color:#64748B"><i class="fa fa-calendar"></i> <?= Html::encode($dl->deadline_date ?: '—') ?></span>
+                        <span style="color:#64748B"><i class="fa fa-calendar"></i> <?= Html::encode($dl['deadline_date'] ?: '—') ?></span>
                         <?php if ($daysRemaining !== null): ?>
                             <span style="font-weight:700;color:<?= $sec['color'] ?>">
                                 <?php if ($daysRemaining < 0): ?>
@@ -124,11 +124,17 @@ $sections = [
                             </span>
                         <?php endif; ?>
                     </div>
-                    <?php if (!empty($dl->label)): ?>
-                        <div style="font-size:11px;color:#475569;margin-top:6px"><?= Html::encode($dl->label) ?></div>
-                    <?php endif; ?>
-                    <?php if (!empty($dl->notes)): ?>
-                        <div style="font-size:10px;color:#94A3B8;margin-top:4px;background:rgba(255,255,255,.6);padding:4px 8px;border-radius:4px"><?= Html::encode($dl->notes) ?></div>
+                    <?php if (!empty($dl['action_name'])): ?>
+                        <div style="font-size:11px;color:#475569;margin-top:6px;display:flex;align-items:center;gap:4px">
+                            <i class="fa fa-file-text-o" style="font-size:10px"></i>
+                            <span style="font-weight:600"><?= Html::encode($dl['action_name']) ?></span>
+                            <?php if (!empty($dl['customer_name'])): ?>
+                                <span style="color:#94A3B8">—</span>
+                                <span><?= Html::encode($dl['customer_name']) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    <?php elseif (!empty($dl['label'])): ?>
+                        <div style="font-size:11px;color:#475569;margin-top:6px"><?= Html::encode($dl['label']) ?></div>
                     <?php endif; ?>
                 </div>
                 <?php endforeach; ?>

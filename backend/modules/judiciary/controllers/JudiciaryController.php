@@ -1880,37 +1880,13 @@ class JudiciaryController extends Controller
 
     public function actionDeadlineDashboardView()
     {
-        $force = Yii::$app->request->get('refresh') == 1;
-
         JudiciaryDeadlineService::generateMissingDeadlines();
-
-        if ($force) {
-            JudiciaryDeadlineService::invalidateRefreshCache();
-        }
-        JudiciaryDeadlineService::refreshAllStatuses($force);
-
-        $expired = JudiciaryDeadline::find()
-            ->where(['status' => JudiciaryDeadline::STATUS_EXPIRED])
-            ->orderBy(['deadline_date' => SORT_ASC])
-            ->with(['judiciary'])
-            ->all();
-
-        $approaching = JudiciaryDeadline::find()
-            ->where(['status' => JudiciaryDeadline::STATUS_APPROACHING])
-            ->orderBy(['deadline_date' => SORT_ASC])
-            ->with(['judiciary'])
-            ->all();
-
-        $pending = JudiciaryDeadline::find()
-            ->where(['status' => JudiciaryDeadline::STATUS_PENDING])
-            ->orderBy(['deadline_date' => SORT_ASC])
-            ->with(['judiciary'])
-            ->all();
+        $data = JudiciaryDeadlineService::getDashboardData();
 
         return $this->render('deadline_dashboard', [
-            'expired' => $expired,
-            'approaching' => $approaching,
-            'pending' => $pending,
+            'expired'     => $data['expired'],
+            'approaching' => $data['approaching'],
+            'pending'     => $data['pending'],
         ]);
     }
 
