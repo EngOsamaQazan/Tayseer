@@ -1880,7 +1880,6 @@ class JudiciaryController extends Controller
 
     public function actionDeadlineDashboardView()
     {
-        JudiciaryDeadlineService::generateMissingDeadlines();
         $data = JudiciaryDeadlineService::getDashboardData();
 
         return $this->render('deadline_dashboard', [
