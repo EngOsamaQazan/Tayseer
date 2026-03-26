@@ -24,65 +24,21 @@ CREATE TABLE IF NOT EXISTS `os_judiciary_deadlines` (
   `created_at` int(11) DEFAULT NULL,
   `updated_at` int(11) DEFAULT NULL,
   `created_by` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_deadline_judiciary` (`judiciary_id`),
-  KEY `idx_deadline_status` (`status`),
-  KEY `idx_deadline_type` (`deadline_type`),
-  KEY `idx_deadline_date` (`deadline_date`),
-  KEY `idx_deadline_action` (`related_customer_action_id`),
-  KEY `idx_deadline_deleted` (`is_deleted`)
+  PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- توليد مواعيد ناقصة للطلبات الإجرائية
-INSERT IGNORE INTO os_judiciary_deadlines
-    (judiciary_id, customer_id, deadline_type, day_type, label,
-     start_date, deadline_date, status,
-     related_customer_action_id, is_deleted, created_at, updated_at)
-SELECT
-    jca.judiciary_id,
-    jca.customers_id,
-    'request_decision_3wd',
-    'working',
-    'قرار القاضي على الطلب',
-    COALESCE(jca.action_date, FROM_UNIXTIME(jca.created_at, '%Y-%m-%d')),
-    DATE_ADD(COALESCE(jca.action_date, FROM_UNIXTIME(jca.created_at, '%Y-%m-%d')), INTERVAL 5 DAY),
-    'pending',
-    jca.id,
-    0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
-FROM os_judiciary_customers_actions jca
-INNER JOIN os_judiciary_actions ja ON ja.id = jca.judiciary_actions_id
-WHERE ja.action_nature = 'request'
-  AND (jca.is_deleted = 0 OR jca.is_deleted IS NULL)
-  AND NOT EXISTS (
-      SELECT 1 FROM os_judiciary_deadlines dl
-      WHERE dl.related_customer_action_id = jca.id
-        AND dl.deadline_type IN ('request_decision_3wd', 'request_decision')
-        AND dl.is_deleted = 0
-  );
+-- إضافة فهارس لتسريع الاستعلامات (تخطي إذا موجودة)
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_judiciary` (`judiciary_id`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_status` (`status`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_type` (`deadline_type`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_date` (`deadline_date`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_action` (`related_customer_action_id`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_deleted` (`is_deleted`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_combo` (`is_deleted`, `status`, `deadline_type`);
 
--- توليد مواعيد ناقصة لتسجيل القضايا
-INSERT IGNORE INTO os_judiciary_deadlines
-    (judiciary_id, customer_id, deadline_type, day_type, label,
-     start_date, deadline_date, status,
-     is_deleted, created_at, updated_at)
-SELECT
-    j.id,
-    NULL,
-    'registration_3wd',
-    'working',
-    'فحص حالة التبليغ بعد التسجيل',
-    FROM_UNIXTIME(j.created_at, '%Y-%m-%d'),
-    DATE_ADD(FROM_UNIXTIME(j.created_at, '%Y-%m-%d'), INTERVAL 5 DAY),
-    'pending',
-    0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
-FROM os_judiciary j
-WHERE (j.is_deleted = 0 OR j.is_deleted IS NULL)
-  AND NOT EXISTS (
-      SELECT 1 FROM os_judiciary_deadlines dl
-      WHERE dl.judiciary_id = j.id
-        AND dl.deadline_type IN ('registration_3wd', 'registration')
-        AND dl.is_deleted = 0
-  );
+-- فهارس مساعدة على جداول مرتبطة
+ALTER TABLE `os_judiciary_customers_actions` ADD INDEX `idx_jca_parent` (`parent_id`);
+ALTER TABLE `os_judiciary_customers_actions` ADD INDEX `idx_jca_judiciary_date` (`judiciary_id`, `action_date`);
 
 -- إنشاء الـ VIEW
 CREATE OR REPLACE VIEW os_v_deadline_live AS
