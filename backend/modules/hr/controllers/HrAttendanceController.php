@@ -92,17 +92,15 @@ class HrAttendanceController extends Controller
             'name'
         );
 
-        // Today's summary stats
         $todayStats = Yii::$app->db->createCommand("
-            SELECT COUNT(*) as total_records,
-                SUM(CASE WHEN status='present' THEN 1 ELSE 0 END) as present,
-                SUM(CASE WHEN status='absent' THEN 1 ELSE 0 END) as absent,
-                SUM(CASE WHEN status='leave' THEN 1 ELSE 0 END) as `leave`,
-                SUM(CASE WHEN status='holiday' THEN 1 ELSE 0 END) as holiday,
-                SUM(CASE WHEN status='half_day' THEN 1 ELSE 0 END) as half_day,
-                SUM(CASE WHEN status='remote' THEN 1 ELSE 0 END) as remote
-            FROM {{%hr_attendance}} WHERE attendance_date = :date AND is_deleted = 0
+            SELECT total_records, present_count AS present, absent_count AS absent,
+                   leave_count AS `leave`, holiday_count AS holiday,
+                   half_day_count AS half_day, remote_count AS remote
+            FROM {{%vw_hr_attendance_daily_summary}} WHERE attendance_date = :date
         ", [':date' => $filterDate])->queryOne();
+        if (!$todayStats) {
+            $todayStats = ['total_records' => 0, 'present' => 0, 'absent' => 0, 'leave' => 0, 'holiday' => 0, 'half_day' => 0, 'remote' => 0];
+        }
 
         return $this->render('index', [
             'dataProvider' => $dataProvider,
@@ -388,37 +386,21 @@ class HrAttendanceController extends Controller
         $departmentId = $request->get('department', '');
 
         $query = "
-            SELECT
-                u.id as user_id,
-                u.username,
-                u.name,
-                d.name as department_name,
-                COUNT(a.id) as total_records,
-                SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present_days,
-                SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent_days,
-                SUM(CASE WHEN a.status = 'leave' THEN 1 ELSE 0 END) as leave_days,
-                SUM(CASE WHEN a.status = 'half_day' THEN 1 ELSE 0 END) as half_days,
-                SUM(CASE WHEN a.status = 'remote' THEN 1 ELSE 0 END) as remote_days,
-                SUM(COALESCE(a.total_hours, 0)) as total_hours,
-                SUM(COALESCE(a.overtime_hours, 0)) as total_overtime,
-                SUM(COALESCE(a.late_minutes, 0)) as total_late_minutes
-            FROM {{%user}} u
-            LEFT JOIN {{%hr_attendance}} a ON a.user_id = u.id
-                AND MONTH(a.attendance_date) = :month
-                AND YEAR(a.attendance_date) = :year
-                AND a.is_deleted = 0
-            LEFT JOIN {{%department}} d ON d.id = u.department
-            WHERE u.blocked_at IS NULL
+            SELECT user_id, username, employee_name AS name, department_name,
+                   total_records, present_days, absent_days, leave_days,
+                   half_days, remote_days, total_hours, total_overtime, total_late_minutes
+            FROM {{%vw_hr_attendance_employee_monthly}}
+            WHERE att_month = :month AND att_year = :year
         ";
 
         $params = [':month' => $month, ':year' => $year];
 
         if (!empty($departmentId)) {
-            $query .= " AND u.department = :dept";
+            $query .= " AND department_id = :dept";
             $params[':dept'] = $departmentId;
         }
 
-        $query .= " GROUP BY u.id, u.username, u.name, d.name ORDER BY u.name ASC";
+        $query .= " ORDER BY employee_name ASC";
 
         $summary = Yii::$app->db->createCommand($query, $params)->queryAll();
 

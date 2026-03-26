@@ -249,23 +249,16 @@ class HrPayrollController extends Controller
                     continue; // Skip employees without salary structure
                 }
 
-                // Calculate attendance
                 $attendance = Yii::$app->db->createCommand("
-                    SELECT
-                        COUNT(*) as total_records,
-                        SUM(CASE WHEN status IN ('present','late','field_duty') THEN 1 ELSE 0 END) as present_days,
-                        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent_days,
-                        SUM(CASE WHEN status IN ('on_leave','leave') THEN 1 ELSE 0 END) as leave_days,
-                        SUM(COALESCE(overtime_hours, 0)) as overtime_hours,
-                        SUM(COALESCE(late_minutes, 0)) as total_late_minutes
-                    FROM {{%hr_attendance}}
+                    SELECT total_records, present_days, absent_days, leave_days,
+                           overtime_hours, total_late_minutes
+                    FROM {{%vw_payroll_employee_attendance}}
                     WHERE user_id = :userId
-                      AND attendance_date BETWEEN :start AND :end
-                      AND is_deleted = 0
+                      AND period_year = :year AND period_month = :month
                 ", [
                     ':userId' => $userId,
-                    ':start' => $periodStart,
-                    ':end' => $periodEnd,
+                    ':year' => $run->period_year,
+                    ':month' => $run->period_month,
                 ])->queryOne();
 
                 $presentDays = (float) ($attendance['present_days'] ?? $workingDaysInMonth);

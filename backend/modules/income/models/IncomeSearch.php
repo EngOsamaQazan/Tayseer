@@ -206,11 +206,12 @@ class IncomeSearch extends Income
         $query = Income::find()->innerJoin('{{%contracts}}', '{{%contracts}}.id = {{%income}}.contract_id');
 
 
+        $judSubquery = '(SELECT DISTINCT contract_id FROM {{%judiciary}} WHERE is_deleted = 0 OR is_deleted IS NULL)';
         if ( !empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 1) {
-            $query ->andWhere(['not in','os_income.contract_id',ArrayHelper::map(Judiciary::find()->all(),'contract_id','contract_id')]) ;
+            $query ->andWhere(['not in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
         }
         if (!empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 2) {
-            $query ->andWhere(['in','os_income.contract_id',ArrayHelper::map(Judiciary::find()->all(),'contract_id','contract_id')]) ;
+            $query ->andWhere(['in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
 
         }
 
@@ -218,11 +219,6 @@ class IncomeSearch extends Income
 
         $this->load($params);
 
-        // if ($this->validate()) {
-        //     // uncomment the following line if you do not want to return any records when validation fails
-        //     // $query->where('0=1');
-        //     return $dataProvider;
-        // }
         if ((!empty($params['IncomeSearch']['from_date']))) {
             $query->andFilterWhere(['>=', '{{%contracts}}.Date_of_sale', $params['IncomeSearch']['from_date']]);
 
@@ -279,14 +275,7 @@ class IncomeSearch extends Income
         if (!empty($params['IncomeSearch']['type'])) {
             $query->andFilterWhere(['in', '{{%income}}.type', $params['IncomeSearch']['type']]);
         }
-       // $query->andFilterWhere(['=', '{{%contracts}}.is_deleted', 0]);
         $this->amount_sum = $query->sum('amount');
-        /*  if((!empty($this->date_to) or  !empty($this->date_from)) and  $params['IncomeSearch']['income_status'] == 1 ){
-              $query->andWhere(['=','os_contracts.status' ,'active']);
-
-          } if((!empty($this->date_to) or  !empty($this->date_from)) and  $params['IncomeSearch']['income_status'] == 2 ){
-          $query->andWhere(['=','os_contracts.status' ,'judiciary']);
-      }*/
 
         if (!empty($params['IncomeSearch']['number_row'])) {
             $dataProvider = new ActiveDataProvider([
@@ -317,12 +306,12 @@ class IncomeSearch extends Income
     {
         $query = Income::find()->innerJoin('{{%contracts}}', '{{%contracts}}.id = {{%income}}.contract_id');
 
-
+        $judSubquery = '(SELECT DISTINCT contract_id FROM {{%judiciary}} WHERE is_deleted = 0 OR is_deleted IS NULL)';
         if ( !empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 1) {
-            $query ->andWhere(['not in','os_income.contract_id',ArrayHelper::map(Judiciary::find()->all(),'contract_id','contract_id')]) ;
+            $query ->andWhere(['not in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
         }
         if (!empty($params['IncomeSearch']['income_status']) and  $params['IncomeSearch']['income_status'] == 2) {
-            $query ->andWhere(['in','os_income.contract_id',ArrayHelper::map(Judiciary::find()->all(),'contract_id','contract_id')]) ;
+            $query ->andWhere(['in','os_income.contract_id', new \yii\db\Expression($judSubquery)]) ;
 
         }
 

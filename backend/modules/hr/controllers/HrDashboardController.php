@@ -66,24 +66,16 @@ class HrDashboardController extends Controller
             Yii::error('HR Dashboard - Active employees query failed: ' . $e->getMessage());
         }
 
-        // Present today
+        // Present today + on leave (from daily summary view)
         $presentToday = 0;
-        try {
-            $presentToday = (int) $db->createCommand(
-                "SELECT COUNT(*) FROM os_hr_attendance WHERE attendance_date = :today AND status = 'present'",
-                [':today' => $today]
-            )->queryScalar();
-        } catch (\Exception $e) {
-            Yii::error('HR Dashboard - Present today query failed: ' . $e->getMessage());
-        }
-
-        // On leave today (from attendance OR leave requests)
         $onLeaveToday = 0;
         try {
-            $fromAttendance = (int) $db->createCommand(
-                "SELECT COUNT(*) FROM os_hr_attendance WHERE attendance_date = :today AND status = 'leave'",
+            $dailyRow = $db->createCommand(
+                "SELECT present_count, leave_count FROM os_vw_hr_attendance_daily_summary WHERE attendance_date = :today",
                 [':today' => $today]
-            )->queryScalar();
+            )->queryOne();
+            $presentToday = (int) ($dailyRow['present_count'] ?? 0);
+            $fromAttendance = (int) ($dailyRow['leave_count'] ?? 0);
 
             $fromLeaveRequest = (int) $db->createCommand(
                 "SELECT COUNT(DISTINCT created_by) FROM os_leave_request WHERE status = 'approved' AND :today BETWEEN start_at AND end_at",
@@ -92,7 +84,7 @@ class HrDashboardController extends Controller
 
             $onLeaveToday = max($fromAttendance, $fromLeaveRequest);
         } catch (\Exception $e) {
-            Yii::error('HR Dashboard - On leave today query failed: ' . $e->getMessage());
+            Yii::error('HR Dashboard - Present/Leave query failed: ' . $e->getMessage());
         }
 
         // Pending leave requests
@@ -105,34 +97,30 @@ class HrDashboardController extends Controller
             Yii::error('HR Dashboard - Pending leave requests query failed: ' . $e->getMessage());
         }
 
-        // Department headcount
+        // Department headcount (from employee directory view)
         $departmentHeadcount = [];
         try {
             $departmentHeadcount = $db->createCommand(
-                "SELECT d.title AS department_name, COUNT(u.id) AS headcount
-                 FROM os_user u
-                 LEFT JOIN os_department d ON d.id = u.department
-                 WHERE u.confirmed_at IS NOT NULL
-                 GROUP BY u.department, d.title
+                "SELECT department_name, COUNT(id) AS headcount
+                 FROM os_vw_hr_employee_directory
+                 GROUP BY department_name
                  ORDER BY headcount DESC"
             )->queryAll();
         } catch (\Exception $e) {
             Yii::error('HR Dashboard - Department headcount query failed: ' . $e->getMessage());
         }
 
-        // Recent 30 days attendance rate
+        // Recent 30 days attendance rate (from daily summary view)
         $attendanceRate = 0;
         try {
-            $totalWorkDays = (int) $db->createCommand(
-                "SELECT COUNT(*) FROM os_hr_attendance WHERE attendance_date >= :fromDate AND attendance_date <= :today",
+            $attRateRow = $db->createCommand(
+                "SELECT SUM(total_records) AS total_days, SUM(present_count) AS present_days
+                 FROM os_vw_hr_attendance_daily_summary
+                 WHERE attendance_date >= :fromDate AND attendance_date <= :today",
                 [':fromDate' => $thirtyDaysAgo, ':today' => $today]
-            )->queryScalar();
-
-            $presentDays = (int) $db->createCommand(
-                "SELECT COUNT(*) FROM os_hr_attendance WHERE attendance_date >= :fromDate AND attendance_date <= :today AND status = 'present'",
-                [':fromDate' => $thirtyDaysAgo, ':today' => $today]
-            )->queryScalar();
-
+            )->queryOne();
+            $totalWorkDays = (int) ($attRateRow['total_days'] ?? 0);
+            $presentDays = (int) ($attRateRow['present_days'] ?? 0);
             $attendanceRate = $totalWorkDays > 0 ? round(($presentDays / $totalWorkDays) * 100, 1) : 0;
         } catch (\Exception $e) {
             Yii::error('HR Dashboard - Attendance rate query failed: ' . $e->getMessage());

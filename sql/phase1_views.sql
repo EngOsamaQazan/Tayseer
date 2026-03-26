@@ -516,3 +516,101 @@ LEFT JOIN os_judiciary j ON j.id = d.judiciary_id
 LEFT JOIN os_judiciary_customers_actions ra ON ra.id = d.related_customer_action_id
 LEFT JOIN os_vw_contract_balance cb ON cb.contract_id = j.contract_id
 WHERE d.is_deleted = 0;
+
+-- ========================================================
+-- Phase 3 Views
+-- ========================================================
+
+-- 10. vw_income_contract_summary
+CREATE OR REPLACE VIEW os_vw_income_contract_summary AS
+SELECT
+    i.id AS income_id, i.contract_id, i.amount, i.date, i.type,
+    i.payment_type, i._by, i.created_by,
+    c.status AS contract_status, c.company_id, c.followed_by,
+    c.Date_of_sale, c.is_deleted AS contract_is_deleted,
+    c.total_value AS contract_total_value, c.seller_id,
+    CASE WHEN j.jud_count > 0 THEN 1 ELSE 0 END AS has_judiciary
+FROM os_income i
+LEFT JOIN os_contracts c ON c.id = i.contract_id
+LEFT JOIN (
+    SELECT contract_id, COUNT(*) AS jud_count
+    FROM os_judiciary WHERE is_deleted = 0 OR is_deleted IS NULL
+    GROUP BY contract_id
+) j ON j.contract_id = i.contract_id;
+
+-- 11. vw_hr_attendance_daily_summary
+CREATE OR REPLACE VIEW os_vw_hr_attendance_daily_summary AS
+SELECT
+    attendance_date,
+    COUNT(*) AS total_records,
+    SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) AS present_count,
+    SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) AS absent_count,
+    SUM(CASE WHEN status = 'leave' THEN 1 ELSE 0 END) AS leave_count,
+    SUM(CASE WHEN status = 'holiday' THEN 1 ELSE 0 END) AS holiday_count,
+    SUM(CASE WHEN status = 'half_day' THEN 1 ELSE 0 END) AS half_day_count,
+    SUM(CASE WHEN status = 'remote' THEN 1 ELSE 0 END) AS remote_count,
+    SUM(CASE WHEN status IN ('present','late','field_duty') THEN 1 ELSE 0 END) AS working_count
+FROM os_hr_attendance
+WHERE is_deleted = 0
+GROUP BY attendance_date;
+
+-- 12. vw_hr_attendance_employee_monthly
+CREATE OR REPLACE VIEW os_vw_hr_attendance_employee_monthly AS
+SELECT
+    u.id AS user_id, u.username, u.name AS employee_name,
+    d.id AS department_id,
+    d.title AS department_name,
+    MONTH(a.attendance_date) AS att_month,
+    YEAR(a.attendance_date) AS att_year,
+    COUNT(a.id) AS total_records,
+    SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) AS present_days,
+    SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) AS absent_days,
+    SUM(CASE WHEN a.status IN ('on_leave','leave') THEN 1 ELSE 0 END) AS leave_days,
+    SUM(CASE WHEN a.status = 'half_day' THEN 1 ELSE 0 END) AS half_days,
+    SUM(CASE WHEN a.status = 'remote' THEN 1 ELSE 0 END) AS remote_days,
+    SUM(CASE WHEN a.status IN ('present','late','field_duty') THEN 1 ELSE 0 END) AS payroll_present_days,
+    SUM(COALESCE(a.total_hours, 0)) AS total_hours,
+    SUM(COALESCE(a.overtime_hours, 0)) AS total_overtime,
+    SUM(COALESCE(a.late_minutes, 0)) AS total_late_minutes
+FROM os_user u
+INNER JOIN os_hr_attendance a ON a.user_id = u.id AND a.is_deleted = 0
+LEFT JOIN os_department d ON d.id = u.department
+WHERE u.blocked_at IS NULL AND u.confirmed_at IS NOT NULL
+GROUP BY u.id, u.username, u.name, d.id, d.title,
+         MONTH(a.attendance_date), YEAR(a.attendance_date);
+
+-- 13. vw_hr_employee_directory
+CREATE OR REPLACE VIEW os_vw_hr_employee_directory AS
+SELECT
+    u.id, u.username, u.name, u.email, u.mobile,
+    u.employee_type, u.employee_status, u.date_of_hire,
+    u.gender, u.nationality,
+    u.department AS department_id, u.job_title AS job_title_id,
+    u.reporting_to, u.blocked_at, u.confirmed_at, u.created_at,
+    d.title AS department_name,
+    mgr.name AS reporting_to_name,
+    CASE
+        WHEN u.blocked_at IS NOT NULL THEN 'blocked'
+        WHEN u.employee_type = 'Active' THEN 'active'
+        ELSE COALESCE(u.employee_type, 'unknown')
+    END AS computed_status
+FROM os_user u
+LEFT JOIN os_department d ON d.id = u.department
+LEFT JOIN os_user mgr ON mgr.id = u.reporting_to
+WHERE u.confirmed_at IS NOT NULL;
+
+-- 14. vw_payroll_employee_attendance
+CREATE OR REPLACE VIEW os_vw_payroll_employee_attendance AS
+SELECT
+    a.user_id,
+    YEAR(a.attendance_date) AS period_year,
+    MONTH(a.attendance_date) AS period_month,
+    COUNT(*) AS total_records,
+    SUM(CASE WHEN a.status IN ('present','late','field_duty') THEN 1 ELSE 0 END) AS present_days,
+    SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) AS absent_days,
+    SUM(CASE WHEN a.status IN ('on_leave','leave') THEN 1 ELSE 0 END) AS leave_days,
+    SUM(COALESCE(a.overtime_hours, 0)) AS overtime_hours,
+    SUM(COALESCE(a.late_minutes, 0)) AS total_late_minutes
+FROM os_hr_attendance a
+WHERE a.is_deleted = 0
+GROUP BY a.user_id, YEAR(a.attendance_date), MONTH(a.attendance_date);
