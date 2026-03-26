@@ -6,6 +6,10 @@ class m260312_100002_create_diwan_correspondence extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%diwan_correspondence}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%diwan_correspondence}}', [
             'id' => $this->primaryKey(),
             'communication_type' => $this->string(20)->notNull(),

@@ -23,18 +23,21 @@ class m260318_100002_add_accounting_rbac_permissions extends Migration
 
     public function safeUp()
     {
+        $exists = (new \yii\db\Query())->from('{{%auth_item}}')->where(['name' => 'المحاسبة'])->exists();
+        if ($exists) {
+            return;
+        }
+
         $now = time();
 
-        // Insert parent permission
         $this->insert('{{%auth_item}}', [
             'name' => 'المحاسبة',
-            'type' => 2, // permission
+            'type' => 2,
             'description' => 'المحاسبة',
             'created_at' => $now,
             'updated_at' => $now,
         ]);
 
-        // Insert child permissions and link to parent
         $children = array_slice($this->permissions, 1);
         foreach ($children as $permName) {
             $this->insert('{{%auth_item}}', [
@@ -51,7 +54,6 @@ class m260318_100002_add_accounting_rbac_permissions extends Migration
             ]);
         }
 
-        // Assign to مدير role if it exists
         $managerExists = (new \yii\db\Query())
             ->from('{{%auth_item}}')
             ->where(['name' => 'مدير'])
@@ -63,7 +65,6 @@ class m260318_100002_add_accounting_rbac_permissions extends Migration
                 'child' => 'المحاسبة',
             ]);
         } else {
-            // Assign directly to user 1
             $this->insert('{{%auth_assignment}}', [
                 'item_name' => 'المحاسبة',
                 'user_id' => '1',
@@ -74,17 +75,14 @@ class m260318_100002_add_accounting_rbac_permissions extends Migration
 
     public function safeDown()
     {
-        // Remove assignments
         $this->delete('{{%auth_assignment}}', ['item_name' => $this->permissions]);
         
-        // Remove child relationships
         $children = array_slice($this->permissions, 1);
         foreach ($children as $permName) {
             $this->delete('{{%auth_item_child}}', ['child' => $permName]);
         }
         $this->delete('{{%auth_item_child}}', ['child' => 'المحاسبة']);
 
-        // Remove permissions
         foreach ($this->permissions as $permName) {
             $this->delete('{{%auth_item}}', ['name' => $permName]);
         }

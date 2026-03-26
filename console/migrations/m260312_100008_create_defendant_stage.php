@@ -6,6 +6,10 @@ class m260312_100008_create_defendant_stage extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%judiciary_defendant_stage}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%judiciary_defendant_stage}}', [
             'id' => $this->primaryKey(),
             'judiciary_id' => $this->integer()->notNull(),

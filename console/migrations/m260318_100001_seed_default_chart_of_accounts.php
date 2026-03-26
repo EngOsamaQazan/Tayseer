@@ -6,9 +6,13 @@ class m260318_100001_seed_default_chart_of_accounts extends Migration
 {
     public function safeUp()
     {
+        $exists = (new \yii\db\Query())->from('{{%accounts}}')->where(['code' => '1000'])->exists();
+        if ($exists) {
+            return;
+        }
+
         $now = time();
         $accounts = [
-            // Level 1 - Main categories
             ['code' => '1000', 'name_ar' => 'الأصول', 'name_en' => 'Assets', 'parent_id' => null, 'type' => 'assets', 'nature' => 'debit', 'level' => 1, 'is_parent' => 1],
             ['code' => '2000', 'name_ar' => 'الخصوم', 'name_en' => 'Liabilities', 'parent_id' => null, 'type' => 'liabilities', 'nature' => 'credit', 'level' => 1, 'is_parent' => 1],
             ['code' => '3000', 'name_ar' => 'حقوق الملكية', 'name_en' => 'Equity', 'parent_id' => null, 'type' => 'equity', 'nature' => 'credit', 'level' => 1, 'is_parent' => 1],
@@ -26,7 +30,6 @@ class m260318_100001_seed_default_chart_of_accounts extends Migration
             ]));
         }
 
-        // Get parent IDs
         $db = Yii::$app->db;
         $assetsId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='1000'")->queryScalar();
         $liabilitiesId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='2000'")->queryScalar();
@@ -34,7 +37,6 @@ class m260318_100001_seed_default_chart_of_accounts extends Migration
         $revenueId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='4000'")->queryScalar();
         $expensesId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='5000'")->queryScalar();
 
-        // Level 2 - Sub categories
         $level2 = [
             ['code' => '1100', 'name_ar' => 'الأصول المتداولة', 'name_en' => 'Current Assets', 'parent_id' => $assetsId, 'type' => 'assets', 'nature' => 'debit', 'level' => 2, 'is_parent' => 1],
             ['code' => '1200', 'name_ar' => 'الأصول الثابتة', 'name_en' => 'Fixed Assets', 'parent_id' => $assetsId, 'type' => 'assets', 'nature' => 'debit', 'level' => 2, 'is_parent' => 1],
@@ -63,12 +65,10 @@ class m260318_100001_seed_default_chart_of_accounts extends Migration
             ]));
         }
 
-        // Get Level 2 IDs for Level 3
         $currentAssetsId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='1100'")->queryScalar();
         $fixedAssetsId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='1200'")->queryScalar();
         $currentLiabId = $db->createCommand("SELECT id FROM {{%accounts}} WHERE code='2100'")->queryScalar();
 
-        // Level 3 - Detail accounts
         $level3 = [
             ['code' => '1101', 'name_ar' => 'النقدية والبنوك', 'name_en' => 'Cash & Banks', 'parent_id' => $currentAssetsId, 'type' => 'assets', 'nature' => 'debit', 'level' => 3, 'is_parent' => 0],
             ['code' => '1102', 'name_ar' => 'الذمم المدينة', 'name_en' => 'Accounts Receivable', 'parent_id' => $currentAssetsId, 'type' => 'assets', 'nature' => 'debit', 'level' => 3, 'is_parent' => 0],

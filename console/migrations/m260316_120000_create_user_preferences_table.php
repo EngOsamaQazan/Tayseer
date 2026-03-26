@@ -6,6 +6,10 @@ class m260316_120000_create_user_preferences_table extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%user_preferences}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%user_preferences}}', [
             'id' => $this->primaryKey(),
             'user_id' => $this->integer()->notNull(),

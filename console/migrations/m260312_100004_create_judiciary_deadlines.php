@@ -6,6 +6,10 @@ class m260312_100004_create_judiciary_deadlines extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%judiciary_deadlines}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%judiciary_deadlines}}', [
             'id' => $this->primaryKey(),
             'judiciary_id' => $this->integer()->notNull(),

@@ -16,6 +16,12 @@ class m260318_200000_migrate_historical_data extends Migration
 {
     public function safeUp()
     {
+        $exists = (new \yii\db\Query())->from('{{%fiscal_years}}')->where(['name' => '2026'])->exists();
+        if ($exists) {
+            echo "    > 2026 fiscal year already exists — skipping migration.\n";
+            return true;
+        }
+
         $now = time();
 
         // ─── Step 1: Create 2026 Fiscal Year ───

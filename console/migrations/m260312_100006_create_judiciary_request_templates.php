@@ -6,6 +6,10 @@ class m260312_100006_create_judiciary_request_templates extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%judiciary_request_templates}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%judiciary_request_templates}}', [
             'id' => $this->primaryKey(),
             'name' => $this->string(255)->notNull(),

@@ -6,21 +6,26 @@ class m260324_100000_document_sending_workflow extends Migration
 {
     public function safeUp()
     {
-        $this->addColumn('{{%diwan_correspondence}}', 'delivery_method', $this->string(30)->null()->after('notification_method'));
+        $diwanTable = $this->db->getTableSchema('{{%diwan_correspondence}}', true);
+        if ($diwanTable && !isset($diwanTable->columns['delivery_method'])) {
+            $this->addColumn('{{%diwan_correspondence}}', 'delivery_method', $this->string(30)->null()->after('notification_method'));
+        }
 
-        $this->addColumn('{{%judiciary_customers_actions}}', 'correspondence_id', $this->integer()->null()->after('request_target'));
-        $this->addForeignKey(
-            'fk_jca_correspondence',
-            '{{%judiciary_customers_actions}}',
-            'correspondence_id',
-            '{{%diwan_correspondence}}',
-            'id',
-            'SET NULL',
-            'CASCADE'
-        );
-
-        // Documents stay NULL (displayed as "غير مُدخل" in frontend)
-        // No update needed — they are already NULL by default
+        $jcaTable = $this->db->getTableSchema('{{%judiciary_customers_actions}}', true);
+        if ($jcaTable && !isset($jcaTable->columns['correspondence_id'])) {
+            $this->addColumn('{{%judiciary_customers_actions}}', 'correspondence_id', $this->integer()->null()->after('request_target'));
+            try {
+                $this->addForeignKey(
+                    'fk_jca_correspondence',
+                    '{{%judiciary_customers_actions}}',
+                    'correspondence_id',
+                    '{{%diwan_correspondence}}',
+                    'id',
+                    'SET NULL',
+                    'CASCADE'
+                );
+            } catch (\Exception $e) {}
+        }
     }
 
     public function safeDown()

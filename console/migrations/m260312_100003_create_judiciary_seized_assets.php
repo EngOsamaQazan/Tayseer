@@ -6,6 +6,10 @@ class m260312_100003_create_judiciary_seized_assets extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%judiciary_seized_assets}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%judiciary_seized_assets}}', [
             'id' => $this->primaryKey(),
             'judiciary_id' => $this->integer()->notNull(),

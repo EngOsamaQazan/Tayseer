@@ -6,6 +6,10 @@ class m260312_100001_create_judiciary_authorities_with_seed extends Migration
 {
     public function safeUp()
     {
+        if ($this->db->getTableSchema('{{%judiciary_authorities}}', true) !== null) {
+            return;
+        }
+
         $this->createTable('{{%judiciary_authorities}}', [
             'id' => $this->primaryKey(),
             'name' => $this->string(255)->notNull(),
