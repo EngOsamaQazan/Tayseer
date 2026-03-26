@@ -93,7 +93,7 @@ $end   = $begin + count($models) - 1;
                  x-data="{ show: true }" x-show="show" x-transition x-cloak
                  x-init="setTimeout(() => show = false, 5000)">
                 <i class="fa fa-<?= $icon ?>"></i>
-                <span><?= Yii::$app->session->getFlash($type) ?></span>
+                <span><?php $flash = Yii::$app->session->getFlash($type); echo is_array($flash) ? implode('<br>', $flash) : $flash; ?></span>
                 <button class="ct-alert-close" aria-label="إغلاق" @click="show = false">&times;</button>
             </div>
         <?php endif ?>
@@ -312,11 +312,8 @@ $end   = $begin + count($models) - 1;
                                     <?php if ($isManager): ?>
                                         <div class="ct-act-divider"></div>
                                         <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
-                                        <a href="#" class="yeas-cancel" data-url="<?= Url::to(['cancel', 'id' => $m->id]) ?>" role="menuitem">
+                                        <a href="#" class="yeas-cancel" data-url="<?= Url::to(['cancel-contract', 'contract_id' => $m->id]) ?>" role="menuitem">
                                             <i class="fa fa-ban text-danger"></i> إلغاء العقد
-                                        </a>
-                                        <a href="<?= Url::to(['refresh-status', 'id' => $m->id]) ?>" role="menuitem">
-                                            <i class="fa fa-refresh text-info"></i> تحديث الحالة
                                         </a>
                                         <?php endif ?>
                                     <?php endif ?>
