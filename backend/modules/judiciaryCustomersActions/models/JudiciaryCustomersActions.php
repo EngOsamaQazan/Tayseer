@@ -175,6 +175,7 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
                         $ds->advanceTo($targetStage);
                     }
                 }
+                \backend\services\JudiciaryDeadlineService::invalidateRefreshCache();
             } catch (\Exception $e) {
                 Yii::warning('Failed in afterSave hooks: ' . $e->getMessage(), __METHOD__);
             }

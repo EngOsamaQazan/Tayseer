@@ -226,6 +226,12 @@ class JudiciaryDeadlineService
      */
     public static function generateMissingDeadlines(int $batchSize = 500): int
     {
+        $cache = \Yii::$app->cache;
+        $cacheKey = 'deadline_gen_done';
+        if ($cache && $cache->get($cacheKey)) {
+            return 0;
+        }
+
         $db     = \Yii::$app->db;
         $prefix = $db->tablePrefix;
         $svc    = new self();
@@ -326,6 +332,10 @@ class JudiciaryDeadlineService
             $count += count($rows);
         }
 
+        if ($count === 0 && $cache) {
+            $cache->set($cacheKey, true, 3600);
+        }
+
         return $count;
     }
 
@@ -375,212 +385,201 @@ class JudiciaryDeadlineService
     /* ─── Deadline status refresh ─── */
 
     /**
-     * Refresh statuses for all active deadlines (call via cron or admin action).
-     * 0) Auto-complete ALL deadlines for closed/archived cases
-     * 1) Auto-complete deadlines whose related action was deleted
-     * 2) Auto-complete milestone deadlines when a subsequent action exists on the case
-     * 3) Mark overdue deadlines as expired
-     * 4) Mark deadlines within 3 days as approaching
+     * Throttled wrapper — runs the full refresh at most once every $ttl seconds.
+     * Pass $force=true to bypass the throttle (e.g., explicit refresh button).
      */
-    public static function refreshAllStatuses(): int
+    public static function refreshAllStatuses(bool $force = false): int
+    {
+        $cache = \Yii::$app->cache;
+        $cacheKey = 'deadline_refresh_ts';
+        $ttl = 600; // 10 minutes
+
+        if (!$force && $cache) {
+            $lastRun = $cache->get($cacheKey);
+            if ($lastRun && (time() - $lastRun) < $ttl) {
+                return 0;
+            }
+        }
+
+        $result = self::doRefreshAllStatuses();
+
+        if ($cache) {
+            $cache->set($cacheKey, time(), $ttl + 60);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Invalidate the refresh cache so next call runs immediately.
+     */
+    public static function invalidateRefreshCache(): void
+    {
+        $cache = \Yii::$app->cache;
+        if ($cache) {
+            $cache->delete('deadline_refresh_ts');
+        }
+    }
+
+    private static function doRefreshAllStatuses(): int
     {
         $db = \Yii::$app->db;
         $prefix = $db->tablePrefix;
         $updated = 0;
+        $activeFilter = "d.is_deleted = 0 AND d.status IN ('pending','approaching','expired')";
 
-        // --- Revert: undo incorrect 180-day stale auto-completion ---
-        JudiciaryDeadline::updateAll(
-            ['status' => JudiciaryDeadline::STATUS_EXPIRED, 'notes' => null],
-            ['AND',
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED],
-                ['or', ['notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'], ['notes' => 'ترحيل تلقائي']],
-                ['is_deleted' => 0],
-            ]
-        );
-
-        // --- Check 0a: complete ALL deadlines for closed/archived cases ---
-        $closedCaseIds = $db->createCommand(
-            "SELECT d.id FROM {$prefix}judiciary_deadlines d
-             INNER JOIN {$prefix}judiciary j ON j.id = d.judiciary_id
-             WHERE d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
-               AND j.case_status IN ('closed', 'archived')"
-        )->queryColumn();
-
-        if (!empty($closedCaseIds)) {
-            $updated += JudiciaryDeadline::updateAll(
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — القضية مغلقة / مؤرشفة'],
-                ['id' => $closedCaseIds]
+        // --- Revert: undo incorrect 180-day stale auto-completion (one-time migration) ---
+        $staleCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM {$prefix}judiciary_deadlines
+             WHERE is_deleted = 0 AND status = 'completed'
+               AND (notes = 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط' OR notes = 'ترحيل تلقائي')"
+        )->queryScalar();
+        if ($staleCount > 0) {
+            JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_EXPIRED, 'notes' => null],
+                ['AND',
+                    ['status' => JudiciaryDeadline::STATUS_COMPLETED],
+                    ['or', ['notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'], ['notes' => 'ترحيل تلقائي']],
+                    ['is_deleted' => 0],
+                ]
             );
         }
 
-        // --- Check 0b: complete ALL deadlines for fully-paid judiciary contracts ---
-        $paidJudiciaryIds = $db->createCommand(
-            "SELECT DISTINCT d.judiciary_id FROM {$prefix}judiciary_deadlines d
+        // --- Check 0a: complete deadlines for closed/archived cases ---
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines d
              INNER JOIN {$prefix}judiciary j ON j.id = d.judiciary_id
-             WHERE d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
-               AND (j.case_status IS NULL OR j.case_status NOT IN ('closed', 'archived'))"
-        )->queryColumn();
+             SET d.status = 'completed', d.notes = 'تم إنجازه — القضية مغلقة / مؤرشفة'
+             WHERE {$activeFilter}
+               AND j.case_status IN ('closed','archived')"
+        )->execute();
 
-        if (!empty($paidJudiciaryIds)) {
-            $paidDeadlineIds = [];
-            foreach ($paidJudiciaryIds as $jid) {
-                $judiciary = \backend\modules\judiciary\models\Judiciary::findOne($jid);
-                if ($judiciary && $judiciary->contract) {
-                    try {
-                        if ($judiciary->contract->isJudiciaryPaid()) {
-                            $ids = $db->createCommand(
-                                "SELECT id FROM {$prefix}judiciary_deadlines
-                                 WHERE judiciary_id = :jid AND is_deleted = 0
-                                   AND status IN ('pending', 'approaching', 'expired')",
-                                [':jid' => $jid]
-                            )->queryColumn();
-                            $paidDeadlineIds = array_merge($paidDeadlineIds, $ids);
-                        }
-                    } catch (\Exception $e) {
-                        // skip if calculation fails
-                    }
+        // --- Check 0b: complete deadlines for fully-paid judiciary contracts (batch) ---
+        $judiciaryContractMap = $db->createCommand(
+            "SELECT DISTINCT j.id AS jid, j.contract_id
+             FROM {$prefix}judiciary_deadlines d
+             INNER JOIN {$prefix}judiciary j ON j.id = d.judiciary_id
+             WHERE {$activeFilter}
+               AND j.contract_id IS NOT NULL
+               AND (j.case_status IS NULL OR j.case_status NOT IN ('closed','archived'))"
+        )->queryAll();
+
+        if (!empty($judiciaryContractMap)) {
+            $contractIds = array_unique(array_column($judiciaryContractMap, 'contract_id'));
+            $batch = \backend\modules\followUp\helper\ContractCalculations::batchPreload($contractIds);
+
+            $paidJudiciaryIds = [];
+            foreach ($judiciaryContractMap as $row) {
+                $cid = $row['contract_id'];
+                if (!empty($batch[$cid]['isJudiciaryPaid'])) {
+                    $paidJudiciaryIds[] = (int)$row['jid'];
                 }
             }
-            if (!empty($paidDeadlineIds)) {
-                $updated += JudiciaryDeadline::updateAll(
-                    ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — العقد مسدد بالكامل'],
-                    ['id' => $paidDeadlineIds]
-                );
+
+            if (!empty($paidJudiciaryIds)) {
+                $idList = implode(',', $paidJudiciaryIds);
+                $updated += (int)$db->createCommand(
+                    "UPDATE {$prefix}judiciary_deadlines
+                     SET status = 'completed', notes = 'تم إنجازه — العقد مسدد بالكامل'
+                     WHERE is_deleted = 0
+                       AND status IN ('pending','approaching','expired')
+                       AND judiciary_id IN ({$idList})"
+                )->execute();
             }
         }
 
         // --- Check A: complete deadlines whose related action was soft-deleted ---
-        $deletedActionIds = $db->createCommand(
-            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines d
              INNER JOIN {$prefix}judiciary_customers_actions a ON a.id = d.related_customer_action_id
+             SET d.status = 'completed', d.notes = 'تم إنجازه — الإجراء المرتبط محذوف'
              WHERE d.related_customer_action_id IS NOT NULL
                AND d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
+               AND d.status IN ('pending','approaching','expired')
                AND a.is_deleted = 1"
-        )->queryColumn();
-
-        if (!empty($deletedActionIds)) {
-            $updated += JudiciaryDeadline::updateAll(
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — الإجراء المرتبط محذوف'],
-                ['id' => $deletedActionIds]
-            );
-        }
+        )->execute();
 
         // --- Check B: complete milestone deadlines when subsequent actions exist ---
-        $milestoneIds = $db->createCommand(
-            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+        $mlTypes = "'" . implode("','", self::$milestoneTypes) . "'";
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines d
+             SET d.status = 'completed', d.notes = 'تم إنجازه تلقائياً — يوجد إجراء لاحق'
              WHERE d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
-               AND d.deadline_type IN ('" . implode("','", self::$milestoneTypes) . "')
+               AND d.status IN ('pending','approaching','expired')
+               AND d.deadline_type IN ({$mlTypes})
                AND EXISTS (
                    SELECT 1 FROM {$prefix}judiciary_customers_actions a
                    WHERE a.judiciary_id = d.judiciary_id
                      AND (a.is_deleted = 0 OR a.is_deleted IS NULL)
                      AND a.action_date > d.start_date
                )"
-        )->queryColumn();
+        )->execute();
 
-        if (!empty($milestoneIds)) {
-            $updated += JudiciaryDeadline::updateAll(
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه تلقائياً — يوجد إجراء لاحق'],
-                ['id' => $milestoneIds]
-            );
-        }
-
-        // --- Check C: complete request_decision deadlines when request was decided or has child actions ---
-        $reqDecisionTypes = [
-            JudiciaryDeadline::TYPE_REQUEST_DECISION,
-            'request_decision',
-        ];
-        // C1: request explicitly approved/rejected
-        $decidedReqIds = $db->createCommand(
-            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+        // --- Check C1: request explicitly approved/rejected ---
+        $reqTypes = "'" . JudiciaryDeadline::TYPE_REQUEST_DECISION . "','request_decision'";
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines d
              INNER JOIN {$prefix}judiciary_customers_actions a ON a.id = d.related_customer_action_id
+             SET d.status = 'completed', d.notes = 'تم إنجازه — تم البت في الطلب'
              WHERE d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
-               AND d.deadline_type IN ('" . implode("','", $reqDecisionTypes) . "')
+               AND d.status IN ('pending','approaching','expired')
+               AND d.deadline_type IN ({$reqTypes})
                AND d.related_customer_action_id IS NOT NULL
-               AND a.request_status IN ('approved', 'rejected')"
-        )->queryColumn();
+               AND a.request_status IN ('approved','rejected')"
+        )->execute();
 
-        if (!empty($decidedReqIds)) {
-            $updated += JudiciaryDeadline::updateAll(
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — تم البت في الطلب'],
-                ['id' => $decidedReqIds]
-            );
-        }
-
-        // C2: request has child actions (e.g. طلب حبس → مذكرة احضار = implicit approval)
-        $implicitApprovalIds = $db->createCommand(
-            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+        // --- Check C2: request has child actions (implicit approval) ---
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines d
+             SET d.status = 'completed', d.notes = 'تم إنجازه — موافقة ضمنية (صدر إجراء مرتبط بالطلب)'
              WHERE d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
-               AND d.deadline_type IN ('" . implode("','", $reqDecisionTypes) . "')
+               AND d.status IN ('pending','approaching','expired')
+               AND d.deadline_type IN ({$reqTypes})
                AND d.related_customer_action_id IS NOT NULL
                AND EXISTS (
                    SELECT 1 FROM {$prefix}judiciary_customers_actions child
                    WHERE child.parent_id = d.related_customer_action_id
                      AND (child.is_deleted = 0 OR child.is_deleted IS NULL)
                )"
-        )->queryColumn();
+        )->execute();
 
-        if (!empty($implicitApprovalIds)) {
-            $updated += JudiciaryDeadline::updateAll(
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — موافقة ضمنية (صدر إجراء مرتبط بالطلب)'],
-                ['id' => $implicitApprovalIds]
-            );
-        }
-
-        // --- Check D: complete correspondence deadlines when subsequent actions exist after deadline ---
-        $corrDeadlineTypes = [
-            JudiciaryDeadline::TYPE_CORRESPONDENCE_10WD,
-            'correspondence',
-        ];
-        $staleTaskIds = $db->createCommand(
-            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+        // --- Check D: complete correspondence deadlines with subsequent actions ---
+        $corrTypes = "'" . JudiciaryDeadline::TYPE_CORRESPONDENCE_10WD . "','correspondence'";
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines d
+             SET d.status = 'completed', d.notes = 'تم إنجازه — يوجد إجراءات لاحقة بعد انتهاء المهلة'
              WHERE d.is_deleted = 0
-               AND d.status IN ('pending', 'approaching', 'expired')
-               AND d.deadline_type IN ('" . implode("','", $corrDeadlineTypes) . "')
+               AND d.status IN ('pending','approaching','expired')
+               AND d.deadline_type IN ({$corrTypes})
                AND EXISTS (
                    SELECT 1 FROM {$prefix}judiciary_customers_actions a
                    WHERE a.judiciary_id = d.judiciary_id
                      AND (a.is_deleted = 0 OR a.is_deleted IS NULL)
                      AND a.action_date > d.deadline_date
                )"
-        )->queryColumn();
-
-        if (!empty($staleTaskIds)) {
-            $updated += JudiciaryDeadline::updateAll(
-                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — يوجد إجراءات لاحقة بعد انتهاء المهلة'],
-                ['id' => $staleTaskIds]
-            );
-        }
+        )->execute();
 
         // --- Mark overdue as expired ---
         $today = date('Y-m-d');
         $approaching = date('Y-m-d', strtotime('+3 days'));
 
-        $updated += JudiciaryDeadline::updateAll(
-            ['status' => JudiciaryDeadline::STATUS_EXPIRED],
-            ['AND',
-                ['status' => [JudiciaryDeadline::STATUS_PENDING, JudiciaryDeadline::STATUS_APPROACHING]],
-                ['<', 'deadline_date', $today],
-                ['is_deleted' => 0],
-            ]
-        );
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines
+             SET status = 'expired'
+             WHERE is_deleted = 0
+               AND status IN ('pending','approaching')
+               AND deadline_date < '{$today}'"
+        )->execute();
 
         // --- Mark approaching ---
-        $updated += JudiciaryDeadline::updateAll(
-            ['status' => JudiciaryDeadline::STATUS_APPROACHING],
-            ['AND',
-                ['status' => JudiciaryDeadline::STATUS_PENDING],
-                ['<=', 'deadline_date', $approaching],
-                ['>=', 'deadline_date', $today],
-                ['is_deleted' => 0],
-            ]
-        );
+        $updated += (int)$db->createCommand(
+            "UPDATE {$prefix}judiciary_deadlines
+             SET status = 'approaching'
+             WHERE is_deleted = 0
+               AND status = 'pending'
+               AND deadline_date <= '{$approaching}'
+               AND deadline_date >= '{$today}'"
+        )->execute();
 
         return $updated;
     }

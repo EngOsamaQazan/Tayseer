@@ -1880,8 +1880,14 @@ class JudiciaryController extends Controller
 
     public function actionDeadlineDashboardView()
     {
+        $force = Yii::$app->request->get('refresh') == 1;
+
         JudiciaryDeadlineService::generateMissingDeadlines();
-        JudiciaryDeadlineService::refreshAllStatuses();
+
+        if ($force) {
+            JudiciaryDeadlineService::invalidateRefreshCache();
+        }
+        JudiciaryDeadlineService::refreshAllStatuses($force);
 
         $expired = JudiciaryDeadline::find()
             ->where(['status' => JudiciaryDeadline::STATUS_EXPIRED])
@@ -2059,7 +2065,8 @@ class JudiciaryController extends Controller
     public function actionRefreshDeadlines()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        $updated = JudiciaryDeadlineService::refreshAllStatuses();
+        JudiciaryDeadlineService::invalidateRefreshCache();
+        $updated = JudiciaryDeadlineService::refreshAllStatuses(true);
         return ['success' => true, 'updated' => $updated];
     }
 

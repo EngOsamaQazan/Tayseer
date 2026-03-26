@@ -51,7 +51,8 @@ $sections = [
                 <?= $this->title ?>
             </div>
         </div>
-        <div class="jv-actions">
+        <div class="jv-actions" style="display:flex;gap:8px">
+            <?= Html::a('<i class="fa fa-refresh"></i> تحديث البيانات', ['deadline-dashboard-view', 'refresh' => 1], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
             <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
         </div>
     </div>
