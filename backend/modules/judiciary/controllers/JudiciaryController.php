@@ -1880,6 +1880,7 @@ class JudiciaryController extends Controller
 
     public function actionDeadlineDashboardView()
     {
+        JudiciaryDeadlineService::generateMissingDeadlines();
         JudiciaryDeadlineService::refreshAllStatuses();
 
         $expired = JudiciaryDeadline::find()

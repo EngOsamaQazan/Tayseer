@@ -152,6 +152,11 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
                     'تم إنجازه تلقائياً — إجراء جديد: ' . $actionName
                 );
 
+                if ($actionDef && $actionDef->action_nature === 'request') {
+                    $dlService = new \backend\services\JudiciaryDeadlineService();
+                    $dlService->createRequestDecisionDeadline($this->id);
+                }
+
                 if ($actionDef && $this->customers_id) {
                     $targetStage = self::$actionTypeToStage[$actionDef->action_type] ?? null;
                     if ($targetStage) {
