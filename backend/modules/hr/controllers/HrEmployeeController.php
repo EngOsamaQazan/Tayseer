@@ -41,7 +41,7 @@ class HrEmployeeController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['index', 'view', 'export', 'statement'],
+                        'actions' => ['index', 'view', 'export', 'statement', 'user-info'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -282,8 +282,9 @@ class HrEmployeeController extends Controller
         $model = new HrEmployeeExtended();
         $request = Yii::$app->request;
 
-        // Ensure user category tables exist
+        // Ensure user category tables exist and seed defaults
         \backend\models\UserCategory::ensureTablesExist();
+        \backend\models\UserCategory::seedDefaults();
 
         // Users without extended records — الفعالون فقط (نشط وغير محظور)
         $usersWithoutExtended = (new Query())
@@ -517,6 +518,9 @@ class HrEmployeeController extends Controller
      */
     public function actionUpdate($id)
     {
+        \backend\models\UserCategory::ensureTablesExist();
+        \backend\models\UserCategory::seedDefaults();
+
         $model = $this->findModel($id);
         $request = Yii::$app->request;
 
@@ -862,6 +866,50 @@ class HrEmployeeController extends Controller
             'lines' => $lines,
             'yearlyTotals' => $yearlyTotals,
         ]);
+    }
+
+    /**
+     * AJAX: return user info + assigned categories for a given user ID.
+     */
+    public function actionUserInfo($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $user = User::findOne((int)$id);
+        if (!$user) {
+            return ['success' => false, 'error' => 'المستخدم غير موجود'];
+        }
+
+        $categoryIds = (new Query())
+            ->select('category_id')
+            ->from('{{%user_category_map}}')
+            ->where(['user_id' => $user->id])
+            ->column();
+
+        $categorySlugs = [];
+        if (!empty($categoryIds)) {
+            $categorySlugs = (new Query())
+                ->select('slug')
+                ->from('{{%user_categories}}')
+                ->where(['id' => $categoryIds, 'is_active' => 1])
+                ->column();
+        }
+
+        return [
+            'success' => true,
+            'user' => [
+                'id'         => $user->id,
+                'name'       => $user->name,
+                'username'   => $user->username,
+                'email'      => $user->email,
+                'mobile'     => $user->mobile,
+                'department' => $user->department,
+                'job_title'  => $user->job_title,
+                'location'   => $user->location ?? null,
+            ],
+            'category_ids'   => array_map('intval', $categoryIds),
+            'category_slugs' => $categorySlugs,
+        ];
     }
 
     /**

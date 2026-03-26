@@ -912,6 +912,57 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
     var trackSel = document.getElementById('emp-tracking');
     if (trackSel) trackSel.addEventListener('change', function(){ this.dataset.manuallySet = '1'; });
 
+    // ─── جلب بيانات المستخدم عند اختياره من القائمة ───
+    var userSelect = document.getElementById('hr-user-id-select');
+    if (userSelect) {
+        userSelect.addEventListener('change', function() {
+            var userId = this.value;
+            if (!userId) return;
+
+            var baseUrl = '<?= Url::to(['user-info']) ?>';
+            var sep = baseUrl.indexOf('?') !== -1 ? '&' : '?';
+            fetch(baseUrl + sep + 'id=' + encodeURIComponent(userId), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) return;
+
+                // تحديث بطاقات الفئات بناءً على فئات المستخدم المحفوظة
+                var catIds = data.category_ids || [];
+                document.querySelectorAll('.hr-cat-card').forEach(function(card) {
+                    var cb = card.querySelector('.hr-cat-check');
+                    var catVal = parseInt(cb.value, 10);
+                    var isSelected = catIds.indexOf(catVal) !== -1;
+                    cb.checked = isSelected;
+                    card.classList.toggle('selected', isSelected);
+                });
+
+                // تحديث القوائم المنسدلة بالبيانات الموجودة
+                var u = data.user;
+                if (u.job_title) {
+                    var desSel = document.getElementById('user-designation');
+                    if (desSel) desSel.value = u.job_title;
+                }
+                if (u.department) {
+                    var depSel = document.getElementById('user-department');
+                    if (depSel) depSel.value = u.department;
+                }
+                if (u.location) {
+                    var locSel = document.getElementById('user-location');
+                    if (locSel) locSel.value = u.location;
+                }
+
+                // تحديث إظهار/إخفاء الأقسام
+                toggleHrSections();
+            })
+            .catch(function(err) {
+                console.error('Error loading user info:', err);
+            });
+        });
+    }
+
     // ─── تشغيل toggle الأقسام عند التحميل ───
     toggleHrSections();
 })();
