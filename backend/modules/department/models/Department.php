@@ -101,4 +101,26 @@ class Department extends Model
     {
         return new DepartmentQuery(get_called_class());
     }
+
+    public static function seedDefaults()
+    {
+        $defaults = [
+            'الإدارة العامة', 'المبيعات', 'المالية', 'المتابعة والتحصيل',
+            'القسم القانوني', 'المخزون', 'الموارد البشرية',
+        ];
+
+        $created = 0;
+        foreach ($defaults as $title) {
+            $exists = static::find()->where(['title' => $title])->exists();
+            if (!$exists) {
+                $dept = new static();
+                $dept->title = $title;
+                $dept->status = 'active';
+                $dept->created_by = Yii::$app->user->id;
+                $dept->created_at = time();
+                if ($dept->save(false)) $created++;
+            }
+        }
+        return $created;
+    }
 }

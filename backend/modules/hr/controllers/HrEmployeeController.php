@@ -282,9 +282,11 @@ class HrEmployeeController extends Controller
         $model = new HrEmployeeExtended();
         $request = Yii::$app->request;
 
-        // Ensure user category tables exist and seed defaults
+        // Ensure lookup tables have default data
         \backend\models\UserCategory::ensureTablesExist();
         \backend\models\UserCategory::seedDefaults();
+        \backend\modules\department\models\Department::seedDefaults();
+        \backend\modules\designation\models\Designation::seedDefaults();
 
         // Users without extended records — الفعالون فقط (نشط وغير محظور)
         $usersWithoutExtended = (new Query())
@@ -520,6 +522,8 @@ class HrEmployeeController extends Controller
     {
         \backend\models\UserCategory::ensureTablesExist();
         \backend\models\UserCategory::seedDefaults();
+        \backend\modules\department\models\Department::seedDefaults();
+        \backend\modules\designation\models\Designation::seedDefaults();
 
         $model = $this->findModel($id);
         $request = Yii::$app->request;

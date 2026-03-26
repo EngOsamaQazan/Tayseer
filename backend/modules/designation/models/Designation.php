@@ -88,6 +88,62 @@ class Designation extends Model
      * التأكد من وجود عمود department_id في الجدول — إن لم يكن موجوداً يُنشأ تلقائياً.
      * لا يرمي استثناءً حتى لا يوقف "إنشاء الافتراضية" على سيرفرات بصلاحيات محدودة.
      */
+    public static function seedDefaults()
+    {
+        static::ensureDepartmentColumn();
+
+        $deptMap = [];
+        $depts = (new \yii\db\Query())->select(['id', 'title'])->from('{{%department}}')->all();
+        foreach ($depts as $d) {
+            $deptMap[$d['title']] = $d['id'];
+        }
+
+        $defaults = [
+            'مدير عام'           => 'الإدارة العامة',
+            'مدير مبيعات'        => 'المبيعات',
+            'محاسب'              => 'المالية',
+            'موظف متابعة'        => 'المتابعة والتحصيل',
+            'محامي'              => 'القسم القانوني',
+            'موظف مبيعات'        => 'المبيعات',
+            'مندوب محكمة'        => 'القسم القانوني',
+            'مورّد أجهزة'        => 'المخزون',
+            'مدير فرع'           => 'الإدارة العامة',
+            'أمين مخزن'          => 'المخزون',
+            'مدير مالي'          => 'المالية',
+            'موظف استقبال'       => 'الإدارة العامة',
+            'مسؤول موارد بشرية'  => 'الموارد البشرية',
+        ];
+
+        $created = 0;
+        $now = time();
+        $userId = Yii::$app->user->id;
+
+        foreach ($defaults as $title => $deptName) {
+            $exists = (new \yii\db\Query())->from('{{%designation}}')->where(['title' => $title])->exists();
+            if (!$exists) {
+                $data = [
+                    'title'      => $title,
+                    'status'     => 'active',
+                    'created_by' => $userId,
+                    'created_at' => $now,
+                ];
+                $deptId = $deptMap[$deptName] ?? null;
+                if ($deptId) $data['department_id'] = $deptId;
+                try {
+                    Yii::$app->db->createCommand()->insert('{{%designation}}', $data)->execute();
+                    $created++;
+                } catch (\Exception $e) {
+                    unset($data['department_id']);
+                    try {
+                        Yii::$app->db->createCommand()->insert('{{%designation}}', $data)->execute();
+                        $created++;
+                    } catch (\Exception $e2) {}
+                }
+            }
+        }
+        return $created;
+    }
+
     public static function ensureDepartmentColumn()
     {
         $db = Yii::$app->db;
