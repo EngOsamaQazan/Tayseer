@@ -8,6 +8,7 @@ use yii\filters\AccessControl;
 use backend\modules\accounting\models\Account;
 use backend\modules\accounting\models\JournalEntryLine;
 use backend\modules\accounting\models\FiscalYear;
+use backend\modules\accounting\helpers\FinancialReportPdf;
 use common\helper\Permissions;
 
 class FinancialStatementsController extends Controller
@@ -19,7 +20,7 @@ class FinancialStatementsController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['trial-balance', 'income-statement', 'balance-sheet', 'cash-flow'],
+                        'actions' => ['trial-balance', 'income-statement', 'balance-sheet', 'cash-flow', 'export-pdf', 'export-single-pdf'],
                         'allow' => true,
                         'roles' => [Permissions::ACC_VIEW, Permissions::ACC_REPORTS],
                     ],
@@ -206,7 +207,23 @@ class FinancialStatementsController extends Controller
 
         $balances = $this->getAccountBalances($fiscalYearId, $dateFrom, $dateTo);
 
-        // Simplified cash flow: Operating, Investing, Financing
+        $cashFlowData = $this->classifyCashFlow($balances);
+
+        $fiscalYears = FiscalYear::find()->orderBy(['start_date' => SORT_DESC])->all();
+
+        return $this->render('cash-flow', [
+            'operating' => $cashFlowData['operating'],
+            'investing' => $cashFlowData['investing'],
+            'financing' => $cashFlowData['financing'],
+            'fiscalYears' => $fiscalYears,
+            'fiscalYearId' => $fiscalYearId,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+        ]);
+    }
+
+    private function classifyCashFlow($balances)
+    {
         $operating = [];
         $investing = [];
         $financing = [];
@@ -237,16 +254,90 @@ class FinancialStatementsController extends Controller
             }
         }
 
-        $fiscalYears = FiscalYear::find()->orderBy(['start_date' => SORT_DESC])->all();
+        return compact('operating', 'investing', 'financing');
+    }
 
-        return $this->render('cash-flow', [
-            'operating' => $operating,
-            'investing' => $investing,
-            'financing' => $financing,
-            'fiscalYears' => $fiscalYears,
-            'fiscalYearId' => $fiscalYearId,
-            'dateFrom' => $dateFrom,
-            'dateTo' => $dateTo,
-        ]);
+    /**
+     * Build the full data array used by all financial reports.
+     */
+    private function buildReportData($fiscalYearId, $dateFrom = null, $dateTo = null)
+    {
+        $dateTo = $dateTo ?: date('Y-m-d');
+        $balances = $this->getAccountBalances($fiscalYearId, $dateFrom, $dateTo);
+
+        $assets = $this->groupByType($balances, Account::TYPE_ASSETS);
+        $liabilities = $this->groupByType($balances, Account::TYPE_LIABILITIES);
+        $equity = $this->groupByType($balances, Account::TYPE_EQUITY);
+        $revenue = $this->groupByType($balances, Account::TYPE_REVENUE);
+        $expenses = $this->groupByType($balances, Account::TYPE_EXPENSES);
+
+        $totalAssets = array_sum(array_column($assets, 'balance'));
+        $totalLiabilities = array_sum(array_column($liabilities, 'balance'));
+        $totalEquity = array_sum(array_column($equity, 'balance'));
+        $totalRevenue = array_sum(array_column($revenue, 'balance'));
+        $totalExpenses = array_sum(array_column($expenses, 'balance'));
+        $netIncome = $totalRevenue - $totalExpenses;
+
+        $cashFlowData = $this->classifyCashFlow($balances);
+
+        return [
+            'assets' => $assets,
+            'liabilities' => $liabilities,
+            'equity' => $equity,
+            'revenue' => $revenue,
+            'expenses' => $expenses,
+            'totalAssets' => $totalAssets,
+            'totalLiabilities' => $totalLiabilities,
+            'totalEquity' => $totalEquity,
+            'totalRevenue' => $totalRevenue,
+            'totalExpenses' => $totalExpenses,
+            'netIncome' => $netIncome,
+            'operating' => $cashFlowData['operating'],
+            'investing' => $cashFlowData['investing'],
+            'financing' => $cashFlowData['financing'],
+        ];
+    }
+
+    /**
+     * Export complete financial statements package as PDF.
+     */
+    public function actionExportPdf()
+    {
+        $request = Yii::$app->request;
+        $fiscalYearId = $request->get('fiscal_year_id');
+        $dateTo = $request->get('date_to', date('Y-m-d'));
+
+        $currentYear = FiscalYear::getCurrentYear();
+        if (!$fiscalYearId && $currentYear) {
+            $fiscalYearId = $currentYear->id;
+        }
+
+        $fiscalYear = $fiscalYearId ? FiscalYear::findOne($fiscalYearId) : null;
+        $data = $this->buildReportData($fiscalYearId, null, $dateTo);
+
+        $report = new FinancialReportPdf($fiscalYear, $dateTo);
+        return $report->generateFullPackage($data);
+    }
+
+    /**
+     * Export a single financial statement as PDF.
+     */
+    public function actionExportSinglePdf($type = 'balance-sheet')
+    {
+        $request = Yii::$app->request;
+        $fiscalYearId = $request->get('fiscal_year_id');
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to', date('Y-m-d'));
+
+        $currentYear = FiscalYear::getCurrentYear();
+        if (!$fiscalYearId && $currentYear) {
+            $fiscalYearId = $currentYear->id;
+        }
+
+        $fiscalYear = $fiscalYearId ? FiscalYear::findOne($fiscalYearId) : null;
+        $data = $this->buildReportData($fiscalYearId, $dateFrom, $dateTo);
+
+        $report = new FinancialReportPdf($fiscalYear, $dateTo);
+        return $report->generateSingleReport($type, $data);
     }
 }

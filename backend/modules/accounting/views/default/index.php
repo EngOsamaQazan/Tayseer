@@ -69,6 +69,10 @@ $this->params['breadcrumbs'][] = $this->title;
                         <?= Html::a('<i class="fa fa-pie-chart fa-2x" style="color:#ffc107;"></i><br>الموازنات', ['/accounting/budget/index'], ['style' => 'display:block; padding:15px; border-radius:8px; text-decoration:none; color:#333;', 'class' => 'quick-link']) ?>
                     </div>
                 </div>
+                <div style="text-align:center;margin-top:5px;padding-top:12px;border-top:1px solid #eee">
+                    <?= Html::a('<i class="fa fa-book"></i> تصدير القوائم المالية الكاملة (PDF)', ['/accounting/financial-statements/export-pdf'], ['class' => 'btn btn-primary btn-lg', 'target' => '_blank', 'style' => 'min-width:320px;font-weight:700']) ?>
+                    <p style="margin-top:8px;color:#718096;font-size:12px">ميزانية عمومية + قائمة دخل + تدفقات نقدية + تغيرات حقوق الملكية + إيضاحات — جاهزة للمحاسب القانوني</p>
+                </div>
             </div>
         </div>
     </div>
