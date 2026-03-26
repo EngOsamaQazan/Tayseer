@@ -268,6 +268,16 @@ class JudiciaryDeadlineService
         $prefix = $db->tablePrefix;
         $updated = 0;
 
+        // --- Revert: undo incorrect 180-day stale auto-completion ---
+        JudiciaryDeadline::updateAll(
+            ['status' => JudiciaryDeadline::STATUS_EXPIRED, 'notes' => 'ترحيل تلقائي'],
+            ['AND',
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED],
+                ['notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'],
+                ['is_deleted' => 0],
+            ]
+        );
+
         // --- Check 0a: complete ALL deadlines for closed/archived cases ---
         $closedCaseIds = $db->createCommand(
             "SELECT d.id FROM {$prefix}judiciary_deadlines d
@@ -359,11 +369,12 @@ class JudiciaryDeadlineService
             );
         }
 
-        // --- Check C: complete request_decision deadlines when the related request was decided ---
+        // --- Check C: complete request_decision deadlines when request was decided or has child actions ---
         $reqDecisionTypes = [
             JudiciaryDeadline::TYPE_REQUEST_DECISION,
             'request_decision',
         ];
+        // C1: request explicitly approved/rejected
         $decidedReqIds = $db->createCommand(
             "SELECT d.id FROM {$prefix}judiciary_deadlines d
              INNER JOIN {$prefix}judiciary_customers_actions a ON a.id = d.related_customer_action_id
@@ -381,16 +392,37 @@ class JudiciaryDeadlineService
             );
         }
 
-        // --- Check D: complete request_decision/correspondence deadlines when subsequent actions exist ---
-        $taskDeadlineTypes = array_merge($reqDecisionTypes, [
+        // C2: request has child actions (e.g. طلب حبس → مذكرة احضار = implicit approval)
+        $implicitApprovalIds = $db->createCommand(
+            "SELECT d.id FROM {$prefix}judiciary_deadlines d
+             WHERE d.is_deleted = 0
+               AND d.status IN ('pending', 'approaching', 'expired')
+               AND d.deadline_type IN ('" . implode("','", $reqDecisionTypes) . "')
+               AND d.related_customer_action_id IS NOT NULL
+               AND EXISTS (
+                   SELECT 1 FROM {$prefix}judiciary_customers_actions child
+                   WHERE child.parent_id = d.related_customer_action_id
+                     AND (child.is_deleted = 0 OR child.is_deleted IS NULL)
+               )"
+        )->queryColumn();
+
+        if (!empty($implicitApprovalIds)) {
+            $updated += JudiciaryDeadline::updateAll(
+                ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — موافقة ضمنية (صدر إجراء مرتبط بالطلب)'],
+                ['id' => $implicitApprovalIds]
+            );
+        }
+
+        // --- Check D: complete correspondence deadlines when subsequent actions exist after deadline ---
+        $corrDeadlineTypes = [
             JudiciaryDeadline::TYPE_CORRESPONDENCE_10WD,
             'correspondence',
-        ]);
+        ];
         $staleTaskIds = $db->createCommand(
             "SELECT d.id FROM {$prefix}judiciary_deadlines d
              WHERE d.is_deleted = 0
                AND d.status IN ('pending', 'approaching', 'expired')
-               AND d.deadline_type IN ('" . implode("','", $taskDeadlineTypes) . "')
+               AND d.deadline_type IN ('" . implode("','", $corrDeadlineTypes) . "')
                AND EXISTS (
                    SELECT 1 FROM {$prefix}judiciary_customers_actions a
                    WHERE a.judiciary_id = d.judiciary_id
@@ -405,17 +437,6 @@ class JudiciaryDeadlineService
                 ['id' => $staleTaskIds]
             );
         }
-
-        // --- Check E: auto-complete any deadline expired > 180 days (stale beyond practical use) ---
-        $staleCutoff = date('Y-m-d', strtotime('-180 days'));
-        $updated += JudiciaryDeadline::updateAll(
-            ['status' => JudiciaryDeadline::STATUS_COMPLETED, 'notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'],
-            ['AND',
-                ['status' => JudiciaryDeadline::STATUS_EXPIRED],
-                ['<', 'deadline_date', $staleCutoff],
-                ['is_deleted' => 0],
-            ]
-        );
 
         // --- Mark overdue as expired ---
         $today = date('Y-m-d');
