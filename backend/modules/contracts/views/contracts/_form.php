@@ -27,6 +27,7 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contract-form.js', ['de
 
 <div class="cf">
 <?php $form = ActiveForm::begin(['id' => 'contract-form', 'options' => ['autocomplete' => 'off']]) ?>
+<?= Html::activeHiddenInput($model, 'is_legal_department', ['id' => 'cf-is-legal']) ?>
 
 <!-- ═══ Section Nav ═══ -->
 <nav class="cf-nav">

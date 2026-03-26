@@ -195,13 +195,59 @@ var ContractForm = (function () {
         if (!typeEl) return;
 
         function sync() {
-            var isSol = typeEl.value === 'solidarity';
+            var val = typeEl.value;
+            var isSol = val === 'solidarity';
             document.getElementById('cf-normal-cust').style.display = isSol ? 'none' : '';
             document.getElementById('cf-sol-cust').style.display = isSol ? '' : 'none';
+
+            if (val === 'direct_deduction') {
+                applyDirectDeduction();
+            } else {
+                clearDirectDeduction();
+            }
         }
 
         typeEl.addEventListener('change', sync);
         sync();
+    }
+
+    function applyDirectDeduction() {
+        var saleEl = document.getElementById('contracts-date_of_sale');
+        var fdEl = document.getElementById('cf-fd');
+        var legalEl = document.getElementById('cf-is-legal');
+
+        if (saleEl && saleEl.value && fdEl) {
+            var saleDate = new Date(saleEl.value);
+            saleDate.setDate(saleDate.getDate() + 1);
+            var y = saleDate.getFullYear();
+            var m = String(saleDate.getMonth() + 1).padStart(2, '0');
+            var d = String(saleDate.getDate()).padStart(2, '0');
+            fdEl.value = y + '-' + m + '-' + d;
+            fdEl.dispatchEvent(new Event('change'));
+        }
+
+        if (legalEl) {
+            legalEl.value = '1';
+        }
+
+        var tvEl = document.getElementById('cf-tv');
+        var fvEl = document.getElementById('cf-fv');
+        var mvEl = document.getElementById('cf-mv');
+        if (tvEl && fvEl) {
+            fvEl.value = tvEl.value || '0';
+            fvEl.dispatchEvent(new Event('input'));
+        }
+        if (mvEl) {
+            mvEl.value = '0';
+            mvEl.dispatchEvent(new Event('input'));
+        }
+    }
+
+    function clearDirectDeduction() {
+        var legalEl = document.getElementById('cf-is-legal');
+        if (legalEl && legalEl.value === '1') {
+            legalEl.value = '0';
+        }
     }
 
 
@@ -410,7 +456,7 @@ var ContractForm = (function () {
                 document.getElementById('cf-nc-name').textContent = r.model.name || '\u2014';
                 document.getElementById('cf-nc-id').textContent = r.model.id_number || '\u2014';
                 document.getElementById('cf-nc-birth').textContent = r.model.birth_date || '\u2014';
-                document.getElementById('cf-nc-job').textContent = r.model.job_title || '\u2014';
+                document.getElementById('cf-nc-job').textContent = r.job_name || '\u2014';
                 document.getElementById('cf-nc-cnt').textContent = r.contracts_info ? r.contracts_info.count : '0';
                 bar.classList.add('active');
             }
@@ -481,9 +527,29 @@ var ContractForm = (function () {
         initScanner();
         initManualAdd();
         initCalculator();
+        initDirectDeductionListeners();
 
         if (cfg.existingCustomers && cfg.existingCustomers.length === 1 && cfg.type !== 'solidarity') {
             loadCustomerInfo(cfg.existingCustomers[0]);
+        }
+    }
+
+    function initDirectDeductionListeners() {
+        var saleEl = document.getElementById('contracts-date_of_sale');
+        var tvEl = document.getElementById('cf-tv');
+        var typeEl = document.getElementById('cf-type');
+        if (!typeEl) return;
+
+        function reapply() {
+            if (typeEl.value === 'direct_deduction') {
+                applyDirectDeduction();
+            }
+        }
+
+        if (saleEl) saleEl.addEventListener('change', reapply);
+        if (tvEl) {
+            tvEl.addEventListener('input', reapply);
+            tvEl.addEventListener('change', reapply);
         }
     }
 

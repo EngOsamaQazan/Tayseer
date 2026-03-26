@@ -567,8 +567,18 @@ class CustomersController extends Controller
         Yii::$app->response->format = Response::FORMAT_JSON;
         $model = $this->findModel($id);
         $contracts_info = $model->getContractsCustomers();
+
+        $jobName = null;
+        if ($model->job_title) {
+            $job = \backend\modules\jobs\models\Jobs::findOne($model->job_title);
+            if ($job) {
+                $jobName = $job->name;
+            }
+        }
+
         return [
             'model' => $model,
+            'job_name' => $jobName,
             'contracts_info' => [
                 'count' => $contracts_info->count(),
                 'info' => $contracts_info->all(),
