@@ -420,8 +420,15 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                         </span>
                     <?php endif; ?>
                 </div>
-                <?php if (!empty($dl->notes)): ?>
-                    <div style="font-size:11px;color:#64748B;margin-top:6px;background:rgba(255,255,255,.6);padding:4px 8px;border-radius:4px"><?= Html::encode($dl->notes) ?></div>
+                <?php if ($dl->customerAction): ?>
+                    <div style="font-size:11px;color:#475569;margin-top:6px;display:flex;align-items:center;gap:4px">
+                        <i class="fa fa-file-text-o" style="font-size:10px"></i>
+                        <span style="font-weight:600"><?= Html::encode($dl->customerAction->judiciaryActions->name ?? '') ?></span>
+                        <?php if ($dl->customerAction->customers): ?>
+                            <span style="color:#94A3B8">—</span>
+                            <span><?= Html::encode($dl->customerAction->customers->name) ?></span>
+                        <?php endif; ?>
+                    </div>
                 <?php endif; ?>
             </div>
             </a>

@@ -270,10 +270,10 @@ class JudiciaryDeadlineService
 
         // --- Revert: undo incorrect 180-day stale auto-completion ---
         JudiciaryDeadline::updateAll(
-            ['status' => JudiciaryDeadline::STATUS_EXPIRED, 'notes' => 'ترحيل تلقائي'],
+            ['status' => JudiciaryDeadline::STATUS_EXPIRED, 'notes' => null],
             ['AND',
                 ['status' => JudiciaryDeadline::STATUS_COMPLETED],
-                ['notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'],
+                ['or', ['notes' => 'تم إنجازه — منتهي أكثر من 6 أشهر بدون نشاط'], ['notes' => 'ترحيل تلقائي']],
                 ['is_deleted' => 0],
             ]
         );
