@@ -422,8 +422,8 @@ class JudiciaryDeadlineService
                         THEN 'completed'
 
                     WHEN j.contract_id IS NOT NULL
-                         AND cc.c_status = 'judiciary'
-                         AND cc.remaining <= 0
+                         AND cb.status = 'judiciary'
+                         AND cb.remaining_balance <= 0
                         THEN 'completed'
 
                     WHEN d.related_customer_action_id IS NOT NULL
@@ -475,30 +475,7 @@ class JudiciaryDeadlineService
             LEFT JOIN {$p}judiciary j ON j.id = d.judiciary_id
             LEFT JOIN {$p}judiciary_customers_actions ra
                    ON ra.id = d.related_customer_action_id
-            LEFT JOIN (
-                SELECT
-                    co.id,
-                    co.status AS c_status,
-                    GREATEST(0,
-                        co.total_value
-                        + COALESCE(ex.t,0)
-                        + COALESCE(lw.t,0)
-                        - COALESCE(ic.t,0)
-                        - COALESCE(ad.t,0)
-                    ) AS remaining
-                FROM {$p}contracts co
-                LEFT JOIN (SELECT contract_id, SUM(amount) t FROM {$p}expenses
-                           WHERE is_deleted=0 OR is_deleted IS NULL
-                           GROUP BY contract_id) ex ON ex.contract_id = co.id
-                LEFT JOIN (SELECT contract_id, SUM(lawyer_cost) t FROM {$p}judiciary
-                           WHERE is_deleted=0 OR is_deleted IS NULL
-                           GROUP BY contract_id) lw ON lw.contract_id = co.id
-                LEFT JOIN (SELECT contract_id, SUM(amount) t FROM {$p}income
-                           GROUP BY contract_id) ic ON ic.contract_id = co.id
-                LEFT JOIN (SELECT contract_id, SUM(amount) t FROM {$p}contract_adjustments
-                           WHERE is_deleted=0
-                           GROUP BY contract_id) ad ON ad.contract_id = co.id
-            ) cc ON cc.id = j.contract_id
+            LEFT JOIN {$p}vw_contract_balance cb ON cb.contract_id = j.contract_id
 
             WHERE d.is_deleted = 0
         ")->execute();

@@ -229,21 +229,12 @@ class ContractsSearch extends Contracts
             return $this->_judiciaryPaidIds;
         }
 
-        $db = \Yii::$app->db;
-        $rows = $db->createCommand("
-            SELECT c.id,
-                   c.total_value
-                   + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id AND (e.is_deleted=0 OR e.is_deleted IS NULL)), 0)
-                   + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND (j.is_deleted=0 OR j.is_deleted IS NULL)), 0)
-                   - COALESCE((SELECT SUM(ca.amount) FROM os_contract_adjustments ca WHERE ca.contract_id = c.id AND ca.is_deleted=0), 0)
-                   - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
-                   AS remaining
-            FROM os_contracts c
-            WHERE c.status = 'judiciary' AND (c.is_deleted = 0 OR c.is_deleted IS NULL)
-            HAVING remaining <= 0.01
-        ")->queryAll();
+        $p = \Yii::$app->db->tablePrefix;
+        $rows = \Yii::$app->db->createCommand(
+            "SELECT contract_id FROM {$p}vw_contract_balance WHERE status = 'judiciary' AND remaining_balance <= 0.01"
+        )->queryAll();
 
-        $this->_judiciaryPaidIds = array_column($rows, 'id');
+        $this->_judiciaryPaidIds = array_column($rows, 'contract_id');
         return $this->_judiciaryPaidIds;
     }
 

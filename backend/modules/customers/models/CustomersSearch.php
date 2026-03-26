@@ -60,15 +60,11 @@ class CustomersSearch extends Customers
                 $query = Customers::find()->innerJoin(
                     "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = 'judiciary') ON customer_id = os_customers.id"
                 );
-                $paidSql = "(SELECT ct.id FROM {{%contracts}} ct
-                    WHERE ct.status = 'judiciary'
-                      AND (ct.is_deleted = 0 OR ct.is_deleted IS NULL)
-                      AND (ct.total_value - COALESCE((SELECT SUM(i.payment_value) FROM {{%income}} i WHERE i.contract_id = ct.id AND (i.is_deleted = 0 OR i.is_deleted IS NULL)), 0)
-                                           - COALESCE((SELECT SUM(a.amount) FROM {{%contract_adjustments}} a WHERE a.contract_id = ct.id), 0)) <= 0)";
+                $query->innerJoin('{{%vw_contract_balance}} vcb', 'vcb.contract_id = os_contracts.id');
                 if ($ct === 'judiciary_paid') {
-                    $query->andWhere("os_contracts.id IN $paidSql");
+                    $query->andWhere(['<=', 'vcb.remaining_balance', 0]);
                 } else {
-                    $query->andWhere("os_contracts.id NOT IN $paidSql");
+                    $query->andWhere(['>', 'vcb.remaining_balance', 0]);
                 }
             } else {
                 $query = Customers::find()->innerJoin(
@@ -140,15 +136,11 @@ class CustomersSearch extends Customers
                 $query = Customers::find()->innerJoin(
                     "(`os_contracts_customers` INNER JOIN os_contracts ON contract_id = os_contracts.id AND os_contracts.status = 'judiciary') ON customer_id = os_customers.id"
                 );
-                $paidSql = "(SELECT ct.id FROM {{%contracts}} ct
-                    WHERE ct.status = 'judiciary'
-                      AND (ct.is_deleted = 0 OR ct.is_deleted IS NULL)
-                      AND (ct.total_value - COALESCE((SELECT SUM(i.payment_value) FROM {{%income}} i WHERE i.contract_id = ct.id AND (i.is_deleted = 0 OR i.is_deleted IS NULL)), 0)
-                                           - COALESCE((SELECT SUM(a.amount) FROM {{%contract_adjustments}} a WHERE a.contract_id = ct.id), 0)) <= 0)";
+                $query->innerJoin('{{%vw_contract_balance}} vcb', 'vcb.contract_id = os_contracts.id');
                 if ($ct === 'judiciary_paid') {
-                    $query->andWhere("os_contracts.id IN $paidSql");
+                    $query->andWhere(['<=', 'vcb.remaining_balance', 0]);
                 } else {
-                    $query->andWhere("os_contracts.id NOT IN $paidSql");
+                    $query->andWhere(['>', 'vcb.remaining_balance', 0]);
                 }
             } else {
                 $query = Customers::find()->innerJoin(
