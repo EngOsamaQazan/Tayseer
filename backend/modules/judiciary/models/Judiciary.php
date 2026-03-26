@@ -285,6 +285,15 @@ class Judiciary extends \yii\db\ActiveRecord
                 Yii::warning('Failed to create registration deadline: ' . $e->getMessage(), __METHOD__);
             }
         }
+
+        if (isset($changedAttributes['case_status'])
+            && in_array($this->case_status, ['closed', 'archived'])) {
+            try {
+                \backend\services\JudiciaryDeadlineService::completeDeadlinesForCase($this->id);
+            } catch (\Exception $e) {
+                Yii::warning('Failed to complete deadlines on case close: ' . $e->getMessage(), __METHOD__);
+            }
+        }
     }
 
     public function afterDelete()

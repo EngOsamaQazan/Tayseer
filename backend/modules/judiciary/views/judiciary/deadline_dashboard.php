@@ -9,156 +9,200 @@ $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . time());
 
-$typeLabels = JudiciaryDeadline::getTypeLabels();
+$typeLabels  = JudiciaryDeadline::getTypeLabels();
+$ajaxUrl     = Url::to(['deadline-dashboard-ajax']);
+$viewBaseUrl = Url::to(['view', 'id' => '__ID__']);
 
-$tabs = [
-    'expired'     => ['label' => 'متأخرة',  'icon' => 'fa-exclamation-circle', 'color' => '#DC2626', 'bg' => '#FEF2F2', 'border' => '#FECACA'],
-    'approaching' => ['label' => 'تقترب',   'icon' => 'fa-warning',            'color' => '#D97706', 'bg' => '#FFFBEB', 'border' => '#FDE68A'],
-    'pending'     => ['label' => 'قائمة',   'icon' => 'fa-hourglass-half',     'color' => '#64748B', 'bg' => '#F8FAFC', 'border' => '#E2E8F0'],
-];
-$active = $tabs[$activeTab];
-$startRecord = ($page - 1) * $perPage + 1;
-$endRecord   = min($page * $perPage, $counts[$activeTab]);
+$typeLabelsJson = json_encode($typeLabels, JSON_UNESCAPED_UNICODE);
 ?>
 
-<div class="jv-page">
+<div class="jv-page" id="dl-dashboard">
     <div class="jv-header">
         <div>
-            <div class="jv-title">
-                <i class="fa fa-clock-o" style="color:#DC2626"></i>
-                <?= $this->title ?>
-            </div>
+            <div class="jv-title"><i class="fa fa-clock-o" style="color:#DC2626"></i> <?= $this->title ?></div>
         </div>
         <div class="jv-actions" style="display:flex;gap:8px">
-            <?= Html::a('<i class="fa fa-refresh"></i> تحديث', ['deadline-dashboard-view', 'tab' => $activeTab], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
+            <button onclick="DL.load(DL.tab,1)" class="btn btn-default" style="border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px"><i class="fa fa-refresh"></i> تحديث</button>
             <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
         </div>
     </div>
 
     <!-- Summary Cards -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px">
-        <?php foreach ($tabs as $key => $t): ?>
-        <a href="<?= Url::to(['deadline-dashboard-view', 'tab' => $key]) ?>" style="text-decoration:none;background:<?= $t['bg'] ?>;border:1px solid <?= $t['border'] ?>;border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;transition:box-shadow .2s,transform .15s<?= $key === $activeTab ? ';box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateY(-1px)' : '' ?>"
-           onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,.12)';this.style.transform='translateY(-1px)'"
-           onmouseout="<?= $key === $activeTab ? '' : "this.style.boxShadow='';this.style.transform=''" ?>">
-            <div style="width:42px;height:42px;border-radius:10px;background:<?= $t['color'] ?>;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fa <?= $t['icon'] ?>"></i></div>
-            <div>
-                <div style="font-size:22px;font-weight:700;color:<?= $t['color'] ?>"><?= number_format($counts[$key]) ?></div>
-                <div style="font-size:12px;color:<?= $t['color'] ?>;font-weight:<?= $key === $activeTab ? '700' : '400' ?>"><?= $t['label'] ?></div>
-            </div>
-        </a>
-        <?php endforeach; ?>
-    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px" id="dl-summary"></div>
 
-    <!-- Active Tab Content -->
+    <!-- Content Area -->
     <div class="jv-card" style="margin-bottom:20px">
-        <div class="jv-card-title" style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-                <i class="fa <?= $active['icon'] ?>" style="color:<?= $active['color'] ?>"></i>
-                <?= $active['label'] ?>
-                <span style="background:<?= $active['bg'] ?>;color:<?= $active['color'] ?>;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;margin-right:8px"><?= number_format($counts[$activeTab]) ?></span>
-            </div>
-            <?php if ($counts[$activeTab] > 0): ?>
-            <div style="font-size:12px;color:#94A3B8"><?= $startRecord ?> – <?= $endRecord ?> من <?= number_format($counts[$activeTab]) ?></div>
-            <?php endif; ?>
-        </div>
-
-        <?php if (empty($items)): ?>
-            <div style="text-align:center;padding:30px;color:#94A3B8">
-                <i class="fa fa-check-circle" style="font-size:24px;display:block;margin-bottom:8px;color:#D1FAE5"></i>
-                لا توجد مواعيد <?= $active['label'] ?>
-            </div>
-        <?php else: ?>
-            <div class="jv-deadline-grid">
-                <?php foreach ($items as $dl):
-                    $typeLabel = $typeLabels[$dl['deadline_type']] ?? $dl['deadline_type'];
-                    $daysRemaining = !empty($dl['deadline_date']) ? (int)((strtotime($dl['deadline_date']) - time()) / 86400) : null;
-                    $caseNum = !empty($dl['judiciary_number']) ? $dl['judiciary_number'] : '#' . $dl['judiciary_id'];
-                ?>
-                <div class="jv-deadline-card" style="background:<?= $active['bg'] ?>;border:1px solid <?= $active['border'] ?>">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-                        <div style="display:flex;align-items:center;gap:6px">
-                            <i class="fa <?= $active['icon'] ?>" style="color:<?= $active['color'] ?>;font-size:14px"></i>
-                            <span style="font-weight:700;font-size:12px;color:<?= $active['color'] ?>"><?= Html::encode($typeLabel) ?></span>
-                        </div>
-                        <?= Html::a('قضية ' . Html::encode($caseNum), ['view', 'id' => $dl['judiciary_id']], [
-                            'style' => 'font-size:11px;font-weight:600;color:#2563EB;text-decoration:none',
-                        ]) ?>
-                    </div>
-                    <div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">
-                        <span style="color:#64748B"><i class="fa fa-calendar"></i> <?= Html::encode($dl['deadline_date'] ?: '—') ?></span>
-                        <?php if ($daysRemaining !== null): ?>
-                            <span style="font-weight:700;color:<?= $active['color'] ?>">
-                                <?php if ($daysRemaining < 0): ?>
-                                    متأخر <?= number_format(abs($daysRemaining)) ?> يوم
-                                <?php elseif ($daysRemaining === 0): ?>
-                                    اليوم!
-                                <?php else: ?>
-                                    باقي <?= number_format($daysRemaining) ?> يوم
-                                <?php endif; ?>
-                            </span>
-                        <?php endif; ?>
-                    </div>
-                    <?php if (!empty($dl['action_name'])): ?>
-                        <div style="font-size:11px;color:#475569;margin-top:6px;display:flex;align-items:center;gap:4px">
-                            <i class="fa fa-file-text-o" style="font-size:10px"></i>
-                            <span style="font-weight:600"><?= Html::encode($dl['action_name']) ?></span>
-                            <?php if (!empty($dl['customer_name'])): ?>
-                                <span style="color:#94A3B8">—</span>
-                                <span><?= Html::encode($dl['customer_name']) ?></span>
-                            <?php endif; ?>
-                        </div>
-                    <?php elseif (!empty($dl['label'])): ?>
-                        <div style="font-size:11px;color:#475569;margin-top:6px"><?= Html::encode($dl['label']) ?></div>
-                    <?php endif; ?>
-                </div>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Pagination -->
-            <?php if ($totalPages > 1): ?>
-            <div style="display:flex;justify-content:center;align-items:center;gap:6px;padding:16px 0;margin-top:12px;border-top:1px solid #E2E8F0">
-                <?php if ($page > 1): ?>
-                    <?= Html::a('<i class="fa fa-chevron-right"></i>', ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $page - 1], [
-                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:12px;transition:all .15s',
-                        'title' => 'الصفحة السابقة',
-                    ]) ?>
-                <?php endif; ?>
-
-                <?php
-                $range = 2;
-                $start = max(1, $page - $range);
-                $end   = min($totalPages, $page + $range);
-                if ($start > 1) {
-                    echo Html::a('1', ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => 1], [
-                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:13px;font-weight:600',
-                    ]);
-                    if ($start > 2) echo '<span style="color:#94A3B8;font-size:12px">…</span>';
-                }
-                for ($i = $start; $i <= $end; $i++):
-                    $isActive = $i === $page;
-                ?>
-                    <?= Html::a($i, ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $i], [
-                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;text-decoration:none;transition:all .15s;'
-                            . ($isActive ? 'background:#2563EB;color:#fff;border:1px solid #2563EB' : 'border:1px solid #E2E8F0;color:#475569'),
-                    ]) ?>
-                <?php endfor;
-                if ($end < $totalPages) {
-                    if ($end < $totalPages - 1) echo '<span style="color:#94A3B8;font-size:12px">…</span>';
-                    echo Html::a($totalPages, ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $totalPages], [
-                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:13px;font-weight:600',
-                    ]);
-                }
-                ?>
-
-                <?php if ($page < $totalPages): ?>
-                    <?= Html::a('<i class="fa fa-chevron-left"></i>', ['deadline-dashboard-view', 'tab' => $activeTab, 'page' => $page + 1], [
-                        'style' => 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:1px solid #E2E8F0;color:#475569;text-decoration:none;font-size:12px;transition:all .15s',
-                        'title' => 'الصفحة التالية',
-                    ]) ?>
-                <?php endif; ?>
-            </div>
-            <?php endif; ?>
-        <?php endif; ?>
+        <div class="jv-card-title" style="display:flex;justify-content:space-between;align-items:center" id="dl-section-title"></div>
+        <div id="dl-grid"></div>
+        <div id="dl-pagination" style="display:flex;justify-content:center;align-items:center;gap:6px;padding:16px 0;margin-top:12px;border-top:1px solid #E2E8F0"></div>
     </div>
 </div>
+
+<?php
+$initCounts = json_encode($counts, JSON_UNESCAPED_UNICODE);
+$initItems  = json_encode($items, JSON_UNESCAPED_UNICODE);
+$initTab    = $activeTab;
+$initPage   = $page;
+$initTotal  = $totalPages;
+$perPageJs  = $perPage;
+
+$js = <<<JS
+(function(){
+var TABS = {
+    expired:     {label:'متأخرة', icon:'fa-exclamation-circle', color:'#DC2626', bg:'#FEF2F2', border:'#FECACA'},
+    approaching: {label:'تقترب',  icon:'fa-warning',           color:'#D97706', bg:'#FFFBEB', border:'#FDE68A'},
+    pending:     {label:'قائمة',  icon:'fa-hourglass-half',    color:'#64748B', bg:'#F8FAFC', border:'#E2E8F0'}
+};
+var TYPE_LABELS = {$typeLabelsJson};
+var AJAX_URL = '{$ajaxUrl}';
+var VIEW_BASE = '{$viewBaseUrl}';
+
+window.DL = {
+    tab: '{$initTab}',
+    page: {$initPage},
+    counts: {$initCounts},
+    items: {$initItems},
+    totalPages: {$initTotal},
+    perPage: {$perPageJs},
+    loading: false,
+
+    init: function() {
+        this.renderSummary();
+        this.renderContent();
+    },
+
+    load: function(tab, page) {
+        if (this.loading) return;
+        this.loading = true;
+        this.tab = tab;
+        this.page = page || 1;
+        var grid = document.getElementById('dl-grid');
+        grid.style.opacity = '0.5';
+
+        var self = this;
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', AJAX_URL + '?tab=' + tab + '&page=' + self.page);
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.onload = function() {
+            self.loading = false;
+            grid.style.opacity = '1';
+            if (xhr.status === 200) {
+                var d = JSON.parse(xhr.responseText);
+                self.counts = d.counts;
+                self.items = d.items;
+                self.totalPages = d.totalPages;
+                self.page = d.page;
+                self.renderSummary();
+                self.renderContent();
+                history.replaceState(null, '', location.pathname + '?tab=' + self.tab + '&page=' + self.page);
+            }
+        };
+        xhr.onerror = function() { self.loading = false; grid.style.opacity = '1'; };
+        xhr.send();
+    },
+
+    renderSummary: function() {
+        var h = '';
+        var keys = ['expired','approaching','pending'];
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i], t = TABS[k], c = this.counts[k] || 0, active = k === this.tab;
+            h += '<a href="javascript:void(0)" onclick="DL.load(\'' + k + '\',1)" style="text-decoration:none;background:' + t.bg + ';border:1px solid ' + t.border + ';border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:12px;transition:all .2s;cursor:pointer' + (active ? ';box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateY(-1px)' : '') + '">'
+                + '<div style="width:42px;height:42px;border-radius:10px;background:' + t.color + ';color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px"><i class="fa ' + t.icon + '"></i></div>'
+                + '<div><div style="font-size:22px;font-weight:700;color:' + t.color + '">' + c.toLocaleString() + '</div>'
+                + '<div style="font-size:12px;color:' + t.color + ';font-weight:' + (active ? '700' : '400') + '">' + t.label + '</div></div></a>';
+        }
+        document.getElementById('dl-summary').innerHTML = h;
+    },
+
+    renderContent: function() {
+        var t = TABS[this.tab], total = this.counts[this.tab] || 0;
+        var start = (this.page - 1) * this.perPage + 1;
+        var end = Math.min(this.page * this.perPage, total);
+
+        document.getElementById('dl-section-title').innerHTML =
+            '<div><i class="fa ' + t.icon + '" style="color:' + t.color + '"></i> ' + t.label
+            + ' <span style="background:' + t.bg + ';color:' + t.color + ';padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;margin-right:8px">' + total.toLocaleString() + '</span></div>'
+            + (total > 0 ? '<div style="font-size:12px;color:#94A3B8">' + start + ' – ' + end + ' من ' + total.toLocaleString() + '</div>' : '');
+
+        if (!this.items || this.items.length === 0) {
+            document.getElementById('dl-grid').innerHTML = '<div style="text-align:center;padding:30px;color:#94A3B8"><i class="fa fa-check-circle" style="font-size:24px;display:block;margin-bottom:8px;color:#D1FAE5"></i>لا توجد مواعيد ' + t.label + '</div>';
+            document.getElementById('dl-pagination').innerHTML = '';
+            return;
+        }
+
+        var h = '<div class="jv-deadline-grid">';
+        for (var i = 0; i < this.items.length; i++) {
+            var dl = this.items[i];
+            var typeLabel = TYPE_LABELS[dl.deadline_type] || dl.deadline_type;
+            var caseNum = dl.judiciary_number || ('#' + dl.judiciary_id);
+            var viewUrl = VIEW_BASE.replace('__ID__', dl.judiciary_id);
+            var daysRem = dl.deadline_date ? Math.floor((new Date(dl.deadline_date) - new Date()) / 86400000) : null;
+
+            h += '<div class="jv-deadline-card" style="background:' + t.bg + ';border:1px solid ' + t.border + '">';
+            h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+            h += '<div style="display:flex;align-items:center;gap:6px"><i class="fa ' + t.icon + '" style="color:' + t.color + ';font-size:14px"></i><span style="font-weight:700;font-size:12px;color:' + t.color + '">' + this.esc(typeLabel) + '</span></div>';
+            h += '<a href="' + viewUrl + '" style="font-size:11px;font-weight:600;color:#2563EB;text-decoration:none">قضية ' + this.esc(caseNum) + '</a>';
+            h += '</div>';
+
+            h += '<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px">';
+            h += '<span style="color:#64748B"><i class="fa fa-calendar"></i> ' + (dl.deadline_date || '—') + '</span>';
+            if (daysRem !== null) {
+                h += '<span style="font-weight:700;color:' + t.color + '">';
+                if (daysRem < 0) h += 'متأخر ' + Math.abs(daysRem).toLocaleString() + ' يوم';
+                else if (daysRem === 0) h += 'اليوم!';
+                else h += 'باقي ' + daysRem.toLocaleString() + ' يوم';
+                h += '</span>';
+            }
+            h += '</div>';
+
+            if (dl.action_name) {
+                h += '<div style="font-size:11px;color:#475569;margin-top:6px;display:flex;align-items:center;gap:4px">';
+                h += '<i class="fa fa-file-text-o" style="font-size:10px"></i><span style="font-weight:600">' + this.esc(dl.action_name) + '</span>';
+                if (dl.customer_name) h += '<span style="color:#94A3B8">—</span><span>' + this.esc(dl.customer_name) + '</span>';
+                h += '</div>';
+            } else if (dl.label) {
+                h += '<div style="font-size:11px;color:#475569;margin-top:6px">' + this.esc(dl.label) + '</div>';
+            }
+            h += '</div>';
+        }
+        h += '</div>';
+        document.getElementById('dl-grid').innerHTML = h;
+
+        this.renderPagination();
+    },
+
+    renderPagination: function() {
+        var el = document.getElementById('dl-pagination');
+        if (this.totalPages <= 1) { el.innerHTML = ''; return; }
+
+        var h = '', p = this.page, tp = this.totalPages, range = 2;
+        var s = Math.max(1, p - range), e = Math.min(tp, p + range);
+        var btnStyle = 'width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;text-decoration:none;cursor:pointer;transition:all .15s;';
+
+        if (p > 1) h += '<a href="javascript:void(0)" onclick="DL.load(DL.tab,' + (p-1) + ')" style="' + btnStyle + 'border:1px solid #E2E8F0;color:#475569" title="السابقة"><i class="fa fa-chevron-right"></i></a>';
+        if (s > 1) {
+            h += '<a href="javascript:void(0)" onclick="DL.load(DL.tab,1)" style="' + btnStyle + 'border:1px solid #E2E8F0;color:#475569">1</a>';
+            if (s > 2) h += '<span style="color:#94A3B8;font-size:12px">…</span>';
+        }
+        for (var i = s; i <= e; i++) {
+            var act = i === p;
+            h += '<a href="javascript:void(0)" onclick="DL.load(DL.tab,' + i + ')" style="' + btnStyle + (act ? 'background:#2563EB;color:#fff;border:1px solid #2563EB' : 'border:1px solid #E2E8F0;color:#475569') + '">' + i + '</a>';
+        }
+        if (e < tp) {
+            if (e < tp - 1) h += '<span style="color:#94A3B8;font-size:12px">…</span>';
+            h += '<a href="javascript:void(0)" onclick="DL.load(DL.tab,' + tp + ')" style="' + btnStyle + 'border:1px solid #E2E8F0;color:#475569">' + tp + '</a>';
+        }
+        if (p < tp) h += '<a href="javascript:void(0)" onclick="DL.load(DL.tab,' + (p+1) + ')" style="' + btnStyle + 'border:1px solid #E2E8F0;color:#475569" title="التالية"><i class="fa fa-chevron-left"></i></a>';
+
+        el.innerHTML = h;
+    },
+
+    esc: function(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+};
+
+DL.init();
+})();
+JS;
+
+$this->registerJs($js);
+?>

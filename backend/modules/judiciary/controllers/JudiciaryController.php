@@ -1880,16 +1880,14 @@ class JudiciaryController extends Controller
 
     public function actionDeadlineDashboardView()
     {
+        $counts = JudiciaryDeadlineService::getDashboardCounts();
+
         $tab     = Yii::$app->request->get('tab', 'expired');
         $page    = max(1, (int) Yii::$app->request->get('page', 1));
         $perPage = 50;
+        if (!in_array($tab, ['expired', 'approaching', 'pending'])) $tab = 'expired';
 
-        if (!in_array($tab, ['expired', 'approaching', 'pending'])) {
-            $tab = 'expired';
-        }
-
-        $counts = JudiciaryDeadlineService::getDashboardCounts();
-        $items  = JudiciaryDeadlineService::getDashboardPage($tab, $page, $perPage);
+        $items      = JudiciaryDeadlineService::getDashboardPage($tab, $page, $perPage);
         $totalPages = max(1, (int) ceil($counts[$tab] / $perPage));
 
         return $this->render('deadline_dashboard', [
@@ -1900,6 +1898,29 @@ class JudiciaryController extends Controller
             'perPage'    => $perPage,
             'totalPages' => $totalPages,
         ]);
+    }
+
+    public function actionDeadlineDashboardAjax()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $tab     = Yii::$app->request->get('tab', 'expired');
+        $page    = max(1, (int) Yii::$app->request->get('page', 1));
+        $perPage = 50;
+        if (!in_array($tab, ['expired', 'approaching', 'pending'])) $tab = 'expired';
+
+        $counts     = JudiciaryDeadlineService::getDashboardCounts();
+        $items      = JudiciaryDeadlineService::getDashboardPage($tab, $page, $perPage);
+        $totalPages = max(1, (int) ceil($counts[$tab] / $perPage));
+
+        return [
+            'counts'     => $counts,
+            'items'      => $items,
+            'tab'        => $tab,
+            'page'       => $page,
+            'totalPages' => $totalPages,
+            'perPage'    => $perPage,
+        ];
     }
 
     /* ═══════════════════════════════════════════════════════════

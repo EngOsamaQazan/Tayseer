@@ -512,54 +512,91 @@ class JudiciaryDeadlineService
      * Query the live VIEW for dashboard data.
      * Returns ['expired' => [...], 'approaching' => [...], 'pending' => [...]]
      */
+    /**
+     * Fast dashboard counts — single query on composite index, no VIEW.
+     * Temporal status (expired/approaching/pending) derived from deadline_date.
+     */
     public static function getDashboardCounts(): array
     {
-        self::ensureLiveView();
-
         $p = \Yii::$app->db->tablePrefix;
-        $rows = \Yii::$app->db->createCommand("
-            SELECT live_status, COUNT(*) AS cnt
-            FROM {$p}v_deadline_live
-            WHERE live_status IN ('expired','approaching','pending')
-            GROUP BY live_status
-        ")->queryAll();
+        $row = \Yii::$app->db->createCommand("
+            SELECT
+                SUM(deadline_date < CURDATE()) AS expired,
+                SUM(deadline_date >= CURDATE() AND deadline_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)) AS approaching,
+                SUM(deadline_date > DATE_ADD(CURDATE(), INTERVAL 3 DAY)) AS pending
+            FROM {$p}judiciary_deadlines
+            WHERE is_deleted = 0 AND status != 'completed'
+        ")->queryOne();
 
-        $counts = ['expired' => 0, 'approaching' => 0, 'pending' => 0];
-        foreach ($rows as $r) {
-            $counts[$r['live_status']] = (int) $r['cnt'];
-        }
-        return $counts;
+        return [
+            'expired'     => (int) ($row['expired'] ?? 0),
+            'approaching' => (int) ($row['approaching'] ?? 0),
+            'pending'     => (int) ($row['pending'] ?? 0),
+        ];
     }
 
+    /**
+     * Paginated dashboard data — direct indexed query, no VIEW.
+     * JOINs only for display labels (judiciary_number, action_name, customer_name).
+     */
     public static function getDashboardPage(string $status, int $page = 1, int $perPage = 50): array
     {
-        self::ensureLiveView();
-
         $p = \Yii::$app->db->tablePrefix;
         $db = \Yii::$app->db;
         $offset = ($page - 1) * $perPage;
 
-        $rows = $db->createCommand("
-            SELECT v.*, v.live_status,
-                   j.judiciary_number,
-                   ca_action.name AS action_name,
-                   ca_cust.name   AS customer_name
-            FROM {$p}v_deadline_live v
-            LEFT JOIN {$p}judiciary j ON j.id = v.judiciary_id
-            LEFT JOIN {$p}judiciary_customers_actions jca ON jca.id = v.related_customer_action_id
-            LEFT JOIN {$p}judiciary_actions ca_action ON ca_action.id = jca.judiciary_actions_id
-            LEFT JOIN {$p}customers ca_cust ON ca_cust.id = jca.customers_id
-            WHERE v.live_status = :status
-            ORDER BY v.deadline_date ASC
-            LIMIT :limit OFFSET :offset
-        ", [':status' => $status, ':limit' => $perPage, ':offset' => $offset])->queryAll();
+        $dateConditions = [
+            'expired'     => 'd.deadline_date < CURDATE()',
+            'approaching' => 'd.deadline_date >= CURDATE() AND d.deadline_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)',
+            'pending'     => 'd.deadline_date > DATE_ADD(CURDATE(), INTERVAL 3 DAY)',
+        ];
+        $dateCond = $dateConditions[$status] ?? $dateConditions['expired'];
 
-        foreach ($rows as &$r) {
-            $r['status'] = $r['live_status'];
-        }
-        unset($r);
+        $rows = $db->createCommand("
+            SELECT d.id, d.judiciary_id, d.customer_id, d.deadline_type,
+                   d.label, d.deadline_date, d.related_customer_action_id,
+                   j.judiciary_number,
+                   ja.name AS action_name,
+                   cu.name AS customer_name
+            FROM {$p}judiciary_deadlines d
+            LEFT JOIN {$p}judiciary j ON j.id = d.judiciary_id
+            LEFT JOIN {$p}judiciary_customers_actions jca ON jca.id = d.related_customer_action_id
+            LEFT JOIN {$p}judiciary_actions ja ON ja.id = jca.judiciary_actions_id
+            LEFT JOIN {$p}customers cu ON cu.id = jca.customers_id
+            WHERE d.is_deleted = 0 AND d.status != 'completed'
+              AND {$dateCond}
+            ORDER BY d.deadline_date ASC
+            LIMIT {$perPage} OFFSET {$offset}
+        ")->queryAll();
 
         return $rows;
+    }
+
+    /* ─── Completion helpers for afterSave hooks ─── */
+
+    public static function completeDeadlinesForCase(int $judiciaryId): int
+    {
+        return JudiciaryDeadline::updateAll(
+            ['status' => JudiciaryDeadline::STATUS_COMPLETED],
+            ['AND',
+                ['judiciary_id' => $judiciaryId],
+                ['is_deleted' => 0],
+                ['!=', 'status', JudiciaryDeadline::STATUS_COMPLETED],
+            ]
+        );
+    }
+
+    public static function completeDeadlineForRequest(int $actionId): int
+    {
+        return JudiciaryDeadline::updateAll(
+            ['status' => JudiciaryDeadline::STATUS_COMPLETED],
+            ['AND',
+                ['related_customer_action_id' => $actionId],
+                ['in', 'deadline_type', ['request_decision_3wd', 'request_decision']],
+                ['is_deleted' => 0],
+                ['!=', 'status', JudiciaryDeadline::STATUS_COMPLETED],
+            ]
+        );
     }
 
     private static function doRefreshAllStatuses(): int

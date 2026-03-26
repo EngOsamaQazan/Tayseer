@@ -150,6 +150,22 @@ class Income extends \yii\db\ActiveRecord
             } catch (\Exception $e) {
                 Yii::error('AutoPosting Income error: ' . $e->getMessage(), 'accounting');
             }
+
+            if ($contractId) {
+                try {
+                    $judiciaries = \backend\modules\judiciary\models\Judiciary::find()
+                        ->where(['contract_id' => $contractId, 'is_deleted' => 0])
+                        ->select(['id', 'contract_id'])
+                        ->all();
+                    foreach ($judiciaries as $jud) {
+                        if ($jud->contract && $jud->contract->isJudiciaryPaid()) {
+                            \backend\services\JudiciaryDeadlineService::completeDeadlinesForCase($jud->id);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Yii::warning('Deadline completion on payment: ' . $e->getMessage(), __METHOD__);
+                }
+            }
         }
     }
 }

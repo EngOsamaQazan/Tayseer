@@ -157,6 +157,10 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
                     $dlService->createRequestDecisionDeadline($this->id);
                 }
 
+                if ($this->parent_id) {
+                    \backend\services\JudiciaryDeadlineService::completeDeadlineForRequest($this->parent_id);
+                }
+
                 if ($actionDef && $this->customers_id) {
                     $targetStage = self::$actionTypeToStage[$actionDef->action_type] ?? null;
                     if ($targetStage) {
@@ -175,9 +179,17 @@ class JudiciaryCustomersActions extends \yii\db\ActiveRecord
                         $ds->advanceTo($targetStage);
                     }
                 }
-                \backend\services\JudiciaryDeadlineService::invalidateRefreshCache();
             } catch (\Exception $e) {
                 Yii::warning('Failed in afterSave hooks: ' . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        if (!$insert && isset($changedAttributes['request_status'])
+            && in_array($this->request_status, ['approved', 'rejected'])) {
+            try {
+                \backend\services\JudiciaryDeadlineService::completeDeadlineForRequest($this->id);
+            } catch (\Exception $e) {
+                Yii::warning('Failed to complete deadline on request decision: ' . $e->getMessage(), __METHOD__);
             }
         }
     }

@@ -111,8 +111,8 @@ jobs:
               chmod -R 775 api/runtime/ 2>/dev/null || true
               chmod -R 775 api/web/assets/ 2>/dev/null || true
               
-              # Generate missing deadline records in background (idempotent, no timeout)
-              nohup php yii deadline/generate > backend/runtime/logs/deadline-generate.log 2>&1 &
+              # Generate + normalize deadline records in background (idempotent, no timeout)
+              nohup sh -c 'php yii deadline/generate && php yii deadline/normalize' > backend/runtime/logs/deadline-generate.log 2>&1 &
               
               echo "  Done!"
             }

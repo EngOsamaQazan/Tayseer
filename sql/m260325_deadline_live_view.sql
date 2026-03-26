@@ -35,6 +35,7 @@ ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_date` (`deadline_date`);
 ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_action` (`related_customer_action_id`);
 ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_deleted` (`is_deleted`);
 ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_combo` (`is_deleted`, `status`, `deadline_type`);
+ALTER TABLE `os_judiciary_deadlines` ADD INDEX `idx_dl_dashboard` (`is_deleted`, `status`, `deadline_date`);
 
 -- فهارس مساعدة على جداول مرتبطة
 ALTER TABLE `os_judiciary_customers_actions` ADD INDEX `idx_jca_parent` (`parent_id`);
