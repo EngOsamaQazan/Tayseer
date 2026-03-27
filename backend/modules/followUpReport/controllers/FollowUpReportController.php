@@ -150,6 +150,9 @@ class FollowUpReportController extends Controller
         if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
             $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
         }
+        if (!isset($params['FollowUpReportSearch']['reminder'])) {
+            $params['FollowUpReportSearch']['reminder'] = date('Y-m-d');
+        }
         $dataProvider = $searchModel->search($params);
         $dataCount = $dataProvider->getTotalCount();
 
