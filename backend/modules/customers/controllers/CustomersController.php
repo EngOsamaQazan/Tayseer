@@ -569,16 +569,25 @@ class CustomersController extends Controller
         $contracts_info = $model->getContractsCustomers();
 
         $jobName = null;
+        $jobTypeId = null;
+        $jobTypeName = null;
         if ($model->job_title) {
             $job = \backend\modules\jobs\models\Jobs::findOne($model->job_title);
             if ($job) {
                 $jobName = $job->name;
+                $jobTypeId = $job->job_type;
+                $jt = $job->jobType;
+                if ($jt) {
+                    $jobTypeName = $jt->name;
+                }
             }
         }
 
         return [
             'model' => $model,
             'job_name' => $jobName,
+            'job_type_id' => $jobTypeId,
+            'job_type_name' => $jobTypeName,
             'contracts_info' => [
                 'count' => $contracts_info->count(),
                 'info' => $contracts_info->all(),

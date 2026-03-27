@@ -4,6 +4,7 @@ var ContractForm = (function () {
     var _cfg = {};
     var _devices = {};
     var _devNum = 0;
+    var _customerIsGov = false;
 
     /* ══════════════════════════════════════════════════
        Helpers
@@ -446,9 +447,42 @@ var ContractForm = (function () {
     /* ══════════════════════════════════════════════════
        Customer Info Bar
        ══════════════════════════════════════════════════ */
+    function autoFillFirstInstallmentDate() {
+        var typeEl = document.getElementById('cf-type');
+        var type = typeEl ? typeEl.value : 'normal';
+        if (type === 'direct_deduction') return;
+
+        var saleEl = document.getElementById('contracts-date_of_sale');
+        var fdEl = document.getElementById('cf-fd');
+        if (!saleEl || !saleEl.value || !fdEl) return;
+
+        var saleDate = new Date(saleEl.value);
+        var day = saleDate.getDate();
+        var dueDay = _customerIsGov ? 23 : 28;
+
+        var targetMonth, targetYear;
+        if (day <= 15) {
+            targetMonth = saleDate.getMonth();
+            targetYear = saleDate.getFullYear();
+        } else {
+            var next = new Date(saleDate.getFullYear(), saleDate.getMonth() + 1, 1);
+            targetMonth = next.getMonth();
+            targetYear = next.getFullYear();
+        }
+
+        var m = String(targetMonth + 1).padStart(2, '0');
+        var d = String(dueDay).padStart(2, '0');
+        fdEl.value = targetYear + '-' + m + '-' + d;
+        fdEl.dispatchEvent(new Event('change'));
+    }
+
     function loadCustomerInfo(entry) {
         var bar = document.getElementById('cf-cust-bar');
-        if (!bar || !entry) { if (bar) bar.classList.remove('active'); return; }
+        if (!bar || !entry) {
+            if (bar) bar.classList.remove('active');
+            _customerIsGov = false;
+            return;
+        }
 
         ajax(_cfg.customerDataUrl, { id: entry.id }, function (r) {
             if (r && r.model) {
@@ -459,6 +493,14 @@ var ContractForm = (function () {
                 document.getElementById('cf-nc-job').textContent = r.job_name || '\u2014';
                 document.getElementById('cf-nc-cnt').textContent = r.contracts_info ? r.contracts_info.count : '0';
                 bar.classList.add('active');
+
+                var jtName = (r.job_type_name || '').toLowerCase();
+                _customerIsGov = jtName.indexOf('\u062D\u0643\u0648\u0645') !== -1
+                              || jtName.indexOf('\u0642\u0637\u0627\u0639 \u0639\u0627\u0645') !== -1
+                              || jtName.indexOf('\u0639\u0633\u0643\u0631') !== -1
+                              || jtName.indexOf('\u0623\u0645\u0646') !== -1;
+
+                autoFillFirstInstallmentDate();
             }
         });
     }
@@ -628,6 +670,10 @@ var ContractForm = (function () {
         if (cfg.existingCustomers && cfg.existingCustomers.length === 1 && cfg.type !== 'solidarity') {
             loadCustomerInfo(cfg.existingCustomers[0]);
         }
+
+        if (cfg.type !== 'direct_deduction') {
+            autoFillFirstInstallmentDate();
+        }
     }
 
     function initDirectDeductionListeners() {
@@ -639,6 +685,8 @@ var ContractForm = (function () {
         function reapply() {
             if (typeEl.value === 'direct_deduction') {
                 applyDirectDeduction();
+            } else {
+                autoFillFirstInstallmentDate();
             }
         }
 

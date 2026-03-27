@@ -100,6 +100,12 @@ class PromissoryNote extends ActiveRecord
             ->all();
 
         if (count($existing) >= 3) {
+            foreach ($existing as $n) {
+                if ($n->due_date !== $dueDate) {
+                    $n->due_date = $dueDate;
+                    $n->save(false);
+                }
+            }
             return $existing;
         }
 

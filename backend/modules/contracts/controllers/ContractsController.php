@@ -516,6 +516,11 @@ class ContractsController extends Controller
         if (defined('\backend\modules\contracts\models\Contracts::MONTHLY_INSTALLMENT_VALE'))
             $model->monthly_installment_value = Contracts::MONTHLY_INSTALLMENT_VALE;
 
+        $primaryCompany = Companies::findOne(['is_primary_company' => 1]);
+        if ($primaryCompany) {
+            $model->company_id = $primaryCompany->id;
+        }
+
         if (!Yii::$app->request->isPost) {
             $params = $this->buildFormParams($model);
             $customerId = Yii::$app->request->get('id');
@@ -916,7 +921,7 @@ class ContractsController extends Controller
         $model = $this->findModel($id);
 
         $kambAmount = ($model->total_value ?: 0) * 1.15;
-        $notes = PromissoryNote::ensureNotesExist($model->id, $kambAmount, $model->due_date);
+        $notes = PromissoryNote::ensureNotesExist($model->id, $kambAmount, $model->first_installment_date);
 
         $buyers     = $model->customers;
         $guarantors = $model->guarantor;

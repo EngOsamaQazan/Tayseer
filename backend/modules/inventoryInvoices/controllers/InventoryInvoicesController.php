@@ -31,6 +31,7 @@ use yii\helpers\ArrayHelper;
 use backend\modules\inventorySuppliers\models\InventorySuppliers;
 use backend\modules\companies\models\Companies;
 use common\helper\Permissions;
+use common\models\WizardDraft;
 use backend\helpers\ExportTrait;
 
 class InventoryInvoicesController extends Controller
@@ -53,7 +54,12 @@ class InventoryInvoicesController extends Controller
                         },
                     ],
                     [
-                        'actions' => ['create', 'create-wizard'],
+                        'actions' => [
+                            'create', 'create-wizard',
+                            'save-wizard-draft', 'load-wizard-draft', 'clear-wizard-draft',
+                            'list-wizard-drafts', 'save-wizard-draft-as',
+                            'delete-wizard-draft', 'restore-wizard-draft',
+                        ],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -99,7 +105,11 @@ class InventoryInvoicesController extends Controller
                     'approve-reception' => ['post'],
                     'reject-reception' => ['get', 'post'],
                     'approve-manager'  => ['post'],
-                    'reject-manager'   => ['post'],
+                    'reject-manager'       => ['post'],
+                    'save-wizard-draft'    => ['post'],
+                    'clear-wizard-draft'   => ['post'],
+                    'save-wizard-draft-as' => ['post'],
+                    'delete-wizard-draft'  => ['post'],
                 ],
             ],
         ];
@@ -321,6 +331,100 @@ class InventoryInvoicesController extends Controller
             'suppliersList'  => $suppliersList,
             'companiesList'  => $companiesList,
         ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  مسودة الويزارد — حفظ/تحميل/حذف (سيرفر)
+     * ═══════════════════════════════════════════════════════════ */
+
+    private const WIZARD_DRAFT_KEY = 'inv_wizard';
+
+    public function actionSaveWizardDraft()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $data = Yii::$app->request->post('draft_data', '');
+        if (!$data) {
+            return ['ok' => false, 'msg' => 'no data'];
+        }
+        $ok = WizardDraft::saveDraft(Yii::$app->user->id, self::WIZARD_DRAFT_KEY, $data);
+        return ['ok' => $ok];
+    }
+
+    public function actionLoadWizardDraft()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $draft = WizardDraft::loadDraft(Yii::$app->user->id, self::WIZARD_DRAFT_KEY);
+        if (!$draft) {
+            return ['ok' => true, 'data' => null];
+        }
+        return ['ok' => true, 'data' => json_decode($draft->draft_data, true)];
+    }
+
+    public function actionClearWizardDraft()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        WizardDraft::clearDraft(Yii::$app->user->id, self::WIZARD_DRAFT_KEY);
+        return ['ok' => true];
+    }
+
+    /* ─── المسودات المحفوظة يدوياً (3 حد أقصى) ─── */
+
+    public function actionListWizardDrafts()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $drafts = WizardDraft::listSavedDrafts(Yii::$app->user->id, self::WIZARD_DRAFT_KEY);
+        $result = [];
+        foreach ($drafts as $d) {
+            $result[] = [
+                'id'      => $d->id,
+                'label'   => $d->draft_label,
+                'summary' => $d->items_summary,
+                'date'    => date('Y-m-d H:i', $d->updated_at),
+            ];
+        }
+        return ['ok' => true, 'drafts' => $result];
+    }
+
+    public function actionSaveWizardDraftAs()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $data  = Yii::$app->request->post('draft_data', '');
+        $label = trim((string) Yii::$app->request->post('draft_label', ''));
+        if (!$data) {
+            return ['ok' => false, 'msg' => 'no data'];
+        }
+        $ok = WizardDraft::saveDraftSlot(
+            Yii::$app->user->id,
+            self::WIZARD_DRAFT_KEY,
+            $data,
+            $label ?: null
+        );
+        return ['ok' => $ok];
+    }
+
+    public function actionDeleteWizardDraft()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $draftId = (int) Yii::$app->request->post('draft_id', 0);
+        if ($draftId <= 0) {
+            return ['ok' => false];
+        }
+        WizardDraft::deleteSavedDraft(Yii::$app->user->id, self::WIZARD_DRAFT_KEY, $draftId);
+        return ['ok' => true];
+    }
+
+    public function actionRestoreWizardDraft()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $draftId = (int) Yii::$app->request->get('draft_id', 0);
+        if ($draftId <= 0) {
+            return ['ok' => false, 'data' => null];
+        }
+        $draft = WizardDraft::loadSavedDraft(Yii::$app->user->id, self::WIZARD_DRAFT_KEY, $draftId);
+        if (!$draft) {
+            return ['ok' => false, 'data' => null];
+        }
+        return ['ok' => true, 'data' => json_decode($draft->draft_data, true)];
     }
 
     protected function isVendorUser()
