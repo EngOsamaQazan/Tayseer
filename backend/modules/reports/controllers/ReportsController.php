@@ -486,13 +486,14 @@ class ReportsController extends Controller
                 'lawyer_cost',
                 'lawyer.name',
                 function ($model) {
-                    $names = [];
-                    if (!empty($model->customersAndGuarantor)) {
-                        foreach ($model->customersAndGuarantor as $c) {
-                            $names[] = $c->name;
-                        }
+                    static $cache = [];
+                    $cid = $model->contract_id;
+                    if (!isset($cache[$cid])) {
+                        $cache[$cid] = \Yii::$app->db->createCommand(
+                            "SELECT all_party_names FROM {{%vw_contract_customers_names}} WHERE contract_id = :id", [':id' => $cid]
+                        )->queryScalar() ?: '—';
                     }
-                    return implode(', ', $names);
+                    return $cache[$cid];
                 },
             ],
             'widths'   => [6, 14, 18, 14, 16, 18, 30],

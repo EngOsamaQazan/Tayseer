@@ -296,9 +296,9 @@ a.fur-id-link:hover{text-decoration:underline}
                 <?php
                 ?>
                 <?php foreach ($models as $m):
-                    $custNames = ArrayHelper::map($m->customers, 'id', 'name');
-                    $customerNamesFull = implode('، ', $custNames) ?: '—';
-                    $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], $custNames)) ?: '—';
+                    $nm = ($namesMap ?? [])[$m->id] ?? null;
+                    $customerNamesFull = $nm ? ($nm['client_names'] ?: '—') : '—';
+                    $customerNamesShort = $nm ? implode('، ', array_map([NameHelper::class, 'short'], array_filter(explode('، ', $nm['client_names'] ?? '')))) ?: '—' : '—';
                     $followName = $allUsers[$m->followed_by] ?? ($m->followedBy ? $m->followedBy->username : '—');
                     $dueAmt = (float)($m->due_amount ?? 0);
                     $stKey = $m->status;

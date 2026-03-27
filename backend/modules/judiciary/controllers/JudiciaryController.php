@@ -980,48 +980,34 @@ class JudiciaryController extends Controller
 
         $query = $search['dataProvider']->query;
         $query->with = [];
-
-        $query->leftJoin('{{%court}} _ct', '_ct.id = j.court_id')
-              ->leftJoin('{{%judiciary_type}} _jt', '_jt.id = j.type_id')
-              ->leftJoin('{{%lawyers}} _lw', '_lw.id = j.lawyer_id');
-
-        $query->select([
-            'j.id', 'j.contract_id', 'j.judiciary_number', 'j.year',
-            'j.lawyer_cost', 'j.case_cost',
-            'court_name'  => '_ct.name',
-            'type_name'   => '_jt.name',
-            'lawyer_name' => '_lw.name',
-        ]);
-
-        $rows = $query->asArray()->all();
-
-        $contractIds = array_unique(array_filter(array_column($rows, 'contract_id')));
-        $nameByContract = [];
-        if (!empty($contractIds)) {
-            $custData = (new \yii\db\Query())
-                ->select(['cc.contract_id', "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
-                ->from('{{%contracts_customers}} cc')
-                ->innerJoin('{{%customers}} c', 'c.id = cc.customer_id')
-                ->where(['cc.contract_id' => $contractIds])
-                ->groupBy('cc.contract_id')
-                ->all();
-            $nameByContract = \yii\helpers\ArrayHelper::map($custData, 'contract_id', 'names');
-        }
+        $ids = $query->select(['j.id'])->column();
 
         $exportRows = [];
-        foreach ($rows as $r) {
-            $num  = $r['judiciary_number'] ?: '—';
-            $year = $r['year'] ?: '';
-            $exportRows[] = [
-                'contract_id' => $r['contract_id'] ?: '—',
-                'customer'    => $nameByContract[$r['contract_id']] ?? '—',
-                'court'       => $r['court_name'] ?: '—',
-                'type'        => $r['type_name'] ?: '—',
-                'lawyer'      => $r['lawyer_name'] ?: '—',
-                'case_number' => $year ? "{$num}-{$year}" : $num,
-                'lawyer_cost' => $r['lawyer_cost'] ?: 0,
-                'case_cost'   => $r['case_cost'] ?: 0,
-            ];
+        if (!empty($ids)) {
+            $idList = implode(',', array_map('intval', $ids));
+            $rows = Yii::$app->db->createCommand(
+                "SELECT id, contract_id, judiciary_number, year,
+                        lawyer_cost, case_cost,
+                        court_name, type_name, lawyer_name, all_party_names
+                 FROM {{%vw_judiciary_cases_overview}}
+                 WHERE id IN ($idList)
+                 ORDER BY id DESC"
+            )->queryAll();
+
+            foreach ($rows as $r) {
+                $num  = $r['judiciary_number'] ?: '—';
+                $year = $r['year'] ?: '';
+                $exportRows[] = [
+                    'contract_id' => $r['contract_id'] ?: '—',
+                    'customer'    => $r['all_party_names'] ?: '—',
+                    'court'       => $r['court_name'] ?: '—',
+                    'type'        => $r['type_name'] ?: '—',
+                    'lawyer'      => $r['lawyer_name'] ?: '—',
+                    'case_number' => $year ? "{$num}-{$year}" : $num,
+                    'lawyer_cost' => $r['lawyer_cost'] ?: 0,
+                    'case_cost'   => $r['case_cost'] ?: 0,
+                ];
+            }
         }
 
         return $this->exportArrayData($exportRows, [
@@ -1049,26 +1035,17 @@ class JudiciaryController extends Controller
 
     private function exportActionsLightweight($format)
     {
-        $rows = (new \yii\db\Query())
-            ->select([
-                'jca.id', 'jca.judiciary_id', 'jca.note', 'jca.action_date',
-                'j.judiciary_number', 'j.year', 'j.contract_id',
-                'cust_name' => 'c.name',
-                'action_name' => 'ja.name',
-                'user_name' => 'u.username',
-                'lawyer_name' => 'lw.name',
-                'court_name' => 'ct.name',
-            ])
-            ->from('{{%judiciary_customers_actions}} jca')
-            ->leftJoin('{{%judiciary}} j', 'j.id = jca.judiciary_id')
-            ->leftJoin('{{%customers}} c', 'c.id = jca.customers_id')
-            ->leftJoin('{{%judiciary_actions}} ja', 'ja.id = jca.judiciary_actions_id')
-            ->leftJoin('{{%user}} u', 'u.id = jca.created_by')
-            ->leftJoin('{{%lawyers}} lw', 'lw.id = j.lawyer_id')
-            ->leftJoin('{{%court}} ct', 'ct.id = j.court_id')
-            ->andWhere(['or', ['jca.is_deleted' => 0], ['jca.is_deleted' => null]])
-            ->orderBy(['jca.id' => SORT_DESC])
-            ->all();
+        $rows = Yii::$app->db->createCommand(
+            "SELECT af.id, af.judiciary_id, af.note, af.action_date,
+                    af.judiciary_number, af.year, af.contract_id,
+                    af.customer_name, af.action_name,
+                    af.lawyer_name, af.court_name,
+                    u.username AS user_name
+             FROM {{%vw_judiciary_actions_feed}} af
+             LEFT JOIN {{%user}} u ON u.id = af.created_by
+             WHERE (af.action_is_deleted = 0 OR af.action_is_deleted IS NULL)
+             ORDER BY af.id DESC"
+        )->queryAll();
 
         $exportRows = [];
         foreach ($rows as $r) {
@@ -1076,7 +1053,7 @@ class JudiciaryController extends Controller
             $year = $r['year'] ?: '';
             $exportRows[] = [
                 'case'    => $num ? "{$num}/{$year}" : '#' . $r['judiciary_id'],
-                'customer' => $r['cust_name'] ?: '—',
+                'customer' => $r['customer_name'] ?: '—',
                 'action'  => $r['action_name'] ?: '—',
                 'note'    => $r['note'] ?: '—',
                 'creator' => $r['user_name'] ?: '—',
@@ -1589,36 +1566,30 @@ class JudiciaryController extends Controller
             return $this->processBatchCreate($contractIds, $request);
         }
 
-        // ─── تحميل بيانات العقود لعرض المعالج ───
-        $contracts = Contracts::find()
-            ->where(['id' => $contractIds])
-            ->with(['customers'])
-            ->all();
-
-        // استبعاد العقود التي لها قضايا مسبقة
         $existingCases = Judiciary::find()
             ->select('contract_id')
             ->where(['contract_id' => $contractIds, 'is_deleted' => 0])
             ->column();
 
+        $validIds = array_diff($contractIds, $existingCases);
+
         $contractsData = [];
-        foreach ($contracts as $c) {
-            if (in_array($c->id, $existingCases)) continue;
-
-            $paid = ContractInstallment::find()
-                ->where(['contract_id' => $c->id])
-                ->sum('amount') ?? 0;
-            $remaining = $c->total_value - $paid;
-            $customerNames = implode('، ', \yii\helpers\ArrayHelper::map($c->customers, 'id', 'name'));
-
-            $contractsData[] = [
-                'id'            => $c->id,
-                'customer'      => $customerNames ?: '—',
-                'total'         => (float)$c->total_value,
-                'paid'          => (float)$paid,
-                'remaining'     => round($remaining, 2),
-                'sale_date'     => $c->Date_of_sale,
-            ];
+        if (!empty($validIds)) {
+            $idList = implode(',', array_map('intval', $validIds));
+            $rows = Yii::$app->db->createCommand(
+                "SELECT id, total_value, Date_of_sale, client_names, total_paid, remaining_balance
+                 FROM {{%vw_contracts_overview}} WHERE id IN ($idList)"
+            )->queryAll();
+            foreach ($rows as $r) {
+                $contractsData[] = [
+                    'id'            => $r['id'],
+                    'customer'      => $r['client_names'] ?: '—',
+                    'total'         => (float)$r['total_value'],
+                    'paid'          => (float)$r['total_paid'],
+                    'remaining'     => round((float)$r['remaining_balance'], 2),
+                    'sale_date'     => $r['Date_of_sale'],
+                ];
+            }
         }
 
         if (empty($contractsData)) {

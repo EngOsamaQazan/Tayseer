@@ -220,9 +220,10 @@ $end   = $begin + count($models) - 1;
                         $calc = new ContractCalculations($cid);
                         $deserved = $calc->deservedAmount();
 
-                        $customerFullNames = implode('، ', array_map(fn($c) => $c->name, $m->customers)) ?: '—';
-                        $customerNames = implode('، ', array_map(fn($c) => NameHelper::short($c->name), $m->customers)) ?: '—';
-                        $customerIdNumbers = array_filter(array_map(fn($c) => $c->id_number, $m->customers));
+                        $nm = ($namesMap ?? [])[$cid] ?? null;
+                        $customerFullNames = $nm ? ($nm['client_names'] ?: '—') : '—';
+                        $customerNames = $nm ? implode('، ', array_map([NameHelper::class, 'short'], explode('، ', $nm['client_names'] ?? ''))) ?: '—' : '—';
+                        $customerIdNumbers = [];
                         $sellerName = isset($m->seller->name) ? NameHelper::short($m->seller->name) : '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
                     ?>

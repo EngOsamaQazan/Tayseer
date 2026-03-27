@@ -157,6 +157,18 @@ class FollowUpReportController extends Controller
         $dataCount = $dataProvider->getTotalCount();
 
         $db = Yii::$app->db;
+
+        $models = $dataProvider->getModels();
+        $contractIds = \yii\helpers\ArrayHelper::getColumn($models, 'id');
+        $namesMap = [];
+        if (!empty($contractIds)) {
+            $idList = implode(',', array_map('intval', $contractIds));
+            $namesMap = \yii\helpers\ArrayHelper::index(
+                $db->createCommand("SELECT contract_id, client_names, client_phone FROM {{%vw_contract_customers_names}} WHERE contract_id IN ($idList)")->queryAll(),
+                'contract_id'
+            );
+        }
+
         $cacheKey = 'followup_card_stats_' . date('Y-m-d-H');
         $cardStats = Yii::$app->cache->getOrSet($cacheKey, function () use ($db) {
             return $db->createCommand("
@@ -173,6 +185,7 @@ class FollowUpReportController extends Controller
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount' => $dataCount,
+            'namesMap' => $namesMap,
             'activeCount' => (int)($cardStats['active_count'] ?? 0),
             'neverFollowedCount' => (int)($cardStats['never_followed_count'] ?? 0),
             'overduePromiseCount' => (int)($cardStats['overdue_promise_count'] ?? 0),
@@ -191,10 +204,22 @@ class FollowUpReportController extends Controller
         $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchNoContactCount(Yii::$app->request->queryParams);
 
+        $models = $dataProvider->getModels();
+        $contractIds = \yii\helpers\ArrayHelper::getColumn($models, 'id');
+        $namesMap = [];
+        if (!empty($contractIds)) {
+            $idList = implode(',', array_map('intval', $contractIds));
+            $namesMap = \yii\helpers\ArrayHelper::index(
+                Yii::$app->db->createCommand("SELECT contract_id, client_names, client_phone FROM {{%vw_contract_customers_names}} WHERE contract_id IN ($idList)")->queryAll(),
+                'contract_id'
+            );
+        }
+
         return $this->render('no-contact', [
             'searchModel' => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount' => $dataCount,
+            'namesMap' => $namesMap,
         ]);
     }
 
@@ -443,15 +468,11 @@ class FollowUpReportController extends Controller
         $contractIds = array_column($rows, 'id');
         $customersByContract = [];
         if (!empty($contractIds)) {
-            $custData = (new \yii\db\Query())
-                ->select(["cc.contract_id", "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
-                ->from('{{%contracts_customers}} cc')
-                ->innerJoin('{{%customers}} c', 'c.id = cc.customer_id')
-                ->where(['cc.contract_id' => $contractIds])
-                ->andWhere(['cc.customer_type' => 'client'])
-                ->groupBy('cc.contract_id')
-                ->all();
-            $customersByContract = \yii\helpers\ArrayHelper::map($custData, 'contract_id', 'names');
+            $idList = implode(',', array_map('intval', $contractIds));
+            $customersByContract = \yii\helpers\ArrayHelper::map(
+                Yii::$app->db->createCommand("SELECT contract_id, client_names FROM {{%vw_contract_customers_names}} WHERE contract_id IN ($idList)")->queryAll(),
+                'contract_id', 'client_names'
+            );
         }
 
         $statusMap = [
@@ -488,94 +509,61 @@ class FollowUpReportController extends Controller
     /**
      * Export no-contact report to Excel.
      */
+    private function noContactExportKeys()
+    {
+        $statusLabels = [
+            'active' => 'نشط', 'judiciary' => 'قضاء',
+            'legal_department' => 'قانوني', 'settlement' => 'تسوية',
+            'finished' => 'منتهي', 'canceled' => 'ملغي',
+        ];
+        $namesCache = [];
+        return [
+            'id',
+            function ($model) use (&$namesCache) {
+                $cid = $model->id;
+                if (!isset($namesCache[$cid])) {
+                    $namesCache[$cid] = Yii::$app->db->createCommand(
+                        "SELECT client_names FROM {{%vw_contract_customers_names}} WHERE contract_id = :id", [':id' => $cid]
+                    )->queryScalar() ?: '—';
+                }
+                return $namesCache[$cid];
+            },
+            function ($model) { return $model->seller ? $model->seller->name : '—'; },
+            'Date_of_sale',
+            'total_value',
+            'total_paid',
+            function ($model) { return max(0, ($model->total_value ?? 0) - ($model->total_paid ?? 0)); },
+            function ($model) use ($statusLabels) { return $statusLabels[$model->status] ?? $model->status; },
+            function ($model) { return $model->date_time ? date('Y-m-d', strtotime($model->date_time)) : 'لا يوجد'; },
+            function ($model) { return $model->followedBy ? $model->followedBy->username : '—'; },
+        ];
+    }
+
     public function actionExportNoContactExcel()
     {
         $searchModel = new FollowUpReportSearch();
         $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
 
-        $statusLabels = [
-            'active' => 'نشط', 'judiciary' => 'قضاء',
-            'legal_department' => 'قانوني', 'settlement' => 'تسوية',
-            'finished' => 'منتهي', 'canceled' => 'ملغي',
-        ];
-
         return $this->exportData($dataProvider, [
             'title' => 'عقود بدون أرقام تواصل',
             'filename' => 'no_contact_contracts',
             'headers' => ['#', 'العميل', 'البائع', 'تاريخ البيع', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'آخر متابعة', 'المتابع'],
-            'keys' => [
-                'id',
-                function ($model) {
-                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
-                    return implode('، ', $names) ?: '—';
-                },
-                function ($model) {
-                    return $model->seller ? $model->seller->name : '—';
-                },
-                'Date_of_sale',
-                'total_value',
-                'total_paid',
-                function ($model) {
-                    return max(0, ($model->total_value ?? 0) - ($model->total_paid ?? 0));
-                },
-                function ($model) use ($statusLabels) {
-                    return $statusLabels[$model->status] ?? $model->status;
-                },
-                function ($model) {
-                    return $model->date_time ? date('Y-m-d', strtotime($model->date_time)) : 'لا يوجد';
-                },
-                function ($model) {
-                    return $model->followedBy ? $model->followedBy->username : '—';
-                },
-            ],
+            'keys' => $this->noContactExportKeys(),
             'widths' => [10, 22, 16, 14, 14, 14, 14, 14, 14, 16],
             'orientation' => 'L',
         ], 'excel');
     }
 
-    /**
-     * Export no-contact report to PDF.
-     */
     public function actionExportNoContactPdf()
     {
         $searchModel = new FollowUpReportSearch();
         $dataProvider = $searchModel->searchNoContact(Yii::$app->request->queryParams);
 
-        $statusLabels = [
-            'active' => 'نشط', 'judiciary' => 'قضاء',
-            'legal_department' => 'قانوني', 'settlement' => 'تسوية',
-            'finished' => 'منتهي', 'canceled' => 'ملغي',
-        ];
-
         return $this->exportData($dataProvider, [
             'title' => 'عقود بدون أرقام تواصل',
             'filename' => 'no_contact_contracts',
             'headers' => ['#', 'العميل', 'البائع', 'تاريخ البيع', 'الإجمالي', 'المدفوع', 'المتبقي', 'الحالة', 'آخر متابعة', 'المتابع'],
-            'keys' => [
-                'id',
-                function ($model) {
-                    $names = \yii\helpers\ArrayHelper::map($model->customers, 'id', 'name');
-                    return implode('، ', $names) ?: '—';
-                },
-                function ($model) {
-                    return $model->seller ? $model->seller->name : '—';
-                },
-                'Date_of_sale',
-                'total_value',
-                'total_paid',
-                function ($model) {
-                    return max(0, ($model->total_value ?? 0) - ($model->total_paid ?? 0));
-                },
-                function ($model) use ($statusLabels) {
-                    return $statusLabels[$model->status] ?? $model->status;
-                },
-                function ($model) {
-                    return $model->date_time ? date('Y-m-d', strtotime($model->date_time)) : 'لا يوجد';
-                },
-                function ($model) {
-                    return $model->followedBy ? $model->followedBy->username : '—';
-                },
-            ],
+            'keys' => $this->noContactExportKeys(),
             'orientation' => 'L',
         ], 'pdf');
     }

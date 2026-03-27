@@ -243,8 +243,9 @@ $end   = $begin + count($models) - 1;
                     <?php
                     ?>
                     <?php foreach ($models as $m):
-                        $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
-                        $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
+                        $nm = ($namesMap ?? [])[$m->id] ?? null;
+                        $customerNamesFull = $nm ? ($nm['client_names'] ?: '—') : '—';
+                        $customerNamesShort = $nm ? implode('، ', array_map([NameHelper::class, 'short'], array_filter(explode('، ', $nm['client_names'] ?? '')))) ?: '—' : '—';
                         $sellerName = $m->seller->name ?? '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
 

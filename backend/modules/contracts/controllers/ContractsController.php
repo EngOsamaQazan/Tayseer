@@ -168,7 +168,7 @@ class ContractsController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $dataCount = $searchModel->searchcounter(Yii::$app->request->queryParams);
 
-        $dataProvider->query->with(['customers', 'seller', 'followedBy']);
+        $dataProvider->query->with(['seller', 'followedBy']);
 
         $models = $dataProvider->getModels();
         $contractIds = ArrayHelper::getColumn($models, 'id');
@@ -176,6 +176,16 @@ class ContractsController extends Controller
         $batchData = ContractCalculations::batchPreload($contractIds);
 
         $db = Yii::$app->db;
+
+        $namesMap = [];
+        if (!empty($contractIds)) {
+            $idList = implode(',', array_map('intval', $contractIds));
+            $namesMap = ArrayHelper::index(
+                $db->createCommand("SELECT contract_id, client_names, all_party_names, client_phone FROM {{%vw_contract_customers_names}} WHERE contract_id IN ($idList)")->queryAll(),
+                'contract_id'
+            );
+        }
+
         $statusCounts = ArrayHelper::map(
             $db->createCommand("SELECT status, COUNT(*) AS cnt FROM os_contracts WHERE is_deleted=0 OR is_deleted IS NULL GROUP BY status")->queryAll(),
             'status', 'cnt'
@@ -195,6 +205,7 @@ class ContractsController extends Controller
             'dataCount'    => $dataCount,
             'batchData'    => $batchData,
             'statusCounts' => $statusCounts,
+            'namesMap'     => $namesMap,
         ]);
     }
 
@@ -215,12 +226,19 @@ class ContractsController extends Controller
         $models = $dataProvider->getModels();
         $ids = ArrayHelper::getColumn($models, 'id');
         $balanceMap = [];
+        $namesMap = [];
         if (!empty($ids)) {
             $idList = implode(',', array_map('intval', $ids));
             $balanceMap = ArrayHelper::index(
                 Yii::$app->db->createCommand(
                     "SELECT contract_id, total_value, total_paid, total_expenses, total_lawyer_cost, remaining_balance
                      FROM {{%vw_contract_balance}} WHERE contract_id IN ($idList)"
+                )->queryAll(),
+                'contract_id'
+            );
+            $namesMap = ArrayHelper::index(
+                Yii::$app->db->createCommand(
+                    "SELECT contract_id, client_names, guarantor_names, all_party_names FROM {{%vw_contract_customers_names}} WHERE contract_id IN ($idList)"
                 )->queryAll(),
                 'contract_id'
             );
@@ -235,6 +253,7 @@ class ContractsController extends Controller
             'dataProvider' => $dataProvider,
             'dataCount'    => $dataCount,
             'balanceMap'   => $balanceMap,
+            'namesMap'     => $namesMap,
         ]);
     }
 
@@ -338,40 +357,9 @@ class ContractsController extends Controller
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $query = $dataProvider->query;
         $query->with = [];
-
-        $query->leftJoin('{{%user}} _sl', '_sl.id = os_contracts.seller_id');
-        $query->leftJoin('{{%user}} _fu', '_fu.id = os_contracts.followed_by');
-        $query->select([
-            'os_contracts.id', 'os_contracts.total_value', 'os_contracts.Date_of_sale',
-            'os_contracts.status', 'os_contracts.seller_id', 'os_contracts.followed_by',
-            'seller_name' => '_sl.username', 'follower_name' => '_fu.username',
-        ]);
         $dataProvider->pagination = false;
-        $rows = $query->asArray()->all();
-
+        $rows = $query->select(['os_contracts.id'])->asArray()->all();
         $contractIds = array_column($rows, 'id');
-        $balanceMap = [];
-        $customersByContract = [];
-        if (!empty($contractIds)) {
-            $idList = implode(',', array_map('intval', $contractIds));
-            $balanceMap = ArrayHelper::index(
-                Yii::$app->db->createCommand(
-                    "SELECT contract_id, total_value, total_paid, total_expenses, total_lawyer_cost, total_adjustments, remaining_balance
-                     FROM {{%vw_contract_balance}} WHERE contract_id IN ($idList)"
-                )->queryAll(),
-                'contract_id'
-            );
-
-            $custData = (new \yii\db\Query())
-                ->select(["cc.contract_id", "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
-                ->from('{{%contracts_customers}} cc')
-                ->innerJoin('{{%customers}} c', 'c.id = cc.customer_id')
-                ->where(['cc.contract_id' => $contractIds])
-                ->andWhere(['cc.customer_type' => 'client'])
-                ->groupBy('cc.contract_id')
-                ->all();
-            $customersByContract = ArrayHelper::map($custData, 'contract_id', 'names');
-        }
 
         $statusLabels = [
             'active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء',
@@ -380,24 +368,33 @@ class ContractsController extends Controller
         ];
 
         $exportRows = [];
-        foreach ($rows as $r) {
-            $id = $r['id'];
-            $b = $balanceMap[$id] ?? null;
-            $totalDebt = $b ? (float)$b['total_value'] + (float)$b['total_expenses'] + (float)$b['total_lawyer_cost'] : (float)$r['total_value'];
-            $remaining = $b ? (float)$b['remaining_balance'] : 0;
-            $paid = $b ? (float)$b['total_paid'] : 0;
+        if (!empty($contractIds)) {
+            $idList = implode(',', array_map('intval', $contractIds));
+            $overviewRows = Yii::$app->db->createCommand(
+                "SELECT v.id, v.total_value, v.Date_of_sale, v.status,
+                        v.seller_name, v.client_names,
+                        v.total_paid, v.total_expenses, v.total_lawyer_cost, v.remaining_balance,
+                        fu.username AS follower_name
+                 FROM {{%vw_contracts_overview}} v
+                 LEFT JOIN {{%user}} fu ON fu.id = v.followed_by
+                 WHERE v.id IN ($idList)
+                 ORDER BY v.id DESC"
+            )->queryAll();
 
-            $exportRows[] = [
-                'id'        => $id,
-                'seller'    => $r['seller_name'] ?: '—',
-                'customer'  => $customersByContract[$id] ?? '—',
-                'deserved'  => $paid,
-                'date'      => $r['Date_of_sale'] ?: '—',
-                'total'     => $totalDebt,
-                'status'    => $statusLabels[$r['status']] ?? $r['status'],
-                'remaining' => $remaining,
-                'follower'  => $r['follower_name'] ?: '—',
-            ];
+            foreach ($overviewRows as $r) {
+                $totalDebt = (float)$r['total_value'] + (float)$r['total_expenses'] + (float)$r['total_lawyer_cost'];
+                $exportRows[] = [
+                    'id'        => $r['id'],
+                    'seller'    => $r['seller_name'] ?: '—',
+                    'customer'  => $r['client_names'] ?: '—',
+                    'deserved'  => (float)$r['total_paid'],
+                    'date'      => $r['Date_of_sale'] ?: '—',
+                    'total'     => $totalDebt,
+                    'status'    => $statusLabels[$r['status']] ?? $r['status'],
+                    'remaining' => (float)$r['remaining_balance'],
+                    'follower'  => $r['follower_name'] ?: '—',
+                ];
+            }
         }
 
         return $this->exportArrayData($exportRows, [
