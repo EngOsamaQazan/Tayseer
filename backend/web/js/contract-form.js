@@ -481,6 +481,101 @@ var ContractForm = (function () {
     /* ══════════════════════════════════════════════════
        Init — main entry point
        ══════════════════════════════════════════════════ */
+    /* ══════════════════════════════════════════════════
+       Validation Toast — mobile-friendly error feedback
+       ══════════════════════════════════════════════════ */
+    function showToast(msg, type) {
+        var old = document.getElementById('cf-toast');
+        if (old) old.remove();
+
+        var t = document.createElement('div');
+        t.id = 'cf-toast';
+        t.className = 'cf-toast ' + (type === 'ok' ? 'cf-toast-ok' : 'cf-toast-err');
+        t.innerHTML = '<i class="fa ' + (type === 'ok' ? 'fa-check-circle' : 'fa-exclamation-triangle') + '"></i> <span>' + msg + '</span>';
+
+        var cf = document.querySelector('.cf');
+        if (cf) cf.appendChild(t);
+
+        setTimeout(function () {
+            t.classList.add('cf-toast-hide');
+            setTimeout(function () { t.remove(); }, 400);
+        }, 6000);
+    }
+
+    function shakeElement(el) {
+        if (!el) return;
+        el.classList.add('cf-shake');
+        setTimeout(function () { el.classList.remove('cf-shake'); }, 700);
+    }
+
+    /* ══════════════════════════════════════════════════
+       Form submission handlers
+       ══════════════════════════════════════════════════ */
+    function initFormHandlers() {
+        var $form = $('#contract-form');
+        if (!$form.length) return;
+
+        $form.on('afterValidate', function (e, messages, errorAttributes) {
+            if (errorAttributes.length > 0) {
+                var labels = [];
+                for (var i = 0; i < errorAttributes.length; i++) {
+                    var lbl = $form.find('[for="' + errorAttributes[i].input + '"]').text()
+                           || errorAttributes[i].input;
+                    labels.push(lbl.replace(/\s*\*\s*$/, ''));
+                }
+                showToast('\u064A\u062C\u0628 \u062A\u0639\u0628\u0626\u0629: ' + labels.join('\u060C '), 'err');
+
+                var firstErr = $form.find('.has-error').first();
+                if (firstErr.length) {
+                    firstErr[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    shakeElement(firstErr[0]);
+                }
+            }
+        });
+
+        $form.on('beforeSubmit', function () {
+            var typeEl = document.getElementById('cf-type');
+            var type = typeEl ? typeEl.value : 'normal';
+            var hasCustomer = false;
+
+            if (type === 'solidarity') {
+                hasCustomer = document.querySelectorAll('#cf-sol-chips .cf-chip').length > 0;
+            } else {
+                hasCustomer = document.querySelectorAll('#cf-cust-chips .cf-chip').length > 0;
+            }
+
+            if (!hasCustomer) {
+                showToast('\u064A\u062C\u0628 \u0627\u062E\u062A\u064A\u0627\u0631 \u0627\u0644\u0639\u0645\u064A\u0644 \u0623\u0648\u0644\u0627\u064B', 'err');
+                var sec = document.getElementById('cf-sec-customer');
+                if (sec) {
+                    sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    shakeElement(sec);
+                }
+                return false;
+            }
+
+            var tv = parseFloat((document.getElementById('cf-tv') || {}).value) || 0;
+            if (tv <= 0) {
+                showToast('\u064A\u062C\u0628 \u062A\u062D\u062F\u064A\u062F \u0625\u062C\u0645\u0627\u0644\u064A \u0627\u0644\u0639\u0642\u062F', 'err');
+                var fin = document.getElementById('cf-sec-finance');
+                if (fin) {
+                    fin.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    shakeElement(fin);
+                }
+                return false;
+            }
+
+            $form.find('button[type=submit]').each(function () {
+                var $btn = $(this);
+                $btn.prop('disabled', true);
+                $btn.data('orig', $btn.html());
+                $btn.html('<i class="fa fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');
+            });
+
+            return true;
+        });
+    }
+
     function init(cfg) {
         _cfg = cfg;
 
@@ -528,6 +623,7 @@ var ContractForm = (function () {
         initManualAdd();
         initCalculator();
         initDirectDeductionListeners();
+        initFormHandlers();
 
         if (cfg.existingCustomers && cfg.existingCustomers.length === 1 && cfg.type !== 'solidarity') {
             loadCustomerInfo(cfg.existingCustomers[0]);

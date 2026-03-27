@@ -26,8 +26,16 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contract-form.js', ['de
 ?>
 
 <div class="cf">
+<?php
+$flashes = Yii::$app->session->getAllFlashes(true);
+foreach ($flashes as $type => $msg): ?>
+    <div class="cf-flash cf-flash-<?= $type === 'error' ? 'err' : ($type === 'success' ? 'ok' : 'warn') ?>">
+        <i class="fa fa-<?= $type === 'error' ? 'exclamation-circle' : ($type === 'success' ? 'check-circle' : 'info-circle') ?>"></i>
+        <?= Html::encode(is_array($msg) ? implode(' ', $msg) : $msg) ?>
+    </div>
+<?php endforeach; ?>
 <?php $form = ActiveForm::begin(['id' => 'contract-form', 'options' => ['autocomplete' => 'off']]) ?>
-<?= Html::activeHiddenInput($model, 'is_legal_department', ['id' => 'cf-is-legal']) ?>
+<?= Html::hiddenInput('Contracts[is_legal_department]', $model->is_legal_department ?? 0, ['id' => 'cf-is-legal']) ?>
 
 <!-- ═══ Section Nav ═══ -->
 <nav class="cf-nav">

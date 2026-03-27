@@ -128,18 +128,15 @@ class Contracts extends \yii\db\ActiveRecord
             //['monthly_installment_value', 'compare', 'compareAttribute' => 'total_value', 'operator' => '<', 'enableClientValidation' => true],
             ['first_installment_date', 'compare', 'compareAttribute' => 'Date_of_sale', 'operator' => '>', 'enableClientValidation' => true],
             ['customers_ids', 'required',
+                'when' => function ($model) { return $model->type === 'solidarity'; },
                 'whenClient' => "function(attribute, value) {
-                                     return  $(\"[name='Contracts[type]']:checked\").val()=='solidarity';
-                                }"
+                    return $(\"[name='Contracts[type]']\").val()=='solidarity';
+                }"
             ],
-//            [['customer_id', 'guarantors_ids'], 'required',
-//                'whenClient' => "function(attribute, value) {
-//                        return  $(\"[name='Contracts[type]']:checked\").val()=='normal';
-//                }"
-//            ]
             [['customer_id'], 'required',
+                'when' => function ($model) { return $model->type !== 'solidarity'; },
                 'whenClient' => "function(attribute, value) {
-                        return  $(\"[name='Contracts[type]']:checked\").val()=='normal';
+                    return $(\"[name='Contracts[type]']\").val()!='solidarity';
                 }"
             ],
             [['from_date', 'to_date', 'job_title'], 'string'],
