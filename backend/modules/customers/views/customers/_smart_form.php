@@ -705,7 +705,7 @@ if (!$isNew) {
             <?php
             $contractsCount = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers WHERE customer_id=:cid", [':cid' => $model->id])->queryScalar();
             $activeContracts = (int) $db->createCommand("SELECT COUNT(*) FROM os_contracts_customers cc INNER JOIN os_contracts c ON c.id=cc.contract_id WHERE cc.customer_id=:cid AND c.status='active'", [':cid' => $model->id])->queryScalar();
-            $totalPaid = (float) $db->createCommand("SELECT COALESCE(SUM(i.amount),0) FROM os_income i INNER JOIN os_contracts_customers cc ON cc.contract_id=i.contract_id WHERE cc.customer_id=:cid", [':cid' => $model->id])->queryScalar();
+            $totalPaid = (float) $db->createCommand("SELECT COALESCE(SUM(v.total_paid),0) FROM {{%vw_contract_balance}} v INNER JOIN os_contracts_customers cc ON cc.contract_id=v.contract_id WHERE cc.customer_id=:cid", [':cid' => $model->id])->queryScalar();
             $lastFollowUp = $db->createCommand("SELECT MAX(f.date_time) FROM os_follow_up f INNER JOIN os_contracts_customers cc ON cc.contract_id=f.contract_id WHERE cc.customer_id=:cid", [':cid' => $model->id])->queryScalar();
             $existingImages = (int) $db->createCommand("SELECT COUNT(*) FROM os_ImageManager WHERE contractId=:cid AND groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9')", [':cid' => $model->id])->queryScalar();
             ?>

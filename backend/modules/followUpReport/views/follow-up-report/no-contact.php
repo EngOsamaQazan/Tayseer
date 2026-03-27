@@ -248,12 +248,9 @@ $end   = $begin + count($models) - 1;
                         $sellerName = $m->seller->name ?? '—';
                         $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
 
-                        /* Calculations */
-                        $calc = new ContractCalculations($m->id);
-                        $deserved = $calc->deservedAmount() ?? 0;
-
-                        $paid = ContractInstallment::find()->where(['contract_id' => $m->id])->sum('amount') ?? 0;
-                        $remaining = ($m->total_value ?? 0) - $paid;
+                        $vb = ContractCalculations::fromView($m->id);
+                        $deserved = $vb ? $vb['remaining'] : 0;
+                        $remaining = $vb ? $vb['remaining'] : 0;
                     ?>
                     <tr data-id="<?= $m->id ?>">
                         <td class="ct-td-id" data-label="#"><?= $m->id ?></td>

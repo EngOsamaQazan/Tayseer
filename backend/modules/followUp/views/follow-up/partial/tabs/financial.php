@@ -94,10 +94,8 @@ use backend\modules\contractInstallment\models\ContractInstallment;
 
         <td style="border:  1px  solid black ">
             <?php
-            $paid_amount = ContractInstallment::find()
-                ->andWhere(['contract_id' => $contractCalculations->contract_model->id])
-                ->sum('amount');
-            $paid_amount = ($paid_amount > 0) ? $paid_amount : 0;
+            $_vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractCalculations->contract_model->id);
+            $paid_amount = $_vb ? $_vb['paid'] : 0;
             echo $paid_amount ?>
         </td>
 

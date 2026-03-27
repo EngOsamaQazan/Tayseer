@@ -204,21 +204,8 @@ SCRIPT
 <?php
 $totle_value = new LoanContract();
 $totle_value = $totle_value->findContract($contract_id);
-if ($totle_value->status == 'judiciary') {
-    if ($totle_value->is_loan == 1) {
-        $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $totle_value->id])->where(['>=', 'created_at', $totle_value->created_at])->orderBy(['contract_id' => SORT_DESC])->one();
-    } else {
-        $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $totle_value->id])->orderBy(['contract_id' => SORT_DESC])->one();
-    }
-    if (!empty($cost)) {
-        $total_amount = $totle_value->total_value + $cost->case_cost + $cost->lawyer_cost;
-    } else {
-        $total_amount = $totle_value->total_value;
-    }
-
-} else {
-    $total_amount = $totle_value->total_value;
-}
+$vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contract_id);
+$total_amount = $vb ? $vb['totalDebt'] : (float)$totle_value->total_value;
 if (!$model->isNewRecord) {
     $amount_change_code = "
 let id = $(this).attr('model-id');

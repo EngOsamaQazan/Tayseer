@@ -100,35 +100,22 @@ class SmsController extends Controller
             foreach ($contract_models as $batchModels) {
                 foreach ($batchModels as $contract_model) {
                     $modelf = new LoanContract;
-                    $judicary_contract = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contract_model->id])->all();
-
                     $contract_model = $modelf->findContract($contract_model->id);
-                    $total = $contract_model->total_value;
+
+                    $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contract_model->id);
+                    if ($vb) {
+                        $contract_model->total_value = $vb['totalDebt'];
+                    }
+
                     $d1 = new \DateTime($contract_model->first_installment_date);
                     $d2 = new \DateTime(date('Y-m-d'));
                     $interval = $d2->diff($d1);
-                    if (!empty($judicary_contract)) {
-                        $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contract_model->id])->all();
-
-                        foreach ($cost as $cost) {
-                            $totle_value = $contract_model->total_value + $cost->case_cost + $cost->lawyer_cost;
-                            $contract_model->total_value = $totle_value;
-                        }
-                    }
                     $interval = $interval->y * 12 + $interval->m;
 
                     $batches_should_be_paid_count = $interval + 1;
-                    $amount_should_be_paid = (($batches_should_be_paid_count * $contract_model->monthly_installment_value) < $contract_model->total_value) ? $batches_should_be_paid_count * $contract_model->monthly_installment_value : $contract_model->total_value;
-
-                    if ($contract_model->is_loan == 1) {
-                        $paid_amount = ContractInstallment::find()
-                            ->andWhere(['contract_id' => $contract_model->id])->andwhere(['>', 'date', $contract_model->loan_scheduling_new_instalment_date])->sum('amount');
-
-                    } else {
-                        $paid_amount = ContractInstallment::find()
-                            ->andWhere(['contract_id' => $contract_model->id])
-                            ->sum('amount');
-                    }
+                    $effectiveInst = $vb ? $vb['effectiveInstallment'] : $contract_model->monthly_installment_value;
+                    $amount_should_be_paid = min($batches_should_be_paid_count * $effectiveInst, $contract_model->total_value);
+                    $paid_amount = $vb ? $vb['paid'] : 0;
                     $deserved_amount = (date('Y-m-d') >= $contract_model->first_installment_date) ? $amount_should_be_paid - $paid_amount : 0;
 
                     if ($model->type == 1) {

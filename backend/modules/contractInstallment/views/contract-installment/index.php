@@ -22,44 +22,29 @@ use common\helper\LoanContract;
 $this->title = Yii::t('app', 'أقساط العقد رقم') . ': ' . $contract_id;
 $this->params['breadcrumbs'][] = $this->title;
 
-/* === حسابات مالية === */
+/* === حسابات مالية — من vw_contract_balance === */
 $contractHelper = new LoanContract();
 $contract_model = $contractHelper->findContract($contract_id);
 
-// حساب المدة بالأشهر من تاريخ أول قسط حتى اليوم
-$startDate = new DateTime($contract_model->first_installment_date);
-$today = new DateTime(date('Y-m-d'));
-$interval = $today->diff($startDate);
-$monthsDiff = ($interval->y * 12) + $interval->m;
-
-// إضافة تكاليف القضاء إن وجدت
-if ($contract_model->status == 'judiciary') {
-    $costs = \backend\modules\judiciary\models\Judiciary::find()
-        ->where(['contract_id' => $contract_model->id])
-        ->all();
-    foreach ($costs as $cost) {
-        $contract_model->total_value += $cost->case_cost + $cost->lawyer_cost;
-    }
-}
-
-// حساب عدد الأقساط المستحقة والمبلغ المستحق
-$batchesShouldBePaid = $monthsDiff + 1;
-$amountShouldBePaid = min(
-    $batchesShouldBePaid * $contract_model->monthly_installment_value,
-    $contract_model->total_value
-);
-
-// حساب المبلغ المدفوع
-if ($contract_model->is_loan == 1) {
-    $paidAmount = ContractInstallment::find()
-        ->where(['contract_id' => $contract_model->id])
-        ->andWhere(['>', 'date', $contract_model->loan_scheduling_new_instalment_date])
-        ->sum('amount') ?? 0;
+$vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contract_id);
+if ($vb) {
+    $contract_model->total_value = $vb['totalDebt'];
+    $paidAmount = $vb['paid'];
 } else {
     $paidAmount = ContractInstallment::find()
         ->where(['contract_id' => $contract_model->id])
         ->sum('amount') ?? 0;
 }
+
+$startDate = new DateTime($contract_model->first_installment_date);
+$today = new DateTime(date('Y-m-d'));
+$interval = $today->diff($startDate);
+$monthsDiff = ($interval->y * 12) + $interval->m;
+$batchesShouldBePaid = $monthsDiff + 1;
+$amountShouldBePaid = min(
+    $batchesShouldBePaid * ($vb ? $vb['effectiveInstallment'] : $contract_model->monthly_installment_value),
+    $contract_model->total_value
+);
 ?>
 
 <div class="contract-installment-index">

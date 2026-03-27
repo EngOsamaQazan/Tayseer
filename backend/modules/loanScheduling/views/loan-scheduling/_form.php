@@ -26,28 +26,19 @@ $_netDebt = 0;
 if (!empty($model->contract_id)) {
     $_contractObj = \backend\modules\contracts\models\Contracts::findOne($model->contract_id);
     if ($_contractObj) {
-        $_totalValue = (float)($_contractObj->total_value ?? 0);
-
-        // أتعاب المحاماة
-        $_judiciaries = \backend\modules\judiciary\models\Judiciary::find()
-            ->where(['contract_id' => $model->contract_id, 'is_deleted' => 0])->all();
-        foreach ($_judiciaries as $j) {
-            $_lawyerCost += (float)($j->lawyer_cost ?? 0);
+        $_vbLoan = \backend\modules\followUp\helper\ContractCalculations::fromView($model->contract_id);
+        if ($_vbLoan) {
+            $_totalValue = $_vbLoan['contractValue'];
+            $_lawyerCost = $_vbLoan['lawyerCost'];
+            $_allExpenses = $_vbLoan['expenses'];
+            $_paidAmount = $_vbLoan['paid'];
+            $_autoTotal = $_vbLoan['totalDebt'];
+            $_netDebt = $_vbLoan['remaining'];
+        } else {
+            $_totalValue = (float)($_contractObj->total_value ?? 0);
+            $_autoTotal = $_totalValue;
+            $_netDebt = 0;
         }
-
-        // مجموع كل مصاريف Outcome على العقد (جميع التصنيفات)
-        $_allExpenses = (float)((new \yii\db\Query())
-            ->from('os_expenses')
-            ->where(['contract_id' => $model->contract_id])
-            ->sum('amount') ?? 0);
-
-        // المدفوع (كل حركات Income)
-        $_paidAmount = (float)(\backend\modules\contractInstallment\models\ContractInstallment::find()
-            ->where(['contract_id' => $model->contract_id])
-            ->sum('amount') ?? 0);
-
-        $_autoTotal = $_totalValue + $_allExpenses + $_lawyerCost;
-        $_netDebt = max(0, $_autoTotal - $_paidAmount);
     }
 }
 ?>

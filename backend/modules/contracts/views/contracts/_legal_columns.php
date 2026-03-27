@@ -33,25 +33,8 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'total_value',
         'value' => function ($model) {
-            $totle_value = new LoanContract();
-            $totle_value = $totle_value->findContract($model->id);
-            if( $totle_value->status == 'judiciary'){
-                if ($totle_value->is_loan == 1) {
-                    $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $totle_value->id])->where(['>=', 'created_at', $totle_value->created_at])->orderBy(['contract_id' => SORT_DESC])->one();
-
-                } else {
-                    $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $totle_value->id])->orderBy(['contract_id' => SORT_DESC])->one();
-                }
-                if(!empty($cost)){
-                    $totle_value = $totle_value->total_value + $cost->case_cost + $cost->lawyer_cost;
-                    return $totle_value;
-                }
-                return $totle_value->total_value;
-
-            }
-            return $totle_value->total_value;
-
-
+            $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($model->id);
+            return $vb ? $vb['totalDebt'] : (float)$model->total_value;
         }
     ],
     [

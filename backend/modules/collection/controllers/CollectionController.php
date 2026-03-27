@@ -139,24 +139,10 @@ class CollectionController extends Controller
     {
         $request = Yii::$app->request;
         $model = new Collection();
-        $totle_value_price = 0;
         $totle_value = new LoanContract();
         $totle_value = $totle_value->findContract($contract_id);
-        if ($totle_value->status == 'judiciary') {
-            if ($totle_value->is_loan == 1) {
-                $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $totle_value->id])->where(['>=', 'created_at', $totle_value->created_at])->orderBy(['contract_id' => SORT_DESC])->one();
-            } else {
-                $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $totle_value->id])->orderBy(['contract_id' => SORT_DESC])->one();
-            }
-            if (!empty($cost)) {
-                $totle_value_price = $totle_value->total_value + $cost->case_cost + $cost->lawyer_cost;
-            } else {
-                $totle_value_price = $totle_value->total_value;
-            }
-
-        } else {
-            $totle_value_price = $totle_value->total_value;
-        }
+        $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contract_id);
+        $totle_value_price = $vb ? $vb['totalDebt'] : (float)$totle_value->total_value;
 
         if ($model->load($request->post())) {
             $model->contract_id = $contract_id;

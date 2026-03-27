@@ -49,24 +49,9 @@ if (!$contractModel) {
     echo '<div style="text-align:center;padding:60px 20px;font-family:sans-serif;direction:rtl"><h2>العقد غير موجود</h2><p>رقم العقد المطلوب (' . (int)$contract_id . ') غير موجود في النظام.</p></div>';
     return;
 }
-$total = $contractModel->total_value;
-$judicary_contract = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contractModel->id])->all();
-$sum_case_cost = 0;
-$lawyer_cost_total = 0;
-
-if (!empty($judicary_contract)) {
-    $all_case_cost = \backend\modules\expenses\models\Expenses::find()
-        ->where(['contract_id' => $contractModel->id, 'category_id' => 4])->all();
-    foreach ($all_case_cost as $case_cost) {
-        $sum_case_cost += $case_cost->amount;
-    }
-}
-if (!empty($judicary_contract)) {
-    foreach (\backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contractModel->id])->all() as $cost) {
-        $lawyer_cost_total += $cost->lawyer_cost;
-        $contractModel->total_value = $contractModel->total_value + $sum_case_cost + $cost->lawyer_cost;
-    }
-}
+$vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractModel->id);
+$total = $vb ? $vb['totalDebt'] : (float)$contractModel->total_value;
+$contractModel->total_value = $total;
 
 $clientNames = array_map(function ($c) {
     return \backend\modules\customers\models\Customers::findOne($c->customer_id)->name ?? '';
@@ -75,11 +60,8 @@ $guarantorNames = array_map(function ($c) {
     return \backend\modules\customers\models\Customers::findOne($c->customer_id)->name ?? '';
 }, $guarantorInContract);
 
-// ─── Financial calculations ───
-$paid_amount = ContractInstallment::find()->andWhere(['contract_id' => $contractModel->id])->sum('amount');
-$paid_amount = ($paid_amount > 0) ? $paid_amount : 0;
-$custamer_referance = $custamer_referance ?? 0;
-$remaining_balance = ($contractModel->total_value + $custamer_referance) - $paid_amount;
+$paid_amount = $vb ? $vb['paid'] : 0;
+$remaining_balance = $vb ? $vb['remaining'] : 0;
 
 $lastIncomeDate = ContractInstallment::find()
     ->where(['contract_id' => $contract_id])->orderBy(['date' => SORT_DESC])->one();

@@ -386,55 +386,69 @@ class ContractCalculations
      *  تحميل دفعي لصفحات القوائم
      * ═══════════════════════════════════════════════════ */
 
+    /**
+     * تحميل دفعي من vw_contract_balance — استعلام واحد بدل 5
+     */
     public static function batchPreload(array $contractIds): array
     {
         if (empty($contractIds)) return [];
         $db = Yii::$app->db;
         $idList = implode(',', array_map('intval', $contractIds));
 
-        $contractMap = ArrayHelper::index(
-            $db->createCommand("SELECT id, total_value, status FROM os_contracts WHERE id IN ($idList)")->queryAll(),
-            'id'
-        );
-
-        $expMap = ArrayHelper::map(
-            $db->createCommand("SELECT contract_id, COALESCE(SUM(amount),0) as total FROM os_expenses WHERE contract_id IN ($idList) AND (is_deleted = 0 OR is_deleted IS NULL) GROUP BY contract_id")->queryAll(),
-            'contract_id', 'total'
-        );
-
-        $lawyerMap = ArrayHelper::map(
-            $db->createCommand("SELECT contract_id, COALESCE(SUM(lawyer_cost),0) as total FROM os_judiciary WHERE contract_id IN ($idList) AND (is_deleted=0 OR is_deleted IS NULL) GROUP BY contract_id")->queryAll(),
-            'contract_id', 'total'
-        );
-
-        $paidMap = ArrayHelper::map(
-            $db->createCommand("SELECT contract_id, COALESCE(SUM(amount),0) as total FROM os_income WHERE contract_id IN ($idList) GROUP BY contract_id")->queryAll(),
-            'contract_id', 'total'
-        );
-
-        $adjMap = ArrayHelper::map(
-            $db->createCommand("SELECT contract_id, COALESCE(SUM(amount),0) as total FROM os_contract_adjustments WHERE contract_id IN ($idList) AND is_deleted=0 GROUP BY contract_id")->queryAll(),
-            'contract_id', 'total'
-        );
+        $rows = $db->createCommand(
+            "SELECT contract_id, total_value, status,
+                    total_paid, total_expenses, total_lawyer_cost,
+                    total_adjustments, remaining_balance
+             FROM {{%vw_contract_balance}}
+             WHERE contract_id IN ($idList)"
+        )->queryAll();
 
         $result = [];
-        foreach ($contractIds as $cid) {
-            $c = $contractMap[$cid] ?? null;
-            if (!$c) continue;
-            $totalDebt = (float)$c['total_value'] + (float)($expMap[$cid] ?? 0) + (float)($lawyerMap[$cid] ?? 0);
-            $paidAmt = (float)($paidMap[$cid] ?? 0);
-            $adjAmt = (float)($adjMap[$cid] ?? 0);
-            $remaining = max(0, round($totalDebt - $paidAmt - $adjAmt, 2));
+        foreach ($rows as $r) {
+            $cid = $r['contract_id'];
+            $totalDebt = (float)$r['total_value'] + (float)$r['total_expenses'] + (float)$r['total_lawyer_cost'];
+            $remaining = (float)$r['remaining_balance'];
 
             $result[$cid] = [
                 'totalDebt' => $totalDebt,
-                'paid' => $paidAmt,
-                'adjustments' => $adjAmt,
+                'paid' => (float)$r['total_paid'],
+                'adjustments' => (float)$r['total_adjustments'],
                 'remaining' => $remaining,
-                'isJudiciaryPaid' => ($c['status'] === 'judiciary') && ($remaining <= 0),
+                'expenses' => (float)$r['total_expenses'],
+                'lawyerCost' => (float)$r['total_lawyer_cost'],
+                'contractValue' => (float)$r['total_value'],
+                'isJudiciaryPaid' => ($r['status'] === 'judiciary') && ($remaining <= 0),
             ];
         }
         return $result;
+    }
+
+    /**
+     * تحميل بيانات عقد واحد من vw_contract_balance
+     */
+    public static function fromView(int $contractId): ?array
+    {
+        $row = Yii::$app->db->createCommand(
+            "SELECT * FROM {{%vw_contract_balance}} WHERE contract_id = :id",
+            [':id' => $contractId]
+        )->queryOne();
+
+        if (!$row) return null;
+
+        $totalDebt = (float)$row['total_value'] + (float)$row['total_expenses'] + (float)$row['total_lawyer_cost'];
+        return [
+            'contractValue' => (float)$row['total_value'],
+            'totalDebt' => $totalDebt,
+            'paid' => (float)$row['total_paid'],
+            'expenses' => (float)$row['total_expenses'],
+            'lawyerCost' => (float)$row['total_lawyer_cost'],
+            'adjustments' => (float)$row['total_adjustments'],
+            'remaining' => (float)$row['remaining_balance'],
+            'effectiveInstallment' => (float)$row['effective_installment'],
+            'status' => $row['status'],
+            'isJudiciaryPaid' => ($row['status'] === 'judiciary') && ((float)$row['remaining_balance'] <= 0),
+            'judiciaryCount' => (int)$row['judiciary_case_count'],
+        ];
     }
 
     /* ═══════════════════════════════════════════════════

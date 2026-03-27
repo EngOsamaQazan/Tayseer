@@ -18,15 +18,16 @@ use backend\helpers\FlatpickrWidget;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\incomeCategory\models\IncomeCategory;
 
-/* === حسابات مالية سريعة === */
+/* === حسابات مالية — من vw_contract_balance === */
+$vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contract_model->id);
+$paidAmount = $vb ? $vb['paid'] : (ContractInstallment::find()->where(['contract_id' => $contract_model->id])->sum('amount') ?? 0);
+if ($vb) $contract_model->total_value = $vb['totalDebt'];
+
 $origin = new DateTime($contract_model->first_installment_date);
 $target = new DateTime(date('Y-m-d'));
 $interval = $origin->diff($target);
 $batchesShouldBePaid = $interval->format('%R%m') + 1;
-$amountShouldBePaid = $batchesShouldBePaid * $contract_model->monthly_installment_value;
-$paidAmount = ContractInstallment::find()
-    ->where(['contract_id' => $contract_model->id])
-    ->sum('amount') ?? 0;
+$amountShouldBePaid = $batchesShouldBePaid * ($vb ? $vb['effectiveInstallment'] : $contract_model->monthly_installment_value);
 $deservedAmount = $amountShouldBePaid - $paidAmount;
 ?>
 

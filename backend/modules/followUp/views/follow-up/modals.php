@@ -391,32 +391,13 @@ $selectOpts = function($items, $cls, $field) {
 
 <!-- ═══ نافذة إضافة تسوية (محدّثة) ═══ -->
 <?php
-/* ── حساب إجمالي الدين تلقائياً ── */
-$_stlTotalDebt = (float)($contractModel->total_value ?? 0);
-$_stlLawyerCost = 0;
-
-// أتعاب المحاماة من القضايا
-$_stlJudiciary = \backend\modules\judiciary\models\Judiciary::find()
-    ->where(['contract_id' => $contractModel->id, 'is_deleted' => 0])->all();
-if (!empty($_stlJudiciary)) {
-    foreach ($_stlJudiciary as $j) {
-        $_stlLawyerCost += (float)($j->lawyer_cost ?? 0);
-    }
-}
-
-// مجموع كل مصاريف Outcome على العقد (جميع التصنيفات)
-$_stlAllExpenses = (float)((new \yii\db\Query())
-    ->from('os_expenses')
-    ->where(['contract_id' => $contractModel->id])
-    ->sum('amount') ?? 0);
-
-// المدفوع (كل حركات Income)
-$_stlPaidAmount = (float)(\backend\modules\contractInstallment\models\ContractInstallment::find()
-    ->where(['contract_id' => $contractModel->id])
-    ->sum('amount') ?? 0);
-
-$_stlAutoTotal = $_stlTotalDebt + $_stlAllExpenses + $_stlLawyerCost;
-$_stlNetDebt = max(0, $_stlAutoTotal - $_stlPaidAmount);
+/* ── حساب إجمالي الدين تلقائياً — من vw_contract_balance ── */
+$_vbStl = \backend\modules\followUp\helper\ContractCalculations::fromView($contractModel->id);
+$_stlAutoTotal = $_vbStl ? $_vbStl['totalDebt'] : (float)($contractModel->total_value ?? 0);
+$_stlPaidAmount = $_vbStl ? $_vbStl['paid'] : 0;
+$_stlLawyerCost = $_vbStl ? $_vbStl['lawyerCost'] : 0;
+$_stlAllExpenses = $_vbStl ? $_vbStl['expenses'] : 0;
+$_stlNetDebt = $_vbStl ? $_vbStl['remaining'] : max(0, $_stlAutoTotal - $_stlPaidAmount);
 ?>
 
 <style>

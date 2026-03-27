@@ -181,17 +181,9 @@ class ContractsController extends Controller
             'status', 'cnt'
         );
 
-        $judPaidCount = (int)$db->createCommand("
-            SELECT COUNT(*) FROM os_contracts c
-            WHERE c.status = 'judiciary' AND (c.is_deleted=0 OR c.is_deleted IS NULL)
-            AND ROUND(
-                c.total_value
-                + COALESCE((SELECT SUM(e.amount) FROM os_expenses e WHERE e.contract_id = c.id), 0)
-                + COALESCE((SELECT SUM(j.lawyer_cost) FROM os_judiciary j WHERE j.contract_id = c.id AND (j.is_deleted=0 OR j.is_deleted IS NULL)), 0)
-                - COALESCE((SELECT SUM(ca.amount) FROM os_contract_adjustments ca WHERE ca.contract_id = c.id AND ca.is_deleted=0), 0)
-                - COALESCE((SELECT SUM(i.amount) FROM os_income i WHERE i.contract_id = c.id), 0)
-            , 2) <= 0
-        ")->queryScalar();
+        $judPaidCount = (int)$db->createCommand(
+            "SELECT COUNT(*) FROM {{%vw_contract_balance}} WHERE status = 'judiciary' AND remaining_balance <= 0"
+        )->queryScalar();
 
         $judTotalCount = (int)($statusCounts['judiciary'] ?? 0);
         $statusCounts['judiciary_active'] = $judTotalCount - $judPaidCount;
@@ -220,6 +212,20 @@ class ContractsController extends Controller
             return $this->exportLegalCsv($dataProvider);
         }
 
+        $models = $dataProvider->getModels();
+        $ids = ArrayHelper::getColumn($models, 'id');
+        $balanceMap = [];
+        if (!empty($ids)) {
+            $idList = implode(',', array_map('intval', $ids));
+            $balanceMap = ArrayHelper::index(
+                Yii::$app->db->createCommand(
+                    "SELECT contract_id, total_value, total_paid, total_expenses, total_lawyer_cost, remaining_balance
+                     FROM {{%vw_contract_balance}} WHERE contract_id IN ($idList)"
+                )->queryAll(),
+                'contract_id'
+            );
+        }
+
         $referrer = Yii::$app->request->referrer ?: '';
         $isIframe = strpos($referrer, '/judiciary') !== false || Yii::$app->request->get('_iframe');
         $renderMethod = $isIframe ? 'renderAjax' : 'render';
@@ -228,6 +234,7 @@ class ContractsController extends Controller
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
             'dataCount'    => $dataCount,
+            'balanceMap'   => $balanceMap,
         ]);
     }
 
@@ -244,18 +251,17 @@ class ContractsController extends Controller
             \backend\modules\jobs\models\JobsType::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name'
         );
 
-        $judiciaryMap = [];
         $ids = ArrayHelper::getColumn($models, 'id');
+        $balanceMap = [];
         if (!empty($ids)) {
-            $judRecords = \backend\modules\judiciary\models\Judiciary::find()
-                ->where(['contract_id' => $ids, 'is_deleted' => 0])
-                ->orderBy(['id' => SORT_DESC])
-                ->all();
-            foreach ($judRecords as $jud) {
-                if (!isset($judiciaryMap[$jud->contract_id])) {
-                    $judiciaryMap[$jud->contract_id] = $jud;
-                }
-            }
+            $idList = implode(',', array_map('intval', $ids));
+            $balanceMap = ArrayHelper::index(
+                Yii::$app->db->createCommand(
+                    "SELECT contract_id, total_value, total_paid, total_expenses, total_lawyer_cost, remaining_balance
+                     FROM {{%vw_contract_balance}} WHERE contract_id IN ($idList)"
+                )->queryAll(),
+                'contract_id'
+            );
         }
 
         $handle = fopen('php://temp', 'r+');
@@ -273,12 +279,10 @@ class ContractsController extends Controller
             }
             $partiesText = implode(' | ', $partyLines) ?: '—';
 
-            $jud = $judiciaryMap[$m->id] ?? null;
-            $total = $m->total_value;
-            if ($jud) $total += ($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0);
-            $paid = \backend\modules\contractInstallment\models\ContractInstallment::find()
-                ->where(['contract_id' => $m->id])->sum('amount') ?? 0;
-            $remaining = $total - $paid;
+            $b = $balanceMap[$m->id] ?? null;
+            $total = $b ? (float)$b['total_value'] + (float)$b['total_expenses'] + (float)$b['total_lawyer_cost'] : (float)$m->total_value;
+            $remaining = $b ? (float)$b['remaining_balance'] : 0;
+
             $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
             $jobName = $jobId ? ($jobsMap[$jobId] ?? '') : '';
             $jobTypeId = $jobId ? ($jobToTypeMap[$jobId] ?? null) : null;
@@ -346,11 +350,18 @@ class ContractsController extends Controller
         $rows = $query->asArray()->all();
 
         $contractIds = array_column($rows, 'id');
-        $pre = $this->preloadContractExportData($contractIds);
-
+        $balanceMap = [];
         $customersByContract = [];
-        $deservedByContract = [];
         if (!empty($contractIds)) {
+            $idList = implode(',', array_map('intval', $contractIds));
+            $balanceMap = ArrayHelper::index(
+                Yii::$app->db->createCommand(
+                    "SELECT contract_id, total_value, total_paid, total_expenses, total_lawyer_cost, total_adjustments, remaining_balance
+                     FROM {{%vw_contract_balance}} WHERE contract_id IN ($idList)"
+                )->queryAll(),
+                'contract_id'
+            );
+
             $custData = (new \yii\db\Query())
                 ->select(["cc.contract_id", "GROUP_CONCAT(c.name SEPARATOR '، ') as names"])
                 ->from('{{%contracts_customers}} cc')
@@ -360,15 +371,6 @@ class ContractsController extends Controller
                 ->groupBy('cc.contract_id')
                 ->all();
             $customersByContract = ArrayHelper::map($custData, 'contract_id', 'names');
-
-            $deservedData = (new \yii\db\Query())
-                ->select(['contract_id', 'COALESCE(SUM(amount),0) as total'])
-                ->from('{{%income}}')
-                ->where(['contract_id' => $contractIds])
-                ->andWhere(['<=', 'date', date('Y-m-d')])
-                ->groupBy('contract_id')
-                ->all();
-            $deservedByContract = ArrayHelper::map($deservedData, 'contract_id', 'total');
         }
 
         $statusLabels = [
@@ -380,29 +382,20 @@ class ContractsController extends Controller
         $exportRows = [];
         foreach ($rows as $r) {
             $id = $r['id'];
-            $judRows = $pre['judByContract'][$id] ?? [];
-            $total = (float)$r['total_value'];
-            if ($r['status'] === 'judiciary' && !empty($judRows)) {
-                $total += (float)$judRows[0]['case_cost'] + (float)$judRows[0]['lawyer_cost'];
-            }
-            $caseCosts = (float)($pre['expByContract'][$id] ?? 0);
-            $paid = (float)($pre['paidByContract'][$id] ?? 0);
-            $totalForRemain = (float)$r['total_value'];
-            if (!empty($judRows)) {
-                $lawyerSum = 0;
-                foreach ($judRows as $j) $lawyerSum += (float)$j['lawyer_cost'];
-                $totalForRemain += $caseCosts + $lawyerSum;
-            }
+            $b = $balanceMap[$id] ?? null;
+            $totalDebt = $b ? (float)$b['total_value'] + (float)$b['total_expenses'] + (float)$b['total_lawyer_cost'] : (float)$r['total_value'];
+            $remaining = $b ? (float)$b['remaining_balance'] : 0;
+            $paid = $b ? (float)$b['total_paid'] : 0;
 
             $exportRows[] = [
                 'id'        => $id,
                 'seller'    => $r['seller_name'] ?: '—',
                 'customer'  => $customersByContract[$id] ?? '—',
-                'deserved'  => (float)($deservedByContract[$id] ?? 0),
+                'deserved'  => $paid,
                 'date'      => $r['Date_of_sale'] ?: '—',
-                'total'     => $total,
+                'total'     => $totalDebt,
                 'status'    => $statusLabels[$r['status']] ?? $r['status'],
-                'remaining' => $totalForRemain - $paid,
+                'remaining' => $remaining,
                 'follower'  => $r['follower_name'] ?: '—',
             ];
         }
@@ -410,7 +403,7 @@ class ContractsController extends Controller
         return $this->exportArrayData($exportRows, [
             'title'    => 'العقود',
             'filename' => 'contracts',
-            'headers'  => ['#', 'البائع', 'العميل', 'المستحق', 'التاريخ', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
+            'headers'  => ['#', 'البائع', 'العميل', 'المدفوع', 'التاريخ', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
             'keys'     => ['id', 'seller', 'customer', 'deserved', 'date', 'total', 'status', 'remaining', 'follower'],
             'widths'   => [8, 16, 22, 14, 14, 14, 12, 14, 14],
         ], $format);
@@ -431,17 +424,16 @@ class ContractsController extends Controller
         );
 
         $ids = ArrayHelper::getColumn($models, 'id');
-        $judiciaryMap = [];
+        $balanceMap = [];
         if (!empty($ids)) {
-            $judRecords = \backend\modules\judiciary\models\Judiciary::find()
-                ->where(['contract_id' => $ids, 'is_deleted' => 0])
-                ->orderBy(['id' => SORT_DESC])
-                ->all();
-            foreach ($judRecords as $jud) {
-                if (!isset($judiciaryMap[$jud->contract_id])) {
-                    $judiciaryMap[$jud->contract_id] = $jud;
-                }
-            }
+            $idList = implode(',', array_map('intval', $ids));
+            $balanceMap = ArrayHelper::index(
+                Yii::$app->db->createCommand(
+                    "SELECT contract_id, total_value, total_paid, total_expenses, total_lawyer_cost, total_adjustments, remaining_balance
+                     FROM {{%vw_contract_balance}} WHERE contract_id IN ($idList)"
+                )->queryAll(),
+                'contract_id'
+            );
         }
 
         return $this->exportArrayData($models, [
@@ -460,23 +452,14 @@ class ContractsController extends Controller
                     }
                     return implode(' | ', $lines) ?: '—';
                 },
-                function ($m) use ($judiciaryMap) {
-                    $jud = $judiciaryMap[$m->id] ?? null;
-                    $total = (float)$m->total_value;
-                    if ($jud) $total += ($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0);
-                    return $total;
+                function ($m) use ($balanceMap) {
+                    $b = $balanceMap[$m->id] ?? null;
+                    if ($b) return (float)$b['total_value'] + (float)$b['total_expenses'] + (float)$b['total_lawyer_cost'];
+                    return (float)$m->total_value;
                 },
-                function ($m) use ($judiciaryMap) {
-                    $jud = $judiciaryMap[$m->id] ?? null;
-                    $totalForRemain = (float)$m->total_value;
-                    if ($jud) {
-                        $caseCosts = \backend\modules\expenses\models\Expenses::find()
-                            ->where(['contract_id' => $m->id, 'category_id' => 4])->sum('amount') ?? 0;
-                        $totalForRemain += $caseCosts + ($jud->lawyer_cost ?? 0);
-                    }
-                    $paid = \backend\modules\contractInstallment\models\ContractInstallment::find()
-                        ->where(['contract_id' => $m->id])->sum('amount') ?? 0;
-                    return $totalForRemain - $paid;
+                function ($m) use ($balanceMap) {
+                    $b = $balanceMap[$m->id] ?? null;
+                    return $b ? (float)$b['remaining_balance'] : 0;
                 },
                 function ($m) use ($jobsMap) {
                     $firstCustomer = ($m->customersAndGuarantor)[0] ?? null;
@@ -494,43 +477,7 @@ class ContractsController extends Controller
         ], $format);
     }
 
-    private function preloadContractExportData(array $contractIds): array
-    {
-        $pre = ['judByContract' => [], 'expByContract' => [], 'paidByContract' => []];
-        if (empty($contractIds)) return $pre;
-
-        $db = Yii::$app->db;
-        $idList = implode(',', array_map('intval', $contractIds));
-
-        $judRows = $db->createCommand(
-            "SELECT contract_id, id, case_cost, lawyer_cost
-             FROM os_judiciary WHERE contract_id IN ($idList) AND is_deleted=0
-             ORDER BY id DESC"
-        )->queryAll();
-        foreach ($judRows as $j) {
-            $pre['judByContract'][$j['contract_id']][] = $j;
-        }
-
-        $pre['expByContract'] = ArrayHelper::map(
-            $db->createCommand(
-                "SELECT contract_id, COALESCE(SUM(amount),0) as total
-                 FROM os_expenses WHERE contract_id IN ($idList) AND category_id=4
-                 GROUP BY contract_id"
-            )->queryAll(),
-            'contract_id', 'total'
-        );
-
-        $pre['paidByContract'] = ArrayHelper::map(
-            $db->createCommand(
-                "SELECT contract_id, COALESCE(SUM(amount),0) as total
-                 FROM os_income WHERE contract_id IN ($idList)
-                 GROUP BY contract_id"
-            )->queryAll(),
-            'contract_id', 'total'
-        );
-
-        return $pre;
-    }
+    /** @deprecated Replaced by vw_contract_balance — kept for reference only */
 
     /* ══════════════════════════════════════════════════════════════
      *  عرض — View
@@ -562,6 +509,10 @@ class ContractsController extends Controller
         $model->seller_id = Yii::$app->user->id;
         $model->type      = 'normal';
         $model->Date_of_sale = date('Y-m-d');
+        $model->is_legal_department = 0;
+        $model->first_installment_value = 0;
+        $model->commitment_discount = 0;
+        $model->loss_commitment = 0;
 
         if (defined('\backend\modules\contracts\models\Contracts::DEFAUULT_TOTAL_VALUE'))
             $model->total_value = Contracts::DEFAUULT_TOTAL_VALUE;
@@ -585,9 +536,28 @@ class ContractsController extends Controller
             return $this->render('create', $params);
         }
 
+        if (!$model->load(Yii::$app->request->post())) {
+            Yii::$app->session->setFlash('error', 'فشل تحميل بيانات النموذج');
+            return $this->render('create', $this->buildFormParams($model));
+        }
+
+        if ($model->type !== 'solidarity' && empty($model->customer_id)) {
+            Yii::$app->session->setFlash('error', 'يجب اختيار العميل');
+            return $this->render('create', $this->buildFormParams($model));
+        }
+        if ($model->type === 'solidarity' && empty($model->customers_ids)) {
+            Yii::$app->session->setFlash('error', 'يجب اختيار العملاء للعقد التضامني');
+            return $this->render('create', $this->buildFormParams($model));
+        }
+
+        $model->is_legal_department    = $model->is_legal_department ?: 0;
+        $model->first_installment_value = $model->first_installment_value !== null && $model->first_installment_value !== '' ? $model->first_installment_value : 0;
+        $model->commitment_discount     = $model->commitment_discount !== null && $model->commitment_discount !== '' ? $model->commitment_discount : 0;
+        $model->loss_commitment         = $model->loss_commitment !== null && $model->loss_commitment !== '' ? $model->loss_commitment : 0;
+
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            if (!$model->load(Yii::$app->request->post()) || !$model->save(false)) {
+            if (!$model->save(false)) {
                 throw new \Exception('فشل حفظ العقد');
             }
 
@@ -649,9 +619,23 @@ class ContractsController extends Controller
             return $this->render('update', $this->buildFormParams($model));
         }
 
+        if (!$model->load(Yii::$app->request->post())) {
+            Yii::$app->session->setFlash('error', 'فشل تحميل بيانات النموذج');
+            return $this->render('update', $this->buildFormParams($model));
+        }
+
+        if ($model->type !== 'solidarity' && empty($model->customer_id)) {
+            Yii::$app->session->setFlash('error', 'يجب اختيار العميل');
+            return $this->render('update', $this->buildFormParams($model));
+        }
+        if ($model->type === 'solidarity' && empty($model->customers_ids)) {
+            Yii::$app->session->setFlash('error', 'يجب اختيار العملاء للعقد التضامني');
+            return $this->render('update', $this->buildFormParams($model));
+        }
+
         $transaction = Yii::$app->db->beginTransaction();
         try {
-            if (!$model->load(Yii::$app->request->post()) || !$model->save(false)) {
+            if (!$model->save(false)) {
                 throw new \Exception('فشل حفظ العقد');
             }
 

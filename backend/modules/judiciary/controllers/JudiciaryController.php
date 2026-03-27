@@ -1410,18 +1410,8 @@ class JudiciaryController extends Controller
         if ($model->load($request->post())) {
             $model->contract_id = $contract_id;
             if ($model->input_method == 1) {
-
-                $total_amount = Contracts::findOne(['id' => $contract_id]);
-                $total_amount = $total_amount->total_value;
-                $paid_amount = ContractInstallment::find()
-                    ->andWhere(['contract_id' => $contract_id])
-                    ->sum('amount');
-
-                $paid_amount = ($paid_amount > 0) ? $paid_amount : 0;
-                $custamer_referance = (empty($custamer_referance)) ? 0 : $custamer_referance;
-
-                $amount =  ($total_amount + $custamer_referance) - $paid_amount;
-
+                $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contract_id);
+                $amount = $vb ? $vb['remaining'] : 0;
                 $model->lawyer_cost = $amount * ($model->lawyer_cost / 100);
             }
 
@@ -1485,18 +1475,8 @@ class JudiciaryController extends Controller
 
         if ($model->load($request->post())) {
             if ($model->input_method == 1) {
-
-                $total_amount = Contracts::findOne(['id' => $model->contract_id]);
-                $total_amount = $total_amount->total_value;
-                $paid_amount = ContractInstallment::find()
-                    ->andWhere(['contract_id' => $model->contract_id])
-                    ->sum('amount');
-
-                $paid_amount = ($paid_amount > 0) ? $paid_amount : 0;
-                $custamer_referance = (empty($custamer_referance)) ? 0 : $custamer_referance;
-
-                $amount =  ($total_amount + $custamer_referance) - $paid_amount;
-
+                $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($model->contract_id);
+                $amount = $vb ? $vb['remaining'] : 0;
                 $model->lawyer_cost = $amount * ($model->lawyer_cost / 100);
             }
             $model->save();
@@ -1690,11 +1670,8 @@ class JudiciaryController extends Controller
                 $contract = Contracts::findOne($contractId);
                 if (!$contract) continue;
 
-                // حساب أتعاب المحامي بالنسبة المئوية
-                $paid = ContractInstallment::find()
-                    ->where(['contract_id' => $contractId])
-                    ->sum('amount') ?? 0;
-                $remaining = $contract->total_value - $paid;
+                $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractId);
+                $remaining = $vb ? $vb['remaining'] : 0;
                 $lawyerCost = ($percentage > 0) ? round($remaining * ($percentage / 100), 2) : 0;
 
                 // إنشاء سجل القضية

@@ -10,10 +10,8 @@ $settlements = \backend\modules\loanScheduling\models\LoanScheduling::find()
     ->orderBy(['id' => SORT_DESC])
     ->all();
 
-// المدفوع الكلي على العقد
-$totalPaid = (float)(\backend\modules\contractInstallment\models\ContractInstallment::find()
-    ->where(['contract_id' => $contractCalculations->contract_model->id])
-    ->sum('amount') ?? 0);
+$_vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractCalculations->contract_model->id);
+$totalPaid = $_vb ? $_vb['paid'] : 0;
 ?>
 
 <style>

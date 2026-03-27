@@ -116,22 +116,14 @@ return [
         'contentOptions' => ['style' => 'text-align:center'],
     ],
 
-    /* المتبقي */
+    /* المتبقي — يُقرأ من vw_contract_balance */
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المتبقي',
         'format' => ['decimal', 0],
         'value' => function ($m) {
-            $total = $m->total_value;
-            $judRecords = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $m->id])->all();
-            if ($judRecords) {
-                $caseCosts = \backend\modules\expenses\models\Expenses::find()
-                    ->where(['contract_id' => $m->id, 'category_id' => 4])
-                    ->sum('amount') ?? 0;
-                foreach ($judRecords as $j) $total += $caseCosts + $j->lawyer_cost;
-            }
-            $paid = ContractInstallment::find()->where(['contract_id' => $m->id])->sum('amount') ?? 0;
-            return $total - $paid;
+            $b = ContractCalculations::fromView($m->id);
+            return $b ? $b['remaining'] : 0;
         },
         'contentOptions' => ['style' => 'font-weight:600'],
     ],

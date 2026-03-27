@@ -595,23 +595,11 @@ class FollowUpController extends Controller
                 return $cust ? $cust->name : '';
             }, $guarantorRows);
 
-            $judicary = \backend\modules\judiciary\models\Judiciary::find()
-                ->where(['contract_id' => $contractModel->id])->all();
-            $sumCaseCost = 0;
-            if (!empty($judicary)) {
-                foreach (\backend\modules\expenses\models\Expenses::find()
-                    ->where(['contract_id' => $contractModel->id, 'category_id' => 4])->all() as $e) {
-                    $sumCaseCost += $e->amount;
-                }
-                foreach ($judicary as $j) {
-                    $contractModel->total_value += $sumCaseCost + ($j->lawyer_cost ?? 0);
-                }
-            }
-
-            $paidAmount = \backend\modules\contractInstallment\models\ContractInstallment::find()
-                ->where(['contract_id' => $contractModel->id])->sum('amount');
-            $paidAmount = max(0, (float) $paidAmount);
-            $remainingBalance = $contractModel->total_value - $paidAmount;
+            $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractModel->id);
+            $totalDebt = $vb ? $vb['totalDebt'] : (float)$contractModel->total_value;
+            $paidAmount = $vb ? $vb['paid'] : 0;
+            $remainingBalance = $vb ? $vb['remaining'] : 0;
+            $contractModel->total_value = $totalDebt;
 
             $lastIncome = \backend\modules\contractInstallment\models\ContractInstallment::find()
                 ->where(['contract_id' => $contractId])->orderBy(['date' => SORT_DESC])->one();

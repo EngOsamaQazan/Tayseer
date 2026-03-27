@@ -321,18 +321,9 @@ $countNoJob = $totalContracts - $countWithJob;
                         $partiesDisplay = implode('<br>', $partiesHtml) ?: '—';
                         $partiesTitle = implode('، ', ArrayHelper::getColumn($allParties, 'name'));
 
-                        $jud = $judiciaryMap[$m->id] ?? null;
-                        $total = $m->total_value;
-                        if ($jud) $total += ($jud->case_cost ?? 0) + ($jud->lawyer_cost ?? 0);
-
-                        $totalForRemain = $m->total_value;
-                        if ($jud) {
-                            $caseCosts = \backend\modules\expenses\models\Expenses::find()
-                                ->where(['contract_id' => $m->id, 'category_id' => 4])->sum('amount') ?? 0;
-                            $totalForRemain += $caseCosts + ($jud->lawyer_cost ?? 0);
-                        }
-                        $paid = ContractInstallment::find()->where(['contract_id' => $m->id])->sum('amount') ?? 0;
-                        $remaining = $totalForRemain - $paid;
+                        $b = ($balanceMap ?? [])[$m->id] ?? null;
+                        $total = $b ? (float)$b['total_value'] + (float)$b['total_expenses'] + (float)$b['total_lawyer_cost'] : (float)$m->total_value;
+                        $remaining = $b ? (float)$b['remaining_balance'] : 0;
 
                         $jobId = ($firstCustomer && $firstCustomer->job_title) ? $firstCustomer->job_title : null;
                         $jobName = $jobId ? ($jobsMap[$jobId] ?? '—') : '—';

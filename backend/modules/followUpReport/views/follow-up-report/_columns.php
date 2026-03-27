@@ -68,44 +68,17 @@ return [
         'attribute' => Yii::t('app', 'المستحق'),
         'label' => Yii::t('app', 'المستحق'),
         'value' => function ($model) {
-            $contractCalculations = new ContractCalculations($model->id);
-            return $contractCalculations->deservedAmount();
+            $b = ContractCalculations::fromView($model->id);
+            if (!$b) return 0;
+            return $b['remaining'];
         },
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => Yii::t('app', 'Residual Amount'),
         'value' => function ($model) {
-            $judicary_contract = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $model->id])->all();
-
-            if (!empty($judicary_contract)) {
-                $all_case_cost = \backend\modules\expenses\models\Expenses::find()->where(['contract_id' => $model->id])->andWhere(['category_id' => 4])->all();
-                $sum_case_cost = 0;
-                foreach ($all_case_cost as $case_cost) {
-                    $sum_case_cost = $sum_case_cost + $case_cost->amount;
-
-                }
-            }
-            if (!empty($judicary_contract)) {
-                $cost = \backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $model->id])->all();
-
-                foreach ($cost as $cost) {
-                    $totle_value = $model->total_value + $sum_case_cost + $cost->lawyer_cost;
-                    $model->total_value = $totle_value;
-                }
-            }
-
-            $paid_amount = ContractInstallment::find()
-                ->andWhere(['contract_id' => $model->id])
-                ->sum('amount');
-
-            $paid_amount = ($paid_amount > 0) ? $paid_amount : 0;
-            $custamer_referance = (empty($custamer_referance)) ? 0 : $custamer_referance;
-
-
-            return  ($model->total_value + $custamer_referance) - $paid_amount;
-
-
+            $b = ContractCalculations::fromView($model->id);
+            return $b ? $b['remaining'] : 0;
         },
     ],
     [
