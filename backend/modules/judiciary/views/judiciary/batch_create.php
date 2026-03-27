@@ -31,7 +31,7 @@ $contractIdsList = implode(',', ArrayHelper::getColumn($contractsData, 'id'));
 /* JSON data for JS */
 $contractsJson = json_encode($contractsData, JSON_UNESCAPED_UNICODE);
 
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . Yii::$app->params['assetVersion']);
 $this->registerCss('.content-header,.page-header { display: none !important; }');
 ?>
 

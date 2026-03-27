@@ -15,7 +15,9 @@ return [
             'queryCacheDuration' => 3600,
             'attributes' => [
                 PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_PERSISTENT => true,
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION sql_mode='', SESSION group_concat_max_len=65536",
             ],
         ],
         'mailer' => [

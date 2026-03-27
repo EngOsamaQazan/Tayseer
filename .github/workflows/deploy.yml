@@ -134,6 +134,14 @@ jobs:
               echo "  Warning: landing/index.html not found in repo"
             fi
             
+            # Enable Apache performance modules (idempotent)
+            echo "=== Enabling Apache modules ==="
+            a2enmod deflate 2>/dev/null || true
+            a2enmod expires 2>/dev/null || true
+            a2enmod headers 2>/dev/null || true
+            a2enmod http2 2>/dev/null || true
+            a2enmod rewrite 2>/dev/null || true
+            
             # Clear OPcache + PHP-FPM by restarting services
             echo "=== Clearing OPcache ==="
             PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "8.5")

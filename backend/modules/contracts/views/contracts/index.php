@@ -17,8 +17,8 @@ use backend\modules\judiciary\models\Judiciary;
 use backend\helpers\NameHelper;
 
 /* Assets */
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . time(), [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . Yii::$app->params['assetVersion']);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . Yii::$app->params['assetVersion'], [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
 $this->registerCss('.content-header,.page-header { display: none !important; }');

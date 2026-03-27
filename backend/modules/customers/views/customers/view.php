@@ -11,7 +11,7 @@ $this->params['breadcrumbs'][] = ['label' => 'العملاء', 'url' => ['index'
 $this->params['breadcrumbs'][] = $this->title;
 
 $this->registerCssFile('@web/css/smart-onboarding.css', ['depends' => [\yii\web\JqueryAsset::class]]);
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/customers-v2.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/customers-v2.css?v=' . Yii::$app->params['assetVersion']);
 $this->registerCss('.content-header,.page-header { display: none !important; } .content-wrapper { padding-top: 0 !important; } .content { padding: 0 !important; }');
 
 $db = Yii::$app->db;

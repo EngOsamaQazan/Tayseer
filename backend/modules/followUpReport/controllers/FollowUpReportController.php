@@ -156,22 +156,18 @@ class FollowUpReportController extends Controller
         $dataProvider = $searchModel->search($params);
         $dataCount = $dataProvider->getTotalCount();
 
-        $idQuery = clone $dataProvider->query;
-        $filteredIds = $idQuery
-            ->select('os_follow_up_report.id')
-            ->distinct()
-            ->column();
-        Yii::$app->session->set('followup_report_ids', array_map('intval', $filteredIds));
-
         $db = Yii::$app->db;
-        $cardStats = $db->createCommand("
-            SELECT
-                SUM(CASE WHEN is_can_not_contact = 0 AND (reminder IS NULL OR reminder <= CURDATE() OR never_followed = 1) THEN 1 ELSE 0 END) AS active_count,
-                SUM(CASE WHEN is_can_not_contact = 0 AND never_followed = 1 THEN 1 ELSE 0 END) AS never_followed_count,
-                SUM(CASE WHEN is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE() AND due_amount > 0 THEN 1 ELSE 0 END) AS overdue_promise_count,
-                SUM(CASE WHEN is_can_not_contact = 1 THEN 1 ELSE 0 END) AS no_contact_count
-            FROM {{%follow_up_report}}
-        ")->queryOne();
+        $cacheKey = 'followup_card_stats_' . date('Y-m-d-H');
+        $cardStats = Yii::$app->cache->getOrSet($cacheKey, function () use ($db) {
+            return $db->createCommand("
+                SELECT
+                    SUM(CASE WHEN is_can_not_contact = 0 AND (reminder IS NULL OR reminder <= CURDATE() OR never_followed = 1) THEN 1 ELSE 0 END) AS active_count,
+                    SUM(CASE WHEN is_can_not_contact = 0 AND never_followed = 1 THEN 1 ELSE 0 END) AS never_followed_count,
+                    SUM(CASE WHEN is_can_not_contact = 0 AND promise_to_pay_at IS NOT NULL AND promise_to_pay_at <= CURDATE() AND due_amount > 0 THEN 1 ELSE 0 END) AS overdue_promise_count,
+                    SUM(CASE WHEN is_can_not_contact = 1 THEN 1 ELSE 0 END) AS no_contact_count
+                FROM {{%follow_up_report}}
+            ")->queryOne();
+        }, 300);
 
         return $this->render('index', [
             'searchModel' => $searchModel,

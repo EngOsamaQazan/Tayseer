@@ -13,14 +13,14 @@ $this->title = 'القسم القانوني';
 $this->params['breadcrumbs'][] = $this->title;
 $this->registerCss('.content-header,.page-header{display:none!important}');
 
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . time());
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . Yii::$app->params['assetVersion']);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . Yii::$app->params['assetVersion']);
 
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . time(), [
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . Yii::$app->params['assetVersion'], [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/judiciary-v2.js?v=' . time(), [
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/judiciary-v2.js?v=' . Yii::$app->params['assetVersion'], [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);

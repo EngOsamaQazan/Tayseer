@@ -99,9 +99,11 @@ class FollowUpReportSearch extends FollowUpReport
     public function search($params)
     {
         $query = FollowUpReport::find()
-            ->joinWith(['customersWithoutCondition as c'])
-            ->joinWith(['seller as s'])
-            ->joinWith(['contract co']);
+            ->innerJoin('{{%contracts_customers}} cc_j', 'cc_j.contract_id = {{%follow_up_report}}.id')
+            ->innerJoin('{{%customers}} c', 'c.id = cc_j.customer_id')
+            ->joinWith(['contract co'])
+            ->with(['customers', 'followedBy'])
+            ->distinct();
 
         $pageSize = !empty($params['FollowUpReportSearch']['number_row'])
             ? (int)$params['FollowUpReportSearch']['number_row']
@@ -128,8 +130,8 @@ class FollowUpReportSearch extends FollowUpReport
                         'desc' => ['c.name' => SORT_DESC],
                     ],
                     'seller_name' => [
-                        'asc' => ['s.name' => SORT_ASC],
-                        'desc' => ['s.name' => SORT_DESC],
+                        'asc' => ['{{%follow_up_report}}.seller_id' => SORT_ASC],
+                        'desc' => ['{{%follow_up_report}}.seller_id' => SORT_DESC],
                     ],
                 ],
             ],
@@ -177,7 +179,10 @@ class FollowUpReportSearch extends FollowUpReport
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
 
-        $query->andFilterWhere(['like', 's.name', $this->seller_name]);
+        if (!empty($this->seller_name)) {
+            $query->innerJoin('{{%user}} s', 's.id = {{%follow_up_report}}.seller_id');
+            $query->andFilterWhere(['like', 's.name', $this->seller_name]);
+        }
 
         // ── صلاحيات المتابع ──
         if (!Yii::$app->user->can('مدير') && !Yii::$app->user->can('مدير التحصيل')) {
@@ -194,8 +199,8 @@ class FollowUpReportSearch extends FollowUpReport
     public function searchCounter($params)
     {
         $query = FollowUpReport::find()
-            ->joinWith(['customersWithoutCondition as c'])
-            ->joinWith(['seller as s'])
+            ->innerJoin('{{%contracts_customers}} cc_j', 'cc_j.contract_id = {{%follow_up_report}}.id')
+            ->innerJoin('{{%customers}} c', 'c.id = cc_j.customer_id')
             ->joinWith(['contract co']);
 
         $this->load($params);
@@ -236,14 +241,18 @@ class FollowUpReportSearch extends FollowUpReport
             ->andFilterWhere(['like', 'company_id', $this->company_id]);
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
-        $query->andFilterWhere(['like', 's.name', $this->seller_name]);
+
+        if (!empty($this->seller_name)) {
+            $query->innerJoin('{{%user}} s', 's.id = {{%follow_up_report}}.seller_id');
+            $query->andFilterWhere(['like', 's.name', $this->seller_name]);
+        }
 
         if (!Yii::$app->user->can('مدير') && !Yii::$app->user->can('مدير التحصيل')) {
             $query->andFilterWhere(['co.followed_by' => Yii::$app->user->id]);
         }
         $query->andFilterWhere(['co.followed_by' => $this->followed_by]);
 
-        return $query->distinct()->count('id');
+        return $query->distinct()->count('{{%follow_up_report}}.id');
     }
 
     // ═══════════════════════════════════════════════════

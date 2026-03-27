@@ -16,12 +16,12 @@ use backend\widgets\UnifiedSearchWidget;
 use backend\helpers\NameHelper;
 
 /* Assets */
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . time());
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . time(), [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . Yii::$app->params['assetVersion']);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . Yii::$app->params['assetVersion'], [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . time());
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . time(), [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . Yii::$app->params['assetVersion']);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/pin-system.js?v=' . Yii::$app->params['assetVersion'], [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
 $this->registerCss('.content-header,.page-header{display:none!important}');
@@ -296,9 +296,10 @@ a.fur-id-link:hover{text-decoration:underline}
                 <?php
                 ?>
                 <?php foreach ($models as $m):
-                    $customerNamesFull = implode('، ', ArrayHelper::map($m->customers, 'id', 'name')) ?: '—';
-                    $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], ArrayHelper::map($m->customers, 'id', 'name'))) ?: '—';
-                    $followName = $allUsers[$m->followed_by] ?? ($m->followedBy->username ?? '—');
+                    $custNames = ArrayHelper::map($m->customers, 'id', 'name');
+                    $customerNamesFull = implode('، ', $custNames) ?: '—';
+                    $customerNamesShort = implode('، ', array_map([NameHelper::class, 'short'], $custNames)) ?: '—';
+                    $followName = $allUsers[$m->followed_by] ?? ($m->followedBy ? $m->followedBy->username : '—');
                     $dueAmt = (float)($m->due_amount ?? 0);
                     $stKey = $m->status;
                     if ($stKey === 'judiciary' && $dueAmt <= 0) $stKey = 'judiciary_paid';

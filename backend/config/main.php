@@ -293,8 +293,8 @@ return [
             'class' => 'common\components\notificationComponent',
         ],
         'authManager' => [
-            'class' => 'yii\rbac\DbManager', // or use 'yii\rbac\DbManager'
-            'cache' => 'yii\caching\FileCache',
+            'class' => 'yii\rbac\DbManager',
+            'cache' => 'cache',
         ],
         'request' => [
             'csrfParam' => '_csrf-backend',

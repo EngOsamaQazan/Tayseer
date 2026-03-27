@@ -15,7 +15,7 @@ use yii\helpers\Url;
 $this->title = 'إعدادات النظام';
 
 // Register CSS
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v=' . Yii::$app->params['assetVersion']);
 ?>
 
 <div class="sys-settings-page">

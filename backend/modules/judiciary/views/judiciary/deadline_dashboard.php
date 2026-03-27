@@ -7,7 +7,7 @@ $this->title = 'لوحة المواعيد النهائية';
 $this->params['breadcrumbs'][] = ['label' => 'القضاء', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . time());
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/judiciary-v2.css?v=' . Yii::$app->params['assetVersion']);
 
 $typeLabels  = JudiciaryDeadline::getTypeLabels();
 $ajaxUrl     = Url::to(['deadline-dashboard-ajax']);

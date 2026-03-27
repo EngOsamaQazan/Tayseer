@@ -15,4 +15,7 @@ return [
      * يُستخدم عبر MediaHelper::absoluteUrl()
      */
     'customerImagesBaseUrl' => null,
+
+    /** Asset cache-busting: changes on every deploy (git reset --hard updates file mtimes) */
+    'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];
