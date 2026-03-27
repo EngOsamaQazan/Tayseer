@@ -153,7 +153,8 @@ class FollowUpReportController extends Controller
         $dataProvider = $searchModel->search($params);
         $dataCount = $dataProvider->getTotalCount();
 
-        $filteredIds = $dataProvider->query
+        $idQuery = clone $dataProvider->query;
+        $filteredIds = $idQuery
             ->select('os_follow_up_report.id')
             ->distinct()
             ->column();
