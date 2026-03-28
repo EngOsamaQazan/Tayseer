@@ -203,7 +203,7 @@ $netTotal = ($model->total_amount ?: 0) - ($model->discount_amount ?: 0);
                     foreach ($lineItems as $i => $line):
                         $itemName = '—';
                         $item = \backend\modules\inventoryItems\models\InventoryItems::findOne($line->inventory_items_id);
-                        if ($item) $itemName = $item->name;
+                        if ($item) $itemName = $item->item_name;
                         $lineTotal = ($line->number ?: 0) * ($line->single_price ?: 0);
                         $runningTotal += $lineTotal;
                     ?>
