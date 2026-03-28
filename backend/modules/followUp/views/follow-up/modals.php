@@ -393,6 +393,7 @@ $selectOpts = function($items, $cls, $field) {
 <?php
 /* ── حساب إجمالي الدين تلقائياً — من vw_contract_balance ── */
 $_vbStl = \backend\modules\followUp\helper\ContractCalculations::fromView($contractModel->id);
+$_stlTotalDebt = $_vbStl ? $_vbStl['contractValue'] : (float)($contractModel->total_value ?? 0);
 $_stlAutoTotal = $_vbStl ? $_vbStl['totalDebt'] : (float)($contractModel->total_value ?? 0);
 $_stlPaidAmount = $_vbStl ? $_vbStl['paid'] : 0;
 $_stlLawyerCost = $_vbStl ? $_vbStl['lawyerCost'] : 0;
