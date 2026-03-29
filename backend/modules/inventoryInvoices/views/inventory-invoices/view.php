@@ -42,7 +42,12 @@ $locationName = $model->stockLocation ? $model->stockLocation->locations_name : 
 $createdByName = $model->createdBy ? ($model->createdBy->profile->name ?? $model->createdBy->username) : '—';
 $approvedByName = $model->approvedByUser ? ($model->approvedByUser->profile->name ?? $model->approvedByUser->username) : null;
 $lineItems = $model->lineItems;
-$netTotal = ($model->total_amount ?: 0) - ($model->discount_amount ?: 0);
+$grossTotal = 0;
+foreach ($lineItems as $li) {
+    $grossTotal += ($li->single_price * $li->number);
+}
+$discount = (float) ($model->discount_amount ?: 0);
+$netTotal = $grossTotal - $discount;
 ?>
 
 <?php if (!$isAjax): ?>
@@ -152,12 +157,12 @@ $netTotal = ($model->total_amount ?: 0) - ($model->discount_amount ?: 0);
         </div>
         <div class="inv-card">
             <div class="inv-card-lbl"><i class="fa fa-money"></i> المبلغ الإجمالي</div>
-            <div class="inv-card-val inv-amount"><?= number_format($model->total_amount ?: 0, 2) ?></div>
+            <div class="inv-card-val inv-amount"><?= number_format($grossTotal, 2) ?></div>
         </div>
-        <?php if ($model->discount_amount > 0): ?>
+        <?php if ($discount > 0): ?>
         <div class="inv-card">
             <div class="inv-card-lbl"><i class="fa fa-tag"></i> الخصم</div>
-            <div class="inv-card-val" style="color:#d97706"><?= number_format($model->discount_amount, 2) ?></div>
+            <div class="inv-card-val" style="color:#d97706"><?= number_format($discount, 2) ?></div>
         </div>
         <div class="inv-card">
             <div class="inv-card-lbl"><i class="fa fa-calculator"></i> الصافي</div>
