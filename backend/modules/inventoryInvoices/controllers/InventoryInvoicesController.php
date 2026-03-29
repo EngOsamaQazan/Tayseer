@@ -745,8 +745,7 @@ class InventoryInvoicesController extends Controller
                         $this->updateItemQuantity($model, $lineItem, 'add');
                     }
 
-                    $discount = (float) ($model->discount_amount ?? 0);
-                    $model->total_amount = max(0, $totalAmount - $discount);
+                    $model->total_amount = $totalAmount;
                     $model->save(false);
 
                     $transaction->commit();
