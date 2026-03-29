@@ -847,6 +847,54 @@ class Permissions
         return '<li><a href="' . $fullUrl . '"><div class="menu-title">' . $label . '</div></a></li>';
     }
 
+    /**
+     * الصفحة الافتراضية بعد تسجيل الدخول حسب صلاحيات المستخدم
+     * ─────────────────────────────────────────────────────────
+     * تُرتّب الأولويات من الأعلى (المدير) إلى الأدنى.
+     * أول صلاحية يملكها المستخدم تحدد صفحته الرئيسية.
+     */
+    public static function getDefaultLandingUrl()
+    {
+        $map = [
+            self::DASHBOARD            => ['/site/index'],
+            self::MANAGER              => ['/site/index'],
+            self::ACCOUNTING           => ['/accounting/default/index'],
+            self::ACC_VIEW             => ['/accounting/default/index'],
+            self::CUSTOMERS            => ['/customers/customers/create'],
+            self::CUST_CREATE          => ['/customers/customers/create'],
+            self::CUST_VIEW            => ['/customers/customers/index'],
+            self::CONTRACTS            => ['/contracts/contracts/index'],
+            self::CONT_VIEW            => ['/contracts/contracts/index'],
+            self::JUDICIARY            => ['/judiciary/judiciary/index'],
+            self::JUD_VIEW             => ['/judiciary/judiciary/index'],
+            self::COLLECTION           => ['/collection/collection/index'],
+            self::COLL_VIEW            => ['/collection/collection/index'],
+            self::COLLECTION_MANAGER   => ['/collection/collection/index'],
+            self::FINANCIAL_TRANSACTION => ['/financialTransaction/financial-transaction/index'],
+            self::FIN_VIEW             => ['/financialTransaction/financial-transaction/index'],
+            self::INCOME               => ['/income/income/index'],
+            self::EXPENSES             => ['/expenses/expenses/index'],
+            self::DIWAN                => ['/diwan/diwan/index'],
+            self::DIWAN_VIEW           => ['/diwan/diwan/index'],
+            self::INVENTORY_ITEMS      => ['/inventoryItems/inventory-items/index'],
+            self::INVENTORY_INVOICES   => ['/inventoryInvoices/inventory-invoices/index'],
+            self::EMPLOYEE             => ['/hr/hr-employee/index'],
+            self::EMP_VIEW             => ['/hr/hr-employee/index'],
+            self::REPORTS              => ['/reports/reports/index'],
+            self::REP_VIEW             => ['/reports/reports/index'],
+            self::JOBS                 => ['/jobs/jobs/index'],
+            self::JOBS_VIEW            => ['/jobs/jobs/index'],
+        ];
+
+        foreach ($map as $permission => $url) {
+            if (Yii::$app->user->can($permission)) {
+                return $url;
+            }
+        }
+
+        return ['/site/index'];
+    }
+
     public static function checkMainMenuItems($items)
     {
         foreach ($items as $key => $menuItem) {

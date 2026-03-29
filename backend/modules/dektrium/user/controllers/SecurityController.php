@@ -145,7 +145,7 @@ class SecurityController extends Controller
     public function actionLogin()
     {
         if (!\Yii::$app->user->isGuest) {
-            return $this->goHome();
+            return $this->redirect(\common\helper\Permissions::getDefaultLandingUrl());
         }
 
         /** @var LoginForm $model */
@@ -158,7 +158,14 @@ class SecurityController extends Controller
 
         if ($model->load(\Yii::$app->getRequest()->post()) && $model->login()) {
             $this->trigger(self::EVENT_AFTER_LOGIN, $event);
-            return $this->goBack();
+
+            $explicitReturnUrl = \Yii::$app->session->get(\Yii::$app->user->returnUrlParam);
+            if ($explicitReturnUrl !== null && $explicitReturnUrl !== '' && $explicitReturnUrl !== Url::to(\Yii::$app->homeUrl, true)) {
+                return $this->goBack();
+            }
+
+            $landingUrl = \common\helper\Permissions::getDefaultLandingUrl();
+            return $this->redirect($landingUrl);
         }
 
         return $this->render('login', [
