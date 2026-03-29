@@ -275,12 +275,12 @@ class InventoryInvoicesController extends Controller
                         }
                         Yii::$app->session->setFlash('error', $errorMsg);
                     } else {
-                    $existingSerials = InventorySerialNumber::find()
+                    $activeSerials = InventorySerialNumber::find()
                         ->select('serial_number')
                         ->where(['serial_number' => $allSerials])
                         ->column();
-                    if (!empty($existingSerials)) {
-                        $dupList = implode('، ', $existingSerials);
+                    if (!empty($activeSerials)) {
+                        $dupList = implode('، ', $activeSerials);
                         $errorMsg = 'الأرقام التسلسلية التالية مسجّلة مسبقاً في النظام: ' . $dupList;
                         if ($isAjax) {
                             Yii::$app->response->format = Response::FORMAT_JSON;
@@ -316,7 +316,7 @@ class InventoryInvoicesController extends Controller
                                 throw new \Exception('فشل حفظ بند الفاتورة');
                             }
                         }
-                        /* حفظ الأرقام التسلسلية (إلزامي) */
+                        /* حفظ الأرقام التسلسلية (إلزامي) — إعادة تفعيل المحذوف إن وُجد */
                         $companyId = (int) ($invoice->company_id ?: 0);
                         $supplierId = (int) ($invoice->suppliers_id ?: 0);
                         $locationId = (int) ($invoice->branch_id ?: 0);
@@ -329,16 +329,35 @@ class InventoryInvoicesController extends Controller
                             $qty = (int) $row['number'];
                             $itemId = (int) $row['inventory_items_id'];
                             for ($s = 0; $s < $qty && isset($serials[$s]); $s++) {
-                                $sn = new InventorySerialNumber();
-                                $sn->item_id = $itemId;
-                                $sn->serial_number = mb_substr((string)$serials[$s], 0, 50);
-                                $sn->company_id = $companyId;
-                                $sn->supplier_id = $supplierId;
-                                $sn->location_id = $locationId;
-                                $sn->status = InventorySerialNumber::STATUS_AVAILABLE;
-                                if (!$sn->save()) {
-                                    $snErrors = implode(' ', array_map(function($e){ return implode(' ', $e); }, $sn->getErrors()));
-                                    throw new \Exception('خطأ في الرقم التسلسلي "' . $sn->serial_number . '": ' . $snErrors);
+                                $snValue = mb_substr((string)$serials[$s], 0, 50);
+                                $existing = InventorySerialNumber::findBySql(
+                                    'SELECT * FROM ' . InventorySerialNumber::tableName() . ' WHERE serial_number = :sn AND is_deleted = 1 LIMIT 1',
+                                    [':sn' => $snValue]
+                                )->one();
+                                if ($existing) {
+                                    $existing->item_id = $itemId;
+                                    $existing->company_id = $companyId;
+                                    $existing->supplier_id = $supplierId;
+                                    $existing->location_id = $locationId;
+                                    $existing->status = InventorySerialNumber::STATUS_AVAILABLE;
+                                    $existing->contract_id = null;
+                                    $existing->sold_at = null;
+                                    $existing->is_deleted = 0;
+                                    if (!$existing->save(false)) {
+                                        throw new \Exception('خطأ في إعادة تفعيل الرقم التسلسلي "' . $snValue . '"');
+                                    }
+                                } else {
+                                    $sn = new InventorySerialNumber();
+                                    $sn->item_id = $itemId;
+                                    $sn->serial_number = $snValue;
+                                    $sn->company_id = $companyId;
+                                    $sn->supplier_id = $supplierId;
+                                    $sn->location_id = $locationId;
+                                    $sn->status = InventorySerialNumber::STATUS_AVAILABLE;
+                                    if (!$sn->save()) {
+                                        $snErrors = implode(' ', array_map(function($e){ return implode(' ', $e); }, $sn->getErrors()));
+                                        throw new \Exception('خطأ في الرقم التسلسلي "' . $sn->serial_number . '": ' . $snErrors);
+                                    }
                                 }
                             }
                         }
