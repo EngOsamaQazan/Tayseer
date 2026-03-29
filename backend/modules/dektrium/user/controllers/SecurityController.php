@@ -159,13 +159,19 @@ class SecurityController extends Controller
         if ($model->load(\Yii::$app->getRequest()->post()) && $model->login()) {
             $this->trigger(self::EVENT_AFTER_LOGIN, $event);
 
-            $explicitReturnUrl = \Yii::$app->session->get(\Yii::$app->user->returnUrlParam);
-            if ($explicitReturnUrl !== null && $explicitReturnUrl !== '' && $explicitReturnUrl !== Url::to(\Yii::$app->homeUrl, true)) {
-                return $this->goBack();
+            $returnUrl = \Yii::$app->session->get(\Yii::$app->user->returnUrlParam);
+            if ($returnUrl !== null) {
+                $path = trim(parse_url($returnUrl, PHP_URL_PATH) ?? '', '/');
+                $basePath = trim(\Yii::$app->request->baseUrl, '/');
+                if ($basePath !== '') {
+                    $path = ltrim(str_replace($basePath, '', '/' . $path), '/');
+                }
+                if ($path !== '' && $path !== 'site/index' && $path !== 'index.php') {
+                    return $this->goBack();
+                }
             }
 
-            $landingUrl = \common\helper\Permissions::getDefaultLandingUrl();
-            return $this->redirect($landingUrl);
+            return $this->redirect(\common\helper\Permissions::getDefaultLandingUrl());
         }
 
         return $this->render('login', [
