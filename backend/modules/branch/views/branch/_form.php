@@ -14,10 +14,17 @@ $users = ArrayHelper::map(
     \common\models\User::find()->select(['id', 'username'])->where(['<>', 'employee_status', 'fired'])->orderBy('username')->asArray()->all(),
     'id', 'username'
 );
+
+$companies = ArrayHelper::map(
+    \backend\modules\companies\models\Companies::find()->select(['id', 'company_name'])->orderBy('company_name')->asArray()->all(),
+    'id', 'company_name'
+);
+
+$isModal = Yii::$app->request->isAjax;
 ?>
 
 <div class="branch-form">
-    <?php $form = ActiveForm::begin(); ?>
+    <?php $form = ActiveForm::begin(['id' => 'branch-form']); ?>
 
     <div class="row">
         <div class="col-md-6">
@@ -30,17 +37,24 @@ $users = ArrayHelper::map(
         <div class="col-md-3">
             <?= $form->field($model, 'branch_type')->widget(Select2::class, [
                 'data' => Branch::getTypeLabels(),
-                'options' => ['placeholder' => 'اختر النوع...'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                'options' => ['placeholder' => 'اختر النوع...', 'id' => 'branch-type-' . $model->id],
+                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
             ]) ?>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-4">
+            <?= $form->field($model, 'company_id')->widget(Select2::class, [
+                'data' => $companies,
+                'options' => ['placeholder' => 'اختر الشركة...', 'id' => 'branch-company-' . $model->id],
+                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
+            ]) ?>
+        </div>
+        <div class="col-md-5">
             <?= $form->field($model, 'address')->textInput(['maxlength' => true, 'placeholder' => 'العنوان الكامل']) ?>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3">
             <?= $form->field($model, 'phone')->textInput(['maxlength' => true, 'placeholder' => '07xxxxxxxx', 'dir' => 'ltr']) ?>
         </div>
     </div>
@@ -78,8 +92,8 @@ $users = ArrayHelper::map(
         <div class="col-md-4">
             <?= $form->field($model, 'manager_id')->widget(Select2::class, [
                 'data' => $users,
-                'options' => ['placeholder' => 'اختر مدير الفرع...'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                'options' => ['placeholder' => 'اختر مدير الفرع...', 'id' => 'branch-manager-' . $model->id],
+                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
             ]) ?>
         </div>
     </div>
@@ -88,7 +102,8 @@ $users = ArrayHelper::map(
         <div class="col-md-3">
             <?= $form->field($model, 'is_active')->widget(Select2::class, [
                 'data' => [1 => 'فعّال', 0 => 'معطّل'],
-                'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
+                'options' => ['id' => 'branch-active-' . $model->id],
+                'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
             ]) ?>
         </div>
         <div class="col-md-3">
@@ -96,7 +111,7 @@ $users = ArrayHelper::map(
         </div>
     </div>
 
-    <?php if (!Yii::$app->request->isAjax): ?>
+    <?php if (!$isModal): ?>
         <div class="form-group" style="margin-top:15px">
             <?= Html::submitButton($model->isNewRecord ? 'إنشاء' : 'حفظ التعديلات', [
                 'class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary',

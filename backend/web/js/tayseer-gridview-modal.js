@@ -78,6 +78,9 @@
       }
       $footer.html(data.footer);
     }
+    if (data.forceReload) {
+      refreshGrid();
+    }
   }
 
   function renderHtmlFallback(html) {

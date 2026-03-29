@@ -86,7 +86,6 @@ return [
         'viewOptions' => ['role' => 'modal-remote', 'title' => 'عرض', 'data-toggle' => 'tooltip'],
         'updateOptions' => ['role' => 'modal-remote', 'title' => 'تعديل', 'data-toggle' => 'tooltip'],
         'deleteOptions' => [
-            'role' => 'modal-remote',
             'title' => 'حذف',
             'data-confirm' => false,
             'data-method' => false,
