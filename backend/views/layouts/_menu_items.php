@@ -88,9 +88,6 @@ $mainMenuItems = [
     // ─── 12. إدارة الصلاحيات ───
     ['label' => 'إدارة الصلاحيات', 'icon' => 'shield', 'url' => ['/permissions-management'], 'privilege' => [Permissions::PERMISSION, Permissions::ROLE, Permissions::ASSIGNMENT]],
 
-    // ─── الفروع ───
-    ['label' => 'الفروع', 'icon' => 'code-branch', 'url' => ['/branch/branch'], 'privilege' => Permissions::BRANCH],
-
     // ─── أدوات المستخدم (فحص حساب، إصلاح، تعيين كلمة مرور) ───
     ['label' => 'أدوات المستخدم', 'icon' => 'user-circle', 'url' => ['/user-tools/index'], 'privilege' => Permissions::USER_TOOLS],
 

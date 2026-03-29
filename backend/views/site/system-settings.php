@@ -43,7 +43,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         <span class="sys-nav-label">الإعدادات العامة</span>
                         <span class="sys-nav-sub">المتغيرات · الجداول المرجعية</span>
                     </div>
-                    <span class="sys-nav-count">20</span>
+                    <span class="sys-nav-count">21</span>
                 </a>
                 <a href="#" class="sys-nav-item <?= in_array($activeTab, ['google_cloud', 'google_maps', 'google_apis']) ? 'active' : '' ?>" data-tab="google_apis">
                     <div class="sys-nav-icon"><i class="fa fa-google"></i></div>
@@ -2519,6 +2519,14 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                             <div class="gs-item-text">
                                 <span class="gs-item-label">البنوك</span>
                                 <span class="gs-item-desc">المصارف وحساباتها</span>
+                            </div>
+                            <i class="fa fa-chevron-left gs-item-arrow"></i>
+                        </a>
+                        <a href="<?= Url::to(['/branch/branch']) ?>" class="gs-item" data-search="الفروع الأقسام branches فرع مقر مخزن geofence">
+                            <div class="gs-item-icon"><i class="fa fa-code-branch"></i></div>
+                            <div class="gs-item-text">
+                                <span class="gs-item-label">الفروع</span>
+                                <span class="gs-item-desc">الفروع ومواقع العمل الجغرافية</span>
                             </div>
                             <i class="fa fa-chevron-left gs-item-arrow"></i>
                         </a>
