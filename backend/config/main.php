@@ -290,7 +290,10 @@ return [
             'class' => 'common/overridden/DefaultValueBinder.php',
         ],
         'notifications' => [
-            'class' => 'common\components\notificationComponent',
+            'class' => 'common\services\NotificationService',
+        ],
+        'notificationService' => [
+            'class' => 'common\services\NotificationService',
         ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager',

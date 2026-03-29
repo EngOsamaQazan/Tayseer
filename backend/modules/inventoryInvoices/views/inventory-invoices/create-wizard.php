@@ -497,7 +497,6 @@ function validateSerials() {
 
 $('#wizard-tabs a').on('click', function(e){ e.preventDefault(); var step = $(this).data('step'); if (step) goStep(parseInt(step,10)); });
 function goStep(n){
-    $('.inv-wizard-page > .alert').remove();
     if (n === 2 && selectedItems.length === 0) { alert('يرجى إضافة صنف واحد على الأقل في الخطوة 1.'); return; }
     if (n === 3) buildStep3Body();
     if (n === 4) {
@@ -541,27 +540,77 @@ $('#wizard-reset').on('click', function(){
     goStep(1);
 });
 
-$('#wizard-form').on('submit', function(){
+$('#wizard-form').on('submit', function(e){
+    e.preventDefault();
     var branchId = $('#wizard-branch-id').val();
     var supplierId = $('#wizard-suppliers-id').val();
     var companyId = $('#wizard-company-id').val();
-    if (!branchId) { alert('يرجى اختيار موقع التخزين.'); return false; }
-    if (!supplierId) { alert('يرجى اختيار المورد.'); return false; }
-    if (!companyId) { alert('يرجى اختيار الشركة.'); return false; }
+    if (!branchId) { showWizardError('يرجى اختيار موقع التخزين.'); return false; }
+    if (!supplierId) { showWizardError('يرجى اختيار المورد.'); return false; }
+    if (!companyId) { showWizardError('يرجى اختيار الشركة.'); return false; }
     var ok = true;
     $('#wizard-step2-tbody .line-qty, #wizard-step2-tbody .line-price').each(function(){
         var v = parseFloat($(this).val());
         if ($(this).hasClass('line-qty') && (isNaN(v) || v < 1)) ok = false;
         if ($(this).hasClass('line-price') && (isNaN(v) || v < 0)) ok = false;
     });
-    if (!ok) { alert('يرجى تعبئة الكمية (≥1) والسعر (≥0) لكل صنف.'); return false; }
+    if (!ok) { showWizardError('يرجى تعبئة الكمية (≥1) والسعر (≥0) لكل صنف.'); return false; }
     if (!validateSerials()) {
-        alert('عدد الأرقام التسلسلية يجب أن يساوي الكمية بالضبط لكل صنف (لا أقل ولا أكثر).');
+        showWizardError('عدد الأرقام التسلسلية يجب أن يساوي الكمية بالضبط لكل صنف (لا أقل ولا أكثر).');
         return false;
     }
-    clearWizardState();
-    return true;
+    var wizBtn = document.getElementById('wizard-submit');
+    var origText = wizBtn.innerHTML;
+    wizBtn.disabled = true;
+    wizBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+    hideWizardError();
+    var formEl = document.getElementById('wizard-form');
+    $.ajax({
+        url: formEl.getAttribute('action') || window.location.href,
+        type: 'POST',
+        data: $(formEl).serialize(),
+        dataType: 'json',
+        success: function(r) {
+            if (r && r.ok && r.redirect) {
+                clearWizardState();
+                window.location.href = r.redirect;
+            } else {
+                wizBtn.disabled = false;
+                wizBtn.innerHTML = origText;
+                showWizardError(r && r.msg ? r.msg : 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.');
+            }
+        },
+        error: function(xhr) {
+            wizBtn.disabled = false;
+            wizBtn.innerHTML = origText;
+            var msg = 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.';
+            try {
+                var r = JSON.parse(xhr.responseText);
+                if (r && r.msg) msg = r.msg;
+            } catch(ex){}
+            showWizardError(msg);
+        }
+    });
+    return false;
 });
+function showWizardError(msg) {
+    var el = document.getElementById('wizard-ajax-error');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'wizard-ajax-error';
+        el.style.cssText = 'position:sticky;top:0;z-index:9999;margin:0 -24px 15px -24px;padding:18px 24px 18px 50px;font-size:15px;font-weight:600;direction:rtl;text-align:right;border-bottom:3px solid #dc2626;background:#fef2f2;color:#991b1b;box-shadow:0 4px 12px rgba(220,38,38,.15);';
+        el.innerHTML = '<button type="button" style="position:absolute;left:14px;top:14px;background:none;border:none;font-size:22px;cursor:pointer;color:#991b1b;line-height:1;" onclick="hideWizardError();">&times;</button><i class="fa fa-exclamation-triangle" style="margin-left:8px;color:#dc2626;"></i> <span id="wizard-err-text"></span>';
+        var tabContent = document.querySelector('.inv-wizard-page .tab-content');
+        if (tabContent) tabContent.insertBefore(el, tabContent.firstChild);
+    }
+    document.getElementById('wizard-err-text').textContent = msg;
+    el.style.display = 'block';
+    el.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+}
+function hideWizardError() {
+    var el = document.getElementById('wizard-ajax-error');
+    if (el) el.style.display = 'none';
+}
 
 /* حفظ فوري قبل مغادرة الصفحة */
 $(window).on('beforeunload', function(){

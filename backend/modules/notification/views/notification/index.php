@@ -1,42 +1,35 @@
 <?php
 
-use common\models\AuthAssignment;
-use common\models\Notification;
-use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
-use johnitvn\ajaxcrud\BulkButtonWidget;
 
 /* @var $this yii\web\View */
-/* @var $searchModel common\models\NotificationSearch */
+/* @var $searchModel backend\modules\notification\models\NotificationSearch */
 /* @var $dataProvider yii\data\ActiveDataProvider */
 
-$this->title = Yii::t('app', 'Notifications');
+$this->title = Yii::t('app', 'إدارة الإشعارات');
 $this->params['breadcrumbs'][] = $this->title;
-
-CrudAsset::register($this);
 ?>
 <div class="notification-index">
-    <div id="ajaxCrudDatatable">
-        <?=GridView::widget([
-            'id'=>'crud-datatable',
-            'dataProvider' => $dataProvider,
-            'pjax'=>true,
-            'summary'=>false,
-            'columns' => require(__DIR__.'/_columns.php'),
-            'striped' => true,
-            'condensed' => true,
-            'responsive' => true,          
-            'panel' => [
-                'type' => 'default',
-                       'heading'=>'مجموع العناصر :'.$searchCounter,
-            ]
-        ])?>
-    </div>
+    <?= GridView::widget([
+        'id' => 'crud-datatable',
+        'dataProvider' => $dataProvider,
+        'filterModel' => $searchModel,
+        'pjax' => true,
+        'summary' => '<div class="text-muted py-2">إجمالي: {totalCount} إشعار</div>',
+        'columns' => require(__DIR__ . '/_columns.php'),
+        'striped' => true,
+        'condensed' => true,
+        'responsive' => true,
+        'hover' => true,
+        'panel' => [
+            'type' => 'default',
+            'heading' => '<i class="fa fa-bell"></i> ' . $this->title,
+            'before' => Html::a(
+                '<i class="fa fa-plus"></i> ' . Yii::t('app', 'إرسال إشعار جديد'),
+                ['create'],
+                ['class' => 'btn btn-success btn-sm']
+            ),
+        ],
+    ]) ?>
 </div>
-<?php Modal::begin(["id" => "ajaxCrudModal",
-"footer" => "",// always need it for jquery plugin
-]) ?>
-<?php Modal::end(); ?>

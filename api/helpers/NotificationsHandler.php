@@ -3,19 +3,9 @@
 namespace api\helpers;
 
 use Yii;
-use api\helpers\ApiResponse;
-use api\helpers\Messages;
 use api\helpers\PushNotifications;
-use common\models\Notification;
-use common\models\DeviceToken;
+use backend\modules\notification\models\Notification;
 use yii\db\Query;
-use common\models\NotificationType;
-use common\models\Project;
-use common\models\RfiType;
-use common\models\DailyLogType;
-use common\models\PunshListType;
-use common\models\MaintenanceType;
-use common\models\ChangeOrderType;
 
 /**
  * All methods in this class must be work as a background proccess
@@ -34,24 +24,26 @@ class NotificationsHandler
      */
     public static function send($from_user_id, $to_user_id, $type_id, $entity_id = 0, $send_push_notification = false, $params = null)
     {
-        return true;
-        if ($to_user_id != Yii::$app->user->id) {
-            $model = new Notification();
-            $data = ['Notification' => [
-                'sender_id' => $from_user_id,
-                'recipient_id' => $to_user_id,
-                'type_of_notification' => $type_id,
-                'entity_id' => $entity_id,
-                'params' => json_encode($params),
-            ]];
-            $model->load($data);
-            $isSaved = $model->save();
-            if ($isSaved && $send_push_notification) {
-                self::sendPushNotification($to_user_id, $type_id, $params);
-            } else {
-                return $isSaved;
-            }
+        if ($to_user_id == Yii::$app->user->id) {
+            return true;
         }
+
+        $model = new Notification();
+        $model->sender_id = $from_user_id;
+        $model->recipient_id = $to_user_id;
+        $model->type_of_notification = $type_id;
+        $model->title_html = '';
+        $model->body_html = is_array($params) ? json_encode($params) : '';
+        $model->href = '';
+        $model->is_unread = 1;
+        $model->is_hidden = 0;
+        $model->created_time = time();
+        $isSaved = $model->save();
+
+        if ($isSaved && $send_push_notification) {
+            self::sendPushNotification($to_user_id, $type_id, $params);
+        }
+        return $isSaved;
     }
 
     public static function sendPushNotification($to_user_id, $type_id, $params)

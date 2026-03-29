@@ -215,17 +215,17 @@ if (Yii::$app->controller->action->id === 'login') {
                                         <span class="position-absolute top-0 start-50 translate-middle-y badge rounded-pill bg-danger" id="notifBadge" style="font-size:10px"><?= $unreadCount > 99 ? '99+' : $unreadCount ?></span>
                                     <?php endif ?>
                                 </a>
-                                <div class="dropdown-menu dropdown-menu-end p-0" style="width:380px;max-width:92vw;border-radius:10px;overflow:hidden">
+                                <div class="dropdown-menu dropdown-menu-end p-0" style="width:400px;max-width:92vw;border-radius:12px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12)">
                                     <div class="d-flex align-items-center justify-content-between py-3 px-4" style="background:var(--bs-primary);color:#fff">
                                         <span class="fw-bold"><i class="fa fa-bell me-1"></i> الإشعارات</span>
                                         <button type="button" id="btnMarkAllRead" class="btn btn-sm" style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:11px;padding:3px 10px;border-radius:12px;font-weight:600">
                                             <i class="fa fa-check-double"></i> تمييز الجميع كمقروء
                                         </button>
                                     </div>
-                                    <div id="notifList" style="max-height:380px;overflow-y:auto">
+                                    <div id="notifList" style="max-height:420px;overflow-y:auto">
                                         <?php if (empty($latestNotifs)): ?>
                                         <div class="text-center text-muted py-5">
-                                            <i class="fa-regular fa-bell-slash d-block mb-2" style="font-size:28px"></i>
+                                            <i class="fa-regular fa-bell-slash d-block mb-2" style="font-size:28px;opacity:.4"></i>
                                             لا توجد إشعارات
                                         </div>
                                         <?php else: ?>
@@ -233,15 +233,22 @@ if (Yii::$app->controller->action->id === 'login') {
                                         <?php
                                             $isUnread = ((int)$n->is_unread === 1);
                                             $timeAgo  = Yii::$app->formatter->asRelativeTime($n->created_time);
-                                            $href     = !empty($n->href) ? Url::to([$n->href]) : '#';
+                                            $href     = !empty($n->href) ? Url::to([$n->href, 'notificationID' => $n->id]) : '#';
+                                            $nIcon    = Notification::getTypeIcon($n->type_of_notification);
+                                            $nColor   = Notification::getTypeColor($n->type_of_notification);
                                         ?>
-                                        <a href="<?= Html::encode($href) ?>" class="dropdown-item notif-item <?= $isUnread ? 'notif-unread' : '' ?>" style="white-space:normal;padding:11px 14px;border-bottom:1px solid var(--bs-border-color)">
-                                            <div class="d-flex align-items-start gap-2">
-                                                <span class="notif-dot rounded-circle flex-shrink-0 mt-1" style="width:8px;height:8px;background:<?= $isUnread ? 'var(--bs-danger)' : 'var(--bs-border-color)' ?>"></span>
+                                        <a href="<?= Html::encode($href) ?>" class="dropdown-item notif-item <?= $isUnread ? 'notif-unread' : '' ?>" data-notif-id="<?= $n->id ?>" style="white-space:normal;padding:12px 16px;border-bottom:1px solid var(--bs-border-color);transition:background .2s">
+                                            <div class="d-flex align-items-start gap-3">
+                                                <span class="rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:<?= $nColor ?>18;color:<?= $nColor ?>;font-size:14px">
+                                                    <i class="fa-solid <?= $nIcon ?>"></i>
+                                                </span>
                                                 <div class="flex-grow-1 overflow-hidden">
                                                     <div class="<?= $isUnread ? 'fw-semibold text-heading' : 'text-muted' ?>" style="font-size:13px;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical"><?= Html::encode($n->title_html ?: $n->body_html) ?></div>
                                                     <small class="text-muted"><i class="fa-regular fa-clock"></i> <?= $timeAgo ?></small>
                                                 </div>
+                                                <?php if ($isUnread): ?>
+                                                <span class="notif-dot rounded-circle flex-shrink-0 mt-2" style="width:8px;height:8px;background:var(--bs-primary)"></span>
+                                                <?php endif ?>
                                             </div>
                                         </a>
                                         <?php endforeach ?>
@@ -249,8 +256,8 @@ if (Yii::$app->controller->action->id === 'login') {
                                     </div>
                                     <div class="border-top">
                                         <?= Html::a(
-                                            '<i class="fa fa-list-ul"></i> مشاهدة جميع الإشعارات',
-                                            ['/notification/notification/index'],
+                                            '<i class="fa fa-bell me-1"></i> مركز الإشعارات',
+                                            ['/notification/notification/center'],
                                             ['class' => 'dropdown-item text-center py-3 fw-bold', 'style' => 'font-size:13px;color:var(--bs-primary)']
                                         ) ?>
                                     </div>
@@ -323,34 +330,11 @@ if (Yii::$app->controller->action->id === 'login') {
     </script>
 
     <?php
-    $notifJs = <<<JSBLOCK
-    var notifMarked=false;
-    $("#notifDropdown").on("show.bs.dropdown",function(){
-        if(notifMarked) return;
-        notifMarked=true;
-        $.post("$markReadUrl",function(){
-            $("#notifBadge").fadeOut(300);
-            setTimeout(function(){
-                $(".notif-unread").css("background","transparent").removeClass("notif-unread");
-                $(".notif-dot").css("background","var(--bs-border-color)");
-            },1000);
-        });
-    });
-    $("#btnMarkAllRead").on("click",function(e){
-        e.stopPropagation();
-        var btn=$(this);
-        btn.html('<i class="fa fa-spinner fa-spin"></i> جاري...');
-        $.post("$markReadUrl",function(){
-            $("#notifBadge").fadeOut(300);
-            $(".notif-unread").css("background","transparent").removeClass("notif-unread");
-            $(".notif-dot").css("background","var(--bs-border-color)");
-            btn.html('<i class="fa fa-check"></i> تم التمييز');
-            setTimeout(function(){btn.html('<i class="fa fa-check-double"></i> تمييز الجميع كمقروء');},2000);
-        });
-    });
-    $(".notif-unread").css("background","rgba(var(--bs-primary-rgb),.06)");
-    JSBLOCK;
-    $this->registerJs($notifJs, \yii\web\View::POS_READY);
+    $this->registerJsFile(Yii::$app->request->baseUrl . '/js/notification-poller.js', [
+        'depends' => [\yii\web\JqueryAsset::class],
+        'position' => \yii\web\View::POS_END,
+    ]);
+    $this->registerCss('.notif-unread{background:rgba(var(--bs-primary-rgb),.06)}.notif-unread:hover{background:rgba(var(--bs-primary-rgb),.1)}');
     ?>
 
     <script>
