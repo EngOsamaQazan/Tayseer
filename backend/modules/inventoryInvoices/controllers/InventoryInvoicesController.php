@@ -810,10 +810,6 @@ class InventoryInvoicesController extends Controller
     public function actionApproveReception($id)
     {
         $invoice = $this->findModel($id);
-        $user = Yii::$app->user->identity;
-        if (!$user || (!$user->hasCategory('sales_employee') && !$user->hasCategory('manager'))) {
-            throw new ForbiddenHttpException('غير مصرح لك بالموافقة على هذه الفاتورة.');
-        }
         if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
             Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار الاستلام.');
             return $this->redirect(['view', 'id' => $id]);
@@ -838,10 +834,6 @@ class InventoryInvoicesController extends Controller
     public function actionRejectReception($id)
     {
         $invoice = $this->findModel($id);
-        $user = Yii::$app->user->identity;
-        if (!$user || (!$user->hasCategory('sales_employee') && !$user->hasCategory('manager'))) {
-            throw new ForbiddenHttpException('غير مصرح لك برفض هذه الفاتورة.');
-        }
         if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
             Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار الاستلام.');
             return $this->redirect(['view', 'id' => $id]);

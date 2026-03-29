@@ -385,7 +385,11 @@ class Permissions
                 'create-wizard' => self::INVINV_CREATE,
                 'update'        => self::INVINV_UPDATE,
                 'delete'        => self::INVINV_DELETE,
-                'approve'       => self::INVINV_APPROVE,
+                'approve'            => self::INVINV_APPROVE,
+                'approve-reception'  => self::INVINV_APPROVE,
+                'approve-manager'    => self::INVINV_APPROVE,
+                'reject-reception'   => self::INVINV_APPROVE,
+                'reject-manager'     => self::INVINV_APPROVE,
             ],
             /* الديوان */
             'diwan/diwan' => [
