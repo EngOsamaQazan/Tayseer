@@ -229,16 +229,19 @@ $netTotal = ($model->total_amount ?: 0) - ($model->discount_amount ?: 0);
     <?php if (!$model->isNewRecord): ?>
     <?php
         $user = Yii::$app->user->identity;
-        $isBranchSales = $user && method_exists($user, 'hasCategory') && $user->hasCategory('sales_employee');
+        $hasCat = $user && method_exists($user, 'hasCategory');
+        $isBranchSales = $hasCat && $user->hasCategory('sales_employee');
+        $isManager = $hasCat && $user->hasCategory('manager');
         $canApprove = Permissions::can(Permissions::INVINV_APPROVE);
+        $canDoReception = $isBranchSales || $isManager;
     ?>
-    <?php if ($canApprove && ($model->status === InventoryInvoices::STATUS_PENDING_RECEPTION || $model->status === InventoryInvoices::STATUS_PENDING_MANAGER)): ?>
+    <?php if ($canApprove && in_array($model->status, [InventoryInvoices::STATUS_PENDING_RECEPTION, InventoryInvoices::STATUS_PENDING_MANAGER])): ?>
     <div class="inv-section" style="border-color:#d4d4d8">
         <div class="inv-section-hdr" style="background:#fafaf9">
             <i class="fa fa-gavel"></i> إجراءات الموافقة
         </div>
         <div style="padding:20px;display:flex;flex-wrap:wrap;gap:10px;">
-            <?php if ($model->status === InventoryInvoices::STATUS_PENDING_RECEPTION && $isBranchSales): ?>
+            <?php if ($model->status === InventoryInvoices::STATUS_PENDING_RECEPTION && $canDoReception): ?>
                 <?= Html::a('<i class="fa fa-check"></i> موافقة استلام (الفرع)', ['approve-reception', 'id' => $model->id], [
                     'class' => 'btn btn-success', 'data-method' => 'post',
                     'data-confirm' => 'تأكيد الموافقة على استلام الفاتورة؟',

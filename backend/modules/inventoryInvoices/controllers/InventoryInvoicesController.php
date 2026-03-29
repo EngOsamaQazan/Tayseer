@@ -27,6 +27,7 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use yii\web\Response;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use backend\modules\inventorySuppliers\models\InventorySuppliers;
 use backend\modules\companies\models\Companies;
@@ -193,19 +194,29 @@ class InventoryInvoicesController extends Controller
         }
         $companiesList = ArrayHelper::map(Companies::find()->orderBy(['name' => SORT_ASC])->all(), 'id', 'name');
         $request = Yii::$app->request;
+        $isAjax = $request->isAjax;
 
         if ($request->isPost) {
             $branchId = (int) $request->post('branch_id');
             $suppliersId = (int) ($request->post('suppliers_id') ?: 0);
             $companyId = (int) ($request->post('company_id') ?: 0);
             $rawItems = $request->post('ItemsInventoryInvoices', []);
+            $errorMsg = null;
 
             if ($branchId <= 0) {
-                Yii::$app->session->setFlash('error', 'يرجى اختيار موقع التخزين.');
+                $errorMsg = 'يرجى اختيار موقع التخزين.';
             } elseif ($suppliersId <= 0) {
-                Yii::$app->session->setFlash('error', 'يرجى اختيار المورد.');
+                $errorMsg = 'يرجى اختيار المورد.';
             } elseif ($companyId <= 0) {
-                Yii::$app->session->setFlash('error', 'يرجى اختيار الشركة.');
+                $errorMsg = 'يرجى اختيار الشركة.';
+            }
+
+            if ($errorMsg) {
+                if ($isAjax) {
+                    Yii::$app->response->format = Response::FORMAT_JSON;
+                    return ['ok' => false, 'msg' => $errorMsg];
+                }
+                Yii::$app->session->setFlash('error', $errorMsg);
             } else {
                 $lineItems = [];
                 foreach ($rawItems as $row) {
@@ -220,10 +231,16 @@ class InventoryInvoicesController extends Controller
                     ];
                 }
                 if (empty($lineItems)) {
-                    Yii::$app->session->setFlash('error', 'يرجى إضافة صنف واحد على الأقل في الخطوة 1 وتعبئة الكمية والسعر في الخطوة 2.');
+                    $errorMsg = 'يرجى إضافة صنف واحد على الأقل في الخطوة 1 وتعبئة الكمية والسعر في الخطوة 2.';
+                    if ($isAjax) {
+                        Yii::$app->response->format = Response::FORMAT_JSON;
+                        return ['ok' => false, 'msg' => $errorMsg];
+                    }
+                    Yii::$app->session->setFlash('error', $errorMsg);
                 } else {
                     $rawSerials = $request->post('Serials', []);
                     $serialsValid = true;
+                    $allSerials = [];
                     foreach ($lineItems as $idx => $row) {
                         $serialLines = isset($rawSerials[$idx]) ? $rawSerials[$idx] : '';
                         if (is_array($serialLines)) {
@@ -234,10 +251,44 @@ class InventoryInvoicesController extends Controller
                             $serialsValid = false;
                             break;
                         }
+                        foreach ($serials as $sn) {
+                            $allSerials[] = mb_substr((string) $sn, 0, 50);
+                        }
                     }
                     if (!$serialsValid) {
-                        Yii::$app->session->setFlash('error', 'عدد الأرقام التسلسلية يجب أن يساوي الكمية بالضبط لكل صنف (لا أقل ولا أكثر).');
+                        $errorMsg = 'عدد الأرقام التسلسلية يجب أن يساوي الكمية بالضبط لكل صنف (لا أقل ولا أكثر).';
+                        if ($isAjax) {
+                            Yii::$app->response->format = Response::FORMAT_JSON;
+                            return ['ok' => false, 'msg' => $errorMsg];
+                        }
+                        Yii::$app->session->setFlash('error', $errorMsg);
                     } else {
+
+                    /* ── التحقق من تكرار السيريالات قبل الحفظ ── */
+                    $batchDuplicates = array_diff_key($allSerials, array_unique($allSerials));
+                    if (!empty($batchDuplicates)) {
+                        $dupList = implode('، ', array_unique($batchDuplicates));
+                        $errorMsg = 'يوجد أرقام تسلسلية مكررة ضمن الفاتورة نفسها: ' . $dupList;
+                        if ($isAjax) {
+                            Yii::$app->response->format = Response::FORMAT_JSON;
+                            return ['ok' => false, 'msg' => $errorMsg];
+                        }
+                        Yii::$app->session->setFlash('error', $errorMsg);
+                    } else {
+                    $existingSerials = InventorySerialNumber::find()
+                        ->select('serial_number')
+                        ->where(['serial_number' => $allSerials])
+                        ->column();
+                    if (!empty($existingSerials)) {
+                        $dupList = implode('، ', $existingSerials);
+                        $errorMsg = 'الأرقام التسلسلية التالية مسجّلة مسبقاً في النظام: ' . $dupList;
+                        if ($isAjax) {
+                            Yii::$app->response->format = Response::FORMAT_JSON;
+                            return ['ok' => false, 'msg' => $errorMsg];
+                        }
+                        Yii::$app->session->setFlash('error', $errorMsg);
+                    } else {
+
                     $invoice = new InventoryInvoices();
                     $invoice->branch_id = $branchId;
                     $invoice->status = InventoryInvoices::STATUS_PENDING_RECEPTION;
@@ -264,14 +315,6 @@ class InventoryInvoicesController extends Controller
                             if (!$lineItem->save(false)) {
                                 throw new \Exception('فشل حفظ بند الفاتورة');
                             }
-                            $this->updateItemQuantity($invoice, $lineItem, 'add');
-                            StockMovement::record($lineItem->inventory_items_id, StockMovement::TYPE_IN, $lineItem->number, [
-                                'reference_type' => 'invoice',
-                                'reference_id'   => $invoice->id,
-                                'unit_cost'      => $lineItem->single_price,
-                                'supplier_id'    => $invoice->suppliers_id,
-                                'company_id'     => $invoice->company_id,
-                            ]);
                         }
                         /* حفظ الأرقام التسلسلية (إلزامي) */
                         $companyId = (int) ($invoice->company_id ?: 0);
@@ -293,33 +336,43 @@ class InventoryInvoicesController extends Controller
                                 $sn->supplier_id = $supplierId;
                                 $sn->location_id = $locationId;
                                 $sn->status = InventorySerialNumber::STATUS_AVAILABLE;
-                                if (!$sn->save(false)) {
-                                    throw new \Exception('فشل حفظ الرقم التسلسلي: ' . $sn->serial_number);
+                                if (!$sn->save()) {
+                                    $snErrors = implode(' ', array_map(function($e){ return implode(' ', $e); }, $sn->getErrors()));
+                                    throw new \Exception('خطأ في الرقم التسلسلي "' . $sn->serial_number . '": ' . $snErrors);
                                 }
                             }
                         }
                         $invoice->total_amount = $totalAmount;
                         $invoice->save(false);
 
-                        $recipientId = $this->getBranchSalesUserId($invoice->branch_id);
-                        if ($recipientId && Yii::$app->has('notifications')) {
-                            $locName = $invoice->stockLocation ? $invoice->stockLocation->locations_name : '';
-                            $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
-                            Yii::$app->notifications->add(
-                                $href,
-                                Notification::INVOICE_PENDING_RECEPTION,
-                                'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام - موقع: ' . $locName,
-                                '',
-                                Yii::$app->user->id,
-                                $recipientId
-                            );
-                        }
+                        $this->notifyApprovers($invoice, Notification::INVOICE_PENDING_RECEPTION,
+                            'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام');
                         $transaction->commit();
+
+                        if ($isAjax) {
+                            Yii::$app->response->format = Response::FORMAT_JSON;
+                            return ['ok' => true, 'redirect' => Url::to(['view', 'id' => $invoice->id])];
+                        }
                         Yii::$app->session->setFlash('success', 'تم إرسال الفاتورة بنجاح.');
                         return $this->redirect(['view', 'id' => $invoice->id]);
                     } catch (\Exception $e) {
                         $transaction->rollBack();
-                        Yii::$app->session->setFlash('error', 'خطأ: ' . $e->getMessage());
+                        $rawMsg = $e->getMessage();
+                        if (strpos($rawMsg, 'Integrity constraint violation') !== false && strpos($rawMsg, 'uq_serial_number') !== false) {
+                            preg_match("/Duplicate entry '([^']+)'/", $rawMsg, $m);
+                            $dupSn = $m[1] ?? '';
+                            $errorMsg = 'الرقم التسلسلي "' . $dupSn . '" مسجّل مسبقاً في النظام. يرجى التحقق وإزالة المكرر.';
+                        } else {
+                            $errorMsg = 'حدث خطأ أثناء حفظ الفاتورة. يرجى المحاولة مرة أخرى.';
+                            Yii::error('Wizard save error: ' . $rawMsg, __METHOD__);
+                        }
+                        if ($isAjax) {
+                            Yii::$app->response->format = Response::FORMAT_JSON;
+                            return ['ok' => false, 'msg' => $errorMsg];
+                        }
+                        Yii::$app->session->setFlash('error', $errorMsg);
+                    }
+                    }
                     }
                     }
                 }
@@ -439,32 +492,44 @@ class InventoryInvoicesController extends Controller
     }
 
     /**
-     * User ID of branch sales (sales_employee) for the given branch, or null.
+     * جميع user_ids الذين يحملون تصنيف معيّن (slug)
      */
-    protected function getBranchSalesUserId($branchId)
+    protected function getUserIdsByCategory($slug)
     {
-        if (!$branchId) return null;
-        $cat = \backend\models\UserCategory::find()->where(['slug' => 'sales_employee', 'is_active' => 1])->one();
-        if (!$cat) return null;
-        $user = \common\models\User::find()
-            ->alias('u')
-            ->innerJoin(\backend\models\UserCategoryMap::tableName() . ' m', 'm.user_id = u.id')
-            ->where(['u.location' => $branchId, 'm.category_id' => $cat->id])
-            ->one();
-        return $user ? (int) $user->id : null;
+        $cat = \backend\models\UserCategory::find()->where(['slug' => $slug, 'is_active' => 1])->one();
+        if (!$cat) return [];
+        return \backend\models\UserCategoryMap::find()
+            ->select('user_id')
+            ->where(['category_id' => $cat->id])
+            ->column();
     }
 
     /**
-     * User ID of system manager (e.g. first user with admin role), or null.
+     * إشعار جميع المعتمدين (manager + sales_employee) بفاتورة جديدة أو تغيير حالة
      */
-    protected function getSystemManagerUserId()
+    protected function notifyApprovers($invoice, $notificationType, $title)
     {
-        $userId = Yii::$app->params['systemManagerUserId'] ?? null;
-        if ($userId) return (int) $userId;
-        $assignment = \backend\modules\authAssignment\models\AuthAssignment::find()
-            ->where(['item_name' => 'admin'])
-            ->one();
-        return $assignment ? (int) $assignment->user_id : null;
+        if (!Yii::$app->has('notifications')) return;
+        $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
+        $senderId = Yii::$app->user->id;
+        $managerIds = $this->getUserIdsByCategory('manager');
+        $salesIds = $this->getUserIdsByCategory('sales_employee');
+        $recipientIds = array_unique(array_merge($managerIds, $salesIds));
+        foreach ($recipientIds as $rid) {
+            if ((int)$rid === (int)$senderId) continue;
+            Yii::$app->notifications->add($href, $notificationType, $title, '', $senderId, (int)$rid);
+        }
+    }
+
+    /**
+     * إشعار مُنشئ الفاتورة بتحديث الحالة
+     */
+    protected function notifyCreator($invoice, $title)
+    {
+        if (!Yii::$app->has('notifications') || !$invoice->created_by) return;
+        if ((int)$invoice->created_by === (int)Yii::$app->user->id) return;
+        $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
+        Yii::$app->notifications->add($href, Notification::GENERAL, $title, '', Yii::$app->user->id, (int)$invoice->created_by);
     }
 
     /**
@@ -746,7 +811,7 @@ class InventoryInvoicesController extends Controller
     {
         $invoice = $this->findModel($id);
         $user = Yii::$app->user->identity;
-        if (!$user || !$user->hasCategory('sales_employee')) {
+        if (!$user || (!$user->hasCategory('sales_employee') && !$user->hasCategory('manager'))) {
             throw new ForbiddenHttpException('غير مصرح لك بالموافقة على هذه الفاتورة.');
         }
         if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
@@ -756,21 +821,11 @@ class InventoryInvoicesController extends Controller
         $invoice->status = InventoryInvoices::STATUS_PENDING_MANAGER;
         $invoice->approved_by = Yii::$app->user->id;
         $invoice->approved_at = time();
+        $invoice->rejection_reason = null;
         if ($invoice->save(false)) {
-            $managerId = $this->getSystemManagerUserId();
-            if ($managerId && Yii::$app->has('notifications')) {
-                $locName = $invoice->stockLocation ? $invoice->stockLocation->locations_name : '';
-                $href = \yii\helpers\Url::to(['/inventoryInvoices/inventory-invoices/view', 'id' => $invoice->id]);
-                Yii::$app->notifications->add(
-                    $href,
-                    Notification::INVOICE_PENDING_MANAGER,
-                    'فاتورة توريد بانتظار موافقة المدير - موقع: ' . $locName,
-                    '',
-                    Yii::$app->user->id,
-                    $managerId
-                );
-            }
-            Yii::$app->session->setFlash('success', 'تمت الموافقة وتم إشعار المدير.');
+            $this->notifyApprovers($invoice, Notification::INVOICE_PENDING_MANAGER,
+                'فاتورة توريد #' . $invoice->id . ' بانتظار موافقة المدير');
+            Yii::$app->session->setFlash('success', 'تمت الموافقة على الاستلام وتم إشعار المدير.');
         } else {
             Yii::$app->session->setFlash('error', 'فشل تحديث الحالة.');
         }
@@ -784,7 +839,7 @@ class InventoryInvoicesController extends Controller
     {
         $invoice = $this->findModel($id);
         $user = Yii::$app->user->identity;
-        if (!$user || !$user->hasCategory('sales_employee')) {
+        if (!$user || (!$user->hasCategory('sales_employee') && !$user->hasCategory('manager'))) {
             throw new ForbiddenHttpException('غير مصرح لك برفض هذه الفاتورة.');
         }
         if ($invoice->status !== InventoryInvoices::STATUS_PENDING_RECEPTION) {
@@ -793,9 +848,13 @@ class InventoryInvoicesController extends Controller
         }
         $request = Yii::$app->request;
         if ($request->isPost) {
+            $invoice->status = InventoryInvoices::STATUS_REJECTED_RECEPTION;
             $invoice->rejection_reason = trim((string) $request->post('rejection_reason', ''));
+            $invoice->approved_by = Yii::$app->user->id;
+            $invoice->approved_at = time();
             $invoice->save(false);
-            Yii::$app->session->setFlash('success', 'تم تسجيل رفض الاستلام. يمكن للمورد التعديل ثم إعادة الإرسال، أو يمكنك الموافقة بعد التعديل.');
+            $this->notifyCreator($invoice, 'تم رفض استلام الفاتورة #' . $invoice->id . ': ' . $invoice->rejection_reason);
+            Yii::$app->session->setFlash('success', 'تم رفض الاستلام وإشعار مُنشئ الفاتورة.');
             return $this->redirect(['view', 'id' => $id]);
         }
         return $this->render('reject-reception', ['model' => $invoice]);
@@ -817,6 +876,7 @@ class InventoryInvoicesController extends Controller
         if ($invoice->save(false)) {
             try {
                 InventoryInvoicePostingService::post($invoice->id);
+                $this->notifyCreator($invoice, 'تمت الموافقة النهائية على الفاتورة #' . $invoice->id . ' وترحيلها إلى المخزون');
                 Yii::$app->session->setFlash('success', 'تمت الموافقة وترحيل الفاتورة إلى المخزون.');
             } catch (\Exception $e) {
                 Yii::$app->session->setFlash('error', 'تمت الموافقة لكن فشل الترحيل: ' . $e->getMessage());
@@ -837,13 +897,14 @@ class InventoryInvoicesController extends Controller
             Yii::$app->session->setFlash('error', 'الفاتورة ليست بانتظار موافقة المدير.');
             return $this->redirect(['view', 'id' => $id]);
         }
-        $reason = Yii::$app->request->post('rejection_reason', '');
+        $reason = trim((string) Yii::$app->request->post('rejection_reason', ''));
         $invoice->status = InventoryInvoices::STATUS_REJECTED_MANAGER;
         $invoice->rejection_reason = $reason;
         $invoice->approved_by = Yii::$app->user->id;
         $invoice->approved_at = time();
         if ($invoice->save(false)) {
-            Yii::$app->session->setFlash('success', 'تم رفض الفاتورة.');
+            $this->notifyCreator($invoice, 'تم رفض الفاتورة #' . $invoice->id . ' من المدير' . ($reason ? ': ' . $reason : ''));
+            Yii::$app->session->setFlash('success', 'تم رفض الفاتورة وإشعار مُنشئها.');
         }
         return $this->redirect(['view', 'id' => $id]);
     }

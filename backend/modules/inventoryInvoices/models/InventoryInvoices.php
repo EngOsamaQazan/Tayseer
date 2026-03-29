@@ -22,6 +22,7 @@ class InventoryInvoices extends \yii\db\ActiveRecord
     const STATUS_APPROVED_SALES = 'approved_sales';   // للاستخدام كقيمة في سجل التدقيق فقط (log entry)
     const STATUS_PENDING_MANAGER = 'pending_manager';
     const STATUS_APPROVED_FINAL = 'approved_final';
+    const STATUS_REJECTED_RECEPTION = 'rejected_reception';
     const STATUS_REJECTED_MANAGER = 'rejected_manager';
 
     public static function tableName()
@@ -59,7 +60,7 @@ class InventoryInvoices extends \yii\db\ActiveRecord
             [['invoice_number'], 'string', 'max' => 50],
             [['rejection_reason'], 'string', 'max' => 500],
             [['invoice_notes'], 'string'],
-            [['status'], 'in', 'range' => [self::STATUS_DRAFT, self::STATUS_PENDING_RECEPTION, self::STATUS_APPROVED_SALES, self::STATUS_PENDING_MANAGER, self::STATUS_APPROVED_FINAL, self::STATUS_REJECTED_MANAGER]],
+            [['status'], 'in', 'range' => [self::STATUS_DRAFT, self::STATUS_PENDING_RECEPTION, self::STATUS_APPROVED_SALES, self::STATUS_PENDING_MANAGER, self::STATUS_APPROVED_FINAL, self::STATUS_REJECTED_RECEPTION, self::STATUS_REJECTED_MANAGER]],
             [['status'], 'default', 'value' => self::STATUS_DRAFT],
             [['discount_amount'], 'default', 'value' => 0],
             [['invoice_number', 'invoice_notes', 'rejection_reason', 'company_id', 'type', 'branch_id', 'discount_amount'], 'safe'],
@@ -171,8 +172,9 @@ class InventoryInvoices extends \yii\db\ActiveRecord
             self::STATUS_PENDING_RECEPTION => 'بانتظار الاستلام',
             self::STATUS_APPROVED_SALES    => 'موافقة الفرع (سجل)',
             self::STATUS_PENDING_MANAGER   => 'بانتظار المدير',
-            self::STATUS_APPROVED_FINAL    => 'معتمد نهائياً',
-            self::STATUS_REJECTED_MANAGER  => 'مرفوض من المدير',
+            self::STATUS_APPROVED_FINAL     => 'معتمد نهائياً',
+            self::STATUS_REJECTED_RECEPTION => 'مرفوض من الاستلام',
+            self::STATUS_REJECTED_MANAGER   => 'مرفوض من المدير',
         ];
     }
 
