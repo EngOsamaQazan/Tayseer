@@ -690,7 +690,7 @@ class ContractsController extends Controller
         }
 
         $model = InventorySerialNumber::find()
-            ->where(['serial_number' => $serial])
+            ->andWhere(['serial_number' => $serial])
             ->with('item')
             ->one();
 

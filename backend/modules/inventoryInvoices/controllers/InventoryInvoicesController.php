@@ -277,7 +277,7 @@ class InventoryInvoicesController extends Controller
                     } else {
                     $activeSerials = InventorySerialNumber::find()
                         ->select('serial_number')
-                        ->where(['serial_number' => $allSerials])
+                        ->andWhere(['serial_number' => $allSerials])
                         ->column();
                     if (!empty($activeSerials)) {
                         $dupList = implode('، ', $activeSerials);
