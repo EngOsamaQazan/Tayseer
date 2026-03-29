@@ -175,6 +175,7 @@ use app\helper\Permissions;
 
                                     <?= Permissions::showItems(Permissions::MASSAGING, Yii::t('app', 'Massages'), '/sms/sms') ?>
                                     <?= Permissions::showItems(Permissions::JOBS, Yii::t('app', 'Jobs'), '/jobs/jobs') ?>
+                                    <?= Permissions::showItems(Permissions::BRANCH, 'الفروع', '/branch/branch') ?>
                                     <?= Permissions::showItems(Permissions::EXPENSE_CATEGORIES, Yii::t('app', 'Expense Categories'), '/expenseCategories/expense-categories') ?>
                                     <?= Permissions::showItems(Permissions::JUDICIARY, 'الجهات الرسمية', '/judiciaryAuthorities/judiciary-authorities') ?>
                                     <?= Permissions::showItems(Permissions::JUDICIARY, 'العطل الرسمية', '/officialHolidays/official-holidays') ?>

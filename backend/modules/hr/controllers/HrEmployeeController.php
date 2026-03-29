@@ -970,7 +970,7 @@ class HrEmployeeController extends Controller
     }
 
     /**
-     * مزامنة حقل الفرع (os_user.location) — فقط عندما تكون فئة "موظف مبيعات" (sales_employee) مختارة
+     * مزامنة حقل الفرع — يحفظ في os_user.branch_id (الجدول الموحد) + os_user.location (للتوافق العكسي)
      */
     protected function syncUserLocation($userId, $request, array $catSlugs = [])
     {
@@ -979,10 +979,15 @@ class HrEmployeeController extends Controller
             $locationId = $request->post('user_location');
             $value = ($locationId !== null && $locationId !== '') ? (int)$locationId : null;
         }
-        Yii::$app->db->createCommand()->update('{{%user}}', [
-            'location' => $value,
+        $updateData = [
+            'branch_id'  => $value,
             'updated_at' => time(),
-        ], ['id' => $userId])->execute();
+        ];
+        $userSchema = Yii::$app->db->getTableSchema('{{%user}}', true);
+        if ($userSchema && $userSchema->getColumn('location')) {
+            $updateData['location'] = $value;
+        }
+        Yii::$app->db->createCommand()->update('{{%user}}', $updateData, ['id' => $userId])->execute();
     }
 
     /**

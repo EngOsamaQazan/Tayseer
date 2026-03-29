@@ -679,7 +679,12 @@ if (!empty($user->job_title)) {
                             <td><?= Html::encode($extended->field_role) ?></td>
                         </tr>
                         <?php endif ?>
-                        <?php if (!empty($extended->branch_id) && $extended->branch): ?>
+                        <?php if (!empty($extended->unified_branch_id) && $extended->unifiedBranch): ?>
+                        <tr>
+                            <th>الفرع</th>
+                            <td><?= Html::encode($extended->unifiedBranch->name ?? '—') ?></td>
+                        </tr>
+                        <?php elseif (!empty($extended->branch_id) && $extended->branch): ?>
                         <tr>
                             <th>الفرع</th>
                             <td><?= Html::encode($extended->branch->location ?? '—') ?></td>

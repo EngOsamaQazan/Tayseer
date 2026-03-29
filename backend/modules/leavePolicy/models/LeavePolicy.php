@@ -107,4 +107,15 @@ class LeavePolicy extends Model
     {
         return $this->hasOne(LeaveTypes::className(), ['id' => 'leave_type']);
     }
+
+    /** @deprecated location column points to os_location; use getBranchRelation() */
+    public function getLocationRelation()
+    {
+        return $this->hasOne(\backend\modules\location\models\Location::class, ['id' => 'location']);
+    }
+
+    public function getBranchRelation()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'location']);
+    }
 }

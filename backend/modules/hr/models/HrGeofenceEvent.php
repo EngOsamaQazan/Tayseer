@@ -11,6 +11,7 @@ use yii\db\ActiveRecord;
  * @property int $id
  * @property int|null $company_id
  * @property int $user_id
+ * @property int|null $branch_id
  * @property int $zone_id
  * @property string $event_type  enter|exit|dwell
  * @property float $latitude
@@ -35,7 +36,7 @@ class HrGeofenceEvent extends ActiveRecord
     {
         return [
             [['user_id', 'zone_id', 'event_type', 'latitude', 'longitude', 'triggered_at'], 'required'],
-            [['company_id', 'user_id', 'zone_id', 'processed'], 'integer'],
+            [['company_id', 'user_id', 'branch_id', 'zone_id', 'processed'], 'integer'],
             [['attendance_log_id'], 'integer'],
             [['latitude', 'longitude', 'accuracy'], 'number'],
             [['event_type'], 'in', 'range' => ['enter', 'exit', 'dwell']],
@@ -64,6 +65,12 @@ class HrGeofenceEvent extends ActiveRecord
         return $this->hasOne(\common\models\User::class, ['id' => 'user_id']);
     }
 
+    public function getBranch()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'branch_id']);
+    }
+
+    /** @deprecated Use getBranch() — kept for backward compatibility */
     public function getZone()
     {
         return $this->hasOne(HrWorkZone::class, ['id' => 'zone_id']);
@@ -87,7 +94,8 @@ class HrGeofenceEvent extends ActiveRecord
         $zone = $this->zone;
         if (!$zone || $zone->zone_type === 'restricted') return;
 
-        if ($emp->work_zone_id && $emp->work_zone_id != $this->zone_id) return;
+        if ($emp->unified_branch_id && $this->branch_id && $emp->unified_branch_id != $this->branch_id) return;
+        if (!$emp->unified_branch_id && $emp->work_zone_id && $emp->work_zone_id != $this->zone_id) return;
 
         $result = HrAttendanceLog::clockIn(
             $this->user_id,
@@ -115,7 +123,8 @@ class HrGeofenceEvent extends ActiveRecord
         $emp = HrEmployeeExtended::findOne(['user_id' => $this->user_id]);
         if (!$emp || $emp->tracking_mode === 'disabled') return;
 
-        if ($emp->work_zone_id && $emp->work_zone_id != $this->zone_id) return;
+        if ($emp->unified_branch_id && $this->branch_id && $emp->unified_branch_id != $this->branch_id) return;
+        if (!$emp->unified_branch_id && $emp->work_zone_id && $emp->work_zone_id != $this->zone_id) return;
 
         $result = HrAttendanceLog::clockOut(
             $this->user_id,

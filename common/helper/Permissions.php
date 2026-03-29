@@ -23,6 +23,7 @@ class Permissions
     const INVENTORY_ITEMS = 'عناصر المخزون';
     const INVENTORY_STOCK_LOCATIONS = 'مواقع المخزون';
     const INVENTORY_SUPPLIERS = 'موردي المخزون';
+    const BRANCH = 'الفروع';
     const COMPANIES = 'الشركات';
     const INVENTORY_ITEMS_QUANTITY = 'كمية عناصر المخزون';
     const TRANSFER_TO_LEGAL_DEPARTMENT = 'التحويل إلى الدائره القانونية';
@@ -723,6 +724,7 @@ class Permissions
             'notification/notification' => [self::Notification],
             'phoneNumbers/phone-numbers' => self::getSettingsPermissions(),
             'location/location' => self::getSettingsPermissions(),
+            'branch/branch' => [self::BRANCH],
             'address/address' => self::getSettingsPermissions(),
             /* أخرى */
             'documentHolder/document-holder' => [self::DOCUMENT_HOLDER],
@@ -822,7 +824,7 @@ class Permissions
             'legal department' => [self::TRANSFER_TO_LEGAL_DEPARTMENT, self::JUDICIARY, self::JUDICIARY_CUSTOMERS_ACTION, self::COLLECTION],
             'reports' => [self::REPORTS, self::JUDICIARY, self::JUDICIARY_CUSTOMERS_ACTION, self::COLLECTION],
             'permissions' => [self::PERMISSION, self::ROLE, self::ROUTE, self::ASSIGNMENT],
-            'changing' => [self::STATUS, self::Document_STATUS, self::COUSINS, self::CITIZEN, self::BANCKS, self::HEAR_ABOUT_US, self::CITY, self::PAYMENT_TYPE, self::FEELINGS, self::CONTACT_TYPE, self::CONNECTION_RESPONSE, self::DOCYUMENT_TYPE, self::JUDICIARY_ACTION, self::JUDICIARY_TYPE, self::LAWYERS, self::COURT, self::MASSAGING, self::JOBS, self::EXPENSE_CATEGORIES],
+            'changing' => [self::STATUS, self::Document_STATUS, self::COUSINS, self::CITIZEN, self::BANCKS, self::HEAR_ABOUT_US, self::CITY, self::PAYMENT_TYPE, self::FEELINGS, self::CONTACT_TYPE, self::CONNECTION_RESPONSE, self::DOCYUMENT_TYPE, self::JUDICIARY_ACTION, self::JUDICIARY_TYPE, self::LAWYERS, self::COURT, self::MASSAGING, self::JOBS, self::EXPENSE_CATEGORIES, self::BRANCH],
             'accounting' => [self::ACC_VIEW, self::ACC_CREATE, self::ACC_COA_MANAGE, self::ACC_FISCAL_MANAGE, self::ACC_REPORTS, self::ACC_BUDGET_VIEW, self::ACC_AR_MANAGE, self::ACC_AP_MANAGE],
         ];
 

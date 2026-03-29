@@ -6,6 +6,10 @@ use Yii;
 use yii\db\ActiveRecord;
 
 /**
+ * @deprecated Use \backend\modules\branch\models\Branch instead.
+ * This model is kept for backward compatibility. All new code should use the unified Branch model.
+ * The os_branch table combines both organizational branches and geofence work zones.
+ *
  * مناطق العمل — Work Zones (Geofences)
  *
  * @property int $id
@@ -140,5 +144,16 @@ class HrWorkZone extends ActiveRecord
     public function getEmployees()
     {
         return $this->hasMany(HrEmployeeExtended::class, ['work_zone_id' => 'id']);
+    }
+
+    /**
+     * Returns the equivalent Branch record from os_branch.
+     * @return \backend\modules\branch\models\Branch|null
+     */
+    public function getUnifiedBranch()
+    {
+        return \backend\modules\branch\models\Branch::find()
+            ->where(['name' => $this->name])
+            ->one();
     }
 }

@@ -21,6 +21,7 @@ use yii\db\ActiveRecord;
  * @property float|null $clock_in_lng
  * @property float|null $clock_out_lat
  * @property float|null $clock_out_lng
+ * @property int|null $branch_id
  * @property int|null $clock_in_zone_id
  * @property int|null $clock_out_zone_id
  * @property float|null $clock_in_accuracy
@@ -64,7 +65,7 @@ class HrAttendanceLog extends ActiveRecord
     {
         return [
             [['user_id', 'attendance_date'], 'required'],
-            [['company_id', 'user_id', 'shift_id', 'clock_in_zone_id', 'clock_out_zone_id',
+            [['company_id', 'user_id', 'shift_id', 'branch_id', 'clock_in_zone_id', 'clock_out_zone_id',
               'clock_in_wifi_verified', 'is_mock_location',
               'total_minutes', 'overtime_minutes', 'late_minutes', 'early_leave_minutes',
               'break_minutes', 'admin_adjusted'], 'integer'],
@@ -113,11 +114,18 @@ class HrAttendanceLog extends ActiveRecord
         return $this->hasOne(HrWorkShift::class, ['id' => 'shift_id']);
     }
 
+    public function getBranch()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'branch_id']);
+    }
+
+    /** @deprecated Use getBranch() — zone_id columns kept for backward compatibility */
     public function getClockInZone()
     {
         return $this->hasOne(HrWorkZone::class, ['id' => 'clock_in_zone_id']);
     }
 
+    /** @deprecated Use getBranch() */
     public function getClockOutZone()
     {
         return $this->hasOne(HrWorkZone::class, ['id' => 'clock_out_zone_id']);

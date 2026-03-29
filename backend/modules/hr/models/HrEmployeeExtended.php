@@ -30,6 +30,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property string|null $iban
  * @property int|null $grade_id
  * @property int|null $branch_id
+ * @property int|null $unified_branch_id
  * @property int|null $shift_id
  * @property string $employee_type  office|field|sales|hybrid
  * @property int|null $work_zone_id
@@ -90,7 +91,7 @@ class HrEmployeeExtended extends ActiveRecord
     {
         return [
             [['user_id'], 'required'],
-            [['user_id', 'city_id', 'bank_id', 'grade_id', 'branch_id', 'shift_id', 'work_zone_id', 'is_field_staff', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
+            [['user_id', 'city_id', 'bank_id', 'grade_id', 'branch_id', 'unified_branch_id', 'shift_id', 'work_zone_id', 'is_field_staff', 'is_deleted', 'created_at', 'created_by', 'updated_at', 'updated_by'], 'integer'],
             [['employee_type'], 'in', 'range' => ['office', 'field', 'sales', 'hybrid']],
             [['employee_type'], 'default', 'value' => 'office'],
             [['tracking_mode'], 'in', 'range' => ['geofence_only', 'continuous', 'on_task', 'disabled']],
@@ -132,7 +133,8 @@ class HrEmployeeExtended extends ActiveRecord
             'tax_number' => Yii::t('app', 'الرقم الضريبي'),
             'iban' => Yii::t('app', 'رقم الآيبان'),
             'grade_id' => Yii::t('app', 'الدرجة الوظيفية'),
-            'branch_id' => Yii::t('app', 'الفرع'),
+            'branch_id' => Yii::t('app', 'الفرع (قديم)'),
+            'unified_branch_id' => Yii::t('app', 'الفرع'),
             'shift_id' => Yii::t('app', 'الوردية'),
             'employee_type' => Yii::t('app', 'نوع الموظف'),
             'work_zone_id' => Yii::t('app', 'منطقة العمل'),
@@ -180,9 +182,15 @@ class HrEmployeeExtended extends ActiveRecord
     /**
      * @return \yii\db\ActiveQuery
      */
+    /** @deprecated Use getUnifiedBranch() instead */
     public function getBranch()
     {
         return $this->hasOne(\backend\modules\location\models\Location::class, ['id' => 'branch_id']);
+    }
+
+    public function getUnifiedBranch()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'unified_branch_id']);
     }
 
     /**

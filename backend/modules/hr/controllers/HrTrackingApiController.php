@@ -88,7 +88,19 @@ class HrTrackingApiController extends Controller
         }
 
         $zone = null;
-        if ($emp && $emp->work_zone_id) {
+        if ($emp && $emp->unified_branch_id) {
+            $branchModel = \backend\modules\branch\models\Branch::findOne($emp->unified_branch_id);
+            if ($branchModel && $branchModel->latitude && $branchModel->longitude) {
+                $zone = [
+                    'id' => $branchModel->id,
+                    'name' => $branchModel->name,
+                    'latitude' => (float)$branchModel->latitude,
+                    'longitude' => (float)$branchModel->longitude,
+                    'radius_meters' => $branchModel->radius_meters,
+                    'zone_type' => $branchModel->branch_type,
+                ];
+            }
+        } elseif ($emp && $emp->work_zone_id) {
             $zoneModel = HrWorkZone::findOne($emp->work_zone_id);
             if ($zoneModel) {
                 $zone = [
@@ -102,7 +114,11 @@ class HrTrackingApiController extends Controller
             }
         }
 
-        $allZones = HrWorkZone::find()->where(['is_active' => 1])->asArray()->all();
+        $allBranches = \backend\modules\branch\models\Branch::find()
+            ->where(['is_active' => 1])
+            ->andWhere(['IS NOT', 'latitude', null])
+            ->asArray()->all();
+        $allZones = !empty($allBranches) ? $allBranches : HrWorkZone::find()->where(['is_active' => 1])->asArray()->all();
         $zonesData = array_map(function ($z) {
             return [
                 'id' => (int)$z['id'],
@@ -110,7 +126,7 @@ class HrTrackingApiController extends Controller
                 'latitude' => (float)$z['latitude'],
                 'longitude' => (float)$z['longitude'],
                 'radius_meters' => (int)$z['radius_meters'],
-                'zone_type' => $z['zone_type'],
+                'zone_type' => $z['zone_type'] ?? $z['branch_type'] ?? 'branch',
             ];
         }, $allZones);
 

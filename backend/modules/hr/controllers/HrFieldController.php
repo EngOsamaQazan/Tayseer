@@ -219,11 +219,21 @@ class HrFieldController extends Controller
               AND is_deleted = 0
         ")->queryScalar();
 
-        $savedLocations = (new Query())
-            ->select(['id', 'location as name', 'description', 'latitude', 'longitude', 'radius', 'status'])
-            ->from('{{%location}}')
-            ->where(['status' => 'active'])
-            ->all();
+        $branchTable = Yii::$app->db->getTableSchema('{{%branch}}', true);
+        if ($branchTable) {
+            $savedLocations = (new Query())
+                ->select(['id', 'name', 'description', 'latitude', 'longitude', 'radius_meters as radius', 'is_active as status'])
+                ->from('{{%branch}}')
+                ->where(['is_active' => 1])
+                ->andWhere(['IS NOT', 'latitude', null])
+                ->all();
+        } else {
+            $savedLocations = (new Query())
+                ->select(['id', 'location as name', 'description', 'latitude', 'longitude', 'radius', 'status'])
+                ->from('{{%location}}')
+                ->where(['status' => 'active'])
+                ->all();
+        }
 
         $request = Yii::$app->request;
         if ($request->isAjax && !$request->get('withLocations')) {

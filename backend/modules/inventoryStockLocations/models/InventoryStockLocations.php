@@ -42,9 +42,9 @@ class InventoryStockLocations extends \yii\db\ActiveRecord
     {
         return [
             [['locations_name'], 'required'],
-            [['company_id', 'created_by', 'created_at', 'updated_at', 'last_update_by', 'is_deleted', 'number_row'], 'integer'],
+            [['company_id', 'branch_id', 'created_by', 'created_at', 'updated_at', 'last_update_by', 'is_deleted', 'number_row'], 'integer'],
             [['locations_name'], 'string', 'max' => 250],
-            [['company_id'], 'safe'],
+            [['company_id', 'branch_id'], 'safe'],
         ];
     }
 
@@ -53,6 +53,7 @@ class InventoryStockLocations extends \yii\db\ActiveRecord
         return [
             'id'             => 'م',
             'locations_name' => 'اسم الموقع',
+            'branch_id'      => 'الفرع',
             'company_id'     => 'الشركة',
             'created_by'     => 'أنشئ بواسطة',
             'created_at'     => 'تاريخ الإنشاء',
@@ -70,6 +71,11 @@ class InventoryStockLocations extends \yii\db\ActiveRecord
     public function getCompanies()
     {
         return $this->hasOne(\backend\modules\companies\models\Companies::class, ['id' => 'company_id']);
+    }
+
+    public function getBranch()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'branch_id']);
     }
 
     /* ── SoftDelete scope (مصلح — كان ناقص) ── */

@@ -30,6 +30,7 @@ use Yii;
  * @property string|null $gravatar_email
  * @property string|null $gravatar_id
  * @property int|null $location
+ * @property int|null $branch_id
  * @property string|null $website
  * @property string|null $bio
  * @property string|null $timezone
@@ -82,7 +83,7 @@ class User extends BaseUser
     {
         return [
             [['username', 'email', 'password_hash', 'auth_key', 'created_at', 'updated_at', 'employee_type', 'employee_status', 'gender', 'marital_status'], 'required'],
-            [['confirmed_at', 'blocked_at', 'created_at', 'updated_at', 'flags', 'last_login_at', 'location', 'department', 'job_title', 'reporting_to', 'nationality'], 'integer'],
+            [['confirmed_at', 'blocked_at', 'created_at', 'updated_at', 'flags', 'last_login_at', 'location', 'branch_id', 'department', 'job_title', 'reporting_to', 'nationality'], 'integer'],
             [['bio', 'employee_type', 'employee_status', 'gender', 'marital_status','avatar'], 'string'],
             [['date_of_hire'], 'safe'],
             [['username', 'email', 'unconfirmed_email', 'verification_token', 'name', 'public_email', 'gravatar_email', 'website', 'middle_name', 'last_name', 'mobile'], 'string', 'max' => 255],
@@ -193,14 +194,15 @@ class User extends BaseUser
         return $this->hasOne(Designation::className(), ['id' => 'job_title']);
     }
 
-    /**
-     * Gets query for [[Location0]].
-     *
-     * @return \yii\db\ActiveQuery|LocationQuery
-     */
+    /** @deprecated Use getBranchRelation() instead */
     public function getLocation0()
     {
         return $this->hasOne(Location::className(), ['id' => 'location']);
+    }
+
+    public function getBranchRelation()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'branch_id']);
     }
 
     /**

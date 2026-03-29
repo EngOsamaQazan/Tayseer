@@ -111,6 +111,11 @@ class HrPayrollRun extends ActiveRecord
         ];
     }
 
+    public function getBranch()
+    {
+        return $this->hasOne(\backend\modules\branch\models\Branch::class, ['id' => 'branch_id']);
+    }
+
     /**
      * {@inheritdoc}
      */

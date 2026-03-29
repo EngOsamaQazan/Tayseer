@@ -45,10 +45,15 @@ if (!isset($grades)) {
 if (!isset($branches)) {
     try {
         $branches = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%branch}}')->where(['is_active' => 1])->orderBy(['sort_order' => SORT_ASC, 'name' => SORT_ASC])->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $branches = ArrayHelper::map(
             (new Query())->select(['id', 'location'])->from('{{%location}}')->where(['status' => 'active'])->orderBy(['location' => SORT_ASC])->all(),
             'id', 'location'
         );
-    } catch (\Exception $e) { $branches = []; }
+    }
 }
 
 if (!isset($shifts)) {
@@ -63,10 +68,15 @@ if (!isset($shifts)) {
 if (!isset($workZones)) {
     try {
         $workZones = ArrayHelper::map(
+            (new Query())->select(['id', 'name'])->from('{{%branch}}')->where(['is_active' => 1])->orderBy(['sort_order' => SORT_ASC, 'name' => SORT_ASC])->all(),
+            'id', 'name'
+        );
+    } catch (\Exception $e) {
+        $workZones = ArrayHelper::map(
             (new Query())->select(['id', 'name'])->from('{{%hr_work_zone}}')->where(['is_active' => 1])->orderBy(['name' => SORT_ASC])->all(),
             'id', 'name'
         );
-    } catch (\Exception $e) { $workZones = []; }
+    }
 }
 
 $employeeTypes = [
@@ -683,7 +693,7 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
                     <div class="col-md-4">
                         <div class="form-group">
                             <label class="hr-form-label" for="emp-branch">الفرع</label>
-                            <?= Html::activeDropDownList($model, 'branch_id', $branches, [
+                            <?= Html::activeDropDownList($model, 'unified_branch_id', $branches, [
                                 'class' => 'form-control hr-form-input',
                                 'prompt' => '— اختر الفرع —',
                                 'id' => 'emp-branch',

@@ -5,6 +5,9 @@ namespace backend\modules\location\models;
 use Yii;
 use \common\models\User;
 /**
+ * @deprecated Use \backend\modules\branch\models\Branch instead.
+ * This model is kept for backward compatibility. All new code should use the unified Branch model.
+ *
  * This is the model class for table "{{%location}}".
  *
  * @property int $id
@@ -24,6 +27,17 @@ use \common\models\User;
  */
 class Location extends \common\models\Model
 {
+    /**
+     * Helper: returns the equivalent Branch record (from os_branch).
+     * @return \backend\modules\branch\models\Branch|null
+     */
+    public function getUnifiedBranch()
+    {
+        return \backend\modules\branch\models\Branch::find()
+            ->where(['name' => $this->location])
+            ->one();
+    }
+
     /**
      * {@inheritdoc}
      */

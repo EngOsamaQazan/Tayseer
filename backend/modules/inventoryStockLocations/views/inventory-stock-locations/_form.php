@@ -17,14 +17,23 @@ use yii\helpers\ArrayHelper;
 
     <?php $form = ActiveForm::begin(); ?>
     <div class="row">
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <?= $form->field($model, 'locations_name')->textInput(['maxlength' => true]) ?>
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <?= $form->field($model, 'company_id')->widget(Select2::classname(), [
                 'data' => yii\helpers\ArrayHelper::map(Companies::find()->all(), 'id', 'name'),
                 'language' => 'de',
                 'options' => ['placeholder' => 'Select a company.'],
+                'pluginOptions' => [
+                    'allowClear' => true
+                ],
+            ]); ?>
+        </div>
+        <div class="col-lg-4">
+            <?= $form->field($model, 'branch_id')->widget(Select2::classname(), [
+                'data' => \backend\modules\branch\models\Branch::getActiveList(),
+                'options' => ['placeholder' => '— اختر الفرع —', 'dir' => 'rtl'],
                 'pluginOptions' => [
                     'allowClear' => true
                 ],

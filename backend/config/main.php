@@ -72,6 +72,9 @@ return [
         'location' => [
             'class' => 'backend\modules\location\Location',
         ],
+        'branch' => [
+            'class' => 'backend\modules\branch\Branch',
+        ],
         'loanScheduling' => [
             'class' => 'backend\modules\loanScheduling\LoanScheduling',
         ],
@@ -448,6 +451,7 @@ return [
                     // Settings & other
                     'city'                  => 'city',
                     'location'              => 'location',
+                    'branch'                => 'branch',
                     'status'                => 'status',
                     'movment'               => 'movment',
                     'notification'          => 'notification',
