@@ -68,7 +68,12 @@ return [
         'width' => '110px',
         'format' => 'raw',
         'value' => function ($model) {
-            return $model->total_amount ? '<strong>' . number_format($model->total_amount, 2) . '</strong>' : '—';
+            $gross = 0;
+            foreach ($model->lineItems as $li) {
+                $gross += ($li->single_price * $li->number);
+            }
+            $net = $gross - (float) ($model->discount_amount ?: 0);
+            return $net ? '<strong>' . number_format($net, 2) . '</strong>' : '—';
         },
     ],
     [

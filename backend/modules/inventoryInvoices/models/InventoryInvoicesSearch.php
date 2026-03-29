@@ -46,7 +46,7 @@ class InventoryInvoicesSearch extends InventoryInvoices
      */
     public function search($params)
     {
-        $query = InventoryInvoices::find();
+        $query = InventoryInvoices::find()->with('lineItems');
 
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
