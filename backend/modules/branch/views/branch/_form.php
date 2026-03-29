@@ -3,6 +3,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
+use yii\web\JsExpression;
 use kartik\select2\Select2;
 use backend\modules\branch\models\Branch;
 
@@ -16,11 +17,12 @@ $users = ArrayHelper::map(
 );
 
 $companies = ArrayHelper::map(
-    \backend\modules\companies\models\Companies::find()->select(['id', 'company_name'])->orderBy('company_name')->asArray()->all(),
-    'id', 'company_name'
+    \backend\modules\companies\models\Companies::find()->select(['id', 'name'])->orderBy('name')->asArray()->all(),
+    'id', 'name'
 );
 
 $isModal = Yii::$app->request->isAjax;
+$dropParent = $isModal ? new JsExpression('$("#ajaxCrudModal")') : null;
 ?>
 
 <div class="branch-form">
@@ -38,7 +40,7 @@ $isModal = Yii::$app->request->isAjax;
             <?= $form->field($model, 'branch_type')->widget(Select2::class, [
                 'data' => Branch::getTypeLabels(),
                 'options' => ['placeholder' => 'اختر النوع...', 'id' => 'branch-type-' . $model->id],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
+                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
             ]) ?>
         </div>
     </div>
@@ -48,7 +50,7 @@ $isModal = Yii::$app->request->isAjax;
             <?= $form->field($model, 'company_id')->widget(Select2::class, [
                 'data' => $companies,
                 'options' => ['placeholder' => 'اختر الشركة...', 'id' => 'branch-company-' . $model->id],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
+                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
             ]) ?>
         </div>
         <div class="col-md-5">
@@ -93,7 +95,7 @@ $isModal = Yii::$app->request->isAjax;
             <?= $form->field($model, 'manager_id')->widget(Select2::class, [
                 'data' => $users,
                 'options' => ['placeholder' => 'اختر مدير الفرع...', 'id' => 'branch-manager-' . $model->id],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
+                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
             ]) ?>
         </div>
     </div>
@@ -103,7 +105,7 @@ $isModal = Yii::$app->request->isAjax;
             <?= $form->field($model, 'is_active')->widget(Select2::class, [
                 'data' => [1 => 'فعّال', 0 => 'معطّل'],
                 'options' => ['id' => 'branch-active-' . $model->id],
-                'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl', 'dropdownParent' => $isModal ? '#ajaxCrudModal' : null],
+                'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
             ]) ?>
         </div>
         <div class="col-md-3">
