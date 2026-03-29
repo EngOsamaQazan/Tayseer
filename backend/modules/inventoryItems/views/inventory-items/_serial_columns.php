@@ -120,10 +120,9 @@ return [
             'serial-delete' => function ($url, $model) {
                 return Html::a('<i class="fa fa-trash"></i>', $url, [
                     'class' => 'btn btn-xs btn-danger', 'title' => 'حذف',
-                    'data-confirm' => false, 'data-method' => false,
-                    'data-request-method' => 'post', 'data-toggle' => 'tooltip',
-                    'data-confirm-title' => 'تأكيد الحذف',
-                    'data-confirm-message' => 'هل أنت متأكد من حذف هذا الرقم التسلسلي؟',
+                    'data-confirm' => 'هل أنت متأكد من حذف هذا الرقم التسلسلي؟',
+                    'data-method' => 'post',
+                    'data-toggle' => 'tooltip',
                 ]);
             },
         ],
