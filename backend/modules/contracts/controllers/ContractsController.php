@@ -376,27 +376,9 @@ class ContractsController extends Controller
                         v.total_paid, v.total_expenses, v.total_lawyer_cost, v.remaining_balance,
                         v.first_installment_value,
                         fu.username AS follower_name,
-                        CASE
-                            WHEN v.judiciary_case_count > 0 AND cb.active_loan_scheduling_id IS NULL THEN
-                                GREATEST(0, ROUND(
-                                    v.total_value + COALESCE(v.total_expenses, 0) + COALESCE(v.total_lawyer_cost, 0)
-                                    - COALESCE(v.total_adjustments, 0) - COALESCE(v.total_paid, 0)
-                                , 2))
-                            WHEN v.effective_first_date IS NULL OR CURDATE() < v.effective_first_date THEN
-                                0
-                            ELSE
-                                GREATEST(0, ROUND(LEAST(
-                                    (GREATEST(0,
-                                        PERIOD_DIFF(DATE_FORMAT(CURDATE(), '%Y%m'), DATE_FORMAT(v.effective_first_date, '%Y%m'))
-                                        + CASE WHEN DAY(CURDATE()) >= DAY(v.effective_first_date) THEN 1 ELSE 0 END
-                                    ) * COALESCE(v.effective_installment, 0))
-                                    - COALESCE(v.total_paid, 0),
-                                    v.total_value + COALESCE(v.total_expenses, 0) + COALESCE(v.total_lawyer_cost, 0)
-                                    - COALESCE(v.total_adjustments, 0) - COALESCE(v.total_paid, 0)
-                                ), 2))
-                        END AS deserved_amount
+                        COALESCE(vs.deserved_amount, 0) AS deserved_amount
                  FROM {{%vw_contracts_overview}} v
-                 LEFT JOIN {{%vw_contract_balance}} cb ON cb.contract_id = v.id
+                 LEFT JOIN vw_contracts_screen vs ON vs.contract_id = v.id
                  LEFT JOIN {{%user}} fu ON fu.id = v.followed_by
                  WHERE v.id IN ($idList)
                  ORDER BY v.id DESC"
