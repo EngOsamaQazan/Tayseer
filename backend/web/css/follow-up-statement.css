@@ -1007,3 +1007,201 @@
   .tv-header__meta { display: flex; flex-direction: column; gap: 4px; }
   .tv-header__sep { display: none; }
 }
+
+
+/* ══════════════════════════════════════════════════════
+   CLEARANCE CERTIFICATE (براءة الذمة) — fc-* classes
+   ══════════════════════════════════════════════════════ */
+
+/* ── Status Badge (header) ── */
+.fc-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  background: rgba(15, 123, 61, 0.15);
+  border: 1.5px solid #0F7B3D;
+  color: #0F7B3D;
+}
+.fc-status-badge svg {
+  flex-shrink: 0;
+}
+
+/* ── Clearance Banner ── */
+.fc-banner {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 28px 32px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #eefbf3 0%, #d4f5e2 100%);
+  border: 2px solid #0F7B3D;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.fc-banner__icon {
+  width: 64px;
+  height: 64px;
+  background: #0F7B3D;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.fc-banner__icon svg {
+  color: #fff;
+  width: 32px;
+  height: 32px;
+}
+
+.fc-banner__content {
+  flex: 1;
+}
+
+.fc-banner__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #065f2a;
+  margin: 0 0 6px;
+}
+
+.fc-banner__subtitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a7a42;
+  margin: 0;
+}
+
+/* ── Clearance Statement ── */
+.fc-statement {
+  background: var(--c-bg);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.fc-statement__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--c-primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+}
+.fc-statement__header svg {
+  flex-shrink: 0;
+  color: rgba(255,255,255,0.85);
+}
+
+.fc-statement__body {
+  padding: 24px 28px;
+}
+
+.fc-statement__body p {
+  font-size: 16px;
+  line-height: 2;
+  color: var(--c-text);
+  margin: 0;
+}
+
+.fc-statement__body strong {
+  font-weight: 700;
+  color: var(--c-primary);
+}
+
+.fc-statement__seal {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-success);
+  background: var(--c-success-soft);
+  padding: 12px 20px;
+  border-top: 1px solid #c3e7d2;
+}
+.fc-statement__seal svg {
+  color: var(--c-success);
+  flex-shrink: 0;
+}
+
+/* ── Copies Distribution ── */
+.fc-copies {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.fc-copies__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+  padding: 14px 18px;
+  background: var(--c-bg);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--c-border);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--c-text-2);
+}
+.fc-copies__item svg {
+  color: var(--c-primary);
+  flex-shrink: 0;
+}
+
+/* ── Clearance Responsive ── */
+@media (max-width: 768px) {
+  .fc-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px 20px;
+  }
+  .fc-banner__icon {
+    width: 56px;
+    height: 56px;
+  }
+  .fc-banner__icon svg {
+    width: 28px;
+    height: 28px;
+  }
+  .fc-banner__title {
+    font-size: 18px;
+  }
+  .fc-statement__body {
+    padding: 20px;
+  }
+  .fc-statement__body p {
+    font-size: 14px;
+  }
+  .fc-copies {
+    flex-direction: column;
+  }
+}
+
+/* ── Clearance Print ── */
+@media print {
+  .fc-banner,
+  .fc-status-badge,
+  .fc-statement__header,
+  .fc-statement__seal {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .fc-banner {
+    box-shadow: none;
+    border-color: #0F7B3D;
+  }
+  .fc-banner__icon {
+    background: #0F7B3D !important;
+  }
+}
