@@ -75,8 +75,12 @@ jobs:
                 fi
               done
               
+              # Install / update Composer dependencies
+              echo "  Installing Composer dependencies..."
+              composer install --no-dev --no-interaction --optimize-autoloader 2>&1 || echo "  Warning: composer install had issues"
+              
               # Fix permissions
-              chown -R www-data:www-data backend/ common/ console/ frontend/ api/ 2>/dev/null || true
+              chown -R www-data:www-data backend/ common/ console/ frontend/ api/ vendor/ 2>/dev/null || true
               
             # Run pending migrations (skip if fails due to already-applied migrations)
             echo "  Running migrations..."
