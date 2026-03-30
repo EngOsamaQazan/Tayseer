@@ -371,17 +371,32 @@ class ContractsController extends Controller
         if (!empty($contractIds)) {
             $idList = implode(',', array_map('intval', $contractIds));
             $overviewRows = Yii::$app->db->createCommand(
-                "SELECT v.id, v.total_value, v.Date_of_sale, v.status,
-                        v.seller_name, v.client_names,
-                        v.total_paid, v.total_expenses, v.total_lawyer_cost, v.remaining_balance,
-                        v.first_installment_value,
+                "SELECT cb.contract_id AS id,
+                        cb.total_value, cb.Date_of_sale, cb.status,
+                        cb.total_paid, cb.total_expenses, cb.total_lawyer_cost, cb.remaining_balance,
+                        cb.first_installment_value,
+                        u.username  AS seller_name,
+                        cn.client_names,
                         fu.username AS follower_name,
-                        COALESCE(vs.deserved_amount, 0) AS deserved_amount
-                 FROM {{%vw_contracts_overview}} v
-                 LEFT JOIN vw_contracts_screen vs ON vs.contract_id = v.id
-                 LEFT JOIN {{%user}} fu ON fu.id = v.followed_by
-                 WHERE v.id IN ($idList)
-                 ORDER BY v.id DESC"
+                        CASE
+                            WHEN cb.judiciary_case_count > 0 AND cb.active_loan_scheduling_id IS NULL THEN
+                                GREATEST(0, ROUND(cb.total_value + cb.total_expenses + cb.total_lawyer_cost
+                                    - cb.total_adjustments - cb.total_paid, 2))
+                            WHEN cb.effective_first_date IS NULL OR CURDATE() < cb.effective_first_date THEN
+                                0
+                            ELSE
+                                GREATEST(0, ROUND(
+                                    LEAST(
+                                        (TIMESTAMPDIFF(MONTH, cb.effective_first_date, CURDATE()) + 1) * cb.effective_installment,
+                                        cb.total_value + cb.total_expenses + cb.total_lawyer_cost - cb.total_adjustments
+                                    ) - cb.total_paid, 2))
+                        END AS deserved_amount
+                 FROM {{%vw_contract_balance}} cb
+                 LEFT JOIN {{%vw_contract_customers_names}} cn ON cn.contract_id = cb.contract_id
+                 LEFT JOIN {{%user}} u  ON u.id = cb.seller_id
+                 LEFT JOIN {{%user}} fu ON fu.id = cb.followed_by
+                 WHERE cb.contract_id IN ($idList)
+                 ORDER BY cb.contract_id DESC"
             )->queryAll();
 
             foreach ($overviewRows as $r) {
