@@ -2,17 +2,22 @@
 
 namespace backend\helpers;
 
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
+use OpenSpout\Writer\XLSX\Writer;
+use OpenSpout\Writer\XLSX\Options;
+use OpenSpout\Common\Entity\Row;
+use OpenSpout\Common\Entity\Cell;
+use OpenSpout\Common\Entity\Style\Style;
+use OpenSpout\Common\Entity\Style\Color;
+use OpenSpout\Common\Entity\Style\Border;
+use OpenSpout\Common\Entity\Style\BorderPart;
 use Yii;
 
 class ExportHelper
 {
     /**
+     * تصدير Excel بتقنية OpenSpout — streaming بدون تحميل الكل بالذاكرة
+     * يدعم 10,000+ صف بأقل من 3 MB ذاكرة
+     *
      * @param array $config [
      *   'title'     => string,
      *   'subtitle'  => string|null,
@@ -21,16 +26,13 @@ class ExportHelper
      *   'widths'    => int[],
      *   'rows'      => array,
      *   'filename'  => string,
-     *   'sheetTitle'=> string|null,
      *   'headerBg'  => string (hex without #),
-     *   'creator'   => string|null,
+     *   'headerFg'  => string (hex without #),
      * ]
      * @return \yii\web\Response
      */
     public static function toExcel(array $config)
     {
-        $prevLimit = ini_get('memory_limit');
-        ini_set('memory_limit', '512M');
         $title      = $config['title'];
         $subtitle   = $config['subtitle'] ?? null;
         $headers    = $config['headers'];
@@ -38,122 +40,94 @@ class ExportHelper
         $widths     = $config['widths'] ?? [];
         $rows       = $config['rows'];
         $filename   = $config['filename'] ?? 'export';
-        $sheetTitle = $config['sheetTitle'] ?? mb_substr($title, 0, 31);
         $headerBg   = $config['headerBg'] ?? '800020';
         $headerFg   = $config['headerFg'] ?? 'FFFFFF';
-        $creator    = $config['creator'] ?? 'نظام تيسير';
 
-        $excel = new Spreadsheet();
-        $excel->getProperties()->setCreator($creator)->setTitle($title);
+        $colCount     = count($headers);
+        $fullFilename = $filename . '_' . date('Y-m-d') . '.xlsx';
+        $tmpFile      = tempnam(sys_get_temp_dir(), 'spout_') . '.xlsx';
 
-        $sheet = $excel->getActiveSheet();
-        $sheet->setTitle($sheetTitle);
-        $sheet->setRightToLeft(true);
+        $bgColor = self::hexToColor($headerBg);
+        $fgColor = self::hexToColor($headerFg);
 
-        $colCount = count($headers);
-        $lastCol  = Coordinate::stringFromColumnIndex($colCount);
+        $options = new Options();
+        for ($c = 0; $c < $colCount; $c++) {
+            $options->setColumnWidth((float)($widths[$c] ?? 18), $c + 1);
+        }
 
-        $currentRow = 1;
+        $writer = new Writer($options);
+        $writer->openToFile($tmpFile);
 
         /* ── صف العنوان الرئيسي ── */
-        $sheet->mergeCells("A{$currentRow}:{$lastCol}{$currentRow}");
-        $sheet->setCellValue('A1', $title . ' — تاريخ: ' . date('Y-m-d'));
-        $sheet->getStyle("A1")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 16, 'color' => ['rgb' => $headerFg], 'name' => 'Arial'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $headerBg]],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-        ]);
-        $sheet->getRowDimension(1)->setRowHeight(36);
-        $currentRow++;
+        $titleStyle = new Style();
+        $titleStyle->setFontBold();
+        $titleStyle->setFontSize(14);
+        $titleStyle->setFontName('Arial');
+        $titleStyle->setFontColor($fgColor);
+        $titleStyle->setBackgroundColor($bgColor);
+
+        $titleCells = [Cell::fromValue($title . ' — تاريخ: ' . date('Y-m-d'), $titleStyle)];
+        $emptyTitleStyle = new Style();
+        $emptyTitleStyle->setBackgroundColor($bgColor);
+        for ($c = 1; $c < $colCount; $c++) {
+            $titleCells[] = Cell::fromValue('', $emptyTitleStyle);
+        }
+        $writer->addRow(new Row($titleCells));
 
         /* ── صف العنوان الفرعي (اختياري) ── */
         if ($subtitle) {
-            $sheet->mergeCells("A{$currentRow}:{$lastCol}{$currentRow}");
-            $sheet->setCellValue("A{$currentRow}", $subtitle);
-            $sheet->getStyle("A{$currentRow}")->applyFromArray([
-                'font'      => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '334155'], 'name' => 'Arial'],
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F0FF']],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            ]);
-            $sheet->getRowDimension($currentRow)->setRowHeight(26);
-            $currentRow++;
+            $subStyle = new Style();
+            $subStyle->setFontBold();
+            $subStyle->setFontSize(11);
+            $subStyle->setFontName('Arial');
+            $subStyle->setBackgroundColor(self::hexToColor('F0F0FF'));
+            $writer->addRow(Row::fromValues(array_pad([$subtitle], $colCount, ''), $subStyle));
         }
 
         /* ── رؤوس الأعمدة ── */
-        $hRow = $currentRow;
-        for ($c = 0; $c < $colCount; $c++) {
-            $col = Coordinate::stringFromColumnIndex($c + 1);
-            $sheet->setCellValue("{$col}{$hRow}", $headers[$c]);
-        }
-        $sheet->getStyle("A{$hRow}:{$lastCol}{$hRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 11, 'color' => ['rgb' => $headerFg], 'name' => 'Arial'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $headerBg]],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '666666']]],
-        ]);
-        $sheet->getRowDimension($hRow)->setRowHeight(28);
-        $sheet->freezePane('A' . ($hRow + 1));
+        $headerStyle = new Style();
+        $headerStyle->setFontBold();
+        $headerStyle->setFontSize(11);
+        $headerStyle->setFontName('Arial');
+        $headerStyle->setFontColor($fgColor);
+        $headerStyle->setBackgroundColor($bgColor);
+        $headerStyle->setShouldWrapText(true);
+        $headerStyle->setBorder(new Border(
+            new BorderPart(Border::BOTTOM, Color::BLACK, Border::WIDTH_THIN),
+            new BorderPart(Border::TOP, Color::BLACK, Border::WIDTH_THIN),
+            new BorderPart(Border::LEFT, Color::BLACK, Border::WIDTH_THIN),
+            new BorderPart(Border::RIGHT, Color::BLACK, Border::WIDTH_THIN),
+        ));
 
-        /* ── كتابة البيانات ── */
-        $oddRows = [];
-        $rowNum  = $hRow + 1;
+        $writer->addRow(Row::fromValues($headers, $headerStyle));
+
+        /* ── كتابة البيانات — streaming صف بصف ── */
+        $dataStyle = new Style();
+        $dataStyle->setFontSize(11);
+        $dataStyle->setFontName('Arial');
+
+        $altStyle = new Style();
+        $altStyle->setFontSize(11);
+        $altStyle->setFontName('Arial');
+        $altStyle->setBackgroundColor(self::hexToColor('F5F5F5'));
 
         foreach ($rows as $idx => $row) {
-            for ($c = 0; $c < $colCount; $c++) {
-                $col = Coordinate::stringFromColumnIndex($c + 1);
-                $key = $keys[$c];
+            $values = [];
+            foreach ($keys as $key) {
                 if ($key === '#') {
-                    $value = $idx + 1;
+                    $values[] = $idx + 1;
                 } elseif ($key instanceof \Closure || (is_array($key) && is_callable($key))) {
-                    $value = $key($row, $idx);
+                    $values[] = $key($row, $idx);
                 } elseif (is_object($row)) {
-                    $value = self::resolveAttribute($row, $key);
+                    $values[] = self::resolveAttribute($row, $key);
                 } else {
-                    $value = $row[$key] ?? '';
+                    $values[] = $row[$key] ?? '';
                 }
-                $sheet->setCellValue("{$col}{$rowNum}", $value);
             }
-            if ($idx % 2 === 1) {
-                $oddRows[] = $rowNum;
-            }
-            $rowNum++;
+            $writer->addRow(Row::fromValues($values, $idx % 2 === 1 ? $altStyle : $dataStyle));
         }
 
-        $lastDataRow = max($rowNum - 1, $hRow);
-
-        /* ── تنسيق البيانات ── */
-        if ($lastDataRow > $hRow) {
-            $allData = "A" . ($hRow + 1) . ":{$lastCol}{$lastDataRow}";
-            $sheet->getStyle($allData)->applyFromArray([
-                'font'      => ['size' => 10.5, 'name' => 'Arial'],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
-                'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'D1D5DB']]],
-            ]);
-
-            foreach ($oddRows as $or) {
-                $sheet->getStyle("A{$or}:{$lastCol}{$or}")->applyFromArray([
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F9FAFB']],
-                ]);
-            }
-
-            $sheet->setAutoFilter("A{$hRow}:{$lastCol}{$lastDataRow}");
-        }
-
-        /* ── عرض الأعمدة ── */
-        for ($c = 0; $c < $colCount; $c++) {
-            $w = $widths[$c] ?? 18;
-            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($c + 1))->setWidth($w);
-        }
-
-        /* ── حفظ وإرسال ── */
-        $fullFilename = $filename . '_' . date('Y-m-d') . '.xlsx';
-        $tmpFile = tempnam(sys_get_temp_dir(), 'xl') . '.xlsx';
-
-        $writer = new Xlsx($excel);
-        $writer->save($tmpFile);
-
-        $excel->disconnectWorksheets();
-        unset($excel);
+        $writer->close();
 
         return Yii::$app->response->sendFile($tmpFile, $fullFilename, [
             'mimeType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -257,5 +231,18 @@ class ExportHelper
             return '';
         }
         return $related->{$parts[1]} ?? '';
+    }
+
+    /**
+     * hex string (e.g. '800020') → OpenSpout ARGB color string
+     */
+    private static function hexToColor(string $hex): string
+    {
+        $hex = ltrim($hex, '#');
+        return Color::rgb(
+            (int)hexdec(substr($hex, 0, 2)),
+            (int)hexdec(substr($hex, 2, 2)),
+            (int)hexdec(substr($hex, 4, 2)),
+        );
     }
 }

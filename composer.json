@@ -27,6 +27,7 @@
         "mdmsoft/yii2-admin": "~2.0",
         "yii2tech/ar-softdelete": "^1.0",
         "phpoffice/phpspreadsheet": "^5.0",
+        "openspout/openspout": "^4.0",
         "yiisoft/yii2-queue": "^2.3",
         "php-amqplib/php-amqplib": "^3.7",
         "chillerlan/php-qrcode": "^5.0",
