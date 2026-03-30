@@ -370,9 +370,10 @@ class ContractsController extends Controller
         $exportRows = [];
         if (!empty($contractIds)) {
             set_time_limit(0);
+            $db = Yii::$app->db;
             $idList = implode(',', array_map('intval', $contractIds));
 
-            $overviewRows = Yii::$app->db->createCommand(
+            $overviewRows = $db->createCommand(
                 "SELECT v.id, v.total_value, v.Date_of_sale, v.status,
                         v.seller_name, v.client_names,
                         v.total_paid, v.total_expenses, v.total_lawyer_cost, v.remaining_balance,
@@ -384,14 +385,81 @@ class ContractsController extends Controller
                  ORDER BY v.id DESC"
             )->queryAll();
 
+            $adjRows = $db->createCommand(
+                "SELECT contract_id, COALESCE(SUM(amount),0) AS total_adj
+                 FROM {{%contract_adjustment}}
+                 WHERE contract_id IN ($idList) AND is_deleted = 0
+                 GROUP BY contract_id"
+            )->queryAll();
+            $adjMap = ArrayHelper::map($adjRows, 'contract_id', 'total_adj');
+
+            $judIds = $db->createCommand(
+                "SELECT DISTINCT contract_id
+                 FROM {{%judiciary}}
+                 WHERE contract_id IN ($idList) AND (is_deleted = 0 OR is_deleted IS NULL)"
+            )->queryColumn();
+            $judMap = array_flip($judIds);
+
+            $settRows = $db->createCommand(
+                "SELECT ls.*
+                 FROM {{%loan_scheduling}} ls
+                 INNER JOIN (
+                     SELECT contract_id, MAX(id) AS max_id
+                     FROM {{%loan_scheduling}}
+                     WHERE contract_id IN ($idList)
+                     GROUP BY contract_id
+                 ) latest ON ls.id = latest.max_id"
+            )->queryAll();
+            $settMap = ArrayHelper::index($settRows, 'contract_id');
+
+            $cDataRows = $db->createCommand(
+                "SELECT id, first_installment_date, monthly_installment_value
+                 FROM {{%contracts}}
+                 WHERE id IN ($idList)"
+            )->queryAll();
+            $cDataMap = ArrayHelper::index($cDataRows, 'id');
+
+            $today = date('Y-m-d');
+
             foreach ($overviewRows as $r) {
+                $cid = (int)$r['id'];
                 $totalDebt = (float)$r['total_value'] + (float)$r['total_expenses'] + (float)$r['total_lawyer_cost'];
-                $calc = new ContractCalculations((int)$r['id']);
+                $totalAdj  = (float)($adjMap[$cid] ?? 0);
+                $totalPaid = (float)$r['total_paid'];
+                $hasJud    = isset($judMap[$cid]);
+                $sett      = $settMap[$cid] ?? null;
+                $netTotal  = $totalDebt - $totalAdj;
+
+                $deserved = 0;
+                if ($hasJud && !$sett) {
+                    $deserved = max(0, round($netTotal - $totalPaid, 2));
+                } else {
+                    $firstDate = $sett
+                        ? ($sett['first_installment_date'] ?? null)
+                        : ($cDataMap[$cid]['first_installment_date'] ?? null);
+
+                    if (!empty($firstDate) && $today >= $firstDate) {
+                        $d1 = new \DateTime($firstDate);
+                        $d2 = new \DateTime($today);
+                        $interval = $d2->diff($d1);
+                        $months = $interval->y * 12 + $interval->m;
+
+                        if ($sett) {
+                            $monthly = (float)($sett['monthly_installment'] ?? 0);
+                        } else {
+                            $monthly = (float)($cDataMap[$cid]['monthly_installment_value'] ?? 0);
+                        }
+
+                        $shouldPaid = min(($months + 1) * $monthly, $netTotal);
+                        $deserved = max(0, round($shouldPaid - $totalPaid, 2));
+                    }
+                }
+
                 $exportRows[] = [
                     'id'            => $r['id'],
                     'seller'        => $r['seller_name'] ?: '—',
                     'customer'      => $r['client_names'] ?: '—',
-                    'deserved'      => $calc->deservedAmount(),
+                    'deserved'      => $deserved,
                     'date'          => $r['Date_of_sale'] ?: '—',
                     'first_payment' => $r['first_installment_value'] ? (float)$r['first_installment_value'] : 0,
                     'total'         => $totalDebt,
