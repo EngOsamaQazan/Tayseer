@@ -374,8 +374,10 @@ class ContractsController extends Controller
                 "SELECT v.id, v.total_value, v.Date_of_sale, v.status,
                         v.seller_name, v.client_names,
                         v.total_paid, v.total_expenses, v.total_lawyer_cost, v.remaining_balance,
+                        c.first_installment_value,
                         fu.username AS follower_name
                  FROM {{%vw_contracts_overview}} v
+                 LEFT JOIN {{%contracts}} c ON c.id = v.id
                  LEFT JOIN {{%user}} fu ON fu.id = v.followed_by
                  WHERE v.id IN ($idList)
                  ORDER BY v.id DESC"
@@ -383,16 +385,18 @@ class ContractsController extends Controller
 
             foreach ($overviewRows as $r) {
                 $totalDebt = (float)$r['total_value'] + (float)$r['total_expenses'] + (float)$r['total_lawyer_cost'];
+                $calc = new ContractCalculations((int)$r['id']);
                 $exportRows[] = [
-                    'id'        => $r['id'],
-                    'seller'    => $r['seller_name'] ?: '—',
-                    'customer'  => $r['client_names'] ?: '—',
-                    'deserved'  => (float)$r['total_paid'],
-                    'date'      => $r['Date_of_sale'] ?: '—',
-                    'total'     => $totalDebt,
-                    'status'    => $statusLabels[$r['status']] ?? $r['status'],
-                    'remaining' => (float)$r['remaining_balance'],
-                    'follower'  => $r['follower_name'] ?: '—',
+                    'id'            => $r['id'],
+                    'seller'        => $r['seller_name'] ?: '—',
+                    'customer'      => $r['client_names'] ?: '—',
+                    'deserved'      => $calc->deservedAmount(),
+                    'date'          => $r['Date_of_sale'] ?: '—',
+                    'first_payment' => $r['first_installment_value'] ? (float)$r['first_installment_value'] : 0,
+                    'total'         => $totalDebt,
+                    'status'        => $statusLabels[$r['status']] ?? $r['status'],
+                    'remaining'     => (float)$r['remaining_balance'],
+                    'follower'      => $r['follower_name'] ?: '—',
                 ];
             }
         }
@@ -400,9 +404,9 @@ class ContractsController extends Controller
         return $this->exportArrayData($exportRows, [
             'title'    => 'العقود',
             'filename' => 'contracts',
-            'headers'  => ['#', 'البائع', 'العميل', 'المدفوع', 'التاريخ', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
-            'keys'     => ['id', 'seller', 'customer', 'deserved', 'date', 'total', 'status', 'remaining', 'follower'],
-            'widths'   => [8, 16, 22, 14, 14, 14, 12, 14, 14],
+            'headers'  => ['#', 'البائع', 'العميل', 'المستحق', 'التاريخ', 'الدفعة الأولى', 'الإجمالي', 'الحالة', 'المتبقي', 'المتابع'],
+            'keys'     => ['id', 'seller', 'customer', 'deserved', 'date', 'first_payment', 'total', 'status', 'remaining', 'follower'],
+            'widths'   => [8, 16, 22, 14, 14, 14, 14, 12, 14, 14],
         ], $format);
     }
 
