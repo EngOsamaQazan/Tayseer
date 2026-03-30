@@ -374,10 +374,29 @@ class ContractsController extends Controller
                 "SELECT v.id, v.total_value, v.Date_of_sale, v.status,
                         v.seller_name, v.client_names,
                         v.total_paid, v.total_expenses, v.total_lawyer_cost, v.remaining_balance,
-                        c.first_installment_value,
-                        fu.username AS follower_name
+                        v.first_installment_value,
+                        fu.username AS follower_name,
+                        CASE
+                            WHEN v.judiciary_case_count > 0 AND cb.active_loan_scheduling_id IS NULL THEN
+                                GREATEST(0, ROUND(
+                                    v.total_value + COALESCE(v.total_expenses, 0) + COALESCE(v.total_lawyer_cost, 0)
+                                    - COALESCE(v.total_adjustments, 0) - COALESCE(v.total_paid, 0)
+                                , 2))
+                            WHEN v.effective_first_date IS NULL OR CURDATE() < v.effective_first_date THEN
+                                0
+                            ELSE
+                                GREATEST(0, ROUND(LEAST(
+                                    (GREATEST(0,
+                                        PERIOD_DIFF(DATE_FORMAT(CURDATE(), '%Y%m'), DATE_FORMAT(v.effective_first_date, '%Y%m'))
+                                        + CASE WHEN DAY(CURDATE()) >= DAY(v.effective_first_date) THEN 1 ELSE 0 END
+                                    ) * COALESCE(v.effective_installment, 0))
+                                    - COALESCE(v.total_paid, 0),
+                                    v.total_value + COALESCE(v.total_expenses, 0) + COALESCE(v.total_lawyer_cost, 0)
+                                    - COALESCE(v.total_adjustments, 0) - COALESCE(v.total_paid, 0)
+                                ), 2))
+                        END AS deserved_amount
                  FROM {{%vw_contracts_overview}} v
-                 LEFT JOIN {{%contracts}} c ON c.id = v.id
+                 LEFT JOIN {{%vw_contract_balance}} cb ON cb.contract_id = v.id
                  LEFT JOIN {{%user}} fu ON fu.id = v.followed_by
                  WHERE v.id IN ($idList)
                  ORDER BY v.id DESC"
@@ -385,12 +404,11 @@ class ContractsController extends Controller
 
             foreach ($overviewRows as $r) {
                 $totalDebt = (float)$r['total_value'] + (float)$r['total_expenses'] + (float)$r['total_lawyer_cost'];
-                $calc = new ContractCalculations((int)$r['id']);
                 $exportRows[] = [
                     'id'            => $r['id'],
                     'seller'        => $r['seller_name'] ?: '—',
                     'customer'      => $r['client_names'] ?: '—',
-                    'deserved'      => $calc->deservedAmount(),
+                    'deserved'      => (float)$r['deserved_amount'],
                     'date'          => $r['Date_of_sale'] ?: '—',
                     'first_payment' => $r['first_installment_value'] ? (float)$r['first_installment_value'] : 0,
                     'total'         => $totalDebt,
