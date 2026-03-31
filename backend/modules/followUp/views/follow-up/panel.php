@@ -11,6 +11,9 @@ use backend\helpers\PhoneInputAsset;
 
 CrudAsset::register($this);
 PhoneInputAsset::register($this);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=' . Yii::$app->params['assetVersion'], [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 /**
  * @var yii\web\View $this

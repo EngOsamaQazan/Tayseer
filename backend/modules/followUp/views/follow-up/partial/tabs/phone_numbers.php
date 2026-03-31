@@ -153,7 +153,7 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                             <?php endif; ?>
                             <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($pnWa) ?>')" data-toggle="modal" data-target="#smsModal" title="رسالة"><i class="fa fa-comment"></i></button>
                             <?= Html::a('<i class="fa fa-pencil"></i>', ['/phoneNumbers/phone-numbers/update', 'id' => $pn->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل']) ?>
-                            <?= Html::a('<i class="fa fa-trash-o"></i>', ['/phoneNumbers/phone-numbers/delete', 'id' => $pn->id], ['class' => 'pn-contact-btn edit', 'style' => 'color:#EF4444', 'title' => 'حذف', 'data-confirm' => 'هل أنت متأكد من حذف هذا الرقم؟', 'data-method' => 'post']) ?>
+                            <?= Html::a('<i class="fa fa-trash-o"></i>', ['/phoneNumbers/phone-numbers/delete', 'id' => $pn->id], ['class' => 'pn-contact-btn edit', 'style' => 'color:#EF4444', 'title' => 'حذف', 'data-request-method' => 'post', 'data-confirm-message' => 'هل أنت متأكد من حذف هذا الرقم؟']) ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
