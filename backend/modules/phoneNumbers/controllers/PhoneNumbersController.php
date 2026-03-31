@@ -109,29 +109,26 @@ class PhoneNumbersController extends Controller
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => Yii::t('app', "Create new PhoneNumbers"),
+                    'title' => 'إضافة رقم هاتف',
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit'])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
                 return [
+                    'forceClose' => true,
                     'forceReload' => "#customers-info-table-crud-datatable-{$model->customers->id}",
-                    'title' => "Create new PhoneNumbers",
-                    'content' => '<span class="text-success">Create PhoneNumbers success</span>',
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
                 return [
-                    'title' => "Create new PhoneNumbers",
+                    'title' => 'إضافة رقم هاتف',
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit'])
                 ];
             }
         } else {
@@ -167,30 +164,26 @@ class PhoneNumbersController extends Controller
             Yii::$app->response->format = Response::FORMAT_JSON;
             if ($request->isGet) {
                 return [
-                    'title' => "",
-                    // 'forceReload' => '#customers-info-table-crud-datatable',
+                    'title' => 'تعديل رقم الهاتف',
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit'])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
                 return [
+                    'forceClose' => true,
                     'forceReload' => "#customers-info-table-crud-datatable-{$model->customers->id}",
-                    'title' => Yii::t('app', "PhoneNumbers #") . $id,
-                    'content' => "<h3>تم التعديل</h3>",
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
                 return [
-                    'title' => "",
+                    'title' => 'تعديل رقم الهاتف',
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
-                        Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-bs-dismiss' => 'modal']) .
+                        Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit'])
                 ];
             }
         } else {
