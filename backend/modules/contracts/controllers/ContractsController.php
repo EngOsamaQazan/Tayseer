@@ -387,7 +387,7 @@ class ContractsController extends Controller
 
             $adjRows = $db->createCommand(
                 "SELECT contract_id, COALESCE(SUM(amount),0) AS total_adj
-                 FROM {{%contract_adjustment}}
+                 FROM {{%contract_adjustments}}
                  WHERE contract_id IN ($idList) AND is_deleted = 0
                  GROUP BY contract_id"
             )->queryAll();
