@@ -623,8 +623,23 @@ class Permissions
     public static function getRoutePermissionMap()
     {
         return [
-            /* لوحة التحكم — الصفحة الرئيسية */
+            /* لوحة التحكم — الصفحة الرئيسية (افتراضي لكل site/*) */
             'site' => [self::DASHBOARD],
+            /* إعدادات النظام وإدارة الصور — تحتاج صلاحيات الإعدادات لا لوحة التحكم */
+            'site/system-settings'        => self::getSettingsPermissions(),
+            'site/image-manager'          => self::getSettingsPermissions(),
+            'site/image-manager-data'     => self::getSettingsPermissions(),
+            'site/image-manager-stats'    => self::getSettingsPermissions(),
+            'site/image-reassign'         => self::getSettingsPermissions(),
+            'site/image-search-customers' => self::getSettingsPermissions(),
+            'site/image-update-doc-type'  => self::getSettingsPermissions(),
+            'site/image-delete'           => self::getSettingsPermissions(),
+            'site/server-backup'          => self::getSettingsPermissions(),
+            'site/test-google-connection'   => self::getSettingsPermissions(),
+            'site/test-maps-connection'     => self::getSettingsPermissions(),
+            'site/test-sms-connection'      => self::getSettingsPermissions(),
+            'site/test-whatsapp-connection' => self::getSettingsPermissions(),
+            'site/test-whatsapp-message'    => self::getSettingsPermissions(),
             /* العملاء */
             'customers/customers' => self::getModulePermissions(self::CUSTOMERS),
             'customers/smart-media' => self::getModulePermissions(self::CUSTOMERS),

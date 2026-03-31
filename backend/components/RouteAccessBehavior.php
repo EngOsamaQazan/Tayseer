@@ -130,8 +130,11 @@ class RouteAccessBehavior extends Behavior
         $resolvedRoute = self::resolveRoute($rawPathInfo);
         $controllerId = self::getControllerUniqueIdFromPath($resolvedRoute);
 
-        /* ── الطبقة 1: فحص مستوى المتحكم (الوحدة) ── */
-        $permissions = Permissions::getRequiredPermissionsForRoute($controllerId);
+        /* ── الطبقة 1: فحص المسار الكامل (controller/action) أولاً ثم الرجوع لمستوى المتحكم ── */
+        $permissions = Permissions::getRequiredPermissionsForRoute($resolvedRoute);
+        if ($permissions === null) {
+            $permissions = Permissions::getRequiredPermissionsForRoute($controllerId);
+        }
         if ($permissions === null) {
             Yii::warning("Route not in permission map: {$controllerId} (raw: {$rawPathInfo})", __METHOD__);
             throw new ForbiddenHttpException(Yii::t('yii', 'You are not allowed to perform this action.'));
