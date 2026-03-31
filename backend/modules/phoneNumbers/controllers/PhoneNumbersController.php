@@ -218,9 +218,15 @@ class PhoneNumbersController extends Controller
     {
         $request = Yii::$app->request;
         $model = $this->findModel($id);
-        $this->findModel($id)->delete();
-        Yii::$app->response->format = Response::FORMAT_JSON;
-        return ['forceClose' => true, 'forceReload' => "#customers-info-table-crud-datatable-{$model->customers->id}"];
+        $model->delete();
+
+        if ($request->isAjax) {
+            Yii::$app->response->format = Response::FORMAT_JSON;
+            return ['forceClose' => true, 'forceReload' => "#customers-info-table-crud-datatable-{$model->customers->id}"];
+        }
+
+        Yii::$app->session->setFlash('success', 'تم حذف الرقم بنجاح');
+        return $this->redirect($request->referrer ?: ['/']);
     }
 
     /**
