@@ -17,7 +17,7 @@ $columns = [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'id',
         'label' => '#',
-        'headerOptions' => ['style' => 'width:5%;text-align:center'],
+        'headerOptions' => ['style' => 'width:4%;text-align:center'],
         'contentOptions' => ['style' => 'text-align:center;font-weight:600;color:#94A3B8;font-size:11px', 'data-label' => '#'],
     ],
 
@@ -28,7 +28,7 @@ $columns = [
         'label' => 'العقد',
         'format' => 'raw',
         'value' => fn($m) => '<a href="' . Url::to(['/followUp/follow-up/index', 'contract_id' => $m->contract_id]) . '" style="font-weight:700;color:#800020;text-decoration:none">' . $m->contract_id . '</a>',
-        'headerOptions' => ['style' => 'width:7%;text-align:center'],
+        'headerOptions' => ['style' => 'width:5%;text-align:center'],
         'contentOptions' => ['style' => 'text-align:center', 'data-label' => 'العقد'],
     ],
 
@@ -66,8 +66,8 @@ $columns = [
             }
             return '<div style="display:flex;flex-direction:column;gap:2px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . implode('', array_map(fn($r) => '<div style="white-space:nowrap">' . $r . '</div>', $rows)) . '</div>';
         },
-        'headerOptions' => ['style' => 'width:22%'],
-        'contentOptions' => ['style' => 'max-width:220px;padding:4px 6px', 'data-label' => 'الأطراف'],
+        'headerOptions' => ['style' => 'width:21%'],
+        'contentOptions' => ['style' => 'padding:4px 6px;overflow:hidden;text-overflow:ellipsis', 'data-label' => 'الأطراف'],
     ],
 
     /* المحكمة */
@@ -80,8 +80,8 @@ $columns = [
             $name = $m->court->name ?? '—';
             return '<span style="font-size:11px;color:#475569">' . Html::encode($name) . '</span>';
         },
-        'headerOptions' => ['style' => 'width:14%'],
-        'contentOptions' => ['style' => 'max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap', 'data-label' => 'المحكمة'],
+        'headerOptions' => ['style' => 'width:11%'],
+        'contentOptions' => ['style' => 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap', 'data-label' => 'المحكمة'],
     ],
 
     /* المحامي */
@@ -96,8 +96,8 @@ $columns = [
             $short = NameHelper::short($full);
             return '<span style="font-size:11px;color:#475569" title="' . Html::encode($full) . '">' . Html::encode($short) . '</span>';
         },
-        'headerOptions' => ['style' => 'width:10%'],
-        'contentOptions' => ['style' => 'white-space:nowrap', 'data-label' => 'المحامي'],
+        'headerOptions' => ['style' => 'width:8%'],
+        'contentOptions' => ['style' => 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis', 'data-label' => 'المحامي'],
     ],
 
     /* رقم القضية - السنة */
@@ -116,7 +116,7 @@ $columns = [
             }
             return '<span style="font-family:\'Courier New\',monospace;color:#64748B">' . $num . '</span>';
         },
-        'headerOptions' => ['style' => 'width:10%;text-align:center'],
+        'headerOptions' => ['style' => 'width:9%;text-align:center'],
         'contentOptions' => ['style' => 'text-align:center;white-space:nowrap', 'data-label' => 'رقم القضية'],
     ],
 
@@ -177,8 +177,8 @@ $columns = [
             }
             return '<div style="display:flex;flex-direction:column;gap:2px;max-width:220px;max-height:60px;overflow-y:auto;scrollbar-width:thin">' . $html . '</div>';
         },
-        'headerOptions' => ['style' => 'width:16%'],
-        'contentOptions' => ['style' => 'padding:4px 6px', 'data-label' => 'آخر إجراء'],
+        'headerOptions' => ['style' => 'width:15%'],
+        'contentOptions' => ['style' => 'padding:4px 6px;overflow:hidden', 'data-label' => 'آخر إجراء'],
     ],
 
     /* مرحلة القضية */
@@ -204,7 +204,7 @@ $columns = [
             return $html;
         },
         'filter' => Judiciary::getStageList(),
-        'headerOptions' => ['style' => 'width:10%;text-align:center'],
+        'headerOptions' => ['style' => 'width:9%;text-align:center'],
         'contentOptions' => ['style' => 'text-align:center;padding:4px 6px', 'data-label' => 'المرحلة'],
     ],
 
@@ -309,7 +309,7 @@ $columns = [
                 . '</div>'
                 . '</div>';
         },
-        'headerOptions' => ['style' => 'width:12%;text-align:center'],
+        'headerOptions' => ['style' => 'width:14%;text-align:center'],
         'contentOptions' => ['style' => 'text-align:center;overflow:visible;position:relative;white-space:nowrap', 'data-label' => ''],
     ],
 ];

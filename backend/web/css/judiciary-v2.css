@@ -37,6 +37,7 @@
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  overflow-x: hidden;
 }
 .lh-wrap *, .lh-wrap *::before, .lh-wrap *::after { box-sizing: border-box; }
 
@@ -288,7 +289,7 @@
 }
 .lh-panel .jud-act-trigger:hover, .lh-panel .jca-act-trigger:hover { background: var(--clr-border-light); color: var(--clr-text); border-color: #CBD5E1; }
 .lh-panel .jud-act-menu, .lh-panel .jca-act-menu {
-  display: none; position: absolute; left: auto; right: 0; top: 100%; margin-top: 4px; min-width: 160px;
+  display: none; position: absolute; right: auto; left: 0; top: 100%; margin-top: 4px; min-width: 160px;
   background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 99999; padding: 4px 0;
   direction: rtl; font-size: 12px;
@@ -363,8 +364,9 @@
 
 /* ---- 10. GRIDVIEW / PANEL STYLING ---- */
 .lh-panel .panel-body, .lh-panel .kv-grid-container,
-.lh-panel .table-responsive, .lh-panel .kv-grid-table { overflow: visible !important; }
-.lh-panel .kv-grid-table { table-layout: fixed !important; width: 100% !important; border: none !important; }
+.lh-panel .table-responsive { overflow: visible !important; }
+.lh-panel .kv-grid-table { overflow: visible !important; table-layout: fixed !important; width: 100% !important; border: none !important; }
+.lh-content { overflow-x: clip; }
 .lh-panel .kv-grid-table thead th {
   background: var(--clr-bg) !important; font-weight: 700 !important; font-size: 11px !important;
   color: var(--clr-text-muted) !important; border-bottom: 2px solid var(--clr-border) !important;
