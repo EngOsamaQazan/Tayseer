@@ -16,8 +16,8 @@ class FollowUpSearch extends FollowUp {
      */
     public function rules() {
         return [
-            [['id', 'contract_id', 'created_by', 'connection_goal'], 'integer'],
-            [['date_time', 'notes', 'feeling'], 'safe'],
+            [['id', 'contract_id', 'created_by'], 'integer'],
+            [['date_time', 'notes'], 'safe'],
         ];
     }
 
@@ -58,7 +58,6 @@ class FollowUpSearch extends FollowUp {
             'id' => $this->id,
             'date_time' => $this->date_time,
             'created_by' => $this->created_by,
-            'connection_goal' => $this->connection_goal,
         ]);
         if (isset($contract_id)) {
             $query->andFilterWhere([
@@ -66,8 +65,7 @@ class FollowUpSearch extends FollowUp {
             );
         }
 
-        $query->andFilterWhere(['like', 'notes', $this->notes])
-                ->andFilterWhere(['like', 'feeling', $this->feeling]);
+        $query->andFilterWhere(['like', 'notes', $this->notes]);
 
         return $dataProvider;
     }

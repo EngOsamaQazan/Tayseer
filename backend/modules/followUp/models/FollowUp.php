@@ -39,10 +39,12 @@ class FollowUp extends \yii\db\ActiveRecord
     public function rules()
     {
             return [
-                [['contract_id', 'created_by', 'feeling', 'connection_goal','reminder'], 'required'],
-                [['contract_id', 'created_by', 'connection_goal','number_row'], 'integer'],
-                [['date_time', 'reminder', 'promise_to_pay_at',], 'safe'],
+                [['contract_id', 'created_by', 'reminder'], 'required'],
+                [['contract_id', 'created_by', 'connection_goal', 'number_row'], 'integer'],
+                [['date_time', 'reminder', 'promise_to_pay_at'], 'safe'],
                 [['notes', 'feeling'], 'string'],
+                [['connection_goal'], 'default', 'value' => 1],
+                [['feeling'], 'default', 'value' => ''],
                 [['created_by'], 'exist', 'skipOnError' => true, 'targetClass' => \common\models\User::class, 'targetAttribute' => ['created_by' => 'id']],
                 [['contract_id'], 'exist', 'skipOnError' => true, 'targetClass' => \backend\modules\contracts\models\Contracts::class, 'targetAttribute' => ['contract_id' => 'id']],
             ];

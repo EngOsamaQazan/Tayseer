@@ -23,7 +23,7 @@ class FollowUpSearch extends FollowUp
     {
         return [
             [['id', 'contract_id', 'created_by','number_row'], 'integer'],
-            [['date_time', 'connection_type', 'clinet_response', 'feeling', 'connection_goal'], 'safe'],
+            [['date_time', 'connection_type', 'clinet_response'], 'safe'],
             [['date_from', 'date_to'], 'string']
         ];
     }
@@ -115,9 +115,7 @@ class FollowUpSearch extends FollowUp
             'promise_to_pay_at' => $this->promise_to_pay_at,
         ]);
 
-        $query->andFilterWhere(['like', 'notes', $this->notes])
-            ->andFilterWhere(['like', 'feeling', $this->feeling])
-            ->andFilterWhere(['like', 'connection_goal', $this->connection_goal]);
+        $query->andFilterWhere(['like', 'notes', $this->notes]);
         if ((!empty($this->date_from))) {
 
             $query->andFilterWhere(['>=', 'date_time', $this->date_from]);
@@ -155,9 +153,7 @@ class FollowUpSearch extends FollowUp
             'promise_to_pay_at' => $this->promise_to_pay_at,
         ]);
 
-        $query->andFilterWhere(['like', 'notes', $this->notes])
-            ->andFilterWhere(['like', 'feeling', $this->feeling])
-            ->andFilterWhere(['like', 'connection_goal', $this->connection_goal]);
+        $query->andFilterWhere(['like', 'notes', $this->notes]);
 
         if ((!empty($this->date_from))) {
 

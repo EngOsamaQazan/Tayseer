@@ -7,22 +7,6 @@ use yii\helpers\Html;
  * @var backend\modules\customers\models\Customers|null $customer
  */
 
-// Feeling options
-$feelings = [
-    'متجاوب' => 'متجاوب',
-    'متعاون' => 'متعاون',
-    'مماطل' => 'مماطل',
-    'غير متجاوب' => 'غير متجاوب',
-    'رافض' => 'رافض',
-    'غير متاح' => 'غير متاح',
-];
-
-// Connection goals
-$goals = [
-    1 => 'تحصيل',
-    2 => 'مصالحة',
-    3 => 'إنهاء عقد',
-];
 ?>
 
 <?php // ═══ CALL PANEL ═══ ?>
@@ -35,26 +19,6 @@ $goals = [
         <form id="form-call" onsubmit="return OCP.submitFollowUp(event, 'call')">
             <input type="hidden" name="contract_id" value="<?= $contract->id ?>">
             <input type="hidden" name="action_type" value="call">
-            
-            <div class="ocp-form-group">
-                <label class="ocp-form-label ocp-form-label--required">هدف الاتصال</label>
-                <select name="connection_goal" class="ocp-form-input ocp-form-select" required>
-                    <option value="">اختر...</option>
-                    <?php foreach ($goals as $val => $label): ?>
-                    <option value="<?= $val ?>"><?= Html::encode($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <div class="ocp-form-group">
-                <label class="ocp-form-label ocp-form-label--required">انطباع العميل</label>
-                <select name="feeling" class="ocp-form-input ocp-form-select" required>
-                    <option value="">اختر...</option>
-                    <?php foreach ($feelings as $val => $label): ?>
-                    <option value="<?= $val ?>"><?= Html::encode($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
 
             <div class="ocp-form-group">
                 <label class="ocp-form-label ocp-form-label--required">موعد التذكير</label>
@@ -85,7 +49,6 @@ $goals = [
         <form id="form-promise" onsubmit="return OCP.submitFollowUp(event, 'promise')">
             <input type="hidden" name="contract_id" value="<?= $contract->id ?>">
             <input type="hidden" name="action_type" value="promise">
-            <input type="hidden" name="connection_goal" value="1">
 
             <div class="ocp-form-group">
                 <label class="ocp-form-label ocp-form-label--required">تاريخ وعد الدفع</label>
@@ -96,16 +59,6 @@ $goals = [
             <div class="ocp-form-group">
                 <label class="ocp-form-label">المبلغ الموعود</label>
                 <input type="number" name="promise_amount" class="ocp-form-input" placeholder="اختياري" step="0.01" min="0">
-            </div>
-
-            <div class="ocp-form-group">
-                <label class="ocp-form-label ocp-form-label--required">انطباع العميل</label>
-                <select name="feeling" class="ocp-form-input ocp-form-select" required>
-                    <option value="">اختر...</option>
-                    <?php foreach ($feelings as $val => $label): ?>
-                    <option value="<?= $val ?>"><?= Html::encode($label) ?></option>
-                    <?php endforeach; ?>
-                </select>
             </div>
 
             <div class="ocp-form-group">
@@ -138,19 +91,6 @@ $goals = [
         <form id="form-visit" onsubmit="return OCP.submitFollowUp(event, 'visit')">
             <input type="hidden" name="contract_id" value="<?= $contract->id ?>">
             <input type="hidden" name="action_type" value="visit">
-            <input type="hidden" name="connection_goal" value="1">
-
-            <div class="ocp-form-group">
-                <label class="ocp-form-label ocp-form-label--required">نتيجة الزيارة</label>
-                <select name="feeling" class="ocp-form-input ocp-form-select" required>
-                    <option value="">اختر...</option>
-                    <option value="تم الدفع">تم الدفع أثناء الزيارة</option>
-                    <option value="وعد بالدفع">وعد بالدفع</option>
-                    <option value="غير متواجد">العميل غير متواجد</option>
-                    <option value="رفض">رفض الدفع</option>
-                    <option value="عنوان خاطئ">عنوان غير صحيح</option>
-                </select>
-            </div>
 
             <div class="ocp-form-group">
                 <label class="ocp-form-label ocp-form-label--required">موعد التذكير</label>
@@ -269,8 +209,6 @@ $goals = [
         <form id="form-note" onsubmit="return OCP.submitFollowUp(event, 'note')">
             <input type="hidden" name="contract_id" value="<?= $contract->id ?>">
             <input type="hidden" name="action_type" value="note">
-            <input type="hidden" name="connection_goal" value="1">
-            <input type="hidden" name="feeling" value="ملاحظة">
 
             <div class="ocp-form-group">
                 <label class="ocp-form-label ocp-form-label--required">الملاحظة</label>
@@ -302,8 +240,6 @@ $goals = [
         <form id="form-review" onsubmit="return OCP.submitFollowUp(event, 'review')">
             <input type="hidden" name="contract_id" value="<?= $contract->id ?>">
             <input type="hidden" name="action_type" value="review">
-            <input type="hidden" name="connection_goal" value="1">
-            <input type="hidden" name="feeling" value="طلب مراجعة">
 
             <div class="ocp-form-group">
                 <label class="ocp-form-label ocp-form-label--required">سبب طلب المراجعة</label>

@@ -30,9 +30,7 @@ $this->render('partial/follow-up-view',[
             'date_time',
             'connection_type',
             'clinet_response:ntext',
-            'feeling',
             'created_by',
-            'connection_goal',
         ],
     ]) ?>
 </div>

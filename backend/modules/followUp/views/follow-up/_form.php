@@ -25,8 +25,6 @@ if (!$isNew) {
     $canEdit = ($created->diff($now)->h + ($created->diff($now)->days * 24)) < 2;
 }
 
-/* بيانات مرجعية */
-$feelings = ArrayHelper::map(\backend\modules\feelings\models\Feelings::find()->asArray()->all(), 'id', 'name');
 ?>
 
 <!-- ═══ ملخص العقد ═══ -->
@@ -77,22 +75,16 @@ $form = ActiveForm::begin($formConfig);
 <fieldset>
     <legend><i class="fa fa-phone"></i> بيانات المتابعة</legend>
     <div class="row">
-        <div class="col-md-3">
-            <?= $form->field($model, 'connection_goal')->dropDownList([1 => 'تحصيل', 2 => 'مصالحة', 3 => 'إنهاء عقد'], ['prompt' => '-- الهدف --'])->label('هدف الاتصال') ?>
-        </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <?= $form->field($model, 'reminder')->widget(FlatpickrWidget::class, [
                 'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ])->label('تاريخ التذكير') ?>
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <?= $form->field($model, 'promise_to_pay_at')->widget(FlatpickrWidget::class, [
                 'options' => ['placeholder' => 'تاريخ الوعد بالدفع'],
                 'pluginOptions' => ['dateFormat' => 'Y-m-d'],
             ])->label('وعد بالدفع') ?>
-        </div>
-        <div class="col-md-3">
-            <?= $form->field($model, 'feeling')->dropDownList($feelings, ['prompt' => '-- الانطباع --'])->label('الانطباع') ?>
         </div>
     </div>
     <div class="row">

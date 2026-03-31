@@ -23,7 +23,7 @@ use common\models\Model;
 use yii\helpers\ArrayHelper;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\notification\models\Notification;
-use backend\modules\feelings\models\Feelings;
+
 use common\components\customersInformation;
 use common\helper\Permissions;
 use backend\helpers\ExportTrait;
@@ -942,27 +942,13 @@ class FollowUpController extends Controller
             ->limit(50)
             ->all();
 
-        $feelingsMap = ArrayHelper::map(Feelings::find()->select(['id', 'name'])->asArray()->all(), 'id', 'name');
-        $goalLabels = [1 => 'تحصيل', 2 => 'مصالحة', 3 => 'إنهاء عقد'];
-
         foreach ($followUps as $fu) {
             $type = 'call';
             if (!empty($fu->promise_to_pay_at)) {
                 $type = 'promise';
             }
 
-            $meta = [];
-            if ($fu->feeling && isset($feelingsMap[$fu->feeling])) {
-                $meta[] = 'الانطباع: ' . $feelingsMap[$fu->feeling];
-            }
-            if (isset($goalLabels[$fu->connection_goal])) {
-                $meta[] = 'الهدف: ' . $goalLabels[$fu->connection_goal];
-            }
-            $metaLine = $meta ? implode(' | ', $meta) : '';
             $content = $fu->notes ?: '';
-            if ($metaLine) {
-                $content .= ($content ? "\n" : '') . $metaLine;
-            }
 
             $events[] = [
                 'id' => 'fu-' . $fu->id,
@@ -1233,18 +1219,16 @@ class FollowUpController extends Controller
         $model = new FollowUp();
         $model->contract_id = $contractId;
         $model->created_by = Yii::$app->user->id;
-        $model->connection_goal = (int)$request->post('connection_goal', 1);
-        $model->feeling = $request->post('feeling', '');
+        $model->connection_goal = 1;
+        $model->feeling = '';
         $model->reminder = $request->post('reminder', date('Y-m-d', strtotime('+3 days')));
         $model->notes = $request->post('notes', '');
         $model->promise_to_pay_at = $request->post('promise_to_pay_at') ?: null;
 
         if ($model->save()) {
-            // Log audit event
             $this->logAudit($contractId, 'follow_up_created', [
                 'follow_up_id' => $model->id,
                 'action_type' => $request->post('action_type', 'call'),
-                'feeling' => $model->feeling,
             ]);
 
             // Auto-create SLA for promise

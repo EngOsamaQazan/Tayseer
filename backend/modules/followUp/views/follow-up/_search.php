@@ -25,11 +25,7 @@ use yii\widgets\ActiveForm;
 
     <?= $form->field($model, 'clinet_response') ?>
 
-    <?php // echo $form->field($model, 'feeling') ?>
-
     <?php // echo $form->field($model, 'created_by') ?>
-
-    <?php // echo $form->field($model, 'connection_goal') ?>
 
     <div class="form-group">
         <?= Html::submitButton(Yii::t('app', 'Search'), ['class' => 'btn btn-primary']) ?>

@@ -20,10 +20,6 @@ return [
     ],
     [
         'class'=>'\kartik\grid\DataColumn',
-        'attribute'=>'feeling',
-    ],
-    [
-        'class'=>'\kartik\grid\DataColumn',
         'attribute'=>'createdBy.username',
     ],
     [
