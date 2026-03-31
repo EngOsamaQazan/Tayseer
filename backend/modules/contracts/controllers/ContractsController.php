@@ -46,7 +46,7 @@ class ContractsController extends Controller
                         'actions' => ['index', 'view', 'index-legal-department', 'legal-department',
                             'print-preview', 'print-first-page', 'print-second-page',
                             'export-excel', 'export-pdf', 'export-legal-excel', 'export-legal-pdf',
-                            'search-suggest'],
+                            'search-suggest', 'field-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -155,6 +155,112 @@ class ContractsController extends Controller
                 'icon'  => 'fa-file-text-o',
             ];
         }
+        return ['results' => $results];
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+     *  اقتراحات حسب الحقل — Field-specific Suggest (AJAX)
+     * ══════════════════════════════════════════════════════════════ */
+
+    public function actionFieldSuggest($field = '', $q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+
+        $allowed = ['customer_name', 'id', 'id_number', 'phone_number'];
+        if (!in_array($field, $allowed) || mb_strlen($q) < 1) {
+            return ['results' => []];
+        }
+
+        $db = Yii::$app->db;
+        $results = [];
+        $base = "FROM {{%contracts}} c
+                 LEFT JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id
+                 LEFT JOIN {{%customers}} cu ON cu.id = cc.customer_id
+                 WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
+                   AND c.status <> 'canceled'";
+
+        switch ($field) {
+            case 'customer_name':
+                if (mb_strlen($q) < 2) return ['results' => []];
+                $qNorm = str_replace(['أ', 'إ', 'آ'], 'ا', str_replace('ة', 'ه', str_replace('ى', 'ي', $q)));
+                $words = preg_split('/\s+/u', $qNorm, -1, PREG_SPLIT_NO_EMPTY);
+                $norm = "REPLACE(REPLACE(REPLACE(REPLACE(cu.name,'ة','ه'),'أ','ا'),'إ','ا'),'ى','ي')";
+                $where = [];
+                $params = [];
+                foreach ($words as $i => $w) {
+                    $p = ":w{$i}";
+                    $where[] = "$norm LIKE $p";
+                    $params[$p] = '%' . $w . '%';
+                }
+                $clause = implode(' AND ', $where);
+                $rows = $db->createCommand(
+                    "SELECT c.id, cu.name, cu.primary_phone_number AS phone
+                     $base AND ($clause)
+                     ORDER BY c.id DESC LIMIT 10", $params
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = [
+                        'title' => $r['name'],
+                        'sub'   => 'عقد #' . $r['id'] . ($r['phone'] ? ' — ' . $r['phone'] : ''),
+                        'icon'  => 'fa-user',
+                    ];
+                }
+                break;
+
+            case 'id':
+                $rows = $db->createCommand(
+                    "SELECT c.id,
+                            GROUP_CONCAT(DISTINCT cu.name SEPARATOR '، ') AS cname
+                     $base AND CAST(c.id AS CHAR) LIKE :q
+                     GROUP BY c.id ORDER BY c.id DESC LIMIT 10",
+                    [':q' => $q . '%']
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = [
+                        'id'    => $r['id'],
+                        'title' => 'عقد #' . $r['id'],
+                        'sub'   => $r['cname'] ?: '—',
+                        'icon'  => 'fa-file-text-o',
+                    ];
+                }
+                break;
+
+            case 'id_number':
+                if (mb_strlen($q) < 2) return ['results' => []];
+                $rows = $db->createCommand(
+                    "SELECT c.id, cu.name, cu.id_number
+                     $base AND cu.id_number LIKE :q
+                     ORDER BY c.id DESC LIMIT 10",
+                    [':q' => $q . '%']
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = [
+                        'title' => $r['id_number'],
+                        'sub'   => $r['name'] . ' — عقد #' . $r['id'],
+                        'icon'  => 'fa-id-card',
+                    ];
+                }
+                break;
+
+            case 'phone_number':
+                if (mb_strlen($q) < 2) return ['results' => []];
+                $rows = $db->createCommand(
+                    "SELECT c.id, cu.name, cu.primary_phone_number AS phone
+                     $base AND cu.primary_phone_number LIKE :q
+                     ORDER BY c.id DESC LIMIT 10",
+                    [':q' => '%' . $q . '%']
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = [
+                        'title' => $r['phone'],
+                        'sub'   => $r['name'] . ' — عقد #' . $r['id'],
+                        'icon'  => 'fa-phone',
+                    ];
+                }
+                break;
+        }
+
         return ['results' => $results];
     }
 

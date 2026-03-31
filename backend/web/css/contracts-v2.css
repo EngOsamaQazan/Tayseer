@@ -33,6 +33,7 @@ body:has(.ct-page) .page-header {
   display: flex;
   align-items: baseline;
   gap: 12px;
+  flex-wrap: wrap;
 }
 .ct-title-area h1 {
   font-size: 24px;
@@ -53,6 +54,11 @@ body:has(.ct-page) .page-header {
   border-radius: 20px;
   min-width: 40px;
   letter-spacing: 0.3px;
+}
+.ct-count-note {
+  font-size: 11px;
+  color: #6c757d;
+  font-weight: 400;
 }
 .ct-hdr-actions {
   display: flex;
@@ -260,6 +266,46 @@ body:has(.ct-page) .page-header {
 .ct-filter-wide .ct-input {
   font-size: 15px;
   padding: 10px 14px;
+}
+/* ── Search filter groups: unified with accent ── */
+.ct-filter-search {
+  position: relative;
+  border-right: 3px solid var(--clr-primary, #800020);
+  background: rgba(128, 0, 32, .02);
+  padding: 8px 10px 8px 6px;
+  border-radius: var(--radius-sm, 6px);
+  transition: background .2s ease;
+}
+.ct-filter-search:hover {
+  background: rgba(128, 0, 32, .04);
+}
+.ct-filter-search label {
+  color: var(--clr-primary, #800020) !important;
+}
+.ct-filter-search label i {
+  opacity: .65;
+  font-size: 12px;
+}
+/* Autocomplete wrapper inside search groups */
+.ct-filter-search .us-wrap {
+  position: relative;
+  width: 100%;
+}
+.ct-filter-search .us-wrap .us-icon {
+  display: none !important;
+}
+.ct-filter-search .us-input {
+  padding-right: 12px !important;
+  padding-left: 28px !important;
+}
+.ct-filter-search .us-dropdown {
+  min-width: 280px;
+  right: 0;
+  left: auto;
+}
+.ct-filter-search .us-spinner {
+  left: 8px;
+  font-size: 12px;
 }
 .ct-legal-filters {
   display: flex;
@@ -835,6 +881,9 @@ body:has(.ct-page) .page-header {
   .ct-filter-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+  .ct-filter-customer {
+    grid-column: span 2;
+  }
   .ct-table tbody td.ct-td-customer {
     max-width: 140px;
   }
@@ -917,6 +966,12 @@ body:has(.ct-page) .page-header {
   .ct-filter-grid {
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+  }
+  .ct-filter-customer {
+    grid-column: span 2;
+  }
+  .ct-filter-search {
+    padding: 6px 8px 6px 4px;
   }
   .ct-lf-row { flex-direction: column; }
   .ct-lf-date-pair { flex: 1 1 100%; }

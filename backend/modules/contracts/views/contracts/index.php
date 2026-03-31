@@ -104,6 +104,7 @@ $end   = $begin + count($models) - 1;
         <div class="ct-title-area">
             <h1><i class="fa fa-file-text-o" style="margin-left:8px;opacity:.7"></i>العقود</h1>
             <span class="ct-count" aria-label="إجمالي العقود"><?= number_format($dataCount) ?></span>
+            <span class="ct-count-note">لا تشمل العقود المُلغاة</span>
         </div>
         <div class="ct-hdr-actions">
             <?php if (Permissions::can(Permissions::CONT_CREATE)): ?>

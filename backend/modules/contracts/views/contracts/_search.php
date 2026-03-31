@@ -1,15 +1,15 @@
 <?php
 /**
  * بحث متقدم — العقود — V2
- * Advanced Search — Contracts — V2 (Grid layout)
+ * Advanced Search — Contracts — V2 (Grid layout + per-field autocomplete)
  */
 
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
+use yii\web\View;
 use backend\helpers\FlatpickrWidget;
-use backend\widgets\UnifiedSearchWidget;
 use kartik\select2\Select2;
 
 $cache = Yii::$app->cache;
@@ -36,6 +36,21 @@ $statusList = [
     'finished' => 'منتهي',
     'canceled' => 'ملغي',
 ];
+
+$baseUrl = Yii::$app->request->baseUrl;
+$v = Yii::$app->params['assetVersion'];
+$this->registerCssFile("$baseUrl/css/unified-search.css?v=$v");
+$this->registerJsFile("$baseUrl/js/unified-search.js?v=$v", ['position' => View::POS_HEAD]);
+
+$suggestUrl = Url::to(['field-suggest']);
+$this->registerJs(<<<JS
+if (typeof UnifiedSearch !== 'undefined') {
+    UnifiedSearch.init({inputId:'ctf-name',  url:'{$suggestUrl}?field=customer_name', minChars:2, delay:300, formSelector:'#contracts-search'});
+    UnifiedSearch.init({inputId:'ctf-id',    url:'{$suggestUrl}?field=id',            minChars:1, delay:300, formSelector:'#contracts-search'});
+    UnifiedSearch.init({inputId:'ctf-idn',   url:'{$suggestUrl}?field=id_number',     minChars:2, delay:300, formSelector:'#contracts-search'});
+    UnifiedSearch.init({inputId:'ctf-phone', url:'{$suggestUrl}?field=phone_number',  minChars:2, delay:300, formSelector:'#contracts-search'});
+}
+JS, View::POS_READY);
 ?>
 
 <?php $form = ActiveForm::begin([
@@ -47,16 +62,68 @@ $statusList = [
 
 <div class="ct-filter-grid">
 
-    <!-- بحث موحّد -->
-    <div class="ct-filter-group ct-filter-wide">
-        <label><i class="fa fa-search"></i> بحث</label>
-        <?= UnifiedSearchWidget::widget([
-            'name'        => 'ContractsSearch[q]',
-            'value'       => $model->q,
-            'searchUrl'   => Url::to(['search-suggest']),
-            'placeholder' => 'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...',
-            'formSelector'=> '#contracts-search',
-        ]) ?>
+    <!-- بحث: اسم الطرف (عمودين) -->
+    <div class="ct-filter-group ct-filter-search ct-filter-customer">
+        <label><i class="fa fa-user"></i> اسم الطرف</label>
+        <div class="us-wrap" id="ctf-name-wrap">
+            <?= Html::activeTextInput($model, 'customer_name', [
+                'id' => 'ctf-name',
+                'class' => 'form-control us-input',
+                'placeholder' => 'ابحث باسم الطرف...',
+                'aria-label' => 'بحث باسم الطرف',
+                'autocomplete' => 'off',
+            ]) ?>
+            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+            <div class="us-dropdown" style="display:none"></div>
+        </div>
+    </div>
+
+    <!-- بحث: رقم العقد -->
+    <div class="ct-filter-group ct-filter-search">
+        <label><i class="fa fa-file-text-o"></i> رقم العقد</label>
+        <div class="us-wrap" id="ctf-id-wrap">
+            <?= Html::activeTextInput($model, 'id', [
+                'id' => 'ctf-id',
+                'class' => 'form-control us-input',
+                'placeholder' => 'رقم العقد...',
+                'aria-label' => 'بحث برقم العقد',
+                'autocomplete' => 'off',
+            ]) ?>
+            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+            <div class="us-dropdown" style="display:none"></div>
+        </div>
+    </div>
+
+    <!-- بحث: الرقم الوطني -->
+    <div class="ct-filter-group ct-filter-search">
+        <label><i class="fa fa-id-card"></i> الرقم الوطني</label>
+        <div class="us-wrap" id="ctf-idn-wrap">
+            <?= Html::activeTextInput($model, 'id_number', [
+                'id' => 'ctf-idn',
+                'class' => 'form-control us-input',
+                'placeholder' => 'الرقم الوطني...',
+                'aria-label' => 'بحث بالرقم الوطني',
+                'autocomplete' => 'off',
+            ]) ?>
+            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+            <div class="us-dropdown" style="display:none"></div>
+        </div>
+    </div>
+
+    <!-- بحث: رقم الهاتف -->
+    <div class="ct-filter-group ct-filter-search">
+        <label><i class="fa fa-phone"></i> رقم الهاتف</label>
+        <div class="us-wrap" id="ctf-phone-wrap">
+            <?= Html::activeTextInput($model, 'phone_number', [
+                'id' => 'ctf-phone',
+                'class' => 'form-control us-input',
+                'placeholder' => 'رقم الهاتف...',
+                'aria-label' => 'بحث برقم الهاتف',
+                'autocomplete' => 'off',
+            ]) ?>
+            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+            <div class="us-dropdown" style="display:none"></div>
+        </div>
     </div>
 
     <!-- الحالة -->

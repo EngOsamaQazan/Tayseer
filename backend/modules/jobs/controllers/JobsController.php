@@ -598,6 +598,73 @@ class JobsController extends Controller
         return null;
     }
 
+    public function actionSearchPlaces()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim(Yii::$app->request->get('q', ''));
+        $lat = (float)Yii::$app->request->get('lat', 31.95);
+        $lng = (float)Yii::$app->request->get('lng', 35.91);
+        if (empty($q)) return ['results' => []];
+
+        $apiKey = \common\models\SystemSettings::get('google_maps', 'api_key', null)
+            ?? Yii::$app->params['googleMapsApiKey'] ?? null;
+
+        if ($apiKey) {
+            $url = 'https://places.googleapis.com/v1/places:searchText';
+            $body = json_encode([
+                'textQuery' => $q,
+                'locationBias' => [
+                    'circle' => [
+                        'center' => ['latitude' => $lat, 'longitude' => $lng],
+                        'radius' => 50000.0,
+                    ],
+                ],
+                'languageCode' => 'ar',
+                'maxResultCount' => 10,
+            ]);
+
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $body,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'X-Goog-Api-Key: ' . $apiKey,
+                    'X-Goog-FieldMask: places.displayName,places.formattedAddress,places.location,places.types',
+                ],
+                CURLOPT_TIMEOUT => 10,
+                CURLOPT_SSL_VERIFYPEER => false,
+            ]);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            unset($ch);
+
+            if ($httpCode === 200 && $response) {
+                $data = json_decode($response, true);
+                if (!empty($data['places'])) {
+                    $results = [];
+                    foreach ($data['places'] as $p) {
+                        $pLat = $p['location']['latitude'] ?? null;
+                        $pLng = $p['location']['longitude'] ?? null;
+                        if ($pLat === null) continue;
+                        $results[] = [
+                            'name' => $p['displayName']['text'] ?? '',
+                            'addr' => $p['formattedAddress'] ?? '',
+                            'lat' => (float)$pLat,
+                            'lng' => (float)$pLng,
+                            'types' => $p['types'] ?? [],
+                        ];
+                    }
+                    return ['results' => $results, 'source' => 'google'];
+                }
+            }
+        }
+
+        return ['results' => [], 'source' => 'none'];
+    }
+
     private function nominatimGeocode($query)
     {
         $url = 'https://nominatim.openstreetmap.org/search?' . http_build_query([

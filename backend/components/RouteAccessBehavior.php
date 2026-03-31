@@ -131,10 +131,19 @@ class RouteAccessBehavior extends Behavior
         $controllerId = self::getControllerUniqueIdFromPath($resolvedRoute);
 
         /* ── الطبقة 1: فحص المسار الكامل (controller/action) أولاً ثم الرجوع لمستوى المتحكم ── */
-        $permissions = Permissions::getRequiredPermissionsForRoute($resolvedRoute);
-        if ($permissions === null) {
-            $permissions = Permissions::getRequiredPermissionsForRoute($controllerId);
-        }
+        $fullRoutePerms = Permissions::getRequiredPermissionsForRoute($resolvedRoute);
+        $controllerPerms = Permissions::getRequiredPermissionsForRoute($controllerId);
+        $permissions = $fullRoutePerms !== null ? $fullRoutePerms : $controllerPerms;
+
+        $logFile = Yii::getAlias('@runtime/logs/route_debug.log');
+        @file_put_contents($logFile, date('H:i:s') . " | raw={$rawPathInfo} | resolved={$resolvedRoute} | ctrl={$controllerId}"
+            . " | fullRoute=" . ($fullRoutePerms === null ? 'NULL' : count($fullRoutePerms) . 'p')
+            . " | ctrlRoute=" . ($controllerPerms === null ? 'NULL' : count($controllerPerms) . 'p')
+            . " | used=" . ($fullRoutePerms !== null ? 'FULL' : 'CTRL')
+            . " | user=" . (Yii::$app->user->isGuest ? 'guest' : Yii::$app->user->id)
+            . " | hasAny=" . (($permissions && Permissions::hasAnyPermission($permissions)) ? 'YES' : 'NO')
+            . "\n", FILE_APPEND);
+
         if ($permissions === null) {
             Yii::warning("Route not in permission map: {$controllerId} (raw: {$rawPathInfo})", __METHOD__);
             throw new ForbiddenHttpException(Yii::t('yii', 'You are not allowed to perform this action.'));
