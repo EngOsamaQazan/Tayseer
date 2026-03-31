@@ -68,12 +68,12 @@
     $('.jud-act-wrap.open, .jca-act-wrap.open').removeClass('open');
     if (!wasOpen) {
       $wrap.addClass('open');
+      $menu.removeClass('flip-up');
       var r = this.getBoundingClientRect();
-      var menuW = $menu.outerWidth() || 160;
-      var posLeft = r.right - menuW;
-      if (posLeft < 4) posLeft = 4;
-      if (posLeft + menuW > window.innerWidth) posLeft = window.innerWidth - menuW - 4;
-      $menu.css({ left: posLeft + 'px', top: (r.bottom + 4) + 'px' });
+      var menuH = $menu.outerHeight() || 180;
+      if (r.bottom + menuH + 8 > window.innerHeight) {
+        $menu.addClass('flip-up');
+      }
     }
   });
   $(document).on('click', function () {

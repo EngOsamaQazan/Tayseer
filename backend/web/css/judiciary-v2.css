@@ -288,13 +288,16 @@
 }
 .lh-panel .jud-act-trigger:hover, .lh-panel .jca-act-trigger:hover { background: var(--clr-border-light); color: var(--clr-text); border-color: #CBD5E1; }
 .lh-panel .jud-act-menu, .lh-panel .jca-act-menu {
-  display: none; position: fixed; left: auto; top: auto; margin: 0; min-width: 160px;
+  display: none; position: absolute; left: auto; right: 0; top: 100%; margin-top: 4px; min-width: 160px;
   background: var(--clr-surface); border: 1px solid var(--clr-border); border-radius: 8px;
   box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 99999; padding: 4px 0;
   direction: rtl; font-size: 12px;
 }
 .lh-panel .jud-act-wrap.open .jud-act-menu,
 .lh-panel .jca-act-wrap.open .jca-act-menu { display: block; }
+.lh-panel .jud-act-menu.flip-up, .lh-panel .jca-act-menu.flip-up {
+  top: auto; bottom: 100%; margin-top: 0; margin-bottom: 4px;
+}
 .lh-panel .jud-act-menu a, .lh-panel .jca-act-menu a {
   display: flex; align-items: center; gap: 8px; padding: 7px 14px;
   color: #334155; text-decoration: none; white-space: nowrap; transition: background .12s;
