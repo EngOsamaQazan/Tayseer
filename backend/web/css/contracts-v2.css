@@ -16,7 +16,10 @@ body:has(.ct-page) .page-header {
   padding: 0;
   max-width: 100%;
   margin: 0;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
+.ct-page *, .ct-page *::before, .ct-page *::after { box-sizing: border-box; }
 
 /* ---- 2. PAGE HEADER ---- */
 .ct-page-hdr {
@@ -253,21 +256,81 @@ body:has(.ct-page) .page-header {
 .ct-filter-panel.collapsed .ct-filter-body {
   display: none;
 }
-/* Filter form grid */
-.ct-filter-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px 18px;
+/* Filter form — flex-based rows (judiciary pattern: no horizontal scroll) */
+.ct-filter-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ct-filter-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
   align-items: end;
 }
-.ct-filter-wide {
-  grid-column: 1 / -1;
+.ct-filter-row:last-child {
+  margin-bottom: 0;
 }
-.ct-filter-wide .ct-input {
-  font-size: 15px;
-  padding: 10px 14px;
+.ct-filter-col {
+  flex: 1;
+  min-width: 120px;
+  max-width: 220px;
+  display: flex;
+  flex-direction: column;
 }
-/* ── Search filter groups: unified with accent ── */
+.ct-filter-col-wide {
+  flex: 1.5;
+  min-width: 160px;
+  max-width: 280px;
+  display: flex;
+  flex-direction: column;
+}
+.ct-filter-col .form-group,
+.ct-filter-col-wide .form-group {
+  margin-bottom: 0;
+}
+.ct-filter-col label,
+.ct-filter-col-wide label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--clr-text-muted, #64748B);
+  margin-bottom: 2px;
+  letter-spacing: .3px;
+}
+.ct-filter-col .form-control,
+.ct-filter-col-wide .form-control {
+  font-size: 12px !important;
+  height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1.5px solid var(--clr-border, #e0e0e0);
+  transition: border-color 0.2s ease;
+}
+.ct-filter-col .form-control:focus,
+.ct-filter-col-wide .form-control:focus {
+  border-color: var(--clr-primary, #800020);
+  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
+}
+/* Select2 compact sizing */
+.select2-container--open { z-index: 99999 !important; }
+.ct-filter-col .select2-container,
+.ct-filter-col-wide .select2-container {
+  font-size: 12px !important;
+  width: 100% !important;
+}
+.ct-filter-col .select2-container .select2-selection--single,
+.ct-filter-col-wide .select2-container .select2-selection--single {
+  height: 32px !important;
+  min-height: 32px !important;
+  border-radius: var(--radius-sm, 6px) !important;
+}
+.ct-filter-col .select2-container .select2-selection--single .select2-selection__rendered,
+.ct-filter-col-wide .select2-container .select2-selection--single .select2-selection__rendered {
+  line-height: 30px !important;
+  font-size: 12px !important;
+  padding-right: 8px !important;
+}
+/* Search filter groups: accent border */
 .ct-filter-search {
   position: relative;
   border-right: 3px solid var(--clr-primary, #800020);
@@ -286,7 +349,6 @@ body:has(.ct-page) .page-header {
   opacity: .65;
   font-size: 12px;
 }
-/* Autocomplete wrapper inside search groups */
 .ct-filter-search .us-wrap {
   position: relative;
   width: 100%;
@@ -307,62 +369,21 @@ body:has(.ct-page) .page-header {
   left: 8px;
   font-size: 12px;
 }
-.ct-legal-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.ct-lf-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  align-items: end;
-}
-.ct-lf-date-pair {
-  display: flex;
-  gap: 8px;
-  align-items: end;
-}
-.ct-lf-date-pair .ct-filter-group { min-width: 120px; }
-.ct-filter-group {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-/* العميل — يأخذ عمودين على الشاشات الكبيرة فقط */
-.ct-filter-customer {
-  grid-column: span 2;
-}
-.ct-filter-group label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--clr-text-muted, #6c757d);
-  margin-bottom: 5px;
-}
-.ct-filter-group .form-control,
-.ct-filter-group .select2-container {
-  font-size: 13px !important;
-  border-radius: var(--radius-sm, 6px) !important;
-  width: 100% !important;
-  max-width: 100%;
-}
-.ct-filter-group .form-control {
-  border: 1.5px solid var(--clr-border, #e0e0e0);
-  padding: 7px 12px;
-  height: 38px;
-  transition: border-color 0.2s ease;
-}
-.ct-filter-group .form-control:focus {
-  border-color: var(--clr-primary, #800020);
-  box-shadow: 0 0 0 3px rgba(128, 0, 32, 0.1);
-}
+/* Actions row */
 .ct-filter-actions {
   display: flex;
-  gap: 10px;
-  padding-top: 4px;
+  gap: 8px;
+  align-items: flex-end;
+  min-width: 130px;
 }
 .ct-filter-actions .ct-btn {
-  min-width: 100px;
+  height: 32px;
+  font-size: 12px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 /* ---- 5. FILTER CHIPS ---- */
@@ -469,13 +490,20 @@ body:has(.ct-page) .page-header {
   background: var(--clr-surface, #fff);
   border: 1px solid var(--clr-border, #e0e0e0);
   border-radius: var(--radius-md, 10px);
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   margin-bottom: 16px;
 }
 .ct-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
+  table-layout: fixed;
+}
+.ct-table th,
+.ct-table td {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 .ct-table thead {
   position: sticky;
@@ -878,12 +906,6 @@ body:has(.ct-page) .page-header {
    RESPONSIVE — TABLET (768–1279px)
    ============================================================ */
 @media (max-width: 1279px) {
-  .ct-filter-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .ct-filter-customer {
-    grid-column: span 2;
-  }
   .ct-table tbody td.ct-td-customer {
     max-width: 140px;
   }
@@ -895,6 +917,8 @@ body:has(.ct-page) .page-header {
 @media (max-width: 767px) {
   .ct-page {
     padding: 0;
+    max-width: 100vw;
+    overflow-x: hidden !important;
   }
   .ct-page-hdr {
     padding: 0 0 12px;
@@ -908,6 +932,7 @@ body:has(.ct-page) .page-header {
   .ct-status-cards {
     gap: 6px;
     margin-bottom: 12px;
+    max-width: 100%;
   }
   .ct-stat-card {
     padding: 8px 10px;
@@ -961,20 +986,39 @@ body:has(.ct-page) .page-header {
     animation: slideUp 0.3s ease;
   }
   .ct-filter-panel.collapsed .ct-filter-body {
-    display: block; /* always shown in drawer */
+    display: block;
   }
-  .ct-filter-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+  .ct-filter-row {
+    flex-direction: column;
+    gap: 6px;
   }
-  .ct-filter-customer {
-    grid-column: span 2;
+  .ct-filter-col,
+  .ct-filter-col-wide {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .ct-filter-col .form-control,
+  .ct-filter-col-wide .form-control {
+    width: 100% !important;
+  }
+  .ct-filter-col .select2-container,
+  .ct-filter-col-wide .select2-container {
+    width: 100% !important;
   }
   .ct-filter-search {
     padding: 6px 8px 6px 4px;
   }
-  .ct-lf-row { flex-direction: column; }
-  .ct-lf-date-pair { flex: 1 1 100%; }
+  .ct-filter-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .ct-filter-actions .ct-btn {
+    flex: 1;
+    justify-content: center;
+    min-height: 40px;
+  }
   .ct-filter-body {
     padding: 16px;
   }
@@ -1082,12 +1126,6 @@ body:has(.ct-page) .page-header {
   .ct-title-area h1 {
     font-size: 17px;
   }
-  .ct-filter-grid {
-    grid-template-columns: 1fr;
-  }
-  .ct-filter-customer {
-    grid-column: span 1;
-  }
   .ct-table tbody tr {
     grid-template-columns: 1fr 1fr;
     padding: 12px;
@@ -1096,15 +1134,19 @@ body:has(.ct-page) .page-header {
   .ct-hdr-actions .ct-btn span.ct-hide-xs {
     display: none;
   }
+  .ct-filter-col label,
+  .ct-filter-col-wide label {
+    font-size: 9px;
+  }
+  .ct-filter-actions .ct-btn {
+    font-size: 11px;
+  }
 }
 
 /* ============================================================
    RESPONSIVE — FOLD INNER / TABLET (768–1024px)
    ============================================================ */
 @media (min-width: 768px) and (max-width: 1024px) {
-  .ct-filter-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
   .ct-table {
     font-size: 12px;
   }
@@ -1314,3 +1356,4 @@ body:has(.ct-page) .page-header {
         grid-template-columns: 1fr 1fr;
     }
 }
+/* dns-fix-test */
