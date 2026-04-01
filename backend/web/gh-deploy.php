@@ -6,7 +6,7 @@
  * /opt/deploy-pull.sh in the background for near-instant code delivery.
  */
 
-$debugLog = '/var/log/gh-deploy-debug.log';
+$debugLog = '/tmp/gh-deploy-debug.log';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
