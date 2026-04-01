@@ -5,7 +5,6 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use backend\modules\inventorySuppliers\models\InventorySuppliers;
 use backend\modules\inventoryInvoices\models\InventoryInvoices;
@@ -33,18 +32,10 @@ $quickAddSupplierUrl = Url::to(['/inventoryItems/inventory-items/quick-add-suppl
         </div>
         <div class="row">
             <div class="col-lg-4 col-md-6">
-                <?= $form->field($model, 'suppliers_id')->widget(Select2::class, [
-                    'data' => ArrayHelper::map(InventorySuppliers::find()->all(), 'id', 'name'),
-                    'options' => ['placeholder' => '— اختر المورد —', 'id' => 'supplier-select'],
-                    'pluginOptions' => ['allowClear' => true],
-                ])->label('المورد <span style="color:red">*</span> <button type="button" class="po-inline-add" id="btn-inline-supplier"><i class="fa fa-plus"></i> جديد</button>') ?>
+                <?= $form->field($model, 'suppliers_id')->dropDownList(ArrayHelper::map(InventorySuppliers::find()->all(), 'id', 'name'), ['prompt' => '-- اختر المورد --', 'class' => 'form-control', 'id' => 'supplier-select'])->label('المورد <span style="color:red">*</span> <button type="button" class="po-inline-add" id="btn-inline-supplier"><i class="fa fa-plus"></i> جديد</button>') ?>
             </div>
             <div class="col-lg-4 col-md-6">
-                <?= $form->field($model, 'company_id')->widget(Select2::class, [
-                    'data' => ArrayHelper::map(\backend\modules\companies\models\Companies::find()->all(), 'id', 'name'),
-                    'options' => ['placeholder' => '— اختر الشركة —'],
-                    'pluginOptions' => ['allowClear' => true],
-                ])->label('الشركة') ?>
+                <?= $form->field($model, 'company_id')->dropDownList(ArrayHelper::map(\backend\modules\companies\models\Companies::find()->all(), 'id', 'name'), ['prompt' => '-- اختر الشركة --', 'class' => 'form-control'])->label('الشركة') ?>
             </div>
             <div class="col-lg-2 col-md-6">
                 <?= $form->field($model, 'type')->dropDownList(InventoryInvoices::getTypeList())->label('طريقة الدفع') ?>
@@ -94,7 +85,7 @@ $quickAddSupplierUrl = Url::to(['/inventoryItems/inventory-items/quick-add-suppl
             : '<i class="fa fa-check"></i> تحديث أمر الشراء',
             ['class' => 'btn btn-success btn-lg', 'style' => 'font-weight:700;padding:10px 30px;border-radius:8px']
         ) ?>
-        <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-default btn-lg', 'style' => 'margin-right:10px;border-radius:8px']) ?>
+        <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-secondary btn-lg', 'style' => 'margin-right:10px;border-radius:8px']) ?>
     </div>
     <?php endif ?>
 

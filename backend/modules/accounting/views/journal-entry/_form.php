@@ -3,7 +3,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\Account;
 use backend\modules\accounting\models\CostCenter;
 use backend\modules\accounting\models\FiscalYear;
@@ -31,11 +30,7 @@ $form = ActiveForm::begin([
                     <?= $form->field($model, 'entry_date')->textInput(['type' => 'date', 'value' => $model->entry_date ?: date('Y-m-d')]) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'fiscal_year_id')->widget(Select2::class, [
-                        'data' => $fiscalYears,
-                        'options' => ['placeholder' => 'اختر السنة المالية...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ])->hint('يُحدد تلقائيا من التاريخ') ?>
+                    <?= $form->field($model, 'fiscal_year_id')->dropDownList($fiscalYears, ['prompt' => '-- اختر السنة المالية --', 'class' => 'form-control'])->hint('يُحدد تلقائيا من التاريخ') ?>
                 </div>
                 <div class="col-md-6">
                     <?= $form->field($model, 'description')->textInput(['placeholder' => 'بيان القيد...', 'maxlength' => true]) ?>
@@ -104,7 +99,7 @@ $form = ActiveForm::begin([
                     </tr>
                     <tr>
                         <td colspan="6">
-                            <button type="button" class="btn btn-default btn-sm" id="add-line">
+                            <button type="button" class="btn btn-secondary btn-sm" id="add-line">
                                 <i class="fa fa-plus"></i> إضافة بند
                             </button>
                         </td>
@@ -118,7 +113,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ كمسودة' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

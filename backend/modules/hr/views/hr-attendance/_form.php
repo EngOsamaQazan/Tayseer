@@ -9,7 +9,6 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 
 ?>
 
@@ -36,17 +35,7 @@ use kartik\select2\Select2;
     ]); ?>
 
     <!-- الموظف -->
-    <?= $form->field($model, 'user_id')->widget(Select2::class, [
-        'data' => $employees ?? [],
-        'options' => [
-            'placeholder' => 'اختر الموظف...',
-            'dir' => 'rtl',
-        ],
-        'pluginOptions' => [
-            'allowClear' => true,
-            'width' => '100%',
-        ],
-    ])->label('الموظف') ?>
+    <?= $form->field($model, 'user_id')->dropDownList($employees ?? [], ['prompt' => '-- اختر الموظف --', 'class' => 'form-control'])->label('الموظف') ?>
 
     <!-- التاريخ -->
     <?= $form->field($model, 'attendance_date')->widget(FlatpickrWidget::class, [
@@ -113,7 +102,7 @@ use kartik\select2\Select2;
             ['class' => 'btn btn-primary']
         ) ?>
         <?= Html::button('<i class="fa fa-times"></i> إلغاء', [
-            'class' => 'btn btn-default',
+            'class' => 'btn btn-secondary',
             'data-dismiss' => 'modal',
         ]) ?>
     </div>

@@ -26,26 +26,10 @@ use backend\widgets\ExportButtons;
         </div>
 
         <div class="col-lg-6">
-            <?= $form->field($model, 'custamers_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\backend\modules\customers\models\Customers::find()->innerJoin('os_contracts_customers', 'os_customers.id = os_contracts_customers.customer_id ')->where(['os_contracts_customers.contract_id' => $contract_id])->all(), 'id', 'name'),
-                'options' => [
-                    'placeholder' => 'Select a expenses.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'custamers_id')->dropDownList(yii\helpers\ArrayHelper::map(\backend\modules\customers\models\Customers::find()->innerJoin('os_contracts_customers', 'os_customers.id = os_contracts_customers.customer_id')->where(['os_contracts_customers.contract_id' => $contract_id])->all(), 'id', 'name'), ['prompt' => '-- اختر العميل --', 'class' => 'form-control']) ?>
         </div>
         <div class="col-lg-6">
-            <?= $form->field($model, 'judiciary_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contract_id])->all(), 'id', 'id'),
-                'options' => [
-                    'placeholder' => 'Select a expenses.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'judiciary_id')->dropDownList(yii\helpers\ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->where(['contract_id' => $contract_id])->all(), 'id', 'id'), ['prompt' => '-- اختر القضية --', 'class' => 'form-control']) ?>
         </div>
 
         <div class="col-lg-6">
@@ -104,7 +88,7 @@ use backend\widgets\ExportButtons;
                     'class' => '\kartik\grid\DataColumn',
                     'attribute' => 'Edit',
                     'value' => function ($model) {
-                        return '<button type="button" class="btn btn-primary model-amount" year="' . $model->year . '" month="' . $model->month . '" model-id="' . $model->id . '" data-toggle="modal" data-target="#exampleModal">
+                        return '<button type="button" class="btn btn-primary model-amount" year="' . $model->year . '" month="' . $model->month . '" model-id="' . $model->id . '" data-bs-toggle="modal" data-bs-target="#exampleModal">
  Edit
 </button>';
                     },
@@ -113,8 +97,8 @@ use backend\widgets\ExportButtons;
             ],
             'toolbar' => [
                 ['content' =>
-                    Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
-                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
+                    Html::a('<i class="fa fa-refresh"></i>', [''],
+                        ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'Reset Grid']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => ['export-view-excel', 'id' => $model->id],

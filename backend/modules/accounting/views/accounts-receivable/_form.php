@@ -3,7 +3,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\Account;
 use backend\modules\accounting\models\Receivable;
 
@@ -30,18 +29,10 @@ $form = ActiveForm::begin([
             <legend><i class="fa fa-arrow-circle-down"></i> بيانات الذمة المدينة</legend>
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($model, 'customer_id')->widget(Select2::class, [
-                        'data' => $customers,
-                        'options' => ['placeholder' => 'اختر العميل...'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'customer_id')->dropDownList($customers, ['prompt' => '-- اختر العميل --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'account_id')->widget(Select2::class, [
-                        'data' => $accounts,
-                        'options' => ['placeholder' => 'اختر الحساب...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'account_id')->dropDownList($accounts, ['prompt' => '-- اختر الحساب --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($model, 'amount')->textInput(['type' => 'number', 'step' => '0.01', 'min' => '0', 'placeholder' => '0.00']) ?>
@@ -52,10 +43,7 @@ $form = ActiveForm::begin([
                     <?= $form->field($model, 'due_date')->textInput(['type' => 'date']) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'status')->widget(Select2::class, [
-                        'data' => Receivable::getStatuses(),
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'status')->dropDownList(Receivable::getStatuses(), ['prompt' => '-- الحالة --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($model, 'contract_id')->textInput(['type' => 'number', 'placeholder' => 'رقم العقد (اختياري)']) ?>
@@ -73,7 +61,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

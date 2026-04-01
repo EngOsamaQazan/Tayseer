@@ -14,18 +14,7 @@ use backend\helpers\PhoneInputWidget;
     <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>
 </div>
      <div class="col-lg-6">
-        <?=
-        $form->field($model, 'city')->widget(kartik\select2\Select2::classname(), [
-            'data' => Yii::$app->params['city'],
-            'language' => 'de',
-            'options' => [
-                'placeholder' => 'Select a type.',
-            ],
-            'pluginOptions' => [
-                'allowClear' => true
-            ],
-        ]);
-        ?>
+        <?= $form->field($model, 'city')->dropDownList(Yii::$app->params['city'], ['prompt' => '-- اختر المدينة --', 'class' => 'form-control']) ?>
     </div>
 </div>
 <div class="row">

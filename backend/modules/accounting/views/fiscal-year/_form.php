@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\FiscalYear;
 
 $form = ActiveForm::begin([
@@ -39,16 +38,10 @@ $form = ActiveForm::begin([
             </div>
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($model, 'status')->widget(Select2::class, [
-                        'data' => FiscalYear::getStatuses(),
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'status')->dropDownList(FiscalYear::getStatuses(), ['prompt' => '-- الحالة --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'is_current')->widget(Select2::class, [
-                        'data' => [0 => 'لا', 1 => 'نعم'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ])->hint('عند اختيار "نعم" سيتم إلغاء السنة الحالية السابقة') ?>
+                    <?= $form->field($model, 'is_current')->dropDownList([0 => 'لا', 1 => 'نعم'], ['prompt' => '-- اختر --', 'class' => 'form-control'])->hint('عند اختيار "نعم" سيتم إلغاء السنة الحالية السابقة') ?>
                 </div>
             </div>
         </fieldset>
@@ -65,7 +58,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

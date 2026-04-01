@@ -21,21 +21,7 @@ use backend\modules\notification\models\Notification;
             ) ?>
         </div>
         <div class="col-md-6">
-            <?= $form->field($model, 'recipient_id')->widget(kartik\select2\Select2::class, [
-                'data' => ArrayHelper::map(
-                    \common\models\User::find()->select(['id', 'username'])->orderBy('username')->asArray()->all(),
-                    'id',
-                    'username'
-                ),
-                'language' => 'ar',
-                'options' => [
-                    'placeholder' => Yii::t('app', 'اختر المستلم'),
-                    'dir' => 'rtl',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true,
-                ],
-            ]) ?>
+            <?= $form->field($model, 'recipient_id')->dropDownList(ArrayHelper::map(\common\models\User::find()->select(['id', 'username'])->orderBy('username')->asArray()->all(), 'id', 'username'), ['prompt' => '-- اختر المستلم --', 'class' => 'form-control']) ?>
         </div>
     </div>
     <div class="row">

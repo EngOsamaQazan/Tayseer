@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\Account;
 
 $form = ActiveForm::begin([
@@ -43,27 +42,13 @@ $form = ActiveForm::begin([
             </div>
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($model, 'parent_id')->widget(Select2::class, [
-                        'data' => Account::getParentDropdownList($model->id),
-                        'options' => ['placeholder' => 'بدون (حساب رئيسي)'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'parent_id')->dropDownList(Account::getParentDropdownList($model->id), ['prompt' => '-- بدون (حساب رئيسي) --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'type')->widget(Select2::class, [
-                        'data' => Account::getTypes(),
-                        'options' => ['placeholder' => 'اختر نوع الحساب...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                        'disabled' => $model->parent_id ? true : false,
-                    ])->hint($model->parent_id ? 'يُحدد تلقائيا من الحساب الرئيسي' : '') ?>
+                    <?= $form->field($model, 'type')->dropDownList(Account::getTypes(), ['prompt' => '-- اختر نوع الحساب --', 'class' => 'form-control', 'disabled' => $model->parent_id ? true : false])->hint($model->parent_id ? 'يُحدد تلقائيا من الحساب الرئيسي' : '') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'nature')->widget(Select2::class, [
-                        'data' => Account::getNatures(),
-                        'options' => ['placeholder' => 'اختر طبيعة الحساب...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                        'disabled' => $model->parent_id ? true : false,
-                    ])->hint($model->parent_id ? 'يُحدد تلقائيا من الحساب الرئيسي' : '') ?>
+                    <?= $form->field($model, 'nature')->dropDownList(Account::getNatures(), ['prompt' => '-- اختر طبيعة الحساب --', 'class' => 'form-control', 'disabled' => $model->parent_id ? true : false])->hint($model->parent_id ? 'يُحدد تلقائيا من الحساب الرئيسي' : '') ?>
                 </div>
             </div>
         </fieldset>
@@ -79,17 +64,10 @@ $form = ActiveForm::begin([
                     ]) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'is_parent')->widget(Select2::class, [
-                        'data' => [0 => 'لا (حساب فرعي)', 1 => 'نعم (حساب رئيسي)'],
-                        'options' => ['placeholder' => 'اختر...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ])->hint('الحساب الرئيسي لا يقبل قيود مباشرة') ?>
+                    <?= $form->field($model, 'is_parent')->dropDownList([0 => 'لا (حساب فرعي)', 1 => 'نعم (حساب رئيسي)'], ['prompt' => '-- اختر --', 'class' => 'form-control'])->hint('الحساب الرئيسي لا يقبل قيود مباشرة') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'is_active')->widget(Select2::class, [
-                        'data' => [1 => 'فعال', 0 => 'غير فعال'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'is_active')->dropDownList([1 => 'فعال', 0 => 'غير فعال'], ['prompt' => '-- الحالة --', 'class' => 'form-control']) ?>
                 </div>
             </div>
             <div class="row">
@@ -107,7 +85,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

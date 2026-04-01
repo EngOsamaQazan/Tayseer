@@ -7,11 +7,7 @@ use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
 use yii\helpers\Url;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
-use johnitvn\ajaxcrud\BulkButtonWidget;
-use backend\modules\customers\models\Customers;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
 use backend\helpers\FlatpickrWidget;
 use backend\modules\customers\models\ContractsCustomers;
@@ -33,48 +29,15 @@ if (!$model->isNewRecord) {
 ?>
 <div class="row">
     <div class="col-lg-6">
-        <?=
-            $form->field($model, 'court_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(Court::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a court.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-        ?>
+        <?= $form->field($model, 'court_id')->dropDownList(yii\helpers\ArrayHelper::map(Court::find()->all(), 'id', 'name'), ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control']) ?>
     </div>
     <div class="col-lg-6">
-        <?=
-            $form->field($model, 'type_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(JudiciaryType::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a type.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-        ?>
+        <?= $form->field($model, 'type_id')->dropDownList(yii\helpers\ArrayHelper::map(JudiciaryType::find()->all(), 'id', 'name'), ['prompt' => '-- اختر النوع --', 'class' => 'form-control']) ?>
     </div>
 </div>
 <div class="row">
     <div class="col-lg-6">
-        <?=
-            $form->field($model, 'lawyer_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(Lawyers::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a lawyer.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-        ?>
+        <?= $form->field($model, 'lawyer_id')->dropDownList(yii\helpers\ArrayHelper::map(Lawyers::find()->all(), 'id', 'name'), ['prompt' => '-- اختر المحامي --', 'class' => 'form-control']) ?>
     </div>
     <div class="col-lg-6">
         <?= $form->field($model, 'lawyer_cost')->textInput() ?>
@@ -83,18 +46,7 @@ if (!$model->isNewRecord) {
 
 <div class="row">
     <div class="col-lg-6">
-        <?=
-            $form->field($model, 'year')->widget(kartik\select2\Select2::classname(), [
-                'data' => $model->year(),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a year.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ])->label('السنة');
-        ?>
+        <?= $form->field($model, 'year')->dropDownList($model->year(), ['prompt' => '-- السنة --', 'class' => 'form-control'])->label('السنة') ?>
     </div>
     <div class="col-lg-6">
         <?= $form->field($model, 'judiciary_number')->textInput()->label('رقم القضية') ?>
@@ -124,12 +76,12 @@ if (!$model->isNewRecord) {
 if (!$model->isNewRecord) {
     ?>
     <div style="display: inline">
-        <a class="btn btn-primary" type="button" data-toggle="collapse" data-target="#collapseExample" aria-expanded="false"
+        <a class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseExample" aria-expanded="false"
             aria-controls="collapseExample">
             انشاء حركات عملاء
         </a>
         <?= Html::a(Yii::t('app','طباعة سندات التنفيذ'), ['/judiciary/judiciary/print-case', 'id' => $model->id], ['class'=>'btn btn-primary']); ?>
-    </div>`2
+    </div>
 <?php } ?>
 
 <?php ActiveForm::end(); ?>
@@ -142,6 +94,10 @@ $data = ContractsCustomers::find()
     ->createCommand()->queryAll();
 
 if (!$model->isNewRecord) {
+    $this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+    $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+        'depends' => [\yii\web\JqueryAsset::class],
+    ]);
     ?>
     <div class="collapse" id="collapseExample">
         <div class="card card-body">
@@ -153,39 +109,10 @@ if (!$model->isNewRecord) {
             ?>
             <div class="row">
                 <div class="col-lg-6">
-                    <?=
-                        $form->field($modelCustomerAction, 'customers_id')->widget(kartik\select2\Select2::classname(), [
-                            'options' => [
-                                'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
-                                'ajax' => [
-                                    'url' => \yii\helpers\Url::to(['/customers/search-customers']),
-                                    'dataType' => 'json', 'delay' => 250,
-                                    'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                                    'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                                    'cache' => true,
-                                ],
-                                'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
-                                'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                            ],
-                        ])->label('اسم العميل');
-                    ?>
+                    <?= $form->field($modelCustomerAction, 'customers_id')->textInput(['placeholder' => 'ابحث بالاسم أو الرقم الوطني...', 'class' => 'form-control'])->label('اسم العميل') ?>
                 </div>
                 <div class="col-lg-6">
-                    <?=
-                        $form->field($modelCustomerAction, 'judiciary_actions_id')->widget(kartik\select2\Select2::classname(), [
-                            'data' => yii\helpers\ArrayHelper::map(JudiciaryActions::find()->all(), 'id', 'name'),
-                            'language' => 'de',
-                            'options' => [
-                                'placeholder' => 'Select a judiciary action.',
-                            ],
-                            'pluginOptions' => [
-                                'allowClear' => true
-                            ],
-                        ]);
-                    ?>
+                    <?= $form->field($modelCustomerAction, 'judiciary_actions_id')->dropDownList(yii\helpers\ArrayHelper::map(JudiciaryActions::find()->all(), 'id', 'name'), ['prompt' => '-- اختر الإجراء --', 'class' => 'form-control']) ?>
                 </div>
             </div>
             <div class="row">
@@ -290,16 +217,17 @@ if (!$model->isNewRecord) {
                             return Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/update-followup-judicary-custamer-action?contractID=' . $model->contract_id . '&id=' . $model->id]);
                         }
                     },
-                        'viewOptions' => ['role' => 'modal-remote', 'title' => 'View', 'data-toggle' => 'tooltip'],
-                        'updateOptions' => ['role' => 'modal-remote', 'title' => 'Update', 'data-toggle' => 'tooltip'],
+                        'viewOptions' => ['role' => 'modal-remote', 'data-pjax' => 0, 'title' => 'View', 'data-bs-toggle' => 'tooltip'],
+                        'updateOptions' => ['role' => 'modal-remote', 'data-pjax' => 0, 'title' => 'Update', 'data-bs-toggle' => 'tooltip'],
                         'deleteOptions' => [
                             'role' => 'modal-remote',
+                            'data-pjax' => 0,
                             'title' => 'Delete',
                             'data-confirm' => false,
                             'data-method' => false,
                             // for overide yii data api
                             'data-request-method' => 'post',
-                            'data-toggle' => 'tooltip',
+                            'data-bs-toggle' => 'tooltip',
                             'data-confirm-title' => 'Are you sure?',
                             'data-confirm-message' => 'Are you sure want to delete this item'
                         ],
@@ -312,6 +240,21 @@ if (!$model->isNewRecord) {
             ])
             ?>
     </div>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
+</div>
 <?php } ?>
-</div>
-</div>

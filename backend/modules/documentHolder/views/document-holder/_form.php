@@ -16,19 +16,7 @@ use yii\widgets\ActiveForm;
     <div class="questions-bank box box-primary">
     <div class="row">
         <div class="col-lg-6">
-            <?=
-            $form->field($model, 'contract_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => \yii\helpers\ArrayHelper::map(\backend\modules\contracts\models\Contracts::find()->all(), 'id', 'id'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a type.',
-                    'class' => 'contract'
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-            ?>
+            <?= $form->field($model, 'contract_id')->dropDownList(\yii\helpers\ArrayHelper::map(\backend\modules\contracts\models\Contracts::find()->all(), 'id', 'id'), ['prompt' => '-- اختر العقد --', 'class' => 'form-control contract']) ?>
         </div>
 
         <div class="col-lg-6">

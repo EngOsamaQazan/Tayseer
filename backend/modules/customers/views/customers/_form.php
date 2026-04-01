@@ -8,7 +8,6 @@ use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 use backend\helpers\PhoneInputWidget;
 use common\helper\Permissions;
 
@@ -96,21 +95,8 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
         <div class="row">
             <div class="col-md-3">
                 <div class="job-title-wrapper">
-                    <?= $form->field($model, 'job_title')->widget(Select2::class, [
-                        'initValueText' => $model->job_title ? \backend\modules\jobs\models\Jobs::findOne($model->job_title)?->name : '',
-                        'options' => ['placeholder' => 'ابحث عن جهة العمل...', 'id' => 'customers-job_title'],
-                        'pluginOptions' => [
-                            'allowClear' => true,
-                            'dir' => 'rtl',
-                            'minimumInputLength' => 0,
-                            'ajax' => [
-                                'url' => Url::to(['/jobs/jobs/search-list']),
-                                'dataType' => 'json',
-                                'delay' => 200,
-                                'data' => new \yii\web\JsExpression('function(p){return {q:p.term||""};}'),
-                                'processResults' => new \yii\web\JsExpression('function(d){return d;}'),
-                            ],
-                        ],
+                    <?= $form->field($model, 'job_title')->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
+                        'prompt' => '-- جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title',
                     ])->label('المسمى الوظيفي') ?>
                     <button type="button" class="btn-add-job" id="btn-add-job-classic" title="إضافة جهة عمل جديدة"><i class="fa fa-plus"></i></button>
                 </div>
@@ -140,10 +126,8 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
         <legend><i class="fa fa-university"></i> الحساب البنكي</legend>
         <div class="row">
             <div class="col-md-3">
-                <?= $form->field($model, 'bank_name')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($banks, 'id', 'name'),
-                    'options' => ['placeholder' => 'اختر البنك'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'bank_name')->dropDownList(ArrayHelper::map($banks, 'id', 'name'), [
+                    'prompt' => '-- اختر البنك --', 'class' => 'form-control',
                 ])->label('البنك') ?>
             </div>
             <div class="col-md-3">

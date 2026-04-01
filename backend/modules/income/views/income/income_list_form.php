@@ -23,18 +23,7 @@ use backend\helpers\FlatpickrWidget;
     </div>
     <div class="row">
         <div class="col-lg-6">
-            <?=
-            $form->field($model, 'payment_type')->widget(kartik\select2\Select2::classname(), [
-                'data' => \yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(),'id','name'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a type.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-            ?>
+            <?= $form->field($model, 'payment_type')->dropDownList(\yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), ['prompt' => '-- اختر النوع --', 'class' => 'form-control']) ?>
         </div>
         <div class="col-lg-6">
             <?= $form->field($model, 'receipt_bank')->textInput() ?>
@@ -54,16 +43,7 @@ use backend\helpers\FlatpickrWidget;
     </div>
     <div class="row">
         <div class="col-lg-6">
-            <?= $form->field($model, 'type')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\backend\modules\incomeCategory\models\IncomeCategory::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a contract.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'type')->dropDownList(yii\helpers\ArrayHelper::map(\backend\modules\incomeCategory\models\IncomeCategory::find()->all(), 'id', 'name'), ['prompt' => '-- اختر التصنيف --', 'class' => 'form-control']) ?>
         </div>
         <div class="col-lg-6">
             <?= $form->field($model, 'document_number')->textInput() ?>
@@ -71,16 +51,7 @@ use backend\helpers\FlatpickrWidget;
     </div>
     <div class="row">
         <div class="col-lg-6">
-            <?= $form->field($model, 'contract_id')->widget(kartik\select2\Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\backend\modules\contracts\models\Contracts::find()->all(), 'id', 'id'),
-                'language' => 'de',
-                'options' => [
-                    'placeholder' => 'Select a contract.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'contract_id')->dropDownList(yii\helpers\ArrayHelper::map(\backend\modules\contracts\models\Contracts::find()->all(), 'id', 'id'), ['prompt' => '-- اختر العقد --', 'class' => 'form-control']) ?>
         </div>
     </div>
     <div class="row">

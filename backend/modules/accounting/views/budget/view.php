@@ -3,7 +3,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\Account;
 use backend\modules\accounting\models\CostCenter;
 use backend\modules\accounting\models\BudgetLine;
@@ -138,18 +137,10 @@ $months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', '
         ?>
         <div class="row">
             <div class="col-md-4">
-                <?= $form->field($newLine, 'account_id')->widget(Select2::class, [
-                    'data' => $accounts,
-                    'options' => ['placeholder' => 'اختر الحساب...'],
-                    'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                ]) ?>
+                <?= $form->field($newLine, 'account_id')->dropDownList($accounts, ['prompt' => '-- اختر الحساب --', 'class' => 'form-control']) ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($newLine, 'cost_center_id')->widget(Select2::class, [
-                    'data' => $costCenters,
-                    'options' => ['placeholder' => 'مركز تكلفة (اختياري)...'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ]) ?>
+                <?= $form->field($newLine, 'cost_center_id')->dropDownList($costCenters, ['prompt' => '-- مركز تكلفة (اختياري) --', 'class' => 'form-control']) ?>
             </div>
             <div class="col-md-3">
                 <label>الإجمالي السنوي</label>

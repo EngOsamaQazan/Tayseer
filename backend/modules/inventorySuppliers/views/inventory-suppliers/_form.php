@@ -4,7 +4,6 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use common\models\User;
 use backend\modules\companies\models\Companies;
-use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 
 /* @var $this yii\web\View */
@@ -16,14 +15,7 @@ use yii\helpers\ArrayHelper;
     <?php $form = ActiveForm::begin(); ?>
     <div class="row">
         <div class="col-lg-6">
-            <?= $form->field($model, 'company_id')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(Companies::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a company.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'company_id')->dropDownList(yii\helpers\ArrayHelper::map(Companies::find()->all(), 'id', 'name'), ['prompt' => '-- اختر الشركة --', 'class' => 'form-control']) ?>
         </div>
         <div class="col-lg-6">
             <?= $form->field($model, 'name')->textInput(['maxlength' => true]) ?>

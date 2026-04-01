@@ -3,7 +3,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\FiscalYear;
 
 $fyList = ArrayHelper::map(
@@ -26,11 +25,7 @@ $form = ActiveForm::begin([
                     <?= $form->field($model, 'name')->textInput(['maxlength' => true, 'placeholder' => 'مثال: موازنة 2026']) ?>
                 </div>
                 <div class="col-md-6">
-                    <?= $form->field($model, 'fiscal_year_id')->widget(Select2::class, [
-                        'data' => $fyList,
-                        'options' => ['placeholder' => 'اختر السنة المالية...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'fiscal_year_id')->dropDownList($fyList, ['prompt' => '-- اختر السنة المالية --', 'class' => 'form-control']) ?>
                 </div>
             </div>
             <div class="row">
@@ -45,7 +40,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> إنشاء الموازنة' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

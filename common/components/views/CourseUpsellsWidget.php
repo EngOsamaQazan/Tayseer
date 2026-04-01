@@ -2,9 +2,7 @@
 use wbraganca\dynamicform\DynamicFormWidget;
 use yii\helpers\Html;
 use yii\helpers\Url;
-use yii\web\JsExpression;
 use common\models\CourseUpsell;
-use kartik\select2\Select2;
 
 ?>
 <div class="">
@@ -58,21 +56,9 @@ use kartik\select2\Select2;
                         ?>
 						<div class="row row2">
                             <div class="col-sm-4">
-                                <?php echo $form->field($modelCourseUpsell, "[{$i}]upsell_course_id")->widget(Select2::classname(), [
-                                    'initValueText' => $courseText, // set the initial display text
-                                    'options' => ['placeholder' => Yii::t('app','Select a course or bundle to promot')],
-                                    'pluginOptions' => [
-                                        'allowClear' => true,
-                                        'minimumInputLength' => 3,
-                                        'language' => [
-                                            'errorLoading' => new JsExpression("function () { return 'Waiting for results...'; }"),
-                                        ],
-                                        'ajax' => [
-                                            'url' => Url::to(['/dropdown/available-course']),
-                                            'dataType' => 'json',
-                                            'data' => new JsExpression('function(params) { return {q:params.term}; }')
-                                        ],
-                                    ],
+                                <?php echo $form->field($modelCourseUpsell, "[{$i}]upsell_course_id")->textInput([
+                                    'placeholder' => Yii::t('app', 'Select a course or bundle to promot'),
+                                    'class' => 'form-control',
                                 ])->label(false);?>
                             </div>
                             <div class="col-sm-3">

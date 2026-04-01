@@ -129,12 +129,10 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
                     )->label('المتابع') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'income_status')->widget(kartik\select2\Select2::class, [
-                        'data' => ['', \Yii::t('app', 'active'), \Yii::t('app', 'judiciary')],
-                        'language' => 'ar',
-                        'options' => ['placeholder' => 'اختر الحالة...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('الحالة') ?>
+                    <?= $form->field($searchModel, 'income_status')->dropDownList(
+                        ['', \Yii::t('app', 'active'), \Yii::t('app', 'judiciary')],
+                        ['prompt' => '-- اختر الحالة --', 'class' => 'form-control']
+                    )->label('الحالة') ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($searchModel, 'company_id')->dropDownList(

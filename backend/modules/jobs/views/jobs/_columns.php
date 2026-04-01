@@ -33,11 +33,6 @@ return [
             return $model->jobType ? Html::encode($model->jobType->name) : '-';
         },
         'filter' => ArrayHelper::map(JobsType::find()->all(), 'id', 'name'),
-        'filterType' => '\kartik\select2\Select2',
-        'filterWidgetOptions' => [
-            'options' => ['placeholder' => 'الكل'],
-            'pluginOptions' => ['allowClear' => true],
-        ],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
@@ -135,14 +130,14 @@ return [
                 return Html::a('<i class="fa fa-eye"></i>', $url, [
                     'class' => 'btn btn-xs btn-info',
                     'title' => 'عرض',
-                    'data-toggle' => 'tooltip',
+                    'data-bs-toggle' => 'tooltip',
                 ]);
             },
             'update' => function ($url, $model) {
                 return Html::a('<i class="fa fa-pencil"></i>', $url, [
                     'class' => 'btn btn-xs btn-primary',
                     'title' => 'تعديل',
-                    'data-toggle' => 'tooltip',
+                    'data-bs-toggle' => 'tooltip',
                 ]);
             },
             'delete' => function ($url, $model) {
@@ -151,7 +146,7 @@ return [
                     'title' => 'حذف',
                     'data-confirm' => 'هل أنت متأكد من الحذف؟',
                     'data-method' => 'post',
-                    'data-toggle' => 'tooltip',
+                    'data-bs-toggle' => 'tooltip',
                 ]);
             },
         ],

@@ -6,7 +6,7 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
-use kartik\select2\Select2;
+
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
@@ -173,52 +173,27 @@ $this->registerCss('.content-header,.page-header { display: none !important; }')
 
                 <div class="bw-field">
                     <label><span style="color:#dc2626">*</span> المحكمة</label>
-                    <?= Select2::widget([
-                        'name' => 'court_id',
-                        'data' => $courts,
-                        'options' => ['placeholder' => 'اختر المحكمة', 'id' => 'bwCourt'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= Html::dropDownList('court_id', null, $courts, ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control', 'id' => 'bwCourt']) ?>
                 </div>
 
                 <div class="bw-field">
                     <label><span style="color:#dc2626">*</span> المحامي</label>
-                    <?= Select2::widget([
-                        'name' => 'lawyer_id',
-                        'data' => $lawyers,
-                        'options' => ['placeholder' => 'اختر المحامي', 'id' => 'bwLawyer'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= Html::dropDownList('lawyer_id', null, $lawyers, ['prompt' => '-- اختر المحامي --', 'class' => 'form-control', 'id' => 'bwLawyer']) ?>
                 </div>
 
                 <div class="bw-field">
                     <label>نوع القضية</label>
-                    <?= Select2::widget([
-                        'name' => 'type_id',
-                        'data' => $types,
-                        'options' => ['placeholder' => 'اختر النوع', 'id' => 'bwType'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= Html::dropDownList('type_id', null, $types, ['prompt' => '-- نوع القضية --', 'class' => 'form-control', 'id' => 'bwType']) ?>
                 </div>
 
                 <div class="bw-field">
                     <label>الموطن المختار</label>
-                    <?= Select2::widget([
-                        'name' => 'judiciary_inform_address_id',
-                        'data' => $addresses,
-                        'options' => ['placeholder' => 'اختر الموطن المختار', 'id' => 'bwAddress'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= Html::dropDownList('judiciary_inform_address_id', null, $addresses, ['prompt' => '-- الموطن المختار --', 'class' => 'form-control', 'id' => 'bwAddress']) ?>
                 </div>
 
                 <div class="bw-field">
                     <label>الشركة</label>
-                    <?= Select2::widget([
-                        'name' => 'company_id',
-                        'data' => $companies,
-                        'options' => ['placeholder' => 'اختر الشركة', 'id' => 'bwCompany'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= Html::dropDownList('company_id', null, $companies, ['prompt' => '-- اختر الشركة --', 'class' => 'form-control', 'id' => 'bwCompany']) ?>
                 </div>
 
                 <div class="bw-field">

@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\Account;
 use backend\modules\accounting\models\Payable;
 
@@ -30,11 +29,7 @@ $form = ActiveForm::begin([
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'account_id')->widget(Select2::class, [
-                        'data' => $accounts,
-                        'options' => ['placeholder' => 'اختر الحساب...'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'account_id')->dropDownList($accounts, ['prompt' => '-- اختر الحساب --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-4">
                     <?= $form->field($model, 'amount')->textInput(['type' => 'number', 'step' => '0.01', 'min' => '0', 'placeholder' => '0.00']) ?>
@@ -45,20 +40,13 @@ $form = ActiveForm::begin([
                     <?= $form->field($model, 'due_date')->textInput(['type' => 'date']) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'category')->widget(Select2::class, [
-                        'data' => Payable::getCategories(),
-                        'options' => ['placeholder' => 'اختر التصنيف...'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'category')->dropDownList(Payable::getCategories(), ['prompt' => '-- اختر التصنيف --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($model, 'reference_number')->textInput(['placeholder' => 'رقم الفاتورة أو المرجع']) ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($model, 'status')->widget(Select2::class, [
-                        'data' => Payable::getStatuses(),
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'status')->dropDownList(Payable::getStatuses(), ['prompt' => '-- الحالة --', 'class' => 'form-control']) ?>
                 </div>
             </div>
             <div class="row">
@@ -73,7 +61,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

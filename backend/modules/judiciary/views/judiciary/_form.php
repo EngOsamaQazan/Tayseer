@@ -3,7 +3,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
+
 use backend\helpers\FlatpickrWidget;
 use backend\modules\judiciaryType\models\JudiciaryType;
 use backend\modules\court\models\Court;
@@ -48,8 +48,6 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
 .jf-card-body .form-group label{font-weight:600;font-size:12px;color:#64748B;margin-bottom:6px}
 .jf-card-body .form-control{border-radius:8px;border:1px solid #E2E8F0;font-size:13px;padding:8px 12px;transition:border-color .2s,box-shadow .2s}
 .jf-card-body .form-control:focus{border-color:#3B82F6;box-shadow:0 0 0 3px rgba(59,130,246,.1)}
-.jf-card-body .select2-container--krajee-bs3 .select2-selection{border-radius:8px !important;border:1px solid #E2E8F0 !important;min-height:36px}
-.jf-card-body .select2-container--krajee-bs3 .select2-selection:focus,.jf-card-body .select2-container--krajee-bs3.select2-container--focus .select2-selection{border-color:#3B82F6 !important;box-shadow:0 0 0 3px rgba(59,130,246,.1) !important}
 
 .jf-grid{display:grid;gap:16px}
 .jf-grid-3{grid-template-columns:repeat(3,1fr)}
@@ -134,25 +132,13 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
     <div class="jf-card-body">
         <div class="jf-grid jf-grid-3">
             <div>
-                <?= $form->field($model, 'court_id')->widget(Select2::class, [
-                    'data' => $courts,
-                    'options' => ['placeholder' => 'اختر المحكمة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('المحكمة') ?>
+                <?= $form->field($model, 'court_id')->dropDownList($courts, ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control'])->label('المحكمة') ?>
             </div>
             <div>
-                <?= $form->field($model, 'type_id')->widget(Select2::class, [
-                    'data' => $types,
-                    'options' => ['placeholder' => 'نوع القضية'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('نوع القضية') ?>
+                <?= $form->field($model, 'type_id')->dropDownList($types, ['prompt' => '-- نوع القضية --', 'class' => 'form-control'])->label('نوع القضية') ?>
             </div>
             <div>
-                <?= $form->field($model, 'company_id')->widget(Select2::class, [
-                    'data' => $companies,
-                    'options' => ['placeholder' => 'الشركة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('الشركة') ?>
+                <?= $form->field($model, 'company_id')->dropDownList($companies, ['prompt' => '-- اختر الشركة --', 'class' => 'form-control'])->label('الشركة') ?>
             </div>
         </div>
     </div>
@@ -163,11 +149,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
     <div class="jf-card-body">
         <div class="jf-grid jf-grid-3">
             <div>
-                <?= $form->field($model, 'lawyer_id')->widget(Select2::class, [
-                    'data' => $lawyers,
-                    'options' => ['placeholder' => 'اختر المحامي'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('المحامي') ?>
+                <?= $form->field($model, 'lawyer_id')->dropDownList($lawyers, ['prompt' => '-- اختر المحامي --', 'class' => 'form-control'])->label('المحامي') ?>
             </div>
             <div>
                 <?= $form->field($model, 'lawyer_cost')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('أتعاب المحامي') ?>
@@ -187,11 +169,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
                 <?= $form->field($model, 'judiciary_number')->textInput(['placeholder' => 'رقم القضية'])->label('رقم القضية') ?>
             </div>
             <div>
-                <?= $form->field($model, 'year')->widget(Select2::class, [
-                    'data' => $model->year(),
-                    'options' => ['placeholder' => 'السنة'],
-                    'pluginOptions' => ['allowClear' => true],
-                ])->label('السنة') ?>
+                <?= $form->field($model, 'year')->dropDownList($model->year(), ['prompt' => '-- السنة --', 'class' => 'form-control'])->label('السنة') ?>
             </div>
             <div>
                 <?= $form->field($model, 'income_date')->widget(FlatpickrWidget::class, [
@@ -204,11 +182,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
         </div>
         <div class="jf-grid jf-grid-2">
             <div>
-                <?= $form->field($model, 'judiciary_inform_address_id')->widget(Select2::class, [
-                    'data' => $addresses,
-                    'options' => ['placeholder' => 'الموطن المختار'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('الموطن المختار') ?>
+                <?= $form->field($model, 'judiciary_inform_address_id')->dropDownList($addresses, ['prompt' => '-- الموطن المختار --', 'class' => 'form-control'])->label('الموطن المختار') ?>
             </div>
         </div>
     </div>
@@ -221,7 +195,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
         <?= Html::submitButton('<i class="fa fa-plus"></i> إنشاء', ['class' => 'btn btn-success']) ?>
     <?php else: ?>
         <?= Html::submitButton('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'btn btn-primary']) ?>
-        <?= Html::a('<i class="fa fa-print"></i> طباعة سندات التنفيذ', ['/judiciary/judiciary/print-case', 'id' => $model->id], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-print"></i> طباعة سندات التنفيذ', ['/judiciary/judiciary/print-case', 'id' => $model->id], ['class' => 'btn btn-secondary']) ?>
     <?php endif ?>
 </div>
 <?php endif ?>
@@ -229,7 +203,10 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
 <?php ActiveForm::end() ?>
 
 <?php if (!$isNew):
-    \johnitvn\ajaxcrud\CrudAsset::register($this);
+    $this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+    $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+        'depends' => [\yii\web\JqueryAsset::class],
+    ]);
     $contractIdForGrid = $model->contract_id;
     $actionsDP = new yii\data\ActiveDataProvider([
         'query' => \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions::find()
@@ -250,7 +227,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
         <?= Html::a(
             '<i class="fa fa-plus"></i> إضافة إجراء',
             ['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contractIdForGrid],
-            ['role' => 'modal-remote', 'class' => 'btn btn-success', 'style' => 'border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600']
+            ['role' => 'modal-remote', 'data-pjax' => 0, 'class' => 'btn btn-success', 'style' => 'border-radius:8px;font-size:13px;padding:8px 18px;font-weight:600']
         ) ?>
     </div>
 
@@ -367,7 +344,7 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
                     <div class="jca-act-wrap">
                         <button type="button" class="jca-act-trigger"><i class="fa fa-ellipsis-v"></i></button>
                         <div class="jca-act-menu">
-                            <a href="<?= $editUrl ?>" role="modal-remote"><i class="fa fa-pencil text-primary"></i> تعديل</a>
+                            <a href="<?= $editUrl ?>" role="modal-remote" data-pjax="0"><i class="fa fa-pencil text-primary"></i> تعديل</a>
                             <div class="jca-act-divider"></div>
                             <a href="<?= $delUrl ?>" data-request-method="post" data-confirm-message="هل أنت متأكد من حذف هذا الإجراء؟">
                                 <i class="fa fa-trash text-danger"></i> حذف
@@ -487,8 +464,22 @@ $corrStatusLabels = \backend\modules\diwan\models\DiwanCorrespondence::getStatus
     </div>
 </div>
 
-<?php \yii\bootstrap\Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => \yii\bootstrap\Modal::SIZE_LARGE]) ?>
-<?php \yii\bootstrap\Modal::end() ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
 
 <?php
 $updateReqUrl = Url::to(['/judiciary/judiciary/update-request-status']);
@@ -629,11 +620,7 @@ window.JCA = (function(){
         }
         showRecipientFields($('#sdm-recipient-type').val());
 
-        if (typeof bootstrap !== 'undefined') {
-            bootstrap.Modal.getOrCreateInstance(sdmEl[0]).show();
-        } else {
-            sdmEl.modal('show');
-        }
+        bootstrap.Modal.getOrCreateInstance(sdmEl[0]).show();
     });
 
     $('#sdm-submit').on('click', function() {
@@ -655,8 +642,7 @@ window.JCA = (function(){
         $.post(sendDocUrl, postData, function(res) {
             btnEl.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
             if (res.success) {
-                if (typeof bootstrap !== 'undefined') bootstrap.Modal.getInstance(sdmEl[0]).hide();
-                else sdmEl.modal('hide');
+                bootstrap.Modal.getOrCreateInstance(sdmEl[0]).hide();
                 alert(res.message);
                 location.reload();
             } else {

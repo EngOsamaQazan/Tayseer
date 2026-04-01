@@ -3,8 +3,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use yii\web\JsExpression;
-use kartik\select2\Select2;
 use backend\modules\branch\models\Branch;
 
 /* @var $this yii\web\View */
@@ -22,7 +20,6 @@ $companies = ArrayHelper::map(
 );
 
 $isModal = Yii::$app->request->isAjax;
-$dropParent = $isModal ? new JsExpression('$("#ajaxCrudModal")') : null;
 ?>
 
 <div class="branch-form">
@@ -37,21 +34,13 @@ $dropParent = $isModal ? new JsExpression('$("#ajaxCrudModal")') : null;
             <span class="help-block text-muted" style="font-size:12px">يُولّد تلقائيًا إن ترك فارغًا</span>
         </div>
         <div class="col-md-3">
-            <?= $form->field($model, 'branch_type')->widget(Select2::class, [
-                'data' => Branch::getTypeLabels(),
-                'options' => ['placeholder' => 'اختر النوع...', 'id' => 'branch-type-' . $model->id],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
-            ]) ?>
+            <?= $form->field($model, 'branch_type')->dropDownList(Branch::getTypeLabels(), ['prompt' => '-- اختر النوع --', 'class' => 'form-control', 'id' => 'branch-type-' . $model->id]) ?>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-4">
-            <?= $form->field($model, 'company_id')->widget(Select2::class, [
-                'data' => $companies,
-                'options' => ['placeholder' => 'اختر الشركة...', 'id' => 'branch-company-' . $model->id],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
-            ]) ?>
+            <?= $form->field($model, 'company_id')->dropDownList($companies, ['prompt' => '-- اختر الشركة --', 'class' => 'form-control', 'id' => 'branch-company-' . $model->id]) ?>
         </div>
         <div class="col-md-5">
             <?= $form->field($model, 'address')->textInput(['maxlength' => true, 'placeholder' => 'العنوان الكامل']) ?>
@@ -92,21 +81,13 @@ $dropParent = $isModal ? new JsExpression('$("#ajaxCrudModal")') : null;
             <?= $form->field($model, 'wifi_bssid')->textInput(['maxlength' => true, 'placeholder' => 'AA:BB:CC:DD:EE:FF', 'dir' => 'ltr']) ?>
         </div>
         <div class="col-md-4">
-            <?= $form->field($model, 'manager_id')->widget(Select2::class, [
-                'data' => $users,
-                'options' => ['placeholder' => 'اختر مدير الفرع...', 'id' => 'branch-manager-' . $model->id],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
-            ]) ?>
+            <?= $form->field($model, 'manager_id')->dropDownList($users, ['prompt' => '-- اختر مدير الفرع --', 'class' => 'form-control', 'id' => 'branch-manager-' . $model->id]) ?>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-3">
-            <?= $form->field($model, 'is_active')->widget(Select2::class, [
-                'data' => [1 => 'فعّال', 0 => 'معطّل'],
-                'options' => ['id' => 'branch-active-' . $model->id],
-                'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl', 'dropdownParent' => $dropParent],
-            ]) ?>
+            <?= $form->field($model, 'is_active')->dropDownList([1 => 'فعّال', 0 => 'معطّل'], ['class' => 'form-control', 'id' => 'branch-active-' . $model->id]) ?>
         </div>
         <div class="col-md-3">
             <?= $form->field($model, 'sort_order')->textInput(['type' => 'number', 'min' => 0]) ?>

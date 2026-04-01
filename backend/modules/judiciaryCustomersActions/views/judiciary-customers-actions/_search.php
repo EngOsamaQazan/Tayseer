@@ -73,10 +73,8 @@ $years = ArrayHelper::map(
                 ])->label('المحكمة') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'lawyer_name')->widget(Select2::class, [
-                    'data' => $lawyers,
-                    'options' => ['placeholder' => 'المحامي'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'lawyer_name')->dropDownList($lawyers, [
+                    'prompt' => '-- المحامي --', 'class' => 'form-control',
                 ])->label('المحامي') ?>
             </div>
             <div class="col-md-2">

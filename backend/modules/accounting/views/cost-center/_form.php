@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\accounting\models\CostCenter;
 
 $form = ActiveForm::begin([
@@ -34,19 +33,12 @@ $form = ActiveForm::begin([
                     ]) ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'parent_id')->widget(Select2::class, [
-                        'data' => CostCenter::getDropdownList(),
-                        'options' => ['placeholder' => 'بدون (مركز رئيسي)'],
-                        'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'parent_id')->dropDownList(CostCenter::getDropdownList(), ['prompt' => '-- بدون (مركز رئيسي) --', 'class' => 'form-control']) ?>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-3">
-                    <?= $form->field($model, 'is_active')->widget(Select2::class, [
-                        'data' => [1 => 'فعال', 0 => 'غير فعال'],
-                        'pluginOptions' => ['allowClear' => false, 'dir' => 'rtl'],
-                    ]) ?>
+                    <?= $form->field($model, 'is_active')->dropDownList([1 => 'فعال', 0 => 'غير فعال'], ['prompt' => '-- الحالة --', 'class' => 'form-control']) ?>
                 </div>
             </div>
         </fieldset>
@@ -56,7 +48,7 @@ $form = ActiveForm::begin([
             $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ' : '<i class="fa fa-check"></i> تحديث',
             ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
     </div>
 </div>
 

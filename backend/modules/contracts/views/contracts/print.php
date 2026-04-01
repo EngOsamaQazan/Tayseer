@@ -3,7 +3,6 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use backend\modules\customers\models\Customers;
 use yii\helpers\Url;
@@ -80,28 +79,7 @@ $this->registerJsFile('/js/Tafqeet.js');
          x-transition.opacity.duration.200ms>
         <div class="row">
             <div class="col-sm-12 col-xs-12">
-                <?=
-                $form->field($model, 'guarantors_ids')->widget(Select2::classname(), [
-                    'options' => ['placeholder' => Yii::t('app', 'ابحث واختر الكفلاء...'),
-                        'multiple' => true
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
-                        'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/search-customers']),
-                            'dataType' => 'json', 'delay' => 250,
-                            'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                            'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                            'cache' => true,
-                        ],
-                        'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
-                        'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                    ],
-                    'pluginEvents' => [
-                        "change" => "function() { if($('#contracts-customer_id').select2('data').length) getCustomerData($('#contracts-customer_id').select2('data')[0].id) }",
-                    ],
-                ])->label(Yii::t('app', 'Guarantors search'));
-                ?>
+                <?= $form->field($model, 'guarantors_ids')->textInput(['placeholder' => 'ابحث بالاسم أو الرقم الوطني...', 'class' => 'form-control'])->label(Yii::t('app', 'Guarantors search')) ?>
 
             </div>
         </div>

@@ -29,18 +29,7 @@ use yii\widgets\ActiveForm;
         </div>
         <div class ="row">
             <div class="col-lg-6">
-                <?=
-                $form->field($model, 'created_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
-                ?>
+                <?= $form->field($model, 'created_by')->dropDownList(yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'), ['prompt' => '-- اختر المستخدم --', 'class' => 'form-control']) ?>
             </div>
             <div class="col-lg-6">
                 <?= $form->field($model, 'number_row')->textInput(['maxlength' => true]) ?>

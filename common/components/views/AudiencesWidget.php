@@ -6,7 +6,6 @@ use yii\helpers\Url;
 use common\models\Profession;
 use common\models\Audience;
 use kartik\depdrop\DepDrop;
-use kartik\select2\Select2;
 
 ?>
 <div class="">

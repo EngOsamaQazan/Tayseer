@@ -11,7 +11,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\companies\models\Companies;
 use backend\modules\companyBanks\models\CompanyBanks;
 use backend\modules\bancks\models\Bancks;
@@ -70,19 +69,11 @@ $companies = ArrayHelper::map(Companies::find()->all(), 'id', 'name');
         <div class="fin-import-fields">
             <div class="fin-import-field">
                 <label><i class="fa fa-building-o"></i> الشركة</label>
-                <?= $form->field($model, 'company_id')->widget(Select2::class, [
-                    'data' => $companies,
-                    'options' => ['placeholder' => 'اختر الشركة...'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label(false) ?>
+                <?= $form->field($model, 'company_id')->dropDownList($companies, ['prompt' => '-- اختر الشركة --', 'class' => 'form-control'])->label(false) ?>
             </div>
             <div class="fin-import-field">
                 <label><i class="fa fa-university"></i> البنك</label>
-                <?= $form->field($model, 'bank_id')->widget(Select2::class, [
-                    'data' => $bankNames,
-                    'options' => ['placeholder' => 'اختر البنك...'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label(false) ?>
+                <?= $form->field($model, 'bank_id')->dropDownList($bankNames, ['prompt' => '-- اختر البنك --', 'class' => 'form-control'])->label(false) ?>
             </div>
             <div class="fin-import-field fin-import-field--file">
                 <label><i class="fa fa-file-excel-o"></i> ملف Excel</label>

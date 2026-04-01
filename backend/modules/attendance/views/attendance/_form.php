@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use backend\models\Employee;
 use backend\helpers\FlatpickrWidget;
@@ -17,25 +16,9 @@ use backend\modules\location\models\Location;
 
     <?php $form = ActiveForm::begin(); ?>
 
-    <?=
-    $form->field($model, 'user_id')->widget(Select2::classname(), [
-        'data' => yii\helpers\ArrayHelper::map(Employee::find()->all(),'id','username'),
-        'options' => ['placeholder' => 'Select a state ...'],
-        'pluginOptions' => [
-            'allowClear' => true
-        ],
-    ])
-    ?>
+    <?= $form->field($model, 'user_id')->dropDownList(yii\helpers\ArrayHelper::map(Employee::find()->all(), 'id', 'username'), ['prompt' => '-- اختر الموظف --', 'class' => 'form-control']) ?>
     
-    <?=
-    $form->field($model, 'location_id')->widget(Select2::classname(), [
-        'data' => yii\helpers\ArrayHelper::map(Location::find()->all(),'id','location'),
-        'options' => ['placeholder' => 'Select a state ...'],
-        'pluginOptions' => [
-            'allowClear' => true
-        ],
-    ])
-    ?>
+    <?= $form->field($model, 'location_id')->dropDownList(yii\helpers\ArrayHelper::map(Location::find()->all(), 'id', 'location'), ['prompt' => '-- اختر الموقع --', 'class' => 'form-control']) ?>
     
     <?= $form->field($model, 'check_in_time')->widget(FlatpickrWidget::class, [
         'pluginOptions' => ['enableTime' => true, 'noCalendar' => true, 'dateFormat' => 'H:i', 'time_24hr' => true],

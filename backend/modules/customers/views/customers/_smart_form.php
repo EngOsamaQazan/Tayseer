@@ -10,7 +10,6 @@ use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 use backend\helpers\PhoneInputWidget;
 use backend\helpers\MediaHelper;
 use common\helper\Permissions;
@@ -204,21 +203,8 @@ if (!$isNew) {
                     <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية</h3>
                     <div class="so-grid so-grid-3">
                         <div class="job-title-wrapper">
-                            <?= $form->field($model, 'job_title')->widget(Select2::class, [
-                                'initValueText' => $model->job_title ? \backend\modules\jobs\models\Jobs::findOne($model->job_title)?->name : '',
-                                'options' => ['placeholder' => 'ابحث عن جهة العمل...', 'id' => 'customers-job_title'],
-                                'pluginOptions' => [
-                                    'allowClear' => true,
-                                    'dir' => 'rtl',
-                                    'minimumInputLength' => 0,
-                                    'ajax' => [
-                                        'url' => Url::to(['/jobs/jobs/search-list']),
-                                        'dataType' => 'json',
-                                        'delay' => 200,
-                                        'data' => new \yii\web\JsExpression('function(p){return {q:p.term||""};}'),
-                                        'processResults' => new \yii\web\JsExpression('function(d){return d;}'),
-                                    ],
-                                ],
+                            <?= $form->field($model, 'job_title')->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
+                                'prompt' => '-- جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title',
                             ])->label('جهة العمل') ?>
                             <button type="button" class="btn-add-job" id="btn-add-job-smart" title="إضافة جهة عمل جديدة"><i class="fa fa-plus"></i></button>
                         </div>
@@ -293,10 +279,8 @@ if (!$isNew) {
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-university"></i> الحساب البنكي</h3>
                     <div class="so-grid so-grid-3">
-                        <div><?= $form->field($model, 'bank_name')->widget(Select2::class, [
-                            'data' => ArrayHelper::map($banks, 'id', 'name'),
-                            'options' => ['placeholder' => 'اختر البنك'],
-                            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                        <div><?= $form->field($model, 'bank_name')->dropDownList(ArrayHelper::map($banks, 'id', 'name'), [
+                            'prompt' => '-- اختر البنك --', 'class' => 'form-control',
                         ])->label('البنك') ?></div>
                         <div><?= $form->field($model, 'bank_branch')->textInput(['maxlength' => true, 'placeholder' => 'اسم الفرع'])->label('الفرع') ?></div>
                         <div><?= $form->field($model, 'account_number')->textInput(['maxlength' => true, 'placeholder' => 'رقم الحساب'])->label('رقم الحساب') ?></div>

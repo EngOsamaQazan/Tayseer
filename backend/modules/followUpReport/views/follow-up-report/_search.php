@@ -83,18 +83,12 @@ use backend\helpers\FlatpickrWidget;
         </div>
         <?php if(Yii::$app->user->can('مدير') or Yii::$app->user->can(' مدير التحصيل')){ ?>
         <div class="col-lg-4">
-            <?= $form->field($model, 'followed_by')->widget(kartik\select2\Select2::classname(), [
-                'data' =>yii\helpers\ArrayHelper::map( Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
+            <?= $form->field($model, 'followed_by')->dropDownList(
+                yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
                     return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
                 }, Yii::$app->params['time_duration']), 'id', 'username'),
-                'options' => [
-                    'placeholder' => 'Select a created_by.',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
-            ?>
+                ['prompt' => '-- اختر المتابع --', 'class' => 'form-control']
+            ); ?>
         </div>
         <?php } ?>
     </div>

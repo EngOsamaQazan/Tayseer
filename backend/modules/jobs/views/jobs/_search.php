@@ -2,7 +2,6 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use yii\helpers\ArrayHelper;
-use kartik\select2\Select2;
 use backend\modules\jobs\models\JobsType;
 
 /* @var $model backend\modules\jobs\models\JobsSearch */

@@ -12,7 +12,7 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
+
 use backend\modules\expenseCategories\models\ExpenseCategories;
 
 /* === جلب البيانات من الكاش === */
@@ -32,11 +32,7 @@ $contract_id = Yii::$app->cache->getOrSet(Yii::$app->params['key_contract_id'], 
         <!-- التصنيف والمبلغ -->
         <div class="row">
             <div class="col-md-6">
-                <?= $form->field($model, 'category_id')->widget(Select2::class, [
-                    'data' => ArrayHelper::map(ExpenseCategories::find()->all(), 'id', 'name'),
-                    'options' => ['placeholder' => Yii::t('app', 'اختر التصنيف ...')],
-                    'pluginOptions' => ['allowClear' => true],
-                ])->label(Yii::t('app', 'تصنيف المصروف')) ?>
+                <?= $form->field($model, 'category_id')->dropDownList(ArrayHelper::map(ExpenseCategories::find()->all(), 'id', 'name'), ['prompt' => '-- اختر التصنيف --', 'class' => 'form-control'])->label(Yii::t('app', 'تصنيف المصروف')) ?>
             </div>
             <div class="col-md-6">
                 <?= $form->field($model, 'amount')
@@ -68,11 +64,7 @@ $contract_id = Yii::$app->cache->getOrSet(Yii::$app->params['key_contract_id'], 
                     ->label(Yii::t('app', 'رقم المستند')) ?>
             </div>
             <div class="col-md-6">
-                <?= $form->field($model, 'contract_id')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($contract_id, 'id', 'id'),
-                    'options' => ['placeholder' => Yii::t('app', 'اختر العقد ...')],
-                    'pluginOptions' => ['allowClear' => true],
-                ])->label(Yii::t('app', 'رقم العقد')) ?>
+                <?= $form->field($model, 'contract_id')->dropDownList(ArrayHelper::map($contract_id, 'id', 'id'), ['prompt' => '-- اختر العقد --', 'class' => 'form-control'])->label(Yii::t('app', 'رقم العقد')) ?>
             </div>
         </div>
 

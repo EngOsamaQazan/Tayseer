@@ -6,7 +6,7 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
+
 use backend\modules\expenseCategories\models\ExpenseCategories;
 use backend\modules\incomeCategory\models\IncomeCategory;
 use backend\modules\contracts\models\Contracts;
@@ -32,11 +32,7 @@ $contractIds = ArrayHelper::map(Contracts::find()->select(['id'])->asArray()->al
                 <?= $form->field($model, 'amount')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('المبلغ') ?>
             </div>
             <div class="col-md-4">
-                <?= $form->field($model, 'company_id')->widget(Select2::class, [
-                    'data' => $companies,
-                    'options' => ['placeholder' => 'اختر الشركة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('الشركة') ?>
+                <?= $form->field($model, 'company_id')->dropDownList($companies, ['prompt' => '-- اختر الشركة --', 'class' => 'form-control'])->label('الشركة') ?>
             </div>
             <div class="col-md-4">
                 <?= $form->field($model, 'receiver_number')->textInput(['placeholder' => 'رقم المستلم'])->label('رقم المستلم') ?>
@@ -48,27 +44,15 @@ $contractIds = ArrayHelper::map(Contracts::find()->select(['id'])->asArray()->al
             </div>
             <div class="col-md-4 js-category-section"
                  x-show="txType == <?= FinancialTransaction::TYPE_OUTCOME ?>" x-transition x-cloak>
-                <?= $form->field($model, 'category_id')->widget(Select2::class, [
-                    'data' => $categories,
-                    'options' => ['placeholder' => 'تصنيف المصاريف'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('تصنيف المصاريف') ?>
+                <?= $form->field($model, 'category_id')->dropDownList($categories, ['prompt' => '-- تصنيف المصاريف --', 'class' => 'form-control'])->label('تصنيف المصاريف') ?>
             </div>
             <div class="col-md-4 js-income-section"
                  x-show="txType == <?= FinancialTransaction::TYPE_INCOME ?>" x-transition x-cloak>
-                <?= $form->field($model, 'income_type', ['inputOptions' => ['id' => 'ft-income-type']])->widget(Select2::class, [
-                    'data' => $incomeTypes,
-                    'options' => ['placeholder' => 'نوع الدخل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
-                ])->label('نوع الدخل') ?>
+                <?= $form->field($model, 'income_type', ['inputOptions' => ['id' => 'ft-income-type', 'x-model' => 'incomeType']])->dropDownList($incomeTypes, ['prompt' => '-- نوع الدخل --', 'class' => 'form-control', 'id' => 'ft-income-type'])->label('نوع الدخل') ?>
             </div>
             <div class="col-md-4 js-contract-section"
                  x-show="txType == <?= FinancialTransaction::TYPE_INCOME ?> && incomeType == <?= FinancialTransaction::TYPE_INCOME_MONTHLY ?>" x-transition x-cloak>
-                <?= $form->field($model, 'contract_id')->widget(Select2::class, [
-                    'data' => $contractIds,
-                    'options' => ['placeholder' => 'رقم العقد'],
-                    'pluginOptions' => ['allowClear' => true],
-                ])->label('العقد') ?>
+                <?= $form->field($model, 'contract_id')->dropDownList($contractIds, ['prompt' => '-- رقم العقد --', 'class' => 'form-control'])->label('العقد') ?>
             </div>
         </div>
         <div class="row">

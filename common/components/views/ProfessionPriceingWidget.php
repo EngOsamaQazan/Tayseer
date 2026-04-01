@@ -1,7 +1,6 @@
 <?php
 
 use common\models\Profession;
-use kartik\select2\Select2;
 use wbraganca\dynamicform\DynamicFormWidget;
 use yii\helpers\ArrayHelper;
 use yii\helpers\Html;
@@ -92,21 +91,9 @@ $profClasses = $model->date_allow == 0 ? 'col-sm-5 col-xs-5' : 'col-sm-7 col-xs-
 
                             <?php
 
-                            echo $form->field($modelProfessionPrice, "[{$i}]professions_id")->widget(Select2::classname(), [
-                                    'data' => ($model->audiance_type == 1) ? Profession::getSubProfessionList(null) : Profession::getProfessionList($model->audience),
-                                    //'data'=>$professions,
-                                    'options' => ['placeholder' => Yii::t('app', 'Select a course to be prerequistied'),
-                                        'multiple' => true,
-                                        'class' => 'select2-prof-list-price'
-                                    ],
-                                    'pluginOptions' => [
-                                        'tags' => true,
-                                        'closeOnSelect' => false,
-                                        'tokenSeparators' => [',', ' '],
-                                        'maximumInputLength' => 10,
-
-                                    ],
-                                ]
+                            echo $form->field($modelProfessionPrice, "[{$i}]professions_id")->dropDownList(
+                                ($model->audiance_type == 1) ? Profession::getSubProfessionList(null) : Profession::getProfessionList($model->audience),
+                                ['prompt' => '-- اختر --', 'class' => 'form-control select2-prof-list-price', 'multiple' => true]
                             )->label(false); ?>
 
 

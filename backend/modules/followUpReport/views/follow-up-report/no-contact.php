@@ -9,7 +9,6 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\LinkPager;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
 use common\helper\Permissions;
@@ -173,10 +172,8 @@ $end   = $begin + count($models) - 1;
                     <?php if ($isManager || Yii::$app->user->can('مدير التحصيل')): ?>
                     <div class="ct-filter-group">
                         <label>المتابع</label>
-                        <?= $form->field($searchModel, 'followed_by', ['template' => '{input}'])->widget(Select2::class, [
-                            'data' => $allUsers,
-                            'options' => ['placeholder' => 'اختر المتابع'],
-                            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                        <?= $form->field($searchModel, 'followed_by', ['template' => '{input}'])->dropDownList($allUsers, [
+                            'prompt' => '-- اختر المتابع --', 'class' => 'form-control',
                         ]) ?>
                     </div>
                     <?php endif ?>

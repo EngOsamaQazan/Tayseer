@@ -29,14 +29,10 @@ use backend\modules\inventoryItems\models\InventoryItems;
 
         <div class="col-lg-6">
             <?=
-            $form->field($model, 'locations_id')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(InventoryStockLocations::find()->all(), 'id', 'locations_name'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a Location.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
+            $form->field($model, 'locations_id')->dropDownList(
+                yii\helpers\ArrayHelper::map(InventoryStockLocations::find()->all(), 'id', 'locations_name'),
+                ['prompt' => '-- اختر الموقع --', 'class' => 'form-control']
+            );
             ?>
         </div>
     </div>

@@ -3,7 +3,6 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use yii\helpers\ArrayHelper;
-use kartik\select2\Select2;
 use backend\modules\jobs\models\JobsType;
 use backend\modules\jobs\models\Jobs;
 use backend\modules\jobs\models\JobsPhone;
@@ -149,11 +148,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($model, 'job_type')->widget(Select2::class, [
-                        'data' => ArrayHelper::map(JobsType::find()->all(), 'id', 'name'),
-                        'options' => ['placeholder' => 'اختر نوع جهة العمل'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ]) ?>
+                    <?= $form->field($model, 'job_type')->dropDownList(ArrayHelper::map(JobsType::find()->all(), 'id', 'name'), ['prompt' => '-- اختر نوع جهة العمل --', 'class' => 'form-control']) ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($model, 'status')->dropDownList([1 => 'فعال', 0 => 'غير فعال'], ['class' => 'form-control']) ?>
@@ -330,7 +325,7 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
             $model->isNewRecord ? '<i class="fa fa-plus"></i> إنشاء جهة العمل' : '<i class="fa fa-save"></i> حفظ التغييرات',
             ['class' => $model->isNewRecord ? 'btn btn-success btn-lg' : 'btn btn-primary btn-lg']
         ) ?>
-        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default btn-lg']) ?>
+        <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary btn-lg']) ?>
     </div>
 
     <?php ActiveForm::end(); ?>

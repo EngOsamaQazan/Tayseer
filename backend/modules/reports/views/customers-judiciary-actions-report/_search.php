@@ -1,7 +1,6 @@
 <?php
 use yii\widgets\ActiveForm;
 
-use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use common\models\User; // Ensure this matches the namespace of your User model
 use yii\helpers\Html;
@@ -29,18 +28,7 @@ $form = ActiveForm::begin([
             <?= $form->field($model, 'customer_name')->textInput() ?>
         </div>
         <div class="col-lg-6">
-        <?=
-                $form->field($model, 'court_name')->widget(kartik\select2\Select2::classname(), [
-                    'data' =>yii\helpers\ArrayHelper::map($court,'name','name'),
-                    'language' => 'ar',
-                    'options' => [
-                        'placeholder' => 'Select a court.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
-                ?>
+        <?= $form->field($model, 'court_name')->dropDownList(yii\helpers\ArrayHelper::map($court, 'name', 'name'), ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control']) ?>
         </div>
         <!-- Repeat for other attributes -->
     </div>

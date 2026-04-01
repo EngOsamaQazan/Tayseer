@@ -26,52 +26,19 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
         ?>
         <div class="row">
             <div class="col-lg-6">
-                <?=
-                $form->field($model, 'court_id')->widget(kartik\select2\Select2::classname(), [
-                    'data' =>yii\helpers\ArrayHelper::map($court,'id','name'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a court.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
-                ?>
+                <?= $form->field($model, 'court_id')->dropDownList(yii\helpers\ArrayHelper::map($court, 'id', 'name'), ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control']) ?>
             </div>
             <div class="col-lg-6">
-                <?=
-                $form->field($model, 'type_id')->widget(kartik\select2\Select2::classname(), [
-                    'data' => Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_type"], function () {
-                        return yii\helpers\ArrayHelper::map(JudiciaryType::find()->all(), 'id', 'name');
-                    }, Yii::$app->params['time_duration']),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
-                ?>
+                <?= $form->field($model, 'type_id')->dropDownList(Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_type"], function () {
+                    return yii\helpers\ArrayHelper::map(JudiciaryType::find()->all(), 'id', 'name');
+                }, Yii::$app->params['time_duration']), ['prompt' => '-- اختر النوع --', 'class' => 'form-control']) ?>
             </div>
         </div>
         <div class="row">
             <div class="col-lg-6">
-                <?=
-                $form->field($model, 'lawyer_id')->widget(kartik\select2\Select2::classname(), [
-                    'data' => Yii::$app->cache->getOrSet(Yii::$app->params["key_lawyer"], function () {
-                        return yii\helpers\ArrayHelper::map(Lawyers::find()->all(), 'id', 'name');
-                    }, Yii::$app->params['time_duration']),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a lawyer.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
-                ?>
+                <?= $form->field($model, 'lawyer_id')->dropDownList(Yii::$app->cache->getOrSet(Yii::$app->params["key_lawyer"], function () {
+                    return yii\helpers\ArrayHelper::map(Lawyers::find()->all(), 'id', 'name');
+                }, Yii::$app->params['time_duration']), ['prompt' => '-- اختر المحامي --', 'class' => 'form-control']) ?>
             </div>
             <div class="col-lg-6">
                 <?= $form->field($model, 'lawyer_cost')->textInput() ?>
@@ -83,20 +50,9 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
 
             </div>
             <div class="col-lg-6">
-                <?=
-                $form->field($model, 'contract_id')->widget(kartik\select2\Select2::classname(), [
-                    'data' => Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_contract"], function () {
-                        return yii\helpers\ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->all(), 'contract_id', 'contract_id');
-                    }, Yii::$app->params['time_duration']),
-                  'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a lawyer.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ])->label(Yii::t('app', 'Contract ID'));
-                ?>
+                <?= $form->field($model, 'contract_id')->dropDownList(Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_contract"], function () {
+                    return yii\helpers\ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->all(), 'contract_id', 'contract_id');
+                }, Yii::$app->params['time_duration']), ['prompt' => '-- اختر العقد --', 'class' => 'form-control'])->label(Yii::t('app', 'Contract ID')) ?>
             </div>
         </div>
         <div class="row">
@@ -119,18 +75,7 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
         </div>
         <div class="row">
             <div class="col-lg-6">
-                <?= $form->field($model, 'year')->widget(kartik\select2\Select2::classname(), [
-                    'data' => $model->year(),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a year.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ])->label(Yii::t('app', 'Year'));
-
-                ?>
+                <?= $form->field($model, 'year')->dropDownList($model->year(), ['prompt' => '-- السنة --', 'class' => 'form-control'])->label(Yii::t('app', 'Year')) ?>
             </div>
             <div class="col-lg-6">
                 <?= $form->field($model, 'judiciary_number')->textInput()->label(Yii::t('app', 'Judiciary Number')); ?>

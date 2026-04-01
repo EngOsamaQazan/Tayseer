@@ -15,7 +15,6 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 
 /* ═══ بيانات مرجعية (كاش) ═══ */
 $cache = Yii::$app->cache;

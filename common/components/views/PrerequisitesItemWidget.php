@@ -2,9 +2,7 @@
 use wbraganca\dynamicform\DynamicFormWidget;
 use yii\helpers\Html;
 use yii\helpers\Url;
-use yii\web\JsExpression;
 use common\models\PrerequisiteItem;
-use kartik\select2\Select2;
 
 if ($has_prerequisites==1){
 	//$PrerequisitesClass = '';
