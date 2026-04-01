@@ -45,7 +45,12 @@
         xhr.open('GET', POLL_URL + '?since=' + lastId, true);
         xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
         xhr.onreadystatechange = function () {
-            if (xhr.readyState !== 4 || xhr.status !== 200) return;
+            if (xhr.readyState !== 4) return;
+            if (xhr.status === 403 || xhr.status === 401) {
+                stopPolling();
+                return;
+            }
+            if (xhr.status !== 200) return;
             try {
                 var data = JSON.parse(xhr.responseText);
                 handlePollResponse(data);

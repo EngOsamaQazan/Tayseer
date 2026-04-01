@@ -520,24 +520,26 @@ $('#wizard-next').on('click', function(){ goStep(currentStep + 1); });
 
 /* زر إعادة التعيين — الزر الوحيد الذي يحذف المسودة */
 $('#wizard-reset').on('click', function(){
-    if (!confirm('هل أنت متأكد من إعادة تعيين جميع البيانات؟ سيتم تفريغ كل الحقول والأصناف المختارة.')) return;
-    clearWizardState();
-    selectedItems = [];
-    currentStep = 1;
-    $('#wizard-selected-items').empty();
-    $('#wizard-no-items').show();
-    $('#wizard-step2-tbody').empty();
-    $('#wizard-step3-body').empty();
-    $('#wizard-step4-summary').empty();
-    $('#wizard-search-item').val('');
-    $('#wizard-search-results').hide().empty();
-    $('#wizard-branch-id').val('');
-    $('#wizard-suppliers-id').val('');
-    $('#wizard-company-id').val('');
-    $('#wizard-type').val('cash');
-    $('#wizard-date').val(new Date().toISOString().slice(0,10));
-    $('#wizard-notes').val('');
-    goStep(1);
+    TayseerConfirm('سيتم تفريغ كل الحقول والأصناف المختارة.', 'إعادة تعيين؟').then(function(ok){
+        if (!ok) return;
+        clearWizardState();
+        selectedItems = [];
+        currentStep = 1;
+        $('#wizard-selected-items').empty();
+        $('#wizard-no-items').show();
+        $('#wizard-step2-tbody').empty();
+        $('#wizard-step3-body').empty();
+        $('#wizard-step4-summary').empty();
+        $('#wizard-search-item').val('');
+        $('#wizard-search-results').hide().empty();
+        $('#wizard-branch-id').val('');
+        $('#wizard-suppliers-id').val('');
+        $('#wizard-company-id').val('');
+        $('#wizard-type').val('cash');
+        $('#wizard-date').val(new Date().toISOString().slice(0,10));
+        $('#wizard-notes').val('');
+        goStep(1);
+    });
 });
 
 $('#wizard-form').on('submit', function(e){
@@ -686,24 +688,28 @@ $('#wizard-save-draft-btn').on('click', function(){
 /* استعادة مسودة محفوظة */
 $(document).on('click', '.wizard-restore-draft', function(){
     var draftId = $(this).data('id');
-    if (!confirm('هل تريد استعادة هذه المسودة؟ سيتم استبدال البيانات الحالية في المعالج.')) return;
-    $.get('$restoreDraftUrl', {draft_id: draftId}, function(r){
-        if (!r || !r.ok || !r.data) { alert('فشل تحميل المسودة.'); return; }
-        applyDraftState(r.data);
-        showDraftStatus('تم استعادة المسودة', 'saved');
-    }, 'json').fail(function(){ alert('فشل تحميل المسودة.'); });
+    TayseerConfirm('سيتم استبدال البيانات الحالية في المعالج.', 'استعادة المسودة؟').then(function(ok){
+        if (!ok) return;
+        $.get('$restoreDraftUrl', {draft_id: draftId}, function(r){
+            if (!r || !r.ok || !r.data) { alert('فشل تحميل المسودة.'); return; }
+            applyDraftState(r.data);
+            showDraftStatus('تم استعادة المسودة', 'saved');
+        }, 'json').fail(function(){ alert('فشل تحميل المسودة.'); });
+    });
 });
 
 /* حذف مسودة */
 $(document).on('click', '.wizard-delete-draft', function(){
     var draftId = $(this).data('id');
-    if (!confirm('هل أنت متأكد من حذف هذه المسودة؟')) return;
-    var payload = {};
-    payload['$csrfParam'] = '$csrfToken';
-    payload['draft_id'] = draftId;
-    $.post('$deleteDraftUrl', payload, function(r){
-        loadSavedDraftsList();
-    }, 'json');
+    TayseerConfirm('هل أنت متأكد من حذف هذه المسودة؟').then(function(ok){
+        if (!ok) return;
+        var payload = {};
+        payload['$csrfParam'] = '$csrfToken';
+        payload['draft_id'] = draftId;
+        $.post('$deleteDraftUrl', payload, function(r){
+            loadSavedDraftsList();
+        }, 'json');
+    });
 });
 
 /* تطبيق بيانات مسودة على النموذج */

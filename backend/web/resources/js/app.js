@@ -217,6 +217,13 @@ document.querySelectorAll('.jadal-fieldset legend, .so-fieldset legend, fieldset
     }
 });
 
+// ═══ 10a. $.pjax shim — prevents ModalRemote crash on pages without pjax ═══
+if (typeof jQuery !== 'undefined' && !jQuery.pjax) {
+    jQuery.pjax = {
+        reload: function () { location.reload(); }
+    };
+}
+
 // ═══ 10. BS4 → BS5 Data Attribute Shim ═══
 const bs4to5Map = {
     'data-toggle': 'data-bs-toggle',

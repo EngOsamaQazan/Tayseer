@@ -60,10 +60,8 @@ JS, View::POS_READY);
     'options' => ['class' => 'ct-search-form'],
 ]) ?>
 
-<div class="ct-filter-grid">
-
-    <!-- بحث: اسم الطرف (عمودين) -->
-    <div class="ct-filter-group ct-filter-search ct-filter-customer">
+<div class="ct-filter-rows">
+    <div class="ct-filter-col-wide ct-filter-search">
         <label><i class="fa fa-user"></i> اسم الطرف</label>
         <div class="us-wrap" id="ctf-name-wrap">
             <?= Html::activeTextInput($model, 'customer_name', [
@@ -77,9 +75,7 @@ JS, View::POS_READY);
             <div class="us-dropdown" style="display:none"></div>
         </div>
     </div>
-
-    <!-- بحث: رقم العقد -->
-    <div class="ct-filter-group ct-filter-search">
+    <div class="ct-filter-col ct-filter-search">
         <label><i class="fa fa-file-text-o"></i> رقم العقد</label>
         <div class="us-wrap" id="ctf-id-wrap">
             <?= Html::activeTextInput($model, 'id', [
@@ -93,9 +89,7 @@ JS, View::POS_READY);
             <div class="us-dropdown" style="display:none"></div>
         </div>
     </div>
-
-    <!-- بحث: الرقم الوطني -->
-    <div class="ct-filter-group ct-filter-search">
+    <div class="ct-filter-col ct-filter-search">
         <label><i class="fa fa-id-card"></i> الرقم الوطني</label>
         <div class="us-wrap" id="ctf-idn-wrap">
             <?= Html::activeTextInput($model, 'id_number', [
@@ -109,9 +103,7 @@ JS, View::POS_READY);
             <div class="us-dropdown" style="display:none"></div>
         </div>
     </div>
-
-    <!-- بحث: رقم الهاتف -->
-    <div class="ct-filter-group ct-filter-search">
+    <div class="ct-filter-col ct-filter-search">
         <label><i class="fa fa-phone"></i> رقم الهاتف</label>
         <div class="us-wrap" id="ctf-phone-wrap">
             <?= Html::activeTextInput($model, 'phone_number', [
@@ -125,66 +117,52 @@ JS, View::POS_READY);
             <div class="us-dropdown" style="display:none"></div>
         </div>
     </div>
-
-    <!-- الحالة -->
-    <div class="ct-filter-group">
-        <label for="contractssearch-status">الحالة</label>
+    <div class="ct-filter-col">
+        <label>الحالة</label>
         <?= $form->field($model, 'status', ['template' => '{input}'])->dropDownList($statusList, [
             'class' => 'form-control',
             'aria-label' => 'الحالة',
         ]) ?>
     </div>
-
-    <!-- من تاريخ -->
-    <div class="ct-filter-group">
+    <div class="ct-filter-col">
         <label>من تاريخ</label>
         <?= $form->field($model, 'from_date', ['template' => '{input}'])->widget(FlatpickrWidget::class, [
-            'options' => ['placeholder' => 'من تاريخ', 'aria-label' => 'من تاريخ', 'autocomplete' => 'off'],
+            'options' => ['placeholder' => 'من', 'aria-label' => 'من تاريخ', 'autocomplete' => 'off', 'style' => 'font-size:12px'],
             'pluginOptions' => ['dateFormat' => 'Y-m-d'],
         ]) ?>
     </div>
-
-    <!-- إلى تاريخ -->
-    <div class="ct-filter-group">
+    <div class="ct-filter-col">
         <label>إلى تاريخ</label>
         <?= $form->field($model, 'to_date', ['template' => '{input}'])->widget(FlatpickrWidget::class, [
-            'options' => ['placeholder' => 'إلى تاريخ', 'aria-label' => 'إلى تاريخ', 'autocomplete' => 'off'],
+            'options' => ['placeholder' => 'إلى', 'aria-label' => 'إلى تاريخ', 'autocomplete' => 'off', 'style' => 'font-size:12px'],
             'pluginOptions' => ['dateFormat' => 'Y-m-d'],
         ]) ?>
     </div>
-
-    <!-- البائع -->
-    <div class="ct-filter-group">
+    <div class="ct-filter-col">
         <label>البائع</label>
         <?= $form->field($model, 'seller_id', ['template' => '{input}'])->widget(Select2::class, [
             'data' => ArrayHelper::map($users, 'id', 'username'),
-            'options' => ['placeholder' => 'اختر البائع', 'aria-label' => 'البائع'],
-            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+            'options' => ['placeholder' => 'البائع', 'aria-label' => 'البائع'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
         ]) ?>
     </div>
-
-    <!-- المتابع -->
-    <div class="ct-filter-group">
+    <div class="ct-filter-col">
         <label>المتابع</label>
         <?= $form->field($model, 'followed_by', ['template' => '{input}'])->widget(Select2::class, [
             'data' => ArrayHelper::map($users, 'id', 'username'),
-            'options' => ['placeholder' => 'اختر المتابع', 'aria-label' => 'المتابع'],
-            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+            'options' => ['placeholder' => 'المتابع', 'aria-label' => 'المتابع'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
         ]) ?>
     </div>
-
-    <!-- نوع الوظيفة -->
-    <div class="ct-filter-group">
+    <div class="ct-filter-col">
         <label>نوع الوظيفة</label>
         <?= $form->field($model, 'job_Type', ['template' => '{input}'])->widget(Select2::class, [
             'data' => ArrayHelper::map($jobType, 'id', 'name'),
-            'options' => ['placeholder' => 'نوع الوظيفة', 'aria-label' => 'نوع الوظيفة'],
-            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+            'options' => ['placeholder' => 'الوظيفة', 'aria-label' => 'نوع الوظيفة'],
+            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
         ]) ?>
     </div>
-
-    <!-- عدد النتائج -->
-    <div class="ct-filter-group">
+    <div class="ct-filter-col">
         <label>نتائج/صفحة</label>
         <?= $form->field($model, 'number_row', ['template' => '{input}'])->textInput([
             'placeholder' => '20',
@@ -195,14 +173,12 @@ JS, View::POS_READY);
             'aria-label' => 'عدد النتائج في الصفحة',
         ]) ?>
     </div>
-
-    <!-- Actions -->
     <div class="ct-filter-actions">
         <?= Html::submitButton('<i class="fa fa-search"></i> بحث', [
             'class' => 'ct-btn ct-btn-primary',
         ]) ?>
         <a href="<?= Url::to(['index']) ?>" class="ct-btn ct-btn-outline">
-            <i class="fa fa-refresh"></i> <span class="ct-hide-xs">إعادة تعيين</span>
+            <i class="fa fa-refresh"></i> <span class="ct-hide-xs">مسح</span>
         </a>
     </div>
 </div>
