@@ -330,6 +330,7 @@ $countNoJob = $totalContracts - $countWithJob;
                         $jobTypeId = $jobId ? ($jobToTypeMap[$jobId] ?? null) : null;
                         $jobTypeName = $jobTypeId ? ($jobTypesMap[$jobTypeId] ?? '—') : '—';
 
+                        $jud = $judiciaryMap[$m->id] ?? null;
                         $hasCase = (bool) $jud;
                     ?>
                     <tr data-id="<?= $m->id ?>" class="ld-row" style="--row-delay: <?= $rowIndex * 0.03 ?>s">
