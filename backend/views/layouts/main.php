@@ -422,8 +422,11 @@ if (Yii::$app->controller->action->id === 'login') {
     })();
     </script>
 
-    <script src="<?= $baseUrl ?>/plugins/select2/js/select2.min.js"></script>
-    <script>
+    <?php
+    $this->registerJsFile($baseUrl . '/plugins/select2/js/select2.min.js', [
+        'depends' => [\yii\web\JqueryAsset::class],
+    ]);
+    $this->registerJs(<<<'JS'
     (function(){
         function initSearchableSelects(root) {
             var selects = (root || document).querySelectorAll('select.form-control');
@@ -446,7 +449,9 @@ if (Yii::$app->controller->action->id === 'login') {
         $(document).on('pjax:end ajaxComplete', function(){ setTimeout(function(){ initSearchableSelects(); }, 100); });
         window.initSearchableSelects = initSearchableSelects;
     })();
-    </script>
+JS
+    , \yii\web\View::POS_END);
+    ?>
 
     <?php $this->endBody() ?>
     </body>

@@ -370,6 +370,80 @@
     font-size: 8px;
 }
 
+/* ── Legal Filters Form ── */
+.ct-legal-filters {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.ct-lf-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+.ct-filter-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.ct-filter-group label {
+    font-size: 10px;
+    color: var(--clr-text-muted, #64748b);
+    font-weight: 600;
+    margin-bottom: 3px;
+    letter-spacing: 0.3px;
+}
+.ct-filter-group .form-group {
+    margin-bottom: 0;
+}
+.ct-filter-group .form-control {
+    font-size: 12px !important;
+    height: 34px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--clr-border, #e0e0e0);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ct-filter-group .form-control:focus {
+    border-color: var(--clr-primary, #800020);
+    box-shadow: 0 0 0 2px rgba(128, 0, 32, 0.08);
+    outline: none;
+}
+.ct-lf-date-pair {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+.ct-lf-date-pair .ct-filter-group {
+    min-width: 110px;
+    flex: 1;
+}
+
+@media (max-width: 767px) {
+    .ct-lf-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    .ct-lf-row .ct-filter-group,
+    .ct-lf-row .ct-lf-date-pair {
+        width: 100%;
+    }
+    .ct-filter-group {
+        width: 100%;
+    }
+    .ct-filter-group .form-control {
+        width: 100% !important;
+    }
+    .ct-filter-actions {
+        width: 100%;
+    }
+    .ct-filter-actions .ct-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
 /* ── Toolbar ── */
 .ld-toolbar {
     display: flex;
