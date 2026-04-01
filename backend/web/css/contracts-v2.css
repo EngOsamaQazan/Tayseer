@@ -256,34 +256,23 @@ body:has(.ct-page) .page-header {
 .ct-filter-panel.collapsed .ct-filter-body {
   display: none;
 }
-/* Filter form — flex-based rows (judiciary pattern: no horizontal scroll) */
+/* Filter form — compact multi-column grid */
 .ct-filter-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.ct-filter-row {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px 12px;
   align-items: end;
 }
-.ct-filter-row:last-child {
-  margin-bottom: 0;
-}
 .ct-filter-col {
-  flex: 1;
-  min-width: 120px;
-  max-width: 220px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 .ct-filter-col-wide {
-  flex: 1.5;
-  min-width: 160px;
-  max-width: 280px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  grid-column: span 2;
 }
 .ct-filter-col .form-group,
 .ct-filter-col-wide .form-group {
@@ -296,6 +285,9 @@ body:has(.ct-page) .page-header {
   color: var(--clr-text-muted, #64748B);
   margin-bottom: 2px;
   letter-spacing: .3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ct-filter-col .form-control,
 .ct-filter-col-wide .form-control {
@@ -305,6 +297,7 @@ body:has(.ct-page) .page-header {
   border-radius: var(--radius-sm, 6px);
   border: 1.5px solid var(--clr-border, #e0e0e0);
   transition: border-color 0.2s ease;
+  width: 100%;
 }
 .ct-filter-col .form-control:focus,
 .ct-filter-col-wide .form-control:focus {
@@ -335,7 +328,7 @@ body:has(.ct-page) .page-header {
   position: relative;
   border-right: 3px solid var(--clr-primary, #800020);
   background: rgba(128, 0, 32, .02);
-  padding: 8px 10px 8px 6px;
+  padding: 6px 8px 6px 4px;
   border-radius: var(--radius-sm, 6px);
   transition: background .2s ease;
 }
@@ -347,7 +340,7 @@ body:has(.ct-page) .page-header {
 }
 .ct-filter-search label i {
   opacity: .65;
-  font-size: 12px;
+  font-size: 11px;
 }
 .ct-filter-search .us-wrap {
   position: relative;
@@ -357,32 +350,32 @@ body:has(.ct-page) .page-header {
   display: none !important;
 }
 .ct-filter-search .us-input {
-  padding-right: 12px !important;
-  padding-left: 28px !important;
+  padding-right: 10px !important;
+  padding-left: 24px !important;
 }
 .ct-filter-search .us-dropdown {
-  min-width: 280px;
+  min-width: 250px;
   right: 0;
   left: auto;
 }
 .ct-filter-search .us-spinner {
-  left: 8px;
-  font-size: 12px;
+  left: 6px;
+  font-size: 11px;
 }
-/* Actions row */
+/* Actions */
 .ct-filter-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: flex-end;
-  min-width: 130px;
+  grid-column: -1 / 1;
 }
 .ct-filter-actions .ct-btn {
   height: 32px;
   font-size: 12px;
-  padding: 0 16px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   white-space: nowrap;
 }
 
@@ -906,6 +899,9 @@ body:has(.ct-page) .page-header {
    RESPONSIVE — TABLET (768–1279px)
    ============================================================ */
 @media (max-width: 1279px) {
+  .ct-filter-rows {
+    grid-template-columns: repeat(3, 1fr);
+  }
   .ct-table tbody td.ct-td-customer {
     max-width: 140px;
   }
@@ -988,30 +984,22 @@ body:has(.ct-page) .page-header {
   .ct-filter-panel.collapsed .ct-filter-body {
     display: block;
   }
-  .ct-filter-row {
-    flex-direction: column;
-    gap: 6px;
+  .ct-filter-rows {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 8px;
   }
-  .ct-filter-col,
   .ct-filter-col-wide {
-    flex: none;
-    width: 100%;
-    min-width: 0;
-    max-width: none;
-  }
-  .ct-filter-col .form-control,
-  .ct-filter-col-wide .form-control {
-    width: 100% !important;
+    grid-column: span 2;
   }
   .ct-filter-col .select2-container,
   .ct-filter-col-wide .select2-container {
     width: 100% !important;
   }
   .ct-filter-search {
-    padding: 6px 8px 6px 4px;
+    padding: 5px 6px 5px 3px;
   }
   .ct-filter-actions {
-    width: 100%;
+    grid-column: span 2;
     justify-content: stretch;
   }
   .ct-filter-actions .ct-btn {
@@ -1126,13 +1114,8 @@ body:has(.ct-page) .page-header {
   .ct-title-area h1 {
     font-size: 17px;
   }
-  .ct-table tbody tr {
+  .ct-filter-rows {
     grid-template-columns: 1fr 1fr;
-    padding: 12px;
-    gap: 3px 8px;
-  }
-  .ct-hdr-actions .ct-btn span.ct-hide-xs {
-    display: none;
   }
   .ct-filter-col label,
   .ct-filter-col-wide label {
@@ -1140,6 +1123,15 @@ body:has(.ct-page) .page-header {
   }
   .ct-filter-actions .ct-btn {
     font-size: 11px;
+    padding: 0 10px;
+  }
+  .ct-table tbody tr {
+    grid-template-columns: 1fr 1fr;
+    padding: 12px;
+    gap: 3px 8px;
+  }
+  .ct-hdr-actions .ct-btn span.ct-hide-xs {
+    display: none;
   }
 }
 
