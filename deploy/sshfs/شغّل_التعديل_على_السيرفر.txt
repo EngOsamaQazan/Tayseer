@@ -1,0 +1,28 @@
+تم رفع السكربت fix_sftp_on_server.sh إلى السيرفر (بنهايات أسطر Unix).
+الإصدار الحالي يعدّل الملف الرئيسي + كل ملفات sshd_config.d ويضيف 99-sftp-root-full.conf لفرض ChrootDirectory / لـ root.
+
+--- تشغيل السكربت على السيرفر (مرة واحدة) ---
+
+1. افتح PowerShell أو CMD (عادي، بدون "كمسؤول") واكتب:
+   ssh root@31.220.82.115
+
+2. أدخل كلمة مرور root عند الطلب.
+
+3. على السيرفر نفّذ:
+   bash /root/fix_sftp_on_server.sh
+
+4. بعد انتهاء التنفيذ اكتب exit للخروج.
+
+--- تشغيل القرص Y: على جهازك (مهم) ---
+
+5. افتح PowerShell عادي من قائمة ابدأ (وليس "كمسؤول" — لو فتحت من system32 كمسؤول، القرص Y: لا يظهر).
+
+6. أوقف أي rclone قديم (أغلق نافذته أو Ctrl+C)، ثم شغّل:
+   & "C:\Users\PC\AppData\Local\Microsoft\WinGet\Links\rclone.exe" mount myserver: Y: --vfs-cache-mode full --links
+
+7. اترك النافذة مفتوحة وافتح "هذا الكمبيوتر" — يفترض أن يظهر Y: وتشوف var و etc و root (كل السيرفر).
+
+--- إذا بقي يظهر فقط ملفات root ---
+على السيرفر نفّذ ثم أرسل الناتج:
+  bash /root/show_ssh_sftp_config.sh
+لنرى إعدادات SSH/SFTP الفعلية ونحدد السبب.

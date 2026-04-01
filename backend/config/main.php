@@ -606,12 +606,7 @@ return [
                         '//ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js',
                     ]
                 ],
-                // Suppress BS3 assets (no longer used)
-                'yii\bootstrap\BootstrapAsset' => ['css' => []],
-                'yii\bootstrap\BootstrapPluginAsset' => ['js' => []],
-                // Suppress BS4 assets (migrated to BS5 via Vuexy)
-                'yii\bootstrap4\BootstrapAsset' => ['css' => []],
-                'yii\bootstrap4\BootstrapPluginAsset' => ['js' => []],
+                // Suppress BS5 CSS (already loaded via Vuexy core.css; JS bundle is NOT suppressed)
                 // Suppress BS5 CSS only (already loaded via Vuexy core.css)
                 // BS5 JS (bootstrap.bundle.js) is NOT suppressed — it must load as a regular script
                 // so window.bootstrap is available for inline Kartik/Yii2 widget scripts

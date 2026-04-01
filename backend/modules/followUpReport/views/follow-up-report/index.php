@@ -12,6 +12,7 @@ use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
 use backend\widgets\ExportButtons;
 use backend\helpers\NameHelper;
+use backend\modules\jobs\models\Jobs;
 use yii\web\View;
 
 /* Assets */
@@ -75,6 +76,10 @@ $statusMap = [
 ];
 $statusList = ['' => 'جميع الحالات'];
 foreach ($statusMap as $k => $v) $statusList[$k] = $v['label'];
+$jobs = Yii::$app->cache->getOrSet('lookup_jobs', fn() => ArrayHelper::map(
+    Jobs::find()->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])->orderBy(['name' => SORT_ASC])->asArray()->all(),
+    'id', 'name'
+), 3600);
 ?>
 
 <style>
@@ -258,6 +263,14 @@ a.fur-id-link:hover{text-decoration:underline}
                     <div class="ct-filter-col">
                         <label>حالة العقد</label>
                         <?= $form->field($searchModel, 'status', ['template'=>'{input}'])->dropDownList($statusList, ['class'=>'form-control']) ?>
+                    </div>
+                    <div class="ct-filter-col">
+                        <label>جهة العمل</label>
+                        <?= $form->field($searchModel, 'job_title', ['template'=>'{input}'])->dropDownList($jobs, [
+                            'prompt' => '-- جهة العمل --',
+                            'class' => 'form-control',
+                            'aria-label' => 'جهة العمل',
+                        ]) ?>
                     </div>
                     <?php if ($isManager): ?>
                     <div class="ct-filter-col">

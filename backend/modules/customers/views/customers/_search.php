@@ -8,6 +8,7 @@ use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use yii\web\View;
+use backend\modules\jobs\models\Jobs;
 
 $cache = Yii::$app->cache;
 $p = Yii::$app->params;
@@ -16,6 +17,10 @@ $d = $p['time_duration'];
 $city = $cache->getOrSet($p['key_city'], fn() => Yii::$app->db->createCommand($p['city_query'])->queryAll(), $d);
 $jobType = $cache->getOrSet($p['key_job_type'], fn() => Yii::$app->db->createCommand($p['job_type_query'])->queryAll(), $d);
 $jobTypeMap = ArrayHelper::map($jobType, 'id', 'name');
+$jobs = $cache->getOrSet('lookup_jobs', fn() => ArrayHelper::map(
+    Jobs::find()->andWhere(['or', ['is_deleted' => 0], ['is_deleted' => null]])->orderBy(['name' => SORT_ASC])->asArray()->all(),
+    'id', 'name'
+), 3600);
 
 $contractStatusList = [
     '' => '-- حالة العقد --',
@@ -122,6 +127,14 @@ JS, View::POS_READY);
             'prompt' => '-- الوظيفة --',
             'class' => 'form-control',
             'aria-label' => 'نوع الوظيفة',
+        ]) ?>
+    </div>
+    <div class="ct-filter-col">
+        <label>جهة العمل</label>
+        <?= $form->field($model, 'job_title', ['template' => '{input}'])->dropDownList($jobs, [
+            'prompt' => '-- جهة العمل --',
+            'class' => 'form-control',
+            'aria-label' => 'جهة العمل',
         ]) ?>
     </div>
     <div class="ct-filter-col">

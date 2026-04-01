@@ -23,6 +23,7 @@ class FollowUpReportSearch extends FollowUpReport
     public $is_can_not_contact;
     public $phone_number;
     public $id_number;
+    public $job_title;
 
     /**
      * @inheritdoc
@@ -30,10 +31,10 @@ class FollowUpReportSearch extends FollowUpReport
     public function rules()
     {
         return [
-            [['id', 'seller_id', 'is_deleted', 'number_row', 'followed_by', 'never_followed', 'is_can_not_contact'], 'integer'],
+            [['id', 'seller_id', 'is_deleted', 'number_row', 'followed_by', 'never_followed', 'is_can_not_contact', 'job_title'], 'integer'],
             [['type', 'Date_of_sale', 'first_installment_date', 'notes', 'status', 'updated_at',
               'selected_image', 'company_id', 'customer_name', 'seller_name',
-              'last_follow_up', 'promise_to_pay_at', 'reminder', 'q', 'phone_number', 'id_number'], 'safe'],
+              'last_follow_up', 'promise_to_pay_at', 'reminder', 'q', 'phone_number', 'id_number', 'job_title'], 'safe'],
             [['total_value', 'first_installment_value', 'monthly_installment_value', 'users_follow_up', 'effective_installment'], 'number'],
         ];
     }
@@ -199,6 +200,7 @@ class FollowUpReportSearch extends FollowUpReport
         $query->andFilterWhere(['like', 'c.id_number', $this->id_number]);
         $query->andFilterWhere(['like', 'c.primary_phone_number', $this->phone_number]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
+        $query->andFilterWhere(['c.job_title' => $this->job_title]);
 
         if (!empty($this->seller_name)) {
             $query->innerJoin('{{%user}} s', 's.id = {{%follow_up_report}}.seller_id');
@@ -262,6 +264,7 @@ class FollowUpReportSearch extends FollowUpReport
             ->andFilterWhere(['like', 'company_id', $this->company_id]);
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
+        $query->andFilterWhere(['c.job_title' => $this->job_title]);
 
         if (!empty($this->seller_name)) {
             $query->innerJoin('{{%user}} s', 's.id = {{%follow_up_report}}.seller_id');

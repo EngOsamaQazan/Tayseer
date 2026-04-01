@@ -1,54 +1,114 @@
+# Tayseer ERP — نظام تيسير
 
+Enterprise Resource Planning system built on **Yii 2 Advanced** (PHP 8.5+).  
+Multi-tier architecture with backend admin panel, public frontend, REST API, and console tools.
 
-Yii 2 Advanced Project Template is a skeleton [Yii 2](http://www.yiiframework.com/) application best for
-developing complex Web applications with multiple tiers.
+---
 
-The template includes three tiers: front end, back end, and console, each of which
-is a separate Yii application.
-
-The template is designed to work in a team development environment. It supports
-deploying the application in different environments.
-
-Documentation is at [docs/guide/README.md](docs/guide/README.md).
-
-[![Latest Stable Version](https://img.shields.io/packagist/v/yiisoft/yii2-app-advanced.svg)](https://packagist.org/packages/yiisoft/yii2-app-advanced)
-[![Total Downloads](https://img.shields.io/packagist/dt/yiisoft/yii2-app-advanced.svg)](https://packagist.org/packages/yiisoft/yii2-app-advanced)
-[![Build Status](https://travis-ci.com/yiisoft/yii2-app-advanced.svg?branch=master)](https://travis-ci.com/yiisoft/yii2-app-advanced)
-
-DIRECTORY STRUCTURE
--------------------
+## Directory Structure
 
 ```
-common
-    config/              contains shared configurations
-    mail/                contains view files for e-mails
-    models/              contains model classes used in both backend and frontend
-    tests/               contains tests for common classes    
-console
-    config/              contains console configurations
-    controllers/         contains console controllers (commands)
-    migrations/          contains database migrations
-    models/              contains console-specific model classes
-    runtime/             contains files generated during runtime
-backend
-    assets/              contains application assets such as JavaScript and CSS
-    config/              contains backend configurations
-    controllers/         contains Web controller classes
-    models/              contains backend-specific model classes
-    runtime/             contains files generated during runtime
-    tests/               contains tests for backend application    
-    views/               contains view files for the Web application
-    web/                 contains the entry script and Web resources
-frontend
-    assets/              contains application assets such as JavaScript and CSS
-    config/              contains frontend configurations
-    controllers/         contains Web controller classes
-    models/              contains frontend-specific model classes
-    runtime/             contains files generated during runtime
-    tests/               contains tests for frontend application
-    views/               contains view files for the Web application
-    web/                 contains the entry script and Web resources
-    widgets/             contains frontend widgets
-vendor/                  contains dependent 3rd-party packages
-environments/            contains environment-based overrides
+Tayseer/
+│
+├── api/                        Yii2 REST API application (v1 module)
+├── backend/                    Admin panel (AdminLTE 3 + Bootstrap 5)
+├── frontend/                   Public-facing web application
+├── common/                     Shared models, config, mail templates
+├── console/                    CLI commands & Yii migrations
+├── environments/               Environment-specific config overrides
+│
+├── database/                   Database assets
+│   ├── migrations/             Remote migration helper scripts
+│   ├── seeds/                  Test data seeders
+│   └── sql/                    Raw SQL views & scripts
+│
+├── docs/                       Project documentation
+│   ├── reports/                System reverse-engineering reports
+│   ├── specs/                  Feature specifications & design docs
+│   ├── diagnostics/            Server diagnostic outputs
+│   └── attachments/            Reference documents & files
+│
+├── scripts/                    Utility & operations scripts (Python)
+│   ├── check/                  Health-check & validation scripts
+│   ├── debug/                  Debugging & diagnostic scripts
+│   ├── deploy/                 Deployment & upload scripts
+│   ├── fix/                    Bug-fix & patch scripts
+│   ├── server/                 Server management & maintenance
+│   ├── verify/                 Verification & post-deploy checks
+│   └── misc/                   General-purpose utilities
+│
+├── deploy/                     Infrastructure & DevOps
+│   ├── docker-legacy/          Legacy Docker configuration
+│   └── sshfs/                  SSHFS/SFTP setup tools & installers
+│
+├── landing/                    Static marketing landing page
+├── judiciary-v3/               Standalone judiciary app (Node/React)
+│
+├── .cursor/                    Cursor IDE skills & rules
+├── .github/                    GitHub Actions CI/CD workflows
+│
+├── composer.json               PHP dependencies (Composer)
+├── phpstan.neon                PHPStan static analysis config
+├── requirements.php            Yii2 server requirements checker
+├── init / init.bat             Environment initializer
+├── yii.bat                     Console entry point (Windows)
+├── .htaccess                   Apache rewrite rules
+├── .gitignore                  Git ignore rules
+├── LICENSE.md                  License (BSD)
+└── README.md                   This file
 ```
+
+## Quick Start
+
+1. **Clone & install dependencies**
+   ```bash
+   composer install
+   ```
+
+2. **Initialize environment**
+   ```bash
+   php init            # Linux/Mac
+   init.bat            # Windows
+   ```
+
+3. **Configure database**  
+   Edit `common/config/main-local.php` with your DB credentials.
+
+4. **Run migrations**
+   ```bash
+   php yii migrate
+   ```
+
+5. **Launch dev server**
+   ```bash
+   php yii serve
+   ```
+
+> For detailed setup instructions, see [`docs/setup-guide.md`](docs/setup-guide.md).
+
+## Key Technologies
+
+| Layer | Stack |
+|-------|-------|
+| Framework | Yii 2.0.54+ |
+| PHP | 8.5+ |
+| Admin UI | AdminLTE 3, Bootstrap 5, Kartik widgets |
+| Frontend Assets | Vite, Tailwind CSS |
+| REST API | Yii2 REST module (`api/v1`) |
+| Auth | dektrium/yii2-user, mdmsoft/yii2-admin (RBAC) |
+| Queue | yii2-queue + php-amqplib |
+| Reports | mPDF, PhpSpreadsheet |
+| CI/CD | GitHub Actions (SSH deploy) |
+| Static Analysis | PHPStan (level 3) |
+
+## Documentation
+
+- **Setup Guide** — [`docs/setup-guide.md`](docs/setup-guide.md)
+- **HR Module Spec** — [`docs/HR_MODULE_SPECIFICATION.md`](docs/HR_MODULE_SPECIFICATION.md)
+- **Invoice Wizard Flow** — [`docs/invoice-wizard-and-approval-flow.md`](docs/invoice-wizard-and-approval-flow.md)
+- **Judiciary Redesign** — [`docs/specs/JUDICIARY_REDESIGN_PROMPT.md`](docs/specs/JUDICIARY_REDESIGN_PROMPT.md)
+- **System Analysis** — [`docs/reports/`](docs/reports/)
+
+## License
+
+See [LICENSE.md](LICENSE.md).

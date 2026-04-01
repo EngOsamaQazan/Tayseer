@@ -1,8 +1,8 @@
 <?php
 
-use yii\bootstrap\NavBar;
-use yii\bootstrap\Tabs;
-use yii\bootstrap\Nav;
+use yii\bootstrap5\NavBar;
+use yii\bootstrap5\Tabs;
+use yii\bootstrap5\Nav;
 use yii\helpers\Url;
 
 NavBar::begin([

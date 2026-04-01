@@ -16,7 +16,7 @@
     "require": {
         "php": "^8.5",
         "yiisoft/yii2": "~2.0.54",
-        "yiisoft/yii2-bootstrap": "~2.0.0",
+        "yiisoft/yii2-bootstrap5": "^2.0",
         "yiisoft/yii2-symfonymailer": "^4.0",
         "dektrium/yii2-user": "^0.9.14",
         "johnitvn/yii2-ajaxcrud": "~2.1",
@@ -33,9 +33,7 @@
         "chillerlan/php-qrcode": "^5.0",
         "mpdf/mpdf": "^8.2",
         "osamaqazan/arabic-name": "^1.1",
-        "yiisoft/yii2-bootstrap4": "~2.0",
         "potime/yii2-adminlte3": "^1.1",
-        "yiisoft/yii2-bootstrap5": "^2.0",
         "kartik-v/yii2-bootstrap5-dropdown": "^1.0"
     },
     "require-dev": {

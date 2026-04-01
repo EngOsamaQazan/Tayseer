@@ -1,0 +1,36 @@
+---
+description: Yii2 Advanced application structure — correct placement for PHP classes and views
+globs: "**/*.php"
+alwaysApply: false
+---
+
+# Yii2 Advanced — File Placement
+
+## Application tiers
+
+| Tier | Path | Purpose |
+|------|------|---------|
+| Backend | `backend/` | Admin panel (AdminLTE 3) |
+| Frontend | `frontend/` | Public web app |
+| API | `api/` | REST API (v1 module) |
+| Console | `console/` | CLI commands & cron jobs |
+| Common | `common/` | Shared across all tiers |
+
+## Where PHP files go
+
+| Type | Location |
+|------|----------|
+| Shared models | `common/models/` |
+| Backend controllers | `backend/controllers/` |
+| Backend views | `backend/views/{controller-id}/` |
+| Backend widgets | `backend/widgets/` |
+| Frontend controllers | `frontend/controllers/` |
+| Frontend views | `frontend/views/{controller-id}/` |
+| Console commands | `console/controllers/` |
+| Migrations | `console/migrations/` |
+| API controllers | `api/modules/v1/controllers/` |
+| Mail templates | `common/mail/` |
+| Test seeders | `database/seeds/` |
+| Config files | `{app}/config/` |
+
+## NEVER place PHP classes in the project root

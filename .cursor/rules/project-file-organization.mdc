@@ -1,0 +1,53 @@
+---
+description: Enforces correct file placement in Tayseer ERP — never create files in the project root
+alwaysApply: true
+---
+
+# Tayseer ERP — File Organization Rules
+
+NEVER create new files directly in the project root. Every file has a designated location.
+
+## Directory Map
+
+| File type | Correct location | Example |
+|-----------|-----------------|---------|
+| Python check/health scripts | `scripts/check/` | `_check_db.py` |
+| Python debug scripts | `scripts/debug/` | `_debug_route.py` |
+| Python deploy/upload scripts | `scripts/deploy/` | `_deploy_changes.py` |
+| Python fix/patch scripts | `scripts/fix/` | `_fix_ssl.py` |
+| Python server mgmt scripts | `scripts/server/` | `_restart_apache.py` |
+| Python verify scripts | `scripts/verify/` | `_verify_server.py` |
+| Python misc utilities | `scripts/misc/` | `_cleanup.py` |
+| SQL files & views | `database/sql/` | `phase1_views.sql` |
+| DB seed/test data | `database/seeds/` | `_seed_data.php` |
+| Migration helper scripts | `database/migrations/` | `setup_remote.sh` |
+| Docker/container files | `deploy/docker-legacy/` | `Dockerfile` |
+| SSH/SFTP tools | `deploy/sshfs/` | `fix_sftp.sh` |
+| Feature specs & design docs | `docs/specs/` | `FEATURE_SPEC.md` |
+| System reports & analysis | `docs/reports/` | `SYSTEM_REPORT.md` |
+| Diagnostic/log outputs | `docs/diagnostics/` | `error_log.txt` |
+| Reference PDFs/attachments | `docs/attachments/` | `document.pdf` |
+| Setup/how-to guides | `docs/` | `setup-guide.md` |
+
+## Root-level files (ONLY these are allowed)
+
+These are the ONLY files that belong in the project root:
+
+- `.gitignore`, `.htaccess` — Git & Apache config
+- `composer.json` — PHP dependencies
+- `phpstan.neon` — Static analysis config
+- `requirements.php` — Yii2 requirements checker
+- `init`, `init.bat`, `yii.bat` — Yii2 entry scripts
+- `README.md`, `LICENSE.md` — Project docs
+
+## Naming conventions for scripts
+
+- Prefix with `_` for utility scripts: `_check_db.py`, `_fix_ssl.py`
+- Use snake_case for all script filenames
+- Group related scripts by their action verb: check, debug, deploy, fix, verify
+
+## When creating ANY new file
+
+1. Determine file type from the table above
+2. Place it in the correct directory — NEVER in root
+3. If unsure, ask the user before creating in root
