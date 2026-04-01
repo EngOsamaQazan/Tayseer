@@ -155,10 +155,6 @@ jobs:
             echo "www-data ALL=(root) NOPASSWD: /opt/deploy-pull.sh" > /etc/sudoers.d/deploy-pull
             chmod 440 /etc/sudoers.d/deploy-pull
             
-            # Show webhook deploy log
-            echo "=== Webhook Pull Log ==="
-            tail -20 /var/www/jadal.aqssat.co/backend/runtime/logs/deploy-pull.log 2>/dev/null || echo "No webhook pull log"
-            
             # Deploy landing page to root domain aqssat.co
             echo "=== Deploying landing page to aqssat.co ==="
             LANDING_SRC="/var/www/jadal.aqssat.co/landing/index.html"
