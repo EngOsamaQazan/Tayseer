@@ -11,9 +11,6 @@ use yii\widgets\LinkPager;
 /* Bootstrap 3 Modal removed — using Bootstrap 5 HTML instead */
 use common\helper\Permissions;
 use backend\widgets\ExportButtons;
-use backend\modules\contractInstallment\models\ContractInstallment;
-use backend\modules\followUp\helper\ContractCalculations;
-use backend\modules\judiciary\models\Judiciary;
 use backend\helpers\NameHelper;
 
 /* Assets */
@@ -31,16 +28,14 @@ $isManager  = Yii::$app->user->can(Permissions::MANAGER);
 $models     = $dataProvider->getModels();
 $pagination = $dataProvider->getPagination();
 $sort       = $dataProvider->getSort();
-$allUsers   = $isManager
-    ? ArrayHelper::map(
-        Yii::$app->db->createCommand(
-            "SELECT DISTINCT u.id, u.username FROM {{%user}} u
-             INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
-             WHERE u.blocked_at IS NULL AND u.employee_type = 'Active'
-             ORDER BY u.username"
-        )->queryAll(),
-        'id', 'username'
-    ) : [];
+
+$_usersRows = Yii::$app->db->createCommand(
+    "SELECT DISTINCT u.id, u.username FROM {{%user}} u
+     INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
+     WHERE u.blocked_at IS NULL AND u.employee_type = 'Active'
+     ORDER BY u.username"
+)->queryAll();
+$allUsers = ArrayHelper::map($_usersRows, 'id', 'username');
 
 $batch = $batchData ?? [];
 
@@ -157,7 +152,7 @@ $end   = $begin + count($models) - 1;
                         style="font-size:20px;padding:4px 8px">&times;</button>
             </div>
             <div class="ct-filter-body">
-                <?= $this->render('_search', ['model' => $searchModel]) ?>
+                <?= $this->render('_search', ['model' => $searchModel, 'users' => $_usersRows]) ?>
             </div>
         </div>
     </div>
@@ -218,8 +213,7 @@ $end   = $begin + count($models) - 1;
                         $total = (float)($bd['totalDebt'] ?? $m->total_value);
                         $isJudPaid = $bd['isJudiciaryPaid'] ?? false;
 
-                        $calc = new ContractCalculations($cid);
-                        $deserved = $calc->deservedAmount();
+                        $deserved = $deservedMap[$cid] ?? 0;
 
                         $nm = ($namesMap ?? [])[$cid] ?? null;
                         $customerFullNames = $nm ? ($nm['client_names'] ?: '—') : '—';

@@ -10,20 +10,23 @@ use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use yii\web\View;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 
 $cache = Yii::$app->cache;
 $p     = Yii::$app->params;
 $d     = $p['time_duration'];
 $db    = Yii::$app->db;
 
-$users   = $db->createCommand(
-    "SELECT DISTINCT u.id, u.username FROM {{%user}} u
-     INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
-     WHERE u.blocked_at IS NULL AND u.employee_type = 'Active'
-     ORDER BY u.username"
-)->queryAll();
+if (!isset($users)) {
+    $users = $db->createCommand(
+        "SELECT DISTINCT u.id, u.username FROM {{%user}} u
+         INNER JOIN {{%auth_assignment}} a ON a.user_id = u.id
+         WHERE u.blocked_at IS NULL AND u.employee_type = 'Active'
+         ORDER BY u.username"
+    )->queryAll();
+}
+$userMap = ArrayHelper::map($users, 'id', 'username');
 $jobType = $cache->getOrSet($p['key_job_type'], fn() => $db->createCommand($p['job_type_query'])->queryAll(), $d);
+$jobTypeMap = ArrayHelper::map($jobType, 'id', 'name');
 
 $statusList = [
     '' => '-- جميع الحالات --',
@@ -140,26 +143,26 @@ JS, View::POS_READY);
     </div>
     <div class="ct-filter-col">
         <label>البائع</label>
-        <?= $form->field($model, 'seller_id', ['template' => '{input}'])->widget(Select2::class, [
-            'data' => ArrayHelper::map($users, 'id', 'username'),
-            'options' => ['placeholder' => 'البائع', 'aria-label' => 'البائع'],
-            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+        <?= $form->field($model, 'seller_id', ['template' => '{input}'])->dropDownList($userMap, [
+            'prompt' => '-- البائع --',
+            'class' => 'form-control',
+            'aria-label' => 'البائع',
         ]) ?>
     </div>
     <div class="ct-filter-col">
         <label>المتابع</label>
-        <?= $form->field($model, 'followed_by', ['template' => '{input}'])->widget(Select2::class, [
-            'data' => ArrayHelper::map($users, 'id', 'username'),
-            'options' => ['placeholder' => 'المتابع', 'aria-label' => 'المتابع'],
-            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+        <?= $form->field($model, 'followed_by', ['template' => '{input}'])->dropDownList($userMap, [
+            'prompt' => '-- المتابع --',
+            'class' => 'form-control',
+            'aria-label' => 'المتابع',
         ]) ?>
     </div>
     <div class="ct-filter-col">
         <label>نوع الوظيفة</label>
-        <?= $form->field($model, 'job_Type', ['template' => '{input}'])->widget(Select2::class, [
-            'data' => ArrayHelper::map($jobType, 'id', 'name'),
-            'options' => ['placeholder' => 'الوظيفة', 'aria-label' => 'نوع الوظيفة'],
-            'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+        <?= $form->field($model, 'job_Type', ['template' => '{input}'])->dropDownList($jobTypeMap, [
+            'prompt' => '-- الوظيفة --',
+            'class' => 'form-control',
+            'aria-label' => 'نوع الوظيفة',
         ]) ?>
     </div>
     <div class="ct-filter-col">

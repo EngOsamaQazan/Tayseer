@@ -272,11 +272,11 @@ class ContractsController extends Controller
     {
         $searchModel = new ContractsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-        $dataCount = $searchModel->searchcounter(Yii::$app->request->queryParams);
 
         $dataProvider->query->with(['seller', 'followedBy']);
 
         $models = $dataProvider->getModels();
+        $dataCount = $dataProvider->getTotalCount();
         $contractIds = ArrayHelper::getColumn($models, 'id');
 
         $batchData = ContractCalculations::batchPreload($contractIds);
@@ -284,12 +284,75 @@ class ContractsController extends Controller
         $db = Yii::$app->db;
 
         $namesMap = [];
+        $deservedMap = [];
         if (!empty($contractIds)) {
             $idList = implode(',', array_map('intval', $contractIds));
             $namesMap = ArrayHelper::index(
                 $db->createCommand("SELECT contract_id, client_names, all_party_names, client_phone FROM {{%vw_contract_customers_names}} WHERE contract_id IN ($idList)")->queryAll(),
                 'contract_id'
             );
+
+            $judCounts = ArrayHelper::map(
+                $db->createCommand("SELECT contract_id, COUNT(*) AS cnt FROM {{%judiciary}} WHERE contract_id IN ($idList) AND is_deleted = 0 GROUP BY contract_id")->queryAll(),
+                'contract_id', 'cnt'
+            );
+
+            $settlements = ArrayHelper::index(
+                $db->createCommand(
+                    "SELECT ls.contract_id, ls.first_installment_date, ls.monthly_installment
+                     FROM {{%loan_scheduling}} ls
+                     INNER JOIN (SELECT contract_id, MAX(id) AS max_id FROM {{%loan_scheduling}} WHERE contract_id IN ($idList) GROUP BY contract_id) latest
+                     ON ls.id = latest.max_id"
+                )->queryAll(),
+                'contract_id'
+            );
+
+            $adjustments = ArrayHelper::map(
+                $db->createCommand("SELECT contract_id, COALESCE(SUM(amount), 0) AS total FROM {{%contract_adjustment}} WHERE contract_id IN ($idList) AND is_deleted = 0 GROUP BY contract_id")->queryAll(),
+                'contract_id', 'total'
+            );
+
+            $today = date('Y-m-d');
+            foreach ($models as $m) {
+                $cid = $m->id;
+                $bd = $batchData[$cid] ?? [];
+                $totalValue = (float)($m->total_value ?? 0);
+                $expenses = (float)($bd['expenses'] ?? 0);
+                $lawyerCost = (float)($bd['lawyerCost'] ?? 0);
+                $paid = (float)($bd['paid'] ?? 0);
+                $adj = (float)($adjustments[$cid] ?? 0);
+                $totalDebt = $totalValue + $expenses + $lawyerCost;
+                $hasJudiciary = !empty($judCounts[$cid]);
+                $settlement = $settlements[$cid] ?? null;
+
+                if ($hasJudiciary && !$settlement) {
+                    $deservedMap[$cid] = max(0, round($totalDebt - $adj - $paid, 2));
+                    continue;
+                }
+
+                $firstDate = $settlement
+                    ? ($settlement['first_installment_date'] ?? null)
+                    : ($m->first_installment_date ?? null);
+
+                if (empty($firstDate) || $today < $firstDate) {
+                    $deservedMap[$cid] = 0;
+                    continue;
+                }
+
+                $d1 = new \DateTime($firstDate);
+                $d2 = new \DateTime($today);
+                $interval = $d2->diff($d1);
+                $months = $interval->y * 12 + $interval->m + 1;
+
+                $netTotal = $totalDebt - $adj;
+                if ($settlement) {
+                    $monthly = (float)($settlement['monthly_installment'] ?? 0);
+                } else {
+                    $monthly = (float)($m->monthly_installment_value ?? 0);
+                }
+                $shouldBePaid = min($months * $monthly, $netTotal);
+                $deservedMap[$cid] = max(0, round($shouldBePaid - $paid, 2));
+            }
         }
 
         $statusCounts = ArrayHelper::map(
@@ -312,6 +375,7 @@ class ContractsController extends Controller
             'batchData'    => $batchData,
             'statusCounts' => $statusCounts,
             'namesMap'     => $namesMap,
+            'deservedMap'  => $deservedMap,
         ]);
     }
 

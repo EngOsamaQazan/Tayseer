@@ -29,8 +29,8 @@ class ContractsSearch extends Contracts
     public function rules()
     {
         return [
-            [['id', 'seller_id', 'is_deleted', 'number_row', 'job_Type'], 'integer'],
-            [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'notes', 'updated_at', 'customer_name', 'seller_name', 'from_date', 'job_Type', 'to_date', 'job_title', 'q', 'id_number'], 'safe'],
+            [['id', 'seller_id', 'is_deleted', 'number_row', 'job_Type', 'followed_by'], 'integer'],
+            [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'notes', 'updated_at', 'customer_name', 'seller_name', 'from_date', 'job_Type', 'to_date', 'job_title', 'q', 'id_number', 'phone_number', 'followed_by'], 'safe'],
             [['total_value', 'first_installment_value'], 'number'],
             [['from_date', 'to_date', 'job_title'], 'string']
         ];
@@ -171,9 +171,7 @@ class ContractsSearch extends Contracts
         $this->applyNormalizedNameFilter($query);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
         $query->andFilterWhere(['like', 'notes', $this->notes]);
-        if (!empty($params['ContractsSearch']['followed_by'])) {
-            $query->andFilterWhere(['followed_by' => $params['ContractsSearch']['followed_by']]);
-        }
+        $query->andFilterWhere(['os_contracts.followed_by' => $this->followed_by]);
         if (!empty($params['ContractsSearch']['status'])) {
             $statusVal = $params['ContractsSearch']['status'];
             if ($statusVal === 'judiciary_active') {
@@ -195,13 +193,10 @@ class ContractsSearch extends Contracts
             $query->andFilterWhere(['<=', 'Date_of_sale', $this->to_date]);
         }
 
-        if (!empty($params['ContractsSearch']['phone_number'])) {
-            $query->andFilterWhere(['like', 'c.primary_phone_number', $params['ContractsSearch']['phone_number']]);
-        }
-        if (!empty($params['ContractsSearch']['id_number'])) {
-            $query->andFilterWhere(['like', 'c.id_number', $params['ContractsSearch']['id_number']]);
-        }
-        $query->orderBy(['id' => SORT_DESC]);
+        $query->andFilterWhere(['like', 'c.primary_phone_number', $this->phone_number]);
+        $query->andFilterWhere(['like', 'c.id_number', $this->id_number]);
+        $query->distinct();
+        $query->orderBy(['os_contracts.id' => SORT_DESC]);
         return $dataProvider;
     }
 
