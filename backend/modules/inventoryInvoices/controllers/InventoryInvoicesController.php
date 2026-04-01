@@ -846,8 +846,12 @@ class InventoryInvoicesController extends Controller
         $invoice->approved_at = time();
         $invoice->rejection_reason = null;
         if ($invoice->save(false)) {
-            $this->notifyApprovers($invoice, Notification::INVOICE_PENDING_MANAGER,
-                'فاتورة توريد #' . $invoice->id . ' بانتظار موافقة المدير');
+            try {
+                $this->notifyApprovers($invoice, Notification::INVOICE_PENDING_MANAGER,
+                    'فاتورة توريد #' . $invoice->id . ' بانتظار موافقة المدير');
+            } catch (\Exception $e) {
+                Yii::error('Notification failed for invoice #' . $invoice->id . ': ' . $e->getMessage(), __METHOD__);
+            }
             Yii::$app->session->setFlash('success', 'تمت الموافقة على الاستلام وتم إشعار المدير.');
         } else {
             Yii::$app->session->setFlash('error', 'فشل تحديث الحالة.');
@@ -872,7 +876,11 @@ class InventoryInvoicesController extends Controller
             $invoice->approved_by = Yii::$app->user->id;
             $invoice->approved_at = time();
             $invoice->save(false);
-            $this->notifyCreator($invoice, 'تم رفض استلام الفاتورة #' . $invoice->id . ': ' . $invoice->rejection_reason);
+            try {
+                $this->notifyCreator($invoice, 'تم رفض استلام الفاتورة #' . $invoice->id . ': ' . $invoice->rejection_reason);
+            } catch (\Exception $e) {
+                Yii::error('Notification failed for invoice #' . $invoice->id . ': ' . $e->getMessage(), __METHOD__);
+            }
             Yii::$app->session->setFlash('success', 'تم رفض الاستلام وإشعار مُنشئ الفاتورة.');
             return $this->redirect(['view', 'id' => $id]);
         }
@@ -895,10 +903,14 @@ class InventoryInvoicesController extends Controller
         if ($invoice->save(false)) {
             try {
                 InventoryInvoicePostingService::post($invoice->id);
-                $this->notifyCreator($invoice, 'تمت الموافقة النهائية على الفاتورة #' . $invoice->id . ' وترحيلها إلى المخزون');
                 Yii::$app->session->setFlash('success', 'تمت الموافقة وترحيل الفاتورة إلى المخزون.');
             } catch (\Exception $e) {
                 Yii::$app->session->setFlash('error', 'تمت الموافقة لكن فشل الترحيل: ' . $e->getMessage());
+            }
+            try {
+                $this->notifyCreator($invoice, 'تمت الموافقة النهائية على الفاتورة #' . $invoice->id . ' وترحيلها إلى المخزون');
+            } catch (\Exception $e) {
+                Yii::error('Notification failed for invoice #' . $invoice->id . ': ' . $e->getMessage(), __METHOD__);
             }
         } else {
             Yii::$app->session->setFlash('error', 'فشل تحديث الحالة.');
@@ -922,7 +934,11 @@ class InventoryInvoicesController extends Controller
         $invoice->approved_by = Yii::$app->user->id;
         $invoice->approved_at = time();
         if ($invoice->save(false)) {
-            $this->notifyCreator($invoice, 'تم رفض الفاتورة #' . $invoice->id . ' من المدير' . ($reason ? ': ' . $reason : ''));
+            try {
+                $this->notifyCreator($invoice, 'تم رفض الفاتورة #' . $invoice->id . ' من المدير' . ($reason ? ': ' . $reason : ''));
+            } catch (\Exception $e) {
+                Yii::error('Notification failed for invoice #' . $invoice->id . ': ' . $e->getMessage(), __METHOD__);
+            }
             Yii::$app->session->setFlash('success', 'تم رفض الفاتورة وإشعار مُنشئها.');
         }
         return $this->redirect(['view', 'id' => $id]);
