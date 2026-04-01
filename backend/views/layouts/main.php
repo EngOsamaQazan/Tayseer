@@ -122,6 +122,21 @@ if (Yii::$app->controller->action->id === 'login') {
         <link rel="stylesheet" href="<?= $baseUrl ?>/vuexy/vendor/css/core.css">
         <link rel="stylesheet" href="<?= $baseUrl ?>/vuexy/css/demo.css">
 
+        <!-- Select2 (vanilla — no Kartik/BS3 wrapper) -->
+        <link rel="stylesheet" href="<?= $baseUrl ?>/plugins/select2/css/select2.min.css">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/plugins/select2/css/select2-bootstrap4.css">
+        <style>
+        .select2-container--bootstrap4 .select2-selection--single{height:38px;border-color:var(--bs-border-color,#d9dee3);border-radius:6px}
+        .select2-container--bootstrap4.select2-container--focus .select2-selection,.select2-container--bootstrap4.select2-container--open .select2-selection{border-color:#800020!important;box-shadow:0 0 0 .15rem rgba(128,0,32,.12)!important}
+        .select2-container--bootstrap4 .select2-results__option--highlighted[aria-selected]{background:#800020!important}
+        .select2-container--bootstrap4 .select2-selection__rendered{line-height:36px;padding-right:8px;color:var(--bs-body-color,#566a7f)}
+        .select2-container--bootstrap4 .select2-selection__arrow{height:36px}
+        [data-bs-theme=dark] .select2-dropdown{background:var(--bs-body-bg,#2b2c40);border-color:var(--bs-border-color,#444564)}
+        [data-bs-theme=dark] .select2-container--bootstrap4 .select2-selection--single{background:var(--bs-body-bg,#2b2c40);border-color:var(--bs-border-color,#444564);color:var(--bs-body-color,#cfd3ec)}
+        [data-bs-theme=dark] .select2-search__field{background:var(--bs-body-bg,#2b2c40)!important;color:var(--bs-body-color,#cfd3ec)!important}
+        [data-bs-theme=dark] .select2-results__option{color:var(--bs-body-color,#cfd3ec)}
+        </style>
+
         <!-- Tayseer Feature CSS -->
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-modern-libs.css?v=<?= time() ?>">
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/fin-transactions.css?v=<?= time() ?>">
@@ -404,6 +419,32 @@ if (Yii::$app->controller->action->id === 'login') {
             document.addEventListener('keydown', restoreFS, true);
             document.addEventListener('mousedown', restoreFS, true);
         }
+    })();
+    </script>
+
+    <script src="<?= $baseUrl ?>/plugins/select2/js/select2.min.js"></script>
+    <script>
+    (function(){
+        function initSearchableSelects(root) {
+            var selects = (root || document).querySelectorAll('select.form-control');
+            for (var i = 0; i < selects.length; i++) {
+                var sel = selects[i];
+                if ($(sel).data('select2')) continue;
+                if (sel.options.length < 6 && !sel.classList.contains('searchable-select')) continue;
+                if (sel.closest('.select2-container')) continue;
+                $(sel).select2({
+                    theme: 'bootstrap4',
+                    dir: 'rtl',
+                    width: '100%',
+                    allowClear: !!sel.querySelector('option[value=""]'),
+                    placeholder: sel.querySelector('option[value=""]') ? sel.querySelector('option[value=""]').textContent : '',
+                    dropdownParent: $(sel).closest('.modal').length ? $(sel).closest('.modal') : $(document.body)
+                });
+            }
+        }
+        $(document).ready(function(){ initSearchableSelects(); });
+        $(document).on('pjax:end ajaxComplete', function(){ setTimeout(function(){ initSearchableSelects(); }, 100); });
+        window.initSearchableSelects = initSearchableSelects;
     })();
     </script>
 
