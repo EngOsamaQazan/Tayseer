@@ -55,7 +55,7 @@ $typeColors = [
             <button type="button" class="btn btn-primary btn-sm" id="caSaveBtn">
                 <i class="fa fa-check"></i> حفظ
             </button>
-            <button type="button" class="btn btn-default btn-sm" id="caCancelBtn" @click="showForm = false">
+            <button type="button" class="btn btn-secondary btn-sm" id="caCancelBtn" @click="showForm = false">
                 <i class="fa fa-times"></i> إلغاء
             </button>
         </div>

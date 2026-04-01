@@ -147,7 +147,7 @@ class FinancialTransactionController extends Controller
             return [
                 'title'   => 'حركة مالية #' . $id,
                 'content' => $this->renderAjax('view', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                     . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -930,7 +930,7 @@ class FinancialTransactionController extends Controller
             return [
                 'title'   => $isNew ? 'إضافة حركة مالية' : 'تعديل حركة #' . $id,
                 'content' => $this->renderAjax($action, ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                     . Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -943,7 +943,7 @@ class FinancialTransactionController extends Controller
                     'forceReload' => '#crud-datatable-pjax',
                     'title'       => 'إضافة حركة مالية',
                     'content'     => '<span class="text-success">تم الإضافة بنجاح</span>',
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                         . Html::a('إضافة أخرى', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
                 ];
             }
@@ -951,7 +951,7 @@ class FinancialTransactionController extends Controller
                 'forceReload' => '#crud-datatable-pjax',
                 'title'       => 'حركة مالية #' . $id,
                 'content'     => $this->renderAjax('view', ['model' => $model]),
-                'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                     . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -959,7 +959,7 @@ class FinancialTransactionController extends Controller
         return [
             'title'   => $isNew ? 'إضافة حركة مالية' : 'تعديل حركة #' . $id,
             'content' => $this->renderAjax($action, ['model' => $model]),
-            'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+            'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                 . Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
         ];
     }

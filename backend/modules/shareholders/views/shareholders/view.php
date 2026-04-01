@@ -108,7 +108,7 @@ $canManage = Permissions::can('المستثمرين');
         <?php endif ?>
 
         <div class="sh-view-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-secondary']) ?>
             <?php if ($canManage): ?>
                 <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
             <?php endif ?>

@@ -5,12 +5,13 @@
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
 
-CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 $this->title = 'متابعة العقد #' . $contract_id;
 $this->params['breadcrumbs'][] = ['label' => 'العقود', 'url' => ['/contracts/contracts/index']];
 $this->params['breadcrumbs'][] = $this->title;
@@ -104,6 +105,3 @@ $isLegalOrJudiciary = in_array($contractStatus, ['judiciary', 'legal_department'
 
     <?= $this->render('partial/next_contract.php', ['model' => $model, 'contract_id' => $contract_id]) ?>
 </div>
-
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
-<?php Modal::end() ?>

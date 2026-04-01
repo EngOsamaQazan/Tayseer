@@ -53,7 +53,7 @@ use backend\models\Holiday;
                         $model->isNewRecord ? '<i class="fa fa-save"></i> حفظ' : '<i class="fa fa-check"></i> تحديث',
                         ['class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary']
                     ) ?>
-                <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+                <?= Html::a('<i class="fa fa-times"></i> إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
             </div>
 
             <?php ActiveForm::end(); ?>

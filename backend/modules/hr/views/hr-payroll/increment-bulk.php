@@ -29,7 +29,7 @@ $this->title = 'علاوة تلقائية (حسب الأقدمية)';
 <div class="inc-bulk-page">
     <div class="inc-bulk-header">
         <h1><i class="fa fa-magic"></i> <?= Html::encode($this->title) ?></h1>
-        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['increments'], ['class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px']) ?>
+        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['increments'], ['class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px']) ?>
     </div>
 
     <div class="inc-bulk-card">
@@ -62,7 +62,7 @@ $this->title = 'علاوة تلقائية (حسب الأقدمية)';
             </div>
 
             <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-                <?= Html::a('إلغاء', ['increments'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px']) ?>
+                <?= Html::a('إلغاء', ['increments'], ['class' => 'btn btn-secondary', 'style' => 'border-radius:8px']) ?>
                 <button type="submit" class="btn" style="background:#17a2b8;color:#fff;border-radius:8px">
                     <i class="fa fa-eye"></i> معاينة
                 </button>

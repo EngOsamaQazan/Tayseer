@@ -252,7 +252,7 @@ class InventoryItemsController extends Controller
             return [
                 'title'   => 'تفاصيل الصنف #' . $id,
                 'content' => $this->renderAjax('view', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -271,7 +271,7 @@ class InventoryItemsController extends Controller
                 return [
                     'title'   => 'إضافة صنف جديد',
                     'content' => $this->renderAjax('create', ['model' => $model]),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -287,7 +287,7 @@ class InventoryItemsController extends Controller
             return [
                 'title'   => 'إضافة صنف جديد',
                 'content' => $this->renderAjax('create', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -312,7 +312,7 @@ class InventoryItemsController extends Controller
                 return [
                     'title'   => '<i class="fa fa-cubes"></i> إضافة مجموعة أصناف',
                     'content' => $this->renderAjax('_batch_form'),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('<i class="fa fa-plus"></i> إضافة الكل', ['class' => 'btn btn-success', 'type' => 'submit']),
                 ];
             }
@@ -360,7 +360,7 @@ class InventoryItemsController extends Controller
             return [
                 'title'   => '<i class="fa fa-cubes"></i> إضافة مجموعة أصناف',
                 'content' => '<div class="alert alert-danger">لم يتم إضافة أي صنف. تأكد من تعبئة البيانات.</div>' . $this->renderAjax('_batch_form'),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('<i class="fa fa-plus"></i> إضافة الكل', ['class' => 'btn btn-success', 'type' => 'submit']),
             ];
         }
@@ -379,7 +379,7 @@ class InventoryItemsController extends Controller
                 return [
                     'title'   => 'تعديل الصنف #' . $id,
                     'content' => $this->renderAjax('update', ['model' => $model]),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -388,14 +388,14 @@ class InventoryItemsController extends Controller
                     'forceReload' => '#crud-datatable-pjax',
                     'title'       => 'تفاصيل الصنف #' . $id,
                     'content'     => $this->renderAjax('view', ['model' => $model]),
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                      Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
                 ];
             }
             return [
                 'title'   => 'تعديل الصنف #' . $id,
                 'content' => $this->renderAjax('update', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -845,7 +845,7 @@ class InventoryItemsController extends Controller
                 return [
                     'title'   => '<i class="fa fa-barcode"></i> إضافة رقم تسلسلي جديد',
                     'content' => $this->renderAjax('_serial_form', ['model' => $model]),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -862,14 +862,14 @@ class InventoryItemsController extends Controller
                     'forceReload' => '#serial-datatable-pjax',
                     'title'       => 'إضافة رقم تسلسلي',
                     'content'     => '<span class="text-success"><i class="fa fa-check"></i> تم إضافة الرقم التسلسلي بنجاح</span>',
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                      Html::a('إضافة المزيد', ['serial-create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
                 ];
             }
             return [
                 'title'   => '<i class="fa fa-barcode"></i> إضافة رقم تسلسلي جديد',
                 'content' => $this->renderAjax('_serial_form', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -902,7 +902,7 @@ class InventoryItemsController extends Controller
                 return [
                     'title'   => '<i class="fa fa-edit"></i> تعديل الرقم التسلسلي #' . $id,
                     'content' => $this->renderAjax('_serial_form', ['model' => $model]),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -911,13 +911,13 @@ class InventoryItemsController extends Controller
                     'forceReload' => '#serial-datatable-pjax',
                     'title'       => 'تعديل الرقم التسلسلي #' . $id,
                     'content'     => '<span class="text-success"><i class="fa fa-check"></i> تم التحديث بنجاح</span>',
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']),
                 ];
             }
             return [
                 'title'   => '<i class="fa fa-edit"></i> تعديل الرقم التسلسلي #' . $id,
                 'content' => $this->renderAjax('_serial_form', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -941,7 +941,7 @@ class InventoryItemsController extends Controller
             return [
                 'title'   => '<i class="fa fa-barcode"></i> تفاصيل الرقم التسلسلي #' . $id,
                 'content' => $this->renderAjax('_serial_view', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::a('تعديل', ['serial-update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }

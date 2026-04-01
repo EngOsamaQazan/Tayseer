@@ -85,7 +85,7 @@ class LawyersController extends Controller
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                     Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
@@ -112,7 +112,7 @@ class LawyersController extends Controller
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
@@ -120,7 +120,7 @@ class LawyersController extends Controller
                     'forceReload' => '#crud-datatable-pjax',
                     'title' => "إضافة مفوض / وكيل",
                     'content' => '<span class="text-success">تمت الإضافة بنجاح</span>',
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::a('إضافة آخر', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
@@ -129,7 +129,7 @@ class LawyersController extends Controller
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }
@@ -170,7 +170,7 @@ class LawyersController extends Controller
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
@@ -180,7 +180,7 @@ class LawyersController extends Controller
                     'content' => $this->renderAjax('view', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
@@ -189,7 +189,7 @@ class LawyersController extends Controller
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }

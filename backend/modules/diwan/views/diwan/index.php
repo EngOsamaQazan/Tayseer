@@ -110,8 +110,8 @@ $canDiwanDelete = Permissions::can(Permissions::DIWAN_DELETE) || Yii::$app->user
                         <td style="font-size:12px"><?= Yii::$app->formatter->asDatetime($t->transaction_date, 'php:Y/m/d h:i A') ?></td>
                         <td><code style="font-size:11px"><?= Html::encode($t->receipt_number) ?></code></td>
                         <td>
-                            <?= Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $t->id], ['class' => 'btn btn-xs btn-default', 'title' => 'عرض']) ?>
-                            <?= Html::a('<i class="fa fa-print"></i>', ['receipt', 'id' => $t->id], ['class' => 'btn btn-xs btn-default', 'title' => 'طباعة']) ?>
+                            <?= Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $t->id], ['class' => 'btn btn-xs btn-secondary', 'title' => 'عرض']) ?>
+                            <?= Html::a('<i class="fa fa-print"></i>', ['receipt', 'id' => $t->id], ['class' => 'btn btn-xs btn-secondary', 'title' => 'طباعة']) ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>

@@ -15,7 +15,7 @@ $contractModel = $contractCalculations->contract_model;
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-envelope"></i> إرسال رسالة نصية</h4>
             </div>
             <div class="modal-body">
@@ -27,8 +27,8 @@ $contractModel = $contractCalculations->contract_model;
                 <div class="text-muted">عدد الأحرف: <span id="char_count">0</span></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
-                <button type="button" class="btn btn-primary" id="send_sms" data-dismiss="modal"><i class="fa fa-paper-plane"></i> إرسال</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
+                <button type="button" class="btn btn-primary" id="send_sms" data-bs-dismiss="modal"><i class="fa fa-paper-plane"></i> إرسال</button>
             </div>
         </div>
     </div>
@@ -39,7 +39,7 @@ $contractModel = $contractCalculations->contract_model;
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-exchange"></i> تغيير حالة العقد</h4>
             </div>
             <div class="modal-body">
@@ -56,7 +56,7 @@ $contractModel = $contractCalculations->contract_model;
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
                 <button type="button" class="btn btn-primary statse-change" contract-id="<?= $contractModel->id ?>">
                     <i class="fa fa-save"></i> حفظ التغيير
                 </button>
@@ -125,7 +125,7 @@ $selectOpts = function($items, $cls, $field) {
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title" id="customerInfoTitle"><i class="fa fa-user-circle"></i> بيانات العميل</h4>
             </div>
             <div class="modal-body">
@@ -173,7 +173,7 @@ $selectOpts = function($items, $cls, $field) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
                 <button type="button" class="btn btn-success" id="ciFooterSaveBtn" onclick="CiEdit.save()" style="display:none;border-radius:8px;font-size:12px;font-weight:700;padding:8px 20px"><i class="fa fa-check"></i> حفظ التعديلات</button>
                 <a class="btn btn-primary" id="cus-link" style="background:var(--ocp-primary,#6B1D3D);border-color:var(--ocp-primary,#6B1D3D)" target="_blank"><i class="fa fa-external-link"></i> فتح صفحة العميل</a>
             </div>
@@ -186,7 +186,7 @@ $selectOpts = function($items, $cls, $field) {
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-image"></i> صور ومستندات العملاء</h4>
             </div>
             <div class="modal-body">
@@ -315,7 +315,7 @@ $selectOpts = function($items, $cls, $field) {
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-check-square-o"></i> تدقيق عقد #<?= $contract_id ?></h4>
             </div>
             <div class="modal-body" id="auditDisplay" ondblclick="copyText(this)" style="direction:rtl;text-align:right">
@@ -327,7 +327,7 @@ $selectOpts = function($items, $cls, $field) {
                 ?>
                     <h4><i class="fa fa-users"></i> معلومات العملاء</h4>
                     <?php foreach ($allCustomers as $cust): ?>
-                        <div class="well well-sm">
+                        <div class="p-3 bg-light rounded small">
                             <strong>العميل:</strong> <?= Html::encode($cust->name) ?><br>
                             <strong>الرقم الوطني:</strong> <?= Html::encode($cust->id_number) ?><br>
                             <?php if (!empty($cust->city)):
@@ -360,7 +360,7 @@ $selectOpts = function($items, $cls, $field) {
                         <?php if ($cc->customer && $cc->customer->phoneNumbers): ?>
                             <?php foreach ($cc->customer->phoneNumbers as $pn): ?>
                                 <?php $rel = \backend\modules\cousins\models\Cousins::findOne($pn->phone_number_owner); ?>
-                                <span class="label label-info" style="margin-left:5px">
+                                <span class="badge bg-info" style="margin-left:5px">
                                     <?= Html::encode($pn->owner_name) ?> (<?= $rel ? Html::encode($rel->name) : '—' ?>)
                                 </span>
                             <?php endforeach ?>
@@ -373,7 +373,7 @@ $selectOpts = function($items, $cls, $field) {
                     if (!empty($judicaries)): ?>
                         <h4 style="margin-top:15px"><i class="fa fa-gavel"></i> المعلومات القضائية</h4>
                         <?php foreach ($judicaries as $jud): ?>
-                            <div class="well well-sm">
+                            <div class="p-3 bg-light rounded small">
                                 <strong>القضية:</strong> <?= $jud->judiciary_number ?>/<?= $jud->year ?><br>
                                 <strong>تاريخ الورود:</strong> <?= $jud->income_date ?: 'لا يوجد' ?><br>
                                 <?php $law = \backend\modules\lawyers\models\Lawyers::findOne($jud->lawyer_id); ?>
@@ -428,7 +428,7 @@ $_stlNetDebt = $_vbStl ? $_vbStl['remaining'] : max(0, $_stlAutoTotal - $_stlPai
     <div class="modal-dialog" role="document">
         <div class="modal-content stl-modal">
             <div class="modal-header" style="background:linear-gradient(135deg,#800020,#a0003a);color:#fff;border-radius:4px 4px 0 0">
-                <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.8"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal" style="color:#fff;opacity:.8"><span>&times;</span></button>
                 <h4 class="modal-title"><i class="fa fa-balance-scale"></i> إضافة تسوية</h4>
             </div>
             <div class="modal-body">
@@ -518,7 +518,7 @@ $_stlNetDebt = $_vbStl ? $_vbStl['remaining'] : max(0, $_stlAutoTotal - $_stlPai
                 <input type="hidden" value="<?= $contractModel->id ?>" id="contract_id">
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
                 <button type="button" class="btn btn-primary" id="save" style="background:#800020;border-color:#800020">
                     <i class="fa fa-plus-circle"></i> إنشاء التسوية
                 </button>

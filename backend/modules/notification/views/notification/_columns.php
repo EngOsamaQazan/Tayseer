@@ -58,7 +58,7 @@ return [
             'data-confirm' => false,
             'data-method' => false,
             'data-request-method' => 'post',
-            'data-toggle' => 'tooltip',
+            'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => Yii::t('app', 'هل أنت متأكد؟'),
             'data-confirm-message' => Yii::t('app', 'هل أنت متأكد من حذف هذا العنصر؟'),
         ],

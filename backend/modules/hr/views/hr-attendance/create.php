@@ -35,7 +35,7 @@ $this->title = 'إدخال حضور يدوي';
     <div class="hr-page-header">
         <h1><i class="fa fa-plus-circle"></i> <?= Html::encode($this->title) ?></h1>
         <div>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> لوحة الحضور', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> لوحة الحضور', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
         </div>
     </div>
 

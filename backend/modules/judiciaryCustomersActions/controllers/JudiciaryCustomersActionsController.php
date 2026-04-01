@@ -81,7 +81,7 @@ class JudiciaryCustomersActionsController extends Controller
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
+                'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                     Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
@@ -117,7 +117,7 @@ class JudiciaryCustomersActionsController extends Controller
                 'content' => $this->renderAjax('_select_judiciary', [
                     'judiciaries' => $judiciaries,
                 ]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
             ];
         }
 
@@ -139,7 +139,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     'size' => 'large',
                 ];
@@ -159,7 +159,7 @@ class JudiciaryCustomersActionsController extends Controller
                             'model' => $model,
                             'contractID' => $contractID
                         ]),
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                             Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     ];
                 }
@@ -254,7 +254,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'forceClose' => true,
                         'title' => 'إضافة إجراء قضائي',
                         'content' => '<span class="text-success"><i class="fa fa-check-circle"></i> ' . $msg . '</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
                     ];
                 }
 
@@ -264,7 +264,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => "submit"]),
                 ];
             }
@@ -313,7 +313,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'btn btn-primary', 'type' => "submit"]),
                     'size' => 'large',
                 ];
@@ -357,7 +357,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'forceClose' => true,
                         'title' => "تعديل إجراء قضائي",
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal'])
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal'])
                     ];
                 } else {
                     return [
@@ -366,7 +366,7 @@ class JudiciaryCustomersActionsController extends Controller
                             'model' => $model,
                             'contractID' => $contractID
                         ]),
-                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
+                        'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']) .
                             Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                     ];
                 }
@@ -414,7 +414,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-save"></i> حفظ التعديلات', ['class' => 'btn btn-primary', 'type' => 'submit']),
                     'size' => 'large',
                 ];
@@ -460,7 +460,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'forceClose' => true,
                         'title' => 'تعديل إجراء قضائي',
                         'content' => '<span class="text-success">تم تعديل الإجراء القضائي بنجاح</span>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal', 'data-bs-dismiss' => 'modal']),
                     ];
                 }
 
@@ -470,7 +470,7 @@ class JudiciaryCustomersActionsController extends Controller
                         'model' => $model,
                         'contractID' => $contractID,
                     ]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-save"></i> حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }

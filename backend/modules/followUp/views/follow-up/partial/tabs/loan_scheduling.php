@@ -61,7 +61,7 @@ $totalPaid = $_vb ? $_vb['paid'] : 0;
 
 <div class="stl-cards-wrap">
     <!-- زر إضافة تسوية — يفتح النافذة المنبثقة الجديدة -->
-    <button type="button" class="stl-add-btn" data-toggle="modal" data-target="#settlementModal">
+    <button type="button" class="stl-add-btn" data-bs-toggle="modal" data-bs-target="#settlementModal">
         <i class="fa fa-plus-circle"></i> إضافة تسوية جديدة
     </button>
 

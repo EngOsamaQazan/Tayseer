@@ -1,7 +1,7 @@
 <?php
 
 use yii\helpers\Url;
-use yii\bootstrap\ButtonDropdown;
+use yii\bootstrap5\ButtonDropdown;
 use yii\helpers\Html;
 
 return [
@@ -87,7 +87,7 @@ return [
                             ],
                         ],
                         'options' => [
-                            'class' => 'btn-default',
+                            'class' => 'btn-secondary',
                             'style' => 'padding-left: 5px; padding-right: 5px;', // btn-success, btn-info, et cetera
                         ],
                         'split' => true, // if you want a split button
@@ -117,7 +117,7 @@ return [
                             ],
                         ],
                         'options' => [
-                            'class' => 'btn-default',
+                            'class' => 'btn-secondary',
                             'style' => 'padding-left: 5px; padding-right: 5px;', // btn-success, btn-info, et cetera
                         ],
                         'split' => true, // if you want a split button
@@ -173,7 +173,7 @@ return [
 //                        ],
 //                    ],
 //                    'options' => [
-//                        'class' => 'btn-default',
+//                        'class' => 'btn-secondary',
 //                        'style' => 'padding-left: 5px; padding-right: 5px;', // btn-success, btn-info, et cetera
 //                    ],
 //                    'split' => true, // if you want a split button
@@ -187,12 +187,12 @@ return [
 ////                'urlCreator' => function($action, $model, $model->id, $index) {
 ////                    return Url::to([$action, 'id' => $model->id]);
 ////                },
-////                        'viewOptions' => ['role' => 'modal-remote', 'title' => 'View', 'data-toggle' => 'tooltip'],
-////                        'updateOptions' => ['role' => 'modal-remote', 'title' => 'Update', 'data-toggle' => 'tooltip'],
+////                        'viewOptions' => ['role' => 'modal-remote', 'title' => 'View', 'data-bs-toggle' => 'tooltip'],
+////                        'updateOptions' => ['role' => 'modal-remote', 'title' => 'Update', 'data-bs-toggle' => 'tooltip'],
 ////                        'deleteOptions' => ['role' => 'modal-remote', 'title' => 'Delete',
 ////                            'data-confirm' => false, 'data-method' => false, // for overide yii data api
 ////                            'data-request-method' => 'post',
-////                            'data-toggle' => 'tooltip',
+////                            'data-bs-toggle' => 'tooltip',
 ////                            'data-confirm-title' => 'Are you sure?',
 ////                            'data-confirm-message' => 'Are you sure want to delete this item'],
 ////                    ]

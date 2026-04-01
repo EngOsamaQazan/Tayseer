@@ -62,7 +62,7 @@ $typeLabel = $incrementType === 'percentage' ? $amount . '%' : number_format($am
 <div class="inc-preview-page">
     <div class="inc-preview-header">
         <h1><i class="fa fa-eye"></i> <?= Html::encode($this->title) ?></h1>
-        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للقائمة', ['increments'], ['class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px']) ?>
+        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للقائمة', ['increments'], ['class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px']) ?>
     </div>
 
     <div class="inc-preview-summary">
@@ -80,7 +80,7 @@ $typeLabel = $incrementType === 'percentage' ? $amount . '%' : number_format($am
             <div class="inc-preview-empty">
                 <i class="fa fa-users"></i>
                 <p>لا يوجد موظفون مستحقون للعلاوة حسب المعطيات المدخلة (سنوات الخدمة حتى تاريخ السريان، ووجود راتب أساسي).</p>
-                <?= Html::a('تعديل المعطيات', ['increment-bulk'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px']) ?>
+                <?= Html::a('تعديل المعطيات', ['increment-bulk'], ['class' => 'btn btn-secondary', 'style' => 'border-radius:8px']) ?>
             </div>
         <?php else: ?>
             <div style="overflow-x:auto">
@@ -124,7 +124,7 @@ $typeLabel = $incrementType === 'percentage' ? $amount . '%' : number_format($am
 
             <div class="inc-preview-actions">
                 <?= Html::a('<i class="fa fa-times"></i> رفض / إلغاء', ['increment-bulk'], [
-                    'class' => 'btn btn-default',
+                    'class' => 'btn btn-secondary',
                     'style' => 'border-radius:8px',
                 ]) ?>
                 <?= Html::beginForm(['increment-bulk'], 'post', ['style' => 'display:inline']) ?>

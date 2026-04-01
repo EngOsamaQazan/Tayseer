@@ -87,7 +87,7 @@ $this->title = 'قسم الديوان';
                         <?= Html::encode($tracker->status ?: 'غير محدد') ?>
                     </span>
                     <?= Html::a('<i class="fa fa-history"></i> السجل', ['document-history', 'contract_number' => $tracker->contract_number], [
-                        'class' => 'btn btn-xs btn-default', 'style' => 'border-radius:4px;',
+                        'class' => 'btn btn-xs btn-secondary', 'style' => 'border-radius:4px;',
                     ]) ?>
                 </div>
             </div>
@@ -137,7 +137,7 @@ $this->title = 'قسم الديوان';
                     'buttons' => [
                         'history' => function ($url, $m) {
                             return Html::a('<i class="fa fa-history"></i> السجل', ['document-history', 'contract_number' => $m->contract_number], [
-                                'class' => 'btn btn-xs btn-default',
+                                'class' => 'btn btn-xs btn-secondary',
                             ]);
                         },
                     ],

@@ -162,7 +162,7 @@ $reqStatusStyles = [
                 <i class="fa fa-calendar-check-o"></i>
                 آخر تشييك: <strong style="color:var(--ocp-text-primary)"><?= $judiciary->last_check_date ? date('Y/m/d', strtotime($judiciary->last_check_date)) : 'لم يتم بعد' ?></strong>
             </div>
-            <button class="btn btn-xs btn-default" onclick="OCP.updateJudiciaryCheck(<?= $judiciary->id ?>)" style="border-radius:6px;font-size:12px">
+            <button class="btn btn-xs btn-secondary" onclick="OCP.updateJudiciaryCheck(<?= $judiciary->id ?>)" style="border-radius:6px;font-size:12px">
                 <i class="fa fa-check"></i> تحديث تاريخ التشييك
             </button>
         </div>

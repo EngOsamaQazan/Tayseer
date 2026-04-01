@@ -7,6 +7,7 @@ return [
     [
         'class' => '\kartik\grid\SerialColumn',
         'width' => '40px',
+        'contentOptions' => ['data-label' => '#'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
@@ -14,6 +15,7 @@ return [
         'label' => 'الرقم التسلسلي',
         'vAlign' => 'middle',
         'headerOptions' => ['style' => 'min-width:180px'],
+        'contentOptions' => ['data-label' => 'الرقم التسلسلي'],
         'format' => 'raw',
         'value' => function ($model) {
             return '<span class="sn-serial-cell">' . Html::encode($model->serial_number) . '</span>';
@@ -25,6 +27,7 @@ return [
         'label' => 'الصنف',
         'vAlign' => 'middle',
         'headerOptions' => ['style' => 'min-width:140px'],
+        'contentOptions' => ['data-label' => 'الصنف'],
         'format' => 'raw',
         'value' => function ($model) {
             if ($model->item) {
@@ -41,6 +44,7 @@ return [
         'label' => 'الحالة',
         'vAlign' => 'middle',
         'width' => '150px',
+        'contentOptions' => ['data-label' => 'الحالة'],
         'filter' => InventorySerialNumber::getStatusList(),
         'format' => 'raw',
         'value' => function ($model) {
@@ -59,6 +63,7 @@ return [
         'attribute' => 'supplier_id',
         'label' => 'المورد',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'المورد'],
         'value' => function ($model) {
             return $model->supplier ? $model->supplier->name : '—';
         },
@@ -68,6 +73,7 @@ return [
         'attribute' => 'location_id',
         'label' => 'الموقع',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'الموقع'],
         'value' => function ($model) {
             return $model->location ? $model->location->locations_name : '—';
         },
@@ -77,6 +83,7 @@ return [
         'attribute' => 'note',
         'label' => 'ملاحظات',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'ملاحظات'],
         'format' => 'raw',
         'value' => function ($model) {
             $note = (string)($model->note ?? '');
@@ -89,6 +96,7 @@ return [
         'attribute' => 'created_at',
         'vAlign' => 'middle',
         'width' => '100px',
+        'contentOptions' => ['data-label' => 'التاريخ'],
         'format' => 'raw',
         'value' => function ($model) {
             return $model->created_at ? date('Y-m-d', $model->created_at) : '—';
@@ -101,20 +109,21 @@ return [
         'dropdown' => false,
         'vAlign' => 'middle',
         'width' => '150px',
+        'contentOptions' => ['data-label' => ''],
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
         'buttons' => [
             'serial-view' => function ($url, $model) {
                 return Html::a('<i class="fa fa-eye"></i>', $url, [
-                    'class' => 'btn btn-xs btn-default', 'title' => 'عرض',
-                    'role' => 'modal-remote', 'data-toggle' => 'tooltip',
+                    'class' => 'btn btn-xs btn-secondary', 'title' => 'عرض',
+                    'role' => 'modal-remote', 'data-bs-toggle' => 'tooltip', 'data-pjax' => 0,
                 ]);
             },
             'serial-update' => function ($url, $model) {
                 return Html::a('<i class="fa fa-pencil"></i>', $url, [
                     'class' => 'btn btn-xs btn-info', 'title' => 'تعديل',
-                    'role' => 'modal-remote', 'data-toggle' => 'tooltip',
+                    'role' => 'modal-remote', 'data-bs-toggle' => 'tooltip', 'data-pjax' => 0,
                 ]);
             },
             'serial-delete' => function ($url, $model) {
@@ -122,7 +131,7 @@ return [
                     'class' => 'btn btn-xs btn-danger', 'title' => 'حذف',
                     'data-confirm' => 'هل أنت متأكد من حذف هذا الرقم التسلسلي؟',
                     'data-method' => 'post',
-                    'data-toggle' => 'tooltip',
+                    'data-bs-toggle' => 'tooltip',
                 ]);
             },
         ],

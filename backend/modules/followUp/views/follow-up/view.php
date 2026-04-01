@@ -2,12 +2,14 @@
 
 use yii\helpers\Html;
 use yii\widgets\DetailView;
-use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
 
 /* @var $this yii\web\View */
 /* @var $modelView common\models\FollowUp */
-CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 ?>
 <div class="follow-up-view">
 <?=

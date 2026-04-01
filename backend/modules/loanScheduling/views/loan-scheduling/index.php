@@ -211,9 +211,10 @@ $jsModal = <<<JSBLOCK
 /* ═══ فتح مودال إنشاء تسوية ═══ */
 $("#btnNewLoan").on("click",function(){
     var modal=$("#loanModal");
+    var modalInst = bootstrap.Modal.getOrCreateInstance(document.getElementById("loanModal"));
     modal.find("#loanModalLabel").text("تسوية جديدة");
     modal.find("#loanModalBody").html('<div style="text-align:center;padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
-    modal.modal("show");
+    modalInst.show();
     $.ajax({
         url:"$createUrl", type:"GET", dataType:"json",
         success:function(res){
@@ -229,9 +230,10 @@ $(document).on("click",".fin-act--edit",function(e){
     e.preventDefault();
     var url=$(this).attr("href");
     var modal=$("#loanModal");
+    var modalInst = bootstrap.Modal.getOrCreateInstance(document.getElementById("loanModal"));
     modal.find("#loanModalLabel").text("تعديل التسوية");
     modal.find("#loanModalBody").html('<div style="text-align:center;padding:30px"><i class="fa fa-spinner fa-spin fa-2x"></i></div>');
-    modal.modal("show");
+    modalInst.show();
     $.ajax({
         url:url, type:"GET", dataType:"json",
         success:function(res){
@@ -245,6 +247,7 @@ $(document).on("click",".fin-act--edit",function(e){
 /* ═══ ربط submit الفورم داخل المودال ═══ */
 function bindModalForm(actionUrl){
     var modal=$("#loanModal");
+    var modalInst = function(){ return bootstrap.Modal.getOrCreateInstance(document.getElementById("loanModal")); };
     modal.find("form").on("submit",function(e){
         e.preventDefault();
         var form=$(this);
@@ -254,7 +257,7 @@ function bindModalForm(actionUrl){
             url:actionUrl, type:"POST", data:form.serialize(), dataType:"json",
             success:function(res){
                 if(res.success){
-                    modal.modal("hide");
+                    modalInst().hide();
                     location.reload();
                 } else if(res.content){
                     modal.find("#loanModalBody").html(res.content);

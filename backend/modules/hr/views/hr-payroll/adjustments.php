@@ -83,7 +83,7 @@ $typeOptions = [
             <span class="adj-period-badge">
                 <i class="fa fa-calendar"></i> <?= Html::encode($monthName . ' ' . $run->period_year) ?>
             </span>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للمسيرة', ['view', 'id' => $run->id], ['class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px;margin-right:8px']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للمسيرة', ['view', 'id' => $run->id], ['class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px;margin-right:8px']) ?>
         </div>
     </div>
 
@@ -168,7 +168,7 @@ $typeOptions = [
 
         <?php if (in_array($run->status, ['draft', 'calculated'])): ?>
         <div class="adj-actions">
-            <?= Html::a('إلغاء', ['view', 'id' => $run->id], ['class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px']) ?>
+            <?= Html::a('إلغاء', ['view', 'id' => $run->id], ['class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px']) ?>
             <?= Html::submitButton('<i class="fa fa-save"></i> حفظ التعديلات', [
                 'class' => 'btn btn-primary btn-sm',
                 'style' => 'background:#800020;border-color:#800020;border-radius:8px',

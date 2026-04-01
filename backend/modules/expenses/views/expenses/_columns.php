@@ -8,7 +8,7 @@
 
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\ButtonDropdown;
+use yii\bootstrap5\ButtonDropdown;
 use common\helper\Permissions;
 
 return [
@@ -129,7 +129,7 @@ return [
                         'items' => $items,
                         'options' => ['class' => 'dropdown-menu-right'],
                     ],
-                    'options' => ['class' => 'btn-default btn-sm'],
+                    'options' => ['class' => 'btn-secondary btn-sm'],
                     'split' => true,
                 ]);
             },

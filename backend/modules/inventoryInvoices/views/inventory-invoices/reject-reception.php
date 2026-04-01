@@ -19,7 +19,7 @@ $this->params['breadcrumbs'][] = $this->title;
     </div>
     <div class="form-group">
         <?= Html::submitButton('تسجيل الرفض', ['class' => 'btn btn-warning']) ?>
-        <?= Html::a('إلغاء', ['view', 'id' => $model->id], ['class' => 'btn btn-default']) ?>
+        <?= Html::a('إلغاء', ['view', 'id' => $model->id], ['class' => 'btn btn-secondary']) ?>
     </div>
     <?= Html::endForm() ?>
 </div>

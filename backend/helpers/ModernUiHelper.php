@@ -76,7 +76,7 @@ JS;
         $method = $options['method'] ?? 'get';
         $swap = $options['swap'] ?? 'innerHTML';
         $trigger = $options['trigger'] ?? 'click';
-        $cssClass = $options['class'] ?? 'btn btn-default btn-sm';
+        $cssClass = $options['class'] ?? 'btn btn-secondary btn-sm';
         $confirm = $options['confirm'] ?? null;
 
         $attrs = [
@@ -132,7 +132,7 @@ JS;
      */
     public static function alpineToggle(string $buttonLabel, string $content, array $options = []): string
     {
-        $btnClass = $options['buttonClass'] ?? 'btn btn-default btn-sm';
+        $btnClass = $options['buttonClass'] ?? 'btn btn-secondary btn-sm';
         $icon = $options['icon'] ?? 'fa fa-chevron-down';
 
         return <<<HTML

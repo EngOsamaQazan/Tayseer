@@ -10,9 +10,9 @@ use backend\helpers\FlatpickrWidget;
 
     <?php $form = ActiveForm::begin(['id' => 'dynamic-form']); ?>
 
-    <div class="panel panel-default">
-        <div class="panel-heading"><h4><i class="glyphicon glyphicon-envelope"></i> Addresses</h4></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0"><i class="fa fa-envelope"></i> Addresses</h4></div>
+        <div class="card-body">
             <?php
             DynamicFormWidget::begin([
                 'widgetContainer' => 'dynamicform_wrapper', // required: only alphanumeric characters plus "_" [A-Za-z0-9_]
@@ -36,16 +36,15 @@ use backend\helpers\FlatpickrWidget;
             ?>
 
             <div class="container-items"><!-- widgetContainer -->
-                <div class="item panel panel-default"><!-- widgetBody -->
-                    <div class="panel-heading">
-                        <h3 class="panel-title pull-left">Address</h3>
-                        <div class="pull-right">
-                            <button type="button" class="add-item btn btn-success btn-xs"><i class="glyphicon glyphicon-plus"></i></button>
-                            <button type="button" class="remove-item btn btn-danger btn-xs"><i class="glyphicon glyphicon-minus"></i></button>
+                <div class="item card"><!-- widgetBody -->
+                    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h3 class="card-title mb-0">Address</h3>
+                        <div>
+                            <button type="button" class="add-item btn btn-success btn-xs"><i class="fa fa-plus"></i></button>
+                            <button type="button" class="remove-item btn btn-danger btn-xs"><i class="fa fa-minus"></i></button>
                         </div>
-                        <div class="clearfix"></div>
                     </div>
-                    <div class="panel-body">
+                    <div class="card-body">
                         <?php
                         // necessary for update action.
                         if (!$modelAddress->isNewRecord) {

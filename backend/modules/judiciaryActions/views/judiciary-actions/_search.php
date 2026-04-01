@@ -41,7 +41,7 @@ use backend\modules\judiciaryActions\models\JudiciaryActions;
         <div class="col-md-2" style="margin-top:24px">
             <div class="form-group" style="display:flex;gap:6px">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary', 'style' => 'border-radius:8px;font-size:12px;padding:7px 16px']) ?>
-                <?= Html::a('<i class="fa fa-times"></i>', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:12px;padding:7px 12px']) ?>
+                <?= Html::a('<i class="fa fa-times"></i>', ['index'], ['class' => 'btn btn-secondary', 'style' => 'border-radius:8px;font-size:12px;padding:7px 12px']) ?>
             </div>
         </div>
     </div>

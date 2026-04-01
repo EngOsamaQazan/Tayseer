@@ -190,7 +190,7 @@ $totalPct = array_sum(array_map(function($l) { return (float) $l->percentage; },
 
     <div class="se-view-card">
         <div class="se-view-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-secondary']) ?>
             <?php if ($model->status === SharedExpenseAllocation::STATUS_DRAFT): ?>
                 <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $model->id], ['class' => 'btn btn-primary', 'style' => 'background:var(--se-primary);border-color:var(--se-primary)']) ?>
                 <?= Html::a('<i class="fa fa-check"></i> اعتماد', ['approve', 'id' => $model->id], [

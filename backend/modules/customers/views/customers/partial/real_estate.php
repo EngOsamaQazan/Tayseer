@@ -21,8 +21,8 @@ DynamicFormWidget::begin([
 
 <div class="container-items111">
     <?php foreach ($modelRealEstate as $i => $re): ?>
-        <div class="real_estate-item panel panel-default">
-            <div class="panel-body">
+        <div class="real_estate-item card">
+            <div class="card-body">
                 <?php if (!$re->isNewRecord) echo Html::activeHiddenInput($re, "[{$i}]id") ?>
                 <div class="row">
                     <div class="col-md-5">

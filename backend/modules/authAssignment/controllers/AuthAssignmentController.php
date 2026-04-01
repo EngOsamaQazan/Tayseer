@@ -95,7 +95,7 @@ class AuthAssignmentController extends Controller
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($item_name, $user_id),
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                     Html::a('Edit', ['update', 'item_name, $user_id' => $item_name, $user_id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
@@ -127,7 +127,7 @@ class AuthAssignmentController extends Controller
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
 
                 ];
@@ -136,7 +136,7 @@ class AuthAssignmentController extends Controller
                     'forceReload' => '#crud-datatable-pjax',
                     'title' => "Create new AuthAssignment",
                     'content' => '<span class="text-success">Create AuthAssignment success</span>',
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
 
                 ];
@@ -146,7 +146,7 @@ class AuthAssignmentController extends Controller
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
 
                 ];
@@ -190,7 +190,7 @@ class AuthAssignmentController extends Controller
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post()) && $model->save()) {
@@ -200,7 +200,7 @@ class AuthAssignmentController extends Controller
                     'content' => $this->renderAjax('view', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::a('Edit', ['update', 'item_name, $user_id' => $item_name, $user_id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
@@ -209,7 +209,7 @@ class AuthAssignmentController extends Controller
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }

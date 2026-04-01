@@ -4,7 +4,7 @@ use wbraganca\dynamicform\DynamicFormWidget;
 use yii\helpers\Html;
 ?>
 
-<div class="panel-body">
+<div class="card"><div class="card-body">
     <?php
     DynamicFormWidget::begin([
         'widgetContainer' => 'dynamicform_wrapper2', // required: only alphanumeric characters plus "_" [A-Za-z0-9_]
@@ -24,9 +24,9 @@ use yii\helpers\Html;
 
     <div class="container-items2">
         <?php foreach ($modelsPhoneNumbersFollwUps as $i => $modelPhoneNumbersFollwUps): ?>
-            <div class="phone-numbers-item panel panel-default"><!-- widgetBody -->
+            <div class="phone-numbers-item card"><!-- widgetBody -->
 
-                <div class="panel-body">
+                <div class="card-body">
                     <?php
                     // necessary for update action.
                     if (!$modelPhoneNumbersFollwUps->isNewRecord) {
@@ -68,7 +68,7 @@ use yii\helpers\Html;
                         </div>
                         <div class="col-sm-1">
                             <button type="button" class="phone-numbers-remove-item btn btn-danger btn-xs" style="margin-top: 30px;">
-                                <i class="glyphicon glyphicon-minus"></i>
+                                <i class="fa fa-minus"></i>
                             </button>
                         </div>
 
@@ -80,8 +80,8 @@ use yii\helpers\Html;
 
     </div>
     <div class="pull-right">
-        <button type="button" class="phone-numbers-add-item btn btn-success btn-xs"><i class="glyphicon glyphicon-plus"></i></button>
+        <button type="button" class="phone-numbers-add-item btn btn-success btn-xs"><i class="fa fa-plus"></i></button>
 
     </div>
     <?php DynamicFormWidget::end(); ?>
-</div>
+</div></div>

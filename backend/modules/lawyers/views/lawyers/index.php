@@ -33,9 +33,9 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.
             'toolbar' => [
                 ['content' =>
                     Html::a('<i class="fa fa-plus"></i>', ['create'],
-                        ['title' => 'إضافة مفوض / وكيل', 'class' => 'btn btn-default']) .
+                        ['title' => 'إضافة مفوض / وكيل', 'class' => 'btn btn-secondary']) .
                     Html::a('<i class="fa fa-refresh"></i>', [''],
-                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'إعادة تعيين']) .
+                        ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'إعادة تعيين']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => ['export-excel'],

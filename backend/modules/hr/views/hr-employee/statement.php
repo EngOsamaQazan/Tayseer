@@ -133,7 +133,7 @@ $arabicMonths = [
         <h1><i class="fa fa-file-text"></i> <?= Html::encode($this->title) ?></h1>
         <div class="stmt-actions">
             <?= Html::a('<i class="fa fa-arrow-right"></i> العودة لسجل الموظفين', ['/hr/hr-employee/index'], [
-                'class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px',
+                'class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px',
             ]) ?>
             <?= Html::button('<i class="fa fa-print"></i> طباعة', [
                 'class' => 'btn btn-sm',
@@ -250,9 +250,9 @@ $arabicMonths = [
                                         <td style="width:60%"><?= Html::encode($line['description']) ?></td>
                                         <td style="width:20%;text-align:center">
                                             <?php if ($line['component_type'] === 'earning'): ?>
-                                                <span class="label label-success" style="font-size:10px">استحقاق</span>
+                                                <span class="badge bg-success" style="font-size:10px">استحقاق</span>
                                             <?php else: ?>
-                                                <span class="label label-danger" style="font-size:10px">خصم</span>
+                                                <span class="badge bg-danger" style="font-size:10px">خصم</span>
                                             <?php endif; ?>
                                         </td>
                                         <td style="width:20%;text-align:left;font-weight:700;direction:ltr" class="<?= $line['component_type'] === 'earning' ? 'earning' : 'deduction' ?>">

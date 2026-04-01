@@ -43,7 +43,7 @@ $this->title = 'إنشاء علاوة سنوية جديدة';
 <div class="inc-form-page">
     <div class="inc-form-header">
         <h1><i class="fa fa-plus-circle"></i> <?= Html::encode($this->title) ?></h1>
-        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['increments'], ['class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px']) ?>
+        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['increments'], ['class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px']) ?>
     </div>
 
     <div class="inc-form-card">
@@ -94,7 +94,7 @@ $this->title = 'إنشاء علاوة سنوية جديدة';
         <?= $form->field($model, 'notes')->textarea(['rows' => 3, 'placeholder' => 'ملاحظات اختيارية...']) ?>
 
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-            <?= Html::a('إلغاء', ['increments'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px']) ?>
+            <?= Html::a('إلغاء', ['increments'], ['class' => 'btn btn-secondary', 'style' => 'border-radius:8px']) ?>
             <?= Html::submitButton('<i class="fa fa-save"></i> إنشاء العلاوة', [
                 'class' => 'btn',
                 'style' => 'background:#800020;color:#fff;border-radius:8px',

@@ -825,7 +825,7 @@ $formAction = Url::to($isNewRecord ? ['create'] : ['update', 'id' => $model->isN
             <?= Html::a(
                 '<i class="fa fa-times"></i> إلغاء',
                 ['index'],
-                ['class' => 'btn btn-default hr-btn-lg']
+                ['class' => 'btn btn-secondary hr-btn-lg']
             ) ?>
         </div>
 

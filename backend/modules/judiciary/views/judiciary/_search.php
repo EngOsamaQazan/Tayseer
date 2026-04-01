@@ -107,7 +107,7 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
             </div>
             <div class="jud-search-actions">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>
-                <?= Html::a('<i class="fa fa-times"></i>', ['index'], ['class' => 'btn btn-default', 'title' => 'مسح الفلاتر']) ?>
+                <?= Html::a('<i class="fa fa-times"></i>', ['index'], ['class' => 'btn btn-secondary', 'title' => 'مسح الفلاتر']) ?>
             </div>
         </div>
 

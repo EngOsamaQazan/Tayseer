@@ -9,8 +9,8 @@
  * file that was distributed with this source code.
  */
 
-use yii\bootstrap\ActiveForm;
 use yii\helpers\Html;
+use yii\widgets\ActiveForm;
 
 /**
  * @var yii\web\View $this
@@ -21,20 +21,20 @@ use yii\helpers\Html;
 <?php $this->beginContent('@dektrium/user/views/admin/update.php', ['user' => $user]) ?>
 
 <?php $form = ActiveForm::begin([
-    'layout' => 'horizontal',
+    'options' => ['class' => ''],
     'enableAjaxValidation' => true,
     'enableClientValidation' => false,
     'fieldConfig' => [
-        'horizontalCssClasses' => [
-            'wrapper' => 'col-sm-9',
-        ],
+        'options' => ['class' => 'row mb-3'],
+        'template' => "{label}\n<div class=\"col-lg-9\">{input}</div>\n<div class=\"offset-lg-3 col-lg-9\">{error}\n{hint}</div>",
+        'labelOptions' => ['class' => 'col-lg-3 col-form-label'],
     ],
 ]); ?>
 
 <?= $this->render('_user', ['form' => $form, 'user' => $user]) ?>
 
-<div class="form-group">
-    <div class="col-lg-offset-3 col-lg-9">
+<div class="row mb-3">
+    <div class="offset-lg-3 col-lg-9">
         <?= Html::submitButton(Yii::t('user', 'Update'), ['class' => 'btn btn-block btn-success']) ?>
     </div>
 </div>

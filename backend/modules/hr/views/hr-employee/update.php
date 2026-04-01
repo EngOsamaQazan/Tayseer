@@ -26,12 +26,12 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/hr.css', ['depends' => ['yi
 
     <div style="margin-bottom:16px;">
         <?= Html::a('<i class="fa fa-arrow-right"></i> العودة إلى سجل الموظفين', ['index'], [
-            'class' => 'btn btn-default btn-sm',
+            'class' => 'btn btn-secondary btn-sm',
             'style' => 'border-radius:8px',
         ]) ?>
         <?php if ($model->user_id): ?>
             <?= Html::a('<i class="fa fa-eye"></i> عرض ملف الموظف', ['view', 'id' => $model->user_id], [
-                'class' => 'btn btn-default btn-sm',
+                'class' => 'btn btn-secondary btn-sm',
                 'style' => 'border-radius:8px;margin-right:6px',
             ]) ?>
         <?php endif ?>

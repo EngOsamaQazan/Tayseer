@@ -5,14 +5,16 @@
  */
 use yii\helpers\Html;
 use yii\helpers\Url;
-use yii\bootstrap\Modal;
 use backend\modules\inventoryInvoices\models\InventoryInvoices;
 
 $this->title = 'فاتورة توريد جديدة (معالج)';
 $this->params['breadcrumbs'][] = ['label' => 'أوامر الشراء', 'url' => ['index']];
 $this->params['breadcrumbs'][] = $this->title;
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
-\johnitvn\ajaxcrud\CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 $activeBranches = isset($activeBranches) ? $activeBranches : [];
 $branchList = [];
@@ -44,7 +46,7 @@ $companiesList = isset($companiesList) ? $companiesList : [];
 .inv-wizard-page .nav-tabs a { color: #64748b; padding: 10px 18px; font-weight: 600; text-decoration: none; border-bottom: 3px solid transparent; display: inline-block; }
 .inv-wizard-page .nav-tabs li.active a { color: #800020; border-bottom-color: #800020; }
 .inv-wizard-page .btn { color: inherit; }
-.inv-wizard-page .btn-default { color: #374151; background: #f3f4f6; border: 1px solid #d1d5db; }
+.inv-wizard-page .btn-secondary { color: #374151; background: #f3f4f6; border: 1px solid #d1d5db; }
 .inv-wizard-page .btn-primary { color: #fff; }
 .inv-wizard-page .btn-success { color: #fff; }
 .inv-wizard-page .btn-warning { color: #fff; }
@@ -86,9 +88,9 @@ $companiesList = isset($companiesList) ? $companiesList : [];
     <h2 style="margin-bottom:20px"><i class="fa fa-file-text-o"></i> <?= Html::encode($this->title) ?></h2>
 
     <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
-    <div class="alert alert-<?= $type === 'error' ? 'danger' : Html::encode($type) ?>" style="margin-bottom:16px;">
-        <button type="button" class="close" data-dismiss="alert">&times;</button>
+    <div class="alert alert-<?= $type === 'error' ? 'danger' : Html::encode($type) ?> alert-dismissible fade show" style="margin-bottom:16px;" role="alert">
         <?= $message ?>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="إغلاق"></button>
     </div>
     <?php endforeach ?>
 
@@ -126,12 +128,14 @@ $companiesList = isset($companiesList) ? $companiesList : [];
                         'class' => 'fin-btn fin-btn--add',
                         'title' => 'إضافة صنف جديد',
                         'role' => 'modal-remote',
+                        'data-pjax' => 0,
                         'style' => 'white-space:nowrap',
                     ]) ?>
                     <?= Html::a('<i class="fa fa-cubes"></i> <span>إضافة أصناف جديدة</span>', ['/inventoryItems/inventory-items/batch-create'], [
                         'class' => 'fin-btn fin-btn--add',
                         'title' => 'إضافة أصناف جديدة',
                         'role' => 'modal-remote',
+                        'data-pjax' => 0,
                         'style' => 'background:#0ea5e9; white-space:nowrap',
                     ]) ?>
                 </div>
@@ -229,7 +233,7 @@ $companiesList = isset($companiesList) ? $companiesList : [];
                 </button>
             </div>
             <div style="display:flex; gap:12px; align-items:center;">
-                <button type="button" class="btn btn-default" id="wizard-prev" style="display:none">السابق</button>
+                <button type="button" class="btn btn-secondary" id="wizard-prev" style="display:none">السابق</button>
                 <button type="button" class="btn btn-primary" id="wizard-next">التالي</button>
                 <button type="submit" class="btn btn-success" id="wizard-submit" style="display:none">إنهاء وإرسال</button>
             </div>
@@ -752,7 +756,20 @@ restoreWizardState();
 loadSavedDraftsList();
 JS;
 $this->registerJs($js);
-
-Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'options' => ['class' => 'modal fade', 'tabindex' => false], 'size' => Modal::SIZE_LARGE]);
-Modal::end();
 ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>

@@ -16,7 +16,7 @@ $this->params['breadcrumbs'][] = $this->title;
             <h3 class="box-title"><i class="fa fa-eye"></i> <?= Html::encode($this->title) ?></h3>
             <div class="box-tools">
                 <?= Html::a('<i class="fa fa-edit"></i> تعديل', ['update', 'id' => $model->id], ['class' => 'btn btn-primary btn-sm']) ?>
-                <?= Html::a('<i class="fa fa-list"></i> القائمة', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
+                <?= Html::a('<i class="fa fa-list"></i> القائمة', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
             </div>
         </div>
         <div class="box-body">

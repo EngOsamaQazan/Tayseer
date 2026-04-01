@@ -1,7 +1,7 @@
 <?php
 
 use yii\helpers\Url;
-use yii\bootstrap\ButtonDropdown;
+use yii\bootstrap5\ButtonDropdown;
 use common\helper\LoanContract;
 use common\helper\Permissions;
 use backend\helpers\NameHelper;
@@ -111,13 +111,13 @@ return [
                                     'visible' => true,
                                 ],
                                 [
-                                    'label' => '<button type="button" class="btn btn-primary finish" data-id = ' . $key . ' data-toggle="modal" data-target="#exampleModalCenter">
+                                    'label' => '<button type="button" class="btn btn-primary finish" data-id = ' . $key . ' data-bs-toggle="modal" data-bs-target="#exampleModalCenter">
 انهاء العقد
 </button>',
                                     'visible' => true,
                                 ],
                                 [
-                                    'label' => '<button type="button" class="btn btn-primary cancel" data-id = ' . $key . ' data-toggle="modal" data-target="#123">
+                                    'label' => '<button type="button" class="btn btn-primary cancel" data-id = ' . $key . ' data-bs-toggle="modal" data-bs-target="#123">
 الغاء العقد
 </button>',
                                     'visible' => true,
@@ -128,7 +128,7 @@ return [
                             ],
                         ],
                         'options' => [
-                            'class' => 'btn-default',
+                            'class' => 'btn-secondary',
                             'style' => 'padding-left: 5px; padding-right: 5px;', // btn-success, btn-info, et cetera
                         ],
                         'split' => true, // if you want a split button
@@ -181,7 +181,7 @@ return [
                             ],
                         ],
                         'options' => [
-                            'class' => 'btn-default',
+                            'class' => 'btn-secondary',
                             'style' => 'padding-left: 5px; padding-right: 5px;', // btn-success, btn-info, et cetera
                         ],
                         'split' => true, // if you want a split button

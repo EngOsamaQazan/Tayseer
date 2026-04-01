@@ -1,13 +1,12 @@
 <?php
 use yii\helpers\Url;
-use yii\helpers\Html;
-use backend\modules\inventoryInvoices\models\InventoryInvoices;
 use common\helper\Permissions;
 
 return [
     [
         'class' => '\kartik\grid\SerialColumn',
         'width' => '40px',
+        'contentOptions' => ['data-label' => '#'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
@@ -15,6 +14,7 @@ return [
         'label' => 'رقم الأمر',
         'vAlign' => 'middle',
         'width' => '80px',
+        'contentOptions' => ['data-label' => 'رقم الأمر'],
         'format' => 'raw',
         'value' => function ($model) {
             return '<strong style="color:#0369a1">#' . $model->id . '</strong>';
@@ -25,6 +25,7 @@ return [
         'attribute' => 'branch_id',
         'label' => 'موقع التخزين',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'موقع التخزين'],
         'value' => function ($model) {
             return $model->stockLocation ? $model->stockLocation->locations_name : '—';
         },
@@ -34,6 +35,7 @@ return [
         'attribute' => 'suppliers_id',
         'label' => 'المورد',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'المورد'],
         'value' => function ($model) {
             return $model->suppliers ? $model->suppliers->name : '—';
         },
@@ -43,6 +45,7 @@ return [
         'attribute' => 'company_id',
         'label' => 'الشركة',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'الشركة'],
         'value' => function ($model) {
             return $model->company ? $model->company->name : '—';
         },
@@ -53,6 +56,7 @@ return [
         'label' => 'نوع الدفع',
         'vAlign' => 'middle',
         'width' => '100px',
+        'contentOptions' => ['data-label' => 'نوع الدفع'],
         'format' => 'raw',
         'value' => function ($model) {
             $classes = [0 => 'po-type--cash', 1 => 'po-type--credit', 2 => 'po-type--mixed'];
@@ -66,6 +70,7 @@ return [
         'label' => 'المبلغ',
         'vAlign' => 'middle',
         'width' => '110px',
+        'contentOptions' => ['data-label' => 'المبلغ'],
         'format' => 'raw',
         'value' => function ($model) {
             $gross = 0;
@@ -82,6 +87,7 @@ return [
         'label' => 'التاريخ',
         'vAlign' => 'middle',
         'width' => '110px',
+        'contentOptions' => ['data-label' => 'التاريخ'],
         'value' => function ($model) {
             return $model->date ?: ($model->created_at ? date('Y-m-d', $model->created_at) : '—');
         },
@@ -91,6 +97,7 @@ return [
         'attribute' => 'created_by',
         'label' => 'بواسطة',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'بواسطة'],
         'value' => function ($model) {
             return $model->createdBy ? $model->createdBy->username : '—';
         },
@@ -101,6 +108,7 @@ return [
         'dropdown' => false,
         'vAlign' => 'middle',
         'width' => '120px',
+        'contentOptions' => ['data-label' => ''],
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
@@ -109,11 +117,11 @@ return [
             'update' => Permissions::can(Permissions::INVINV_UPDATE),
             'delete' => Permissions::can(Permissions::INVINV_DELETE),
         ],
-        'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-default', 'role' => 'modal-remote'],
-        'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-info'],
+        'viewOptions' => ['title' => 'عرض', 'data-bs-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-secondary', 'role' => 'modal-remote', 'data-pjax' => 0],
+        'updateOptions' => ['title' => 'تعديل', 'data-bs-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-info'],
         'deleteOptions' => [
             'title' => 'حذف', 'data-confirm' => false, 'data-method' => false,
-            'data-request-method' => 'post', 'data-toggle' => 'tooltip',
+            'data-request-method' => 'post', 'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => 'تأكيد الحذف', 'data-confirm-message' => 'هل أنت متأكد من حذف أمر الشراء هذا؟ سيتم تعديل كميات المخزون تلقائياً.',
             'class' => 'btn btn-xs btn-danger',
         ],

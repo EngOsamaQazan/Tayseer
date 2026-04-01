@@ -8,6 +8,10 @@ use common\helper\Permissions;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 ?>
 
 <?= $this->render('@app/views/layouts/_inventory-tabs', ['activeTab' => 'dashboard']) ?>
@@ -176,7 +180,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
         </a>
         <?php endif ?>
         <?php if (Permissions::can(Permissions::INVITEM_CREATE)): ?>
-        <a href="<?= Url::to(['create']) ?>" class="inv-quick-btn inv-qb--item" role="modal-remote">
+        <a href="<?= Url::to(['create']) ?>" class="inv-quick-btn inv-qb--item" role="modal-remote" data-pjax="0">
             <i class="fa fa-plus"></i> إضافة صنف
         </a>
         <?php endif ?>
@@ -296,10 +300,19 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 
 </div>
 
-<?php
-use yii\bootstrap\Modal;
-Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'options' => ['class' => 'modal fade', 'tabindex' => false], 'size' => Modal::SIZE_LARGE]);
-Modal::end();
-
-\johnitvn\ajaxcrud\CrudAsset::register($this);
-?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>

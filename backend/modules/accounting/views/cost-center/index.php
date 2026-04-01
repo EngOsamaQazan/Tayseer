@@ -61,8 +61,8 @@ $this->params['breadcrumbs'][] = $this->title;
                     'format' => 'raw',
                     'value' => function ($model) {
                         return $model->is_active
-                            ? '<span class="label label-success">فعال</span>'
-                            : '<span class="label label-danger">غير فعال</span>';
+                            ? '<span class="badge bg-success">فعال</span>'
+                            : '<span class="badge bg-danger">غير فعال</span>';
                     },
                     'filter' => [1 => 'فعال', 0 => 'غير فعال'],
                     'contentOptions' => ['class' => 'text-center'],

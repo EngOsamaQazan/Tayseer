@@ -6,7 +6,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
-use yii\bootstrap\ButtonDropdown;
+use yii\bootstrap5\ButtonDropdown;
 use common\helper\LoanContract;
 use common\helper\Permissions;
 use backend\modules\contractInstallment\models\ContractInstallment;
@@ -111,7 +111,16 @@ return [
         'value' => function ($m) use ($statusColors, $statusLabels) {
             $color = $statusColors[$m->status] ?? 'default';
             $label = $statusLabels[$m->status] ?? $m->status;
-            return '<span class="label label-' . $color . '">' . $label . '</span>';
+            $badgeMap = [
+                'success' => 'badge bg-success',
+                'danger' => 'badge bg-danger',
+                'warning' => 'badge bg-warning text-dark',
+                'info' => 'badge bg-info',
+                'primary' => 'badge bg-primary',
+                'default' => 'badge bg-secondary',
+            ];
+            $cls = $badgeMap[$color] ?? 'badge bg-secondary';
+            return '<span class="' . $cls . '">' . $label . '</span>';
         },
         'contentOptions' => ['style' => 'text-align:center'],
     ],
@@ -161,7 +170,7 @@ return [
                     $items[] = ['label' => '<i class="fa fa-pencil text-primary"></i> تعديل', 'url' => ['update', 'id' => $key]];
                 }
                 $items[] = ['label' => '<i class="fa fa-print text-info"></i> طباعة العقد والكمبيالات', 'url' => ['print-preview', 'id' => $key]];
-                $items[] = '<li class="divider"></li>';
+                $items[] = '<li><hr class="dropdown-divider"></li>';
                 $items[] = ['label' => '<i class="fa fa-money text-success"></i> الدفعات', 'url' => ['/contractInstallment/contract-installment/index', 'contract_id' => $key]];
                 $items[] = ['label' => '<i class="fa fa-comments text-primary"></i> المتابعة', 'url' => ['/followUp/follow-up/index', 'contract_id' => $key]];
                 $items[] = ['label' => '<i class="fa fa-calendar text-info"></i> جدولة', 'url' => ['/loanScheduling/loan-scheduling/create', 'contract_id' => $key]];
@@ -171,7 +180,7 @@ return [
                 }
 
                 if ($isManager) {
-                    $items[] = '<li class="divider"></li>';
+                    $items[] = '<li><hr class="dropdown-divider"></li>';
                     if (Permissions::can(Permissions::CONT_UPDATE)) {
                         $items[] = ['label' => '<i class="fa fa-check-circle text-success"></i> إنهاء', 'url' => '#', 'linkOptions' => ['class' => 'yeas-finish', 'data-url' => Url::to(['finish', 'id' => $key])]];
                         $items[] = ['label' => '<i class="fa fa-ban text-danger"></i> إلغاء', 'url' => '#', 'linkOptions' => ['class' => 'yeas-cancel', 'data-url' => Url::to(['cancel', 'id' => $key])]];
@@ -188,7 +197,7 @@ return [
                     'encodeLabel' => false,
                     'label' => '<i class="fa fa-cogs"></i>',
                     'dropdown' => ['encodeLabels' => false, 'items' => $items, 'options' => ['class' => 'dropdown-menu-right']],
-                    'options' => ['class' => 'btn-default btn-xs'],
+                    'options' => ['class' => 'btn-secondary btn-xs'],
                     'split' => false,
                 ]);
             },

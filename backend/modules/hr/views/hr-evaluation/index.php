@@ -209,10 +209,10 @@ $statusMap = [
                                 '<i class="fa fa-eye"></i>',
                                 ['view', 'id' => $model->id],
                                 [
-                                    'class' => 'btn btn-sm btn-default',
+                                    'class' => 'btn btn-sm btn-secondary',
                                     'title' => 'عرض',
                                     'style' => 'border-radius:8px;width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;color:#0284c7',
-                                    'data-toggle' => 'tooltip',
+                                    'data-bs-toggle' => 'tooltip',
                                 ]
                             );
                         },
@@ -221,10 +221,10 @@ $statusMap = [
                                 '<i class="fa fa-pencil"></i>',
                                 ['update', 'id' => $model->id],
                                 [
-                                    'class' => 'btn btn-sm btn-default',
+                                    'class' => 'btn btn-sm btn-secondary',
                                     'title' => 'تعديل',
                                     'style' => 'border-radius:8px;width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;color:#d97706',
-                                    'data-toggle' => 'tooltip',
+                                    'data-bs-toggle' => 'tooltip',
                                 ]
                             );
                         },
@@ -233,10 +233,10 @@ $statusMap = [
                                 '<i class="fa fa-trash"></i>',
                                 ['delete', 'id' => $model->id],
                                 [
-                                    'class' => 'btn btn-sm btn-default',
+                                    'class' => 'btn btn-sm btn-secondary',
                                     'title' => 'حذف',
                                     'style' => 'border-radius:8px;width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;color:#dc2626',
-                                    'data-toggle' => 'tooltip',
+                                    'data-bs-toggle' => 'tooltip',
                                     'data-confirm' => 'هل أنت متأكد من حذف هذا التقييم؟',
                                     'data-method' => 'post',
                                     'data-pjax' => '1',
@@ -255,10 +255,15 @@ $statusMap = [
 
 <?php
 $js = <<<JS
-$('[data-toggle="tooltip"]').tooltip({container: 'body', placement: 'top'});
-$(document).on('pjax:complete', function() {
-    $('[data-toggle="tooltip"]').tooltip({container: 'body', placement: 'top'});
-});
+function initHrEvalTooltips() {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        var t = bootstrap.Tooltip.getInstance(el);
+        if (t) { t.dispose(); }
+        new bootstrap.Tooltip(el, { container: 'body', placement: 'top' });
+    });
+}
+initHrEvalTooltips();
+$(document).on('pjax:complete', function () { initHrEvalTooltips(); });
 JS;
 $this->registerJs($js, \yii\web\View::POS_READY);
 ?>

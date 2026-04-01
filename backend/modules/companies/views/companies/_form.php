@@ -234,7 +234,7 @@ use common\helper\Permissions;
                 <?php if ($canSubmit): ?>
                     <div class="inv-card">
                         <div class="inv-submit-bar">
-                            <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+                            <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
                             <?= Html::submitButton($model->isNewRecord ? 'إضافة مُستثمر' : 'حفظ التعديلات', [
                                 'class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary'
                             ]) ?>

@@ -131,9 +131,9 @@ $profitMargin = $totalRevenue > 0 ? round(($netIncome / $totalRevenue) * 100, 1)
             <div class="fs-toolbar">
                 <?= Html::a('<i class="fa fa-file-pdf-o"></i> تصدير قائمة الدخل', ['export-single-pdf', 'type' => 'income-statement', 'fiscal_year_id' => $fiscalYearId, 'date_from' => $dateFrom, 'date_to' => $dateTo], ['class' => 'btn btn-danger btn-sm', 'target' => '_blank']) ?>
                 <?= Html::a('<i class="fa fa-book"></i> البيانات المالية الكاملة', ['export-pdf', 'fiscal_year_id' => $fiscalYearId, 'date_to' => $dateTo], ['class' => 'btn btn-warning btn-sm', 'target' => '_blank', 'style' => 'color:#fff']) ?>
-                <?= Html::a('<i class="fa fa-university"></i> المركز المالي', ['balance-sheet', 'fiscal_year_id' => $fiscalYearId], ['class' => 'btn btn-default btn-sm', 'style' => 'background:rgba(255,255,255,0.15);color:#fff;border:none']) ?>
-                <?= Html::a('<i class="fa fa-balance-scale"></i> ميزان المراجعة', ['trial-balance', 'fiscal_year_id' => $fiscalYearId], ['class' => 'btn btn-default btn-sm', 'style' => 'background:rgba(255,255,255,0.15);color:#fff;border:none']) ?>
-                <?= Html::a('<i class="fa fa-line-chart"></i> التدفقات النقدية', ['cash-flow', 'fiscal_year_id' => $fiscalYearId], ['class' => 'btn btn-default btn-sm', 'style' => 'background:rgba(255,255,255,0.15);color:#fff;border:none']) ?>
+                <?= Html::a('<i class="fa fa-university"></i> المركز المالي', ['balance-sheet', 'fiscal_year_id' => $fiscalYearId], ['class' => 'btn btn-secondary btn-sm', 'style' => 'background:rgba(255,255,255,0.15);color:#fff;border:none']) ?>
+                <?= Html::a('<i class="fa fa-balance-scale"></i> ميزان المراجعة', ['trial-balance', 'fiscal_year_id' => $fiscalYearId], ['class' => 'btn btn-secondary btn-sm', 'style' => 'background:rgba(255,255,255,0.15);color:#fff;border:none']) ?>
+                <?= Html::a('<i class="fa fa-line-chart"></i> التدفقات النقدية', ['cash-flow', 'fiscal_year_id' => $fiscalYearId], ['class' => 'btn btn-secondary btn-sm', 'style' => 'background:rgba(255,255,255,0.15);color:#fff;border:none']) ?>
             </div>
         </div>
     </div>

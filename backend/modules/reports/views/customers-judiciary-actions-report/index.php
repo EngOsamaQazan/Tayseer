@@ -4,15 +4,11 @@
  */
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
 use backend\widgets\ExportButtons;
 
 $this->title = 'الحركات القضائية للعملاء';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
-
-CrudAsset::register($this);
 
 $court = Yii::$app->cache->getOrSet("l1", function () {
     return Yii::$app->db->createCommand(Yii::$app->params['court_query'])->queryAll();
@@ -20,6 +16,12 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
 ?>
 
 <?= $this->render('@app/views/layouts/_reports-tabs', ['activeTab' => 'actions']) ?>
+<?php
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
+?>
 
 <style>
 .rp-page { padding: 16px 0; }
@@ -84,7 +86,7 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">
                 <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class' => 'btn btn-primary']) ?>
-                <?= Html::a('<i class="fa fa-eraser"></i> مسح', ['customers-judiciary-actions'], ['class' => 'btn btn-default', 'style' => 'border-radius: 8px;']) ?>
+                <?= Html::a('<i class="fa fa-eraser"></i> مسح', ['customers-judiciary-actions'], ['class' => 'btn btn-secondary', 'style' => 'border-radius: 8px;']) ?>
             </div>
             <?php yii\widgets\ActiveForm::end() ?>
         </div>
@@ -103,7 +105,7 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
             'responsive' => true,
             'toolbar' => [
                 ['content' =>
-                    Html::a('<i class="fa fa-repeat"></i>', ['customers-judiciary-actions'], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
+                    Html::a('<i class="fa fa-refresh"></i>', ['customers-judiciary-actions'], ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => '/reports/reports/export-jud-actions-excel',
@@ -126,5 +128,19 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
     <?php endif; ?>
 </div>
 
-<?php Modal::begin(["id" => "ajaxCrudModal", "footer" => ""]) ?>
-<?php Modal::end(); ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>

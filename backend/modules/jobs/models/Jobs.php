@@ -187,9 +187,9 @@ class Jobs extends \yii\db\ActiveRecord
     public function getStatusBadge()
     {
         if ($this->status == self::STATUS_ACTIVE) {
-            return '<span class="label label-success">فعال</span>';
+            return '<span class="badge bg-success">فعال</span>';
         }
-        return '<span class="label label-danger">غير فعال</span>';
+        return '<span class="badge bg-danger">غير فعال</span>';
     }
 
     /**

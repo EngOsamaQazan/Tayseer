@@ -42,12 +42,12 @@ return [
         'urlCreator' => function($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
-        'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip'],
-        'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip'],
+        'viewOptions' => ['title' => 'عرض', 'data-bs-toggle' => 'tooltip'],
+        'updateOptions' => ['title' => 'تعديل', 'data-bs-toggle' => 'tooltip'],
         'deleteOptions' => ['title' => 'حذف',
             'data-confirm' => false, 'data-method' => false,
             'data-request-method' => 'post',
-            'data-toggle' => 'tooltip',
+            'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => 'هل أنت متأكد؟',
             'data-confirm-message' => 'هل أنت متأكد من حذف هذا العنصر؟'],
     ],

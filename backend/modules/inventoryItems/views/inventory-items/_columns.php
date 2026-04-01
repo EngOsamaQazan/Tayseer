@@ -8,6 +8,7 @@ return [
     [
         'class' => '\kartik\grid\SerialColumn',
         'width' => '40px',
+        'contentOptions' => ['data-label' => '#'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
@@ -15,6 +16,7 @@ return [
         'label' => 'اسم الصنف',
         'vAlign' => 'middle',
         'headerOptions' => ['style' => 'min-width:140px'],
+        'contentOptions' => ['data-label' => 'اسم الصنف'],
         'format' => 'raw',
         'value' => function ($model) {
             $name = Html::encode($model->item_name);
@@ -27,13 +29,14 @@ return [
         'attribute' => 'item_barcode',
         'label' => 'الباركود',
         'vAlign' => 'middle',
-        'contentOptions' => ['style' => 'direction:ltr; font-family:monospace; font-weight:600'],
+        'contentOptions' => ['data-label' => 'الباركود', 'style' => 'direction:ltr; font-family:monospace; font-weight:600'],
     ],
     [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المخزون',
         'vAlign' => 'middle',
         'width' => '100px',
+        'contentOptions' => ['data-label' => 'المخزون'],
         'format' => 'raw',
         'value' => function ($model) {
             $stock = $model->getTotalStock();
@@ -52,6 +55,7 @@ return [
         'label' => 'السعر',
         'vAlign' => 'middle',
         'width' => '90px',
+        'contentOptions' => ['data-label' => 'السعر'],
         'format' => 'raw',
         'value' => function ($model) {
             return $model->unit_price ? number_format($model->unit_price, 2) : '<span style="color:#cbd5e1">—</span>';
@@ -63,6 +67,7 @@ return [
         'label' => 'الحالة',
         'vAlign' => 'middle',
         'width' => '130px',
+        'contentOptions' => ['data-label' => 'الحالة'],
         'filter' => InventoryItems::getStatusList(),
         'format' => 'raw',
         'value' => function ($model) {
@@ -84,6 +89,7 @@ return [
         'attribute' => 'created_by',
         'label' => 'أنشئ بواسطة',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'أنشئ بواسطة'],
         'value' => 'createdBy.username',
     ],
     [
@@ -91,6 +97,7 @@ return [
         'label' => 'التاريخ',
         'attribute' => 'created_at',
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => 'التاريخ'],
         'format' => 'raw',
         'value' => function ($model) {
             return $model->created_at ? date('Y-m-d', $model->created_at) : '-';
@@ -103,6 +110,7 @@ return [
         'dropdown' => false,
         'vAlign' => 'middle',
         'width' => '200px',
+        'contentOptions' => ['data-label' => ''],
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
@@ -123,11 +131,11 @@ return [
             'update' => Permissions::can(Permissions::INVITEM_UPDATE),
             'delete' => Permissions::can(Permissions::INVITEM_DELETE),
         ],
-        'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-default', 'role' => 'modal-remote'],
-        'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-info', 'role' => 'modal-remote'],
+        'viewOptions' => ['title' => 'عرض', 'data-bs-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-secondary', 'role' => 'modal-remote', 'data-pjax' => 0],
+        'updateOptions' => ['title' => 'تعديل', 'data-bs-toggle' => 'tooltip', 'class' => 'btn btn-xs btn-info', 'role' => 'modal-remote', 'data-pjax' => 0],
         'deleteOptions' => [
             'title' => 'حذف', 'data-confirm' => false, 'data-method' => false,
-            'data-request-method' => 'post', 'data-toggle' => 'tooltip',
+            'data-request-method' => 'post', 'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => 'تأكيد الحذف', 'data-confirm-message' => 'هل أنت متأكد من حذف هذا الصنف؟',
             'class' => 'btn btn-xs btn-danger',
         ],

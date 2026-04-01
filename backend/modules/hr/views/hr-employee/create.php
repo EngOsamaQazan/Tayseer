@@ -21,7 +21,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/hr.css', ['depends' => ['yi
 
     <div style="margin-bottom:16px;">
         <?= Html::a('<i class="fa fa-arrow-right"></i> العودة إلى سجل الموظفين', ['index'], [
-            'class' => 'btn btn-default btn-sm',
+            'class' => 'btn btn-secondary btn-sm',
             'style' => 'border-radius:8px',
         ]) ?>
     </div>

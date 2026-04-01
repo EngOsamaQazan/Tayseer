@@ -162,7 +162,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
         </div>
         <div class="jv-actions">
             <?= Html::a('<i class="fa fa-pencil"></i> تعديل القضية', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-secondary']) ?>
         </div>
     </div>
 
@@ -546,7 +546,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
             <?php endforeach; ?>
         </div>
         <?= Html::a('<i class="fa fa-list"></i> عرض جميع المراسلات', ['/diwan/diwan/correspondence-index', 'DiwanCorrespondenceSearch[related_record_id]' => $model->id, 'DiwanCorrespondenceSearch[related_module]' => 'judiciary'], [
-            'class' => 'btn btn-sm btn-default',
+            'class' => 'btn btn-sm btn-secondary',
             'style' => 'margin-top:12px;border-radius:8px;font-size:12px;font-weight:600',
         ]) ?>
     </div>

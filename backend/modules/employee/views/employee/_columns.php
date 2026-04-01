@@ -150,6 +150,7 @@ return [
         'class' => 'kartik\grid\ActionColumn',
         'dropdown' => false,
         'vAlign'=>'middle',
+        'contentOptions' => ['data-label' => ''],
         'urlCreator' => function($action, $model, $key, $index) { 
                 return Url::to([$action,'id'=>$key]);
         },
@@ -158,12 +159,12 @@ return [
             'update' => Permissions::can(Permissions::EMP_UPDATE),
             'delete' => Permissions::can(Permissions::EMP_DELETE),
         ],
-        'viewOptions'=>['title'=>'View','data-toggle'=>'tooltip'],
-        'updateOptions'=>['title'=>'Update', 'data-toggle'=>'tooltip'],
+        'viewOptions'=>['title'=>'View','data-bs-toggle'=>'tooltip'],
+        'updateOptions'=>['title'=>'Update', 'data-bs-toggle'=>'tooltip'],
         'deleteOptions'=>['title'=>'Delete',
                           'data-confirm'=>false, 'data-method'=>false,// for overide yii data api
                           'data-request-method'=>'post',
-                          'data-toggle'=>'tooltip',
+                          'data-bs-toggle'=>'tooltip',
                           'data-confirm-title'=>'Are you sure?',
                           'data-confirm-message'=>'Are you sure want to delete this item'], 
     ],

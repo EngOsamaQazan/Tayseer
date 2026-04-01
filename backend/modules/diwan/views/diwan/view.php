@@ -39,10 +39,10 @@ $typeCls = $model->transaction_type === 'استلام' ? 'dw-badge--recv' : 'dw-
         </div>
         <div class="dw-view-acts">
             <?= Html::a('<i class="fa fa-print"></i> طباعة', ['receipt', 'id' => $model->id], [
-                'class' => 'btn btn-default btn-sm', 'style' => 'border-radius:6px;', 'target' => '_blank',
+                'class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:6px;', 'target' => '_blank',
             ]) ?>
             <?= Html::a('<i class="fa fa-arrow-right"></i> رجوع', ['transactions'], [
-                'class' => 'btn btn-default btn-sm', 'style' => 'border-radius:6px;',
+                'class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:6px;',
             ]) ?>
         </div>
     </div>
@@ -98,7 +98,7 @@ $typeCls = $model->transaction_type === 'استلام' ? 'dw-badge--recv' : 'dw-
                     <td style="font-weight:700;"><?= Html::encode($detail->contract_number) ?></td>
                     <td>
                         <?= Html::a('<i class="fa fa-history"></i> السجل', ['document-history', 'contract_number' => $detail->contract_number], [
-                            'class' => 'btn btn-xs btn-default',
+                            'class' => 'btn btn-xs btn-secondary',
                         ]) ?>
                     </td>
                 </tr>

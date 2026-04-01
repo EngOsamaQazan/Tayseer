@@ -33,9 +33,9 @@ use wbraganca\dynamicform\DynamicFormWidget;
     ]);
     ?>
     <?= $form->field($model, 'total')->textInput() ?>
-    <div class="panel panel-default">
-        <div class="panel-heading"><h4><i class="glyphicon glyphicon-envelope"></i> item's</h4></div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0"><i class="fa fa-envelope"></i> item's</h4></div>
+        <div class="card-body">
             <?php
             DynamicFormWidget::begin([
                 'widgetContainer' => 'dynamicform_wrapper', // required: only alphanumeric characters plus "_" [A-Za-z0-9_]
@@ -55,9 +55,9 @@ use wbraganca\dynamicform\DynamicFormWidget;
 
             <div class="container-items">
                 <?php foreach ($modelsItems as $i => $modelItems): ?>
-                    <div class="addrres-item panel panel-default"><!-- widgetBody -->
+                    <div class="addrres-item card"><!-- widgetBody -->
 
-                        <div class="panel-body">
+                        <div class="card-body">
                             <?php
                             // necessary for update action.
                             if (!$modelItems->isNewRecord) {
@@ -95,7 +95,7 @@ use wbraganca\dynamicform\DynamicFormWidget;
                                 </div>
                                 <div class="col-sm-6">
                                     <button type="button" class="addrres-remove-item btn btn-danger btn-xs" style="margin-top: 30px;">
-                                        <i class="glyphicon glyphicon-minus"></i>
+                                        <i class="fa fa-minus"></i>
                                     </button>
                                 </div>
                             </div><!-- .row -->
@@ -105,7 +105,7 @@ use wbraganca\dynamicform\DynamicFormWidget;
 
             </div>
             <div class="pull-right">
-                <button type="button" class="addrres-add-item btn btn-success btn-xs"><i class="glyphicon glyphicon-plus"></i></button>
+                <button type="button" class="addrres-add-item btn btn-success btn-xs"><i class="fa fa-plus"></i></button>
 
             </div>
             <?php DynamicFormWidget::end(); ?>

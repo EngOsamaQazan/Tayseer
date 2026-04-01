@@ -1,7 +1,6 @@
 <?php
 
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 
 /* @var $this \yii\web\View */
 /* @var $content string */

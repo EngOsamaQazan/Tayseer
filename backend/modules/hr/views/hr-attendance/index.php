@@ -7,10 +7,14 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
 use backend\helpers\FlatpickrWidget;
-use yii\bootstrap\Modal;
 use backend\helpers\NameHelper;
 
 $this->title = 'لوحة الحضور والانصراف';
+
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 $presentCount = (int) ($todayStats['present'] ?? 0);
 $absentCount  = (int) ($todayStats['absent'] ?? 0);
@@ -111,8 +115,8 @@ $statusMap = [
         <div class="hr-actions">
             <?= Html::button('<i class="fa fa-plus"></i> تسجيل حضور يدوي', [
                 'class' => 'btn btn-primary btn-sm',
-                'data-toggle' => 'modal',
-                'data-target' => '#manual-attendance-modal',
+                'data-bs-toggle' => 'modal',
+                'data-bs-target' => '#manual-attendance-modal',
             ]) ?>
         </div>
     </div>
@@ -316,7 +320,7 @@ $statusMap = [
                     'buttons' => [
                         'update' => function ($url, $model) {
                             return Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $model->id], [
-                                'class' => 'btn btn-xs btn-default',
+                                'class' => 'btn btn-sm btn-secondary',
                                 'title' => 'تعديل',
                             ]);
                         },
@@ -327,19 +331,23 @@ $statusMap = [
     </div>
 </div>
 
-<!-- Manual Attendance Modal -->
-<?php Modal::begin([
-    'id' => 'manual-attendance-modal',
-    'header' => '<h4 class="modal-title"><i class="fa fa-plus-circle"></i> تسجيل حضور يدوي</h4>',
-    'size' => Modal::SIZE_DEFAULT,
-]); ?>
-<div id="manual-attendance-modal-content">
-    <div class="text-center" style="padding:30px">
-        <i class="fa fa-spinner fa-spin fa-2x"></i>
-        <p style="margin-top:10px">جارٍ التحميل...</p>
+<!-- Manual Attendance Modal (Bootstrap 5) -->
+<div class="modal fade" id="manual-attendance-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fa fa-plus-circle"></i> تسجيل حضور يدوي</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body" id="manual-attendance-modal-content">
+                <div class="text-center" style="padding:30px">
+                    <i class="fa fa-spinner fa-spin fa-2x"></i>
+                    <p style="margin-top:10px">جارٍ التحميل...</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-<?php Modal::end(); ?>
 
 <?php
 $createUrl = Url::to(['create']);

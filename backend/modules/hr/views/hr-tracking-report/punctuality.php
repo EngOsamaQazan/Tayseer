@@ -47,7 +47,7 @@ $employeeTypes = ['office' => 'مكتبي', 'field' => 'ميداني', 'sales' =
 <div class="rp-page">
     <div class="rp-header">
         <h1><i class="fa fa-trophy"></i> <?= $this->title ?></h1>
-        <a href="<?= Url::to(['index']) ?>" class="btn btn-default btn-sm"><i class="fa fa-arrow-right"></i> لوحة التحكم</a>
+        <a href="<?= Url::to(['index']) ?>" class="btn btn-secondary btn-sm"><i class="fa fa-arrow-right"></i> لوحة التحكم</a>
     </div>
 
     <form method="get" class="rp-filter">

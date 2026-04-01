@@ -580,7 +580,7 @@ class InventoryInvoicesController extends Controller
             return [
                 'title'   => 'أمر شراء #' . $id,
                 'content' => $this->renderAjax('view', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -603,7 +603,7 @@ class InventoryInvoicesController extends Controller
                 return [
                     'title'   => 'أمر شراء جديد',
                     'content' => $this->renderAjax('create', ['model' => $model]),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -612,13 +612,13 @@ class InventoryInvoicesController extends Controller
                     'forceReload' => '#crud-datatable-pjax',
                     'title'       => 'أمر شراء جديد',
                     'content'     => '<span class="text-success">تم إنشاء أمر الشراء بنجاح</span>',
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']),
                 ];
             }
             return [
                 'title'   => 'أمر شراء جديد',
                 'content' => $this->renderAjax('create', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -697,7 +697,7 @@ class InventoryInvoicesController extends Controller
                 return [
                     'title'   => 'تعديل أمر الشراء #' . $id,
                     'content' => $this->renderAjax('update', ['model' => $model]),
-                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                                  Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -706,13 +706,13 @@ class InventoryInvoicesController extends Controller
                     'forceReload' => '#crud-datatable-pjax',
                     'title'       => 'أمر الشراء #' . $id,
                     'content'     => $this->renderAjax('view', ['model' => $model]),
-                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                    'footer'      => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']),
                 ];
             }
             return [
                 'title'   => 'تعديل أمر الشراء #' . $id,
                 'content' => $this->renderAjax('update', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                              Html::button('حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }

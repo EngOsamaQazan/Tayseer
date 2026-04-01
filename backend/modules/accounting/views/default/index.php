@@ -83,7 +83,7 @@ $this->params['breadcrumbs'][] = $this->title;
     <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-clock-o"></i> آخر القيود</h3>
         <div class="box-tools">
-            <?= Html::a('عرض الكل <i class="fa fa-arrow-left"></i>', ['/accounting/journal-entry/index'], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('عرض الكل <i class="fa fa-arrow-left"></i>', ['/accounting/journal-entry/index'], ['class' => 'btn btn-secondary btn-sm']) ?>
         </div>
     </div>
     <div class="box-body no-padding">

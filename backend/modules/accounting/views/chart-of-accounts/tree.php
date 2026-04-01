@@ -20,13 +20,15 @@ function renderBranch($parentId, $tree, $typeColors) {
         $hasChildren = isset($tree[$account->id]);
         $icon = $hasChildren ? 'fa-folder-open text-warning' : 'fa-file-text-o text-muted';
         $typeColor = $typeColors[$account->type] ?? 'default';
+        $badgeMap = ['primary' => 'badge bg-primary', 'danger' => 'badge bg-danger', 'info' => 'badge bg-info', 'success' => 'badge bg-success', 'warning' => 'badge bg-warning text-dark', 'default' => 'badge bg-secondary'];
+        $typeBadgeCls = $badgeMap[$typeColor] ?? 'badge bg-secondary';
 
         $html .= '<li class="acc-tree-item">';
         $html .= '<div class="acc-tree-node">';
         $html .= '<i class="fa ' . $icon . '"></i> ';
         $html .= '<span class="acc-code">' . Html::encode($account->code) . '</span> ';
         $html .= '<span class="acc-name">' . Html::encode($account->name_ar) . '</span> ';
-        $html .= '<span class="label label-' . $typeColor . ' label-xs">' . Account::getTypes()[$account->type] . '</span>';
+        $html .= '<span class="' . $typeBadgeCls . '" style="font-size:0.75em">' . Account::getTypes()[$account->type] . '</span>';
         if ($account->opening_balance != 0) {
             $html .= ' <span class="acc-balance">' . number_format($account->opening_balance, 2) . '</span>';
         }
@@ -95,7 +97,7 @@ $typeColors = [
     <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-tree"></i> <?= $this->title ?></h3>
         <div class="box-tools">
-            <?= Html::a('<i class="fa fa-list"></i> عرض جدولي', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('<i class="fa fa-list"></i> عرض جدولي', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
             <?= Html::a('<i class="fa fa-plus"></i> إضافة حساب', ['create'], ['class' => 'btn btn-success btn-sm']) ?>
         </div>
     </div>

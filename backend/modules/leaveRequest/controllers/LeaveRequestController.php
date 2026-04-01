@@ -118,7 +118,7 @@ class LeaveRequestController extends Controller
                 'content' => $this->renderAjax('view', [
                     'model' => $this->findModel($id),
                 ]),
-                'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                     Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
             ];
         } else {
@@ -150,7 +150,7 @@ class LeaveRequestController extends Controller
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post())) {
@@ -174,7 +174,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                             'content' => $this->renderAjax('create', [
                                 'model' => $model,
                             ]),
-                            'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                                 Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                         ];
                     } elseif ($result[0]['Result'] == 0) {
@@ -185,7 +185,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                             'forceReload' => '#crud-datatable-pjax',
                             'title' => "Create new LeaveRequest",
                             'content' => '<span class="text-success">Create LeaveRequest success</span>',
-                            'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                                 Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                         ];
                     } else {
@@ -196,7 +196,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                             'forceReload' => '#crud-datatable-pjax',
                             'title' => "Create new LeaveRequest",
                             'content' => '<span class="text-success">Create LeaveRequest success</span>',
-                            'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                                 Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                         ];
                     }
@@ -207,7 +207,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                         'content' => $this->renderAjax('create', [
                             'model' => $model,
                         ]),
-                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                             Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                     ];
                 }
@@ -215,7 +215,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                     'forceReload' => '#crud-datatable-pjax',
                     'title' => "Create new LeaveRequest",
                     'content' => '<span class="text-success">Create LeaveRequest success</span>',
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::a('Create More', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                 ];
             } else {
@@ -224,7 +224,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                     'content' => $this->renderAjax('create', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }
@@ -290,7 +290,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             } else if ($model->load($request->post())) {
@@ -315,7 +315,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                             'content' => $this->renderAjax('update', [
                                 'model' => $model,
                             ]),
-                            'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                                 Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                         ];
                     } elseif ($result[0]['Result'] == 0) {
@@ -324,7 +324,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                             'forceReload' => '#crud-datatable-pjax',
                             'title' => "LeaveRequest #" . $id,
                             'content' => $this->redirectAjax('index'),
-                            'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                                 Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                         ];
                     } else {
@@ -333,7 +333,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                             'forceReload' => '#crud-datatable-pjax',
                             'title' => "LeaveRequest #" . $id,
                             'content' => $this->redirectAjax('index'),
-                            'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                            'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                                 Html::a('Edit', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote'])
                         ];
                     }
@@ -344,7 +344,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                         'content' => $this->renderAjax('update', [
                             'model' => $model,
                         ]),
-                        'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                        'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                             Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                     ];
                 }
@@ -355,7 +355,7 @@ AND created_by = $userID  AND leave_policy = $model->leave_policy
                     'content' => $this->renderAjax('update', [
                         'model' => $model,
                     ]),
-                    'footer' => Html::button('Close', ['class' => 'btn btn-default pull-left', 'data-dismiss' => "modal"]) .
+                    'footer' => Html::button('Close', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => "modal"]) .
                         Html::button('Save', ['class' => 'btn btn-primary', 'type' => "submit"])
                 ];
             }

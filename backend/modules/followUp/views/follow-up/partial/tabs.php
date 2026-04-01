@@ -13,21 +13,21 @@ $contractModel = $contractCalculations->contract_model;
 
 <!-- ═══ شريط التبويبات ═══ -->
 <ul class="nav nav-tabs" style="margin-bottom:15px">
-    <li><a data-toggle="tab" href="#tab-phones"><i class="fa fa-phone"></i> أرقام الهواتف</a></li>
-    <li><a data-toggle="tab" href="#tab-financial"><i class="fa fa-money"></i> البيانات المالية</a></li>
-    <li><a data-toggle="tab" href="#tab-payments"><i class="fa fa-credit-card"></i> الدفعات</a></li>
-    <li><a data-toggle="tab" href="#tab-settlements"><i class="fa fa-balance-scale"></i> التسويات</a></li>
-    <li><a data-toggle="tab" href="#tab-judiciary-actions"><i class="fa fa-gavel"></i> إجراءات قضائية</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-phones"><i class="fa fa-phone"></i> أرقام الهواتف</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-financial"><i class="fa fa-money"></i> البيانات المالية</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-payments"><i class="fa fa-credit-card"></i> الدفعات</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-settlements"><i class="fa fa-balance-scale"></i> التسويات</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-judiciary-actions"><i class="fa fa-gavel"></i> إجراءات قضائية</a></li>
 
     <!-- قائمة الإجراءات المنسدلة -->
-    <li class="dropdown">
-        <a class="dropdown-toggle" data-toggle="dropdown" href="#">
+    <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">
             <i class="fa fa-cogs"></i> إجراءات <span class="caret"></span>
         </a>
         <ul class="dropdown-menu">
-            <li><?= Html::a('<i class="fa fa-image"></i> صور العملاء', '#', ['data-toggle' => 'modal', 'data-target' => '#customerImagesModal']) ?></li>
-            <li><?= Html::a('<i class="fa fa-exchange"></i> تغيير حالة العقد', '#', ['data-toggle' => 'modal', 'data-target' => '#changeStatusModal']) ?></li>
-            <li><?= Html::a('<i class="fa fa-check-square-o"></i> للتدقيق', '#', ['data-toggle' => 'modal', 'data-target' => '#auditModal']) ?></li>
+            <li><?= Html::a('<i class="fa fa-image"></i> صور العملاء', '#', ['data-bs-toggle' => 'modal', 'data-bs-target' => '#customerImagesModal']) ?></li>
+            <li><?= Html::a('<i class="fa fa-exchange"></i> تغيير حالة العقد', '#', ['data-bs-toggle' => 'modal', 'data-bs-target' => '#changeStatusModal']) ?></li>
+            <li><?= Html::a('<i class="fa fa-check-square-o"></i> للتدقيق', '#', ['data-bs-toggle' => 'modal', 'data-bs-target' => '#auditModal']) ?></li>
             <li class="divider"></li>
             <li><?= Html::a('<i class="fa fa-print"></i> كشف حساب', ['printer', 'contract_id' => $contract_id], ['target' => '_blank']) ?></li>
             <li><?= Html::a('<i class="fa fa-file-text-o"></i> براءة الذمة', ['clearance', 'contract_id' => $contract_id], ['target' => '_blank']) ?></li>

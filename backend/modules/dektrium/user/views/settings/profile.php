@@ -31,17 +31,17 @@ $this->params['breadcrumbs'][] = $this->title;
         <?= $this->render('_menu') ?>
     </div>
     <div class="col-md-9">
-        <div class="panel panel-default">
-            <div class="panel-heading">
+        <div class="card mb-3">
+            <div class="card-header">
                 <?= Html::encode($this->title) ?>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <?php $form = ActiveForm::begin([
                     'id' => 'profile-form',
-                    'options' => ['class' => 'form-horizontal'],
+                    'options' => ['class' => ''],
                     'fieldConfig' => [
-                        'template' => "{label}\n<div class=\"col-lg-9\">{input}</div>\n<div class=\"col-sm-offset-3 col-lg-9\">{error}\n{hint}</div>",
-                        'labelOptions' => ['class' => 'col-lg-3 control-label'],
+                        'template' => "{label}\n<div class=\"col-lg-9\">{input}</div>\n<div class=\"offset-lg-3 col-lg-9\">{error}\n{hint}</div>",
+                        'labelOptions' => ['class' => 'col-lg-3 col-form-label'],
                     ],
                     'enableAjaxValidation' => true,
                     'enableClientValidation' => false,
@@ -72,8 +72,8 @@ $this->params['breadcrumbs'][] = $this->title;
 
                 <?= $form->field($model, 'bio')->textarea() ?>
 
-                <div class="form-group">
-                    <div class="col-lg-offset-3 col-lg-9">
+                <div class="row mb-3">
+                    <div class="offset-lg-3 col-lg-9">
                         <?= Html::submitButton(Yii::t('user', 'Save'), ['class' => 'btn btn-block btn-success']) ?>
                         <br>
                     </div>

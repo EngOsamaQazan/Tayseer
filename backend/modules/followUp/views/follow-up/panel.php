@@ -3,15 +3,13 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\Json;
-use yii\bootstrap\Modal;
-use johnitvn\ajaxcrud\CrudAsset;
 use common\helper\Permissions;
 use backend\helpers\NameHelper;
 use backend\helpers\PhoneInputAsset;
 
-CrudAsset::register($this);
 PhoneInputAsset::register($this);
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=' . Yii::$app->params['assetVersion'], [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
 
@@ -143,7 +141,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     <?php if ($pi > 0): ?><span style="color:#CBD5E1;font-size:10px">|</span><?php endif; ?>
                     <span style="display:inline-flex;align-items:center;gap:3px">
                         <i class="fa <?= $isClient ? 'fa-user' : 'fa-shield' ?>" style="font-size:9px;color:<?= $isClient ? '#BE185D' : '#2563EB' ?>"></i>
-                        <a href="javascript:void(0)" class="custmer-popup ocp-status-bar__customer-name" data-target="#customerInfoModal" data-toggle="modal" customer-id="<?= $partyCust->id ?>" title="<?= Html::encode($partyCust->name) ?> (<?= $isClient ? 'مشتري' : 'كفيل' ?>)" style="cursor:pointer;font-size:12px"><?= Html::encode(NameHelper::short($partyCust->name)) ?></a>
+                        <a href="javascript:void(0)" class="custmer-popup ocp-status-bar__customer-name" data-bs-target="#customerInfoModal" data-bs-toggle="modal" customer-id="<?= $partyCust->id ?>" title="<?= Html::encode($partyCust->name) ?> (<?= $isClient ? 'مشتري' : 'كفيل' ?>)" style="cursor:pointer;font-size:12px"><?= Html::encode(NameHelper::short($partyCust->name)) ?></a>
                     </span>
                 <?php
                     endforeach;
@@ -458,7 +456,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                         <div class="ocp-action-grid ocp-hidden" id="ocp-more-actions" style="margin-top:var(--ocp-space-md)">
                             <?php if ($hasCase): ?>
                             <?php $judiciaryModel = $judiciaryData['judiciary'] ?? null; ?>
-                            <a class="ocp-action-btn" href="<?= $judiciaryModel ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]) : '#' ?>" role="modal-remote" style="text-decoration:none">
+                            <a class="ocp-action-btn" href="<?= $judiciaryModel ? Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]) : '#' ?>" role="modal-remote" data-pjax="0" style="text-decoration:none">
                                 <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-plus-circle"></i></div>
                                 <span class="ocp-action-btn__label">إضافة إجراء قضائي</span>
                             </a>
@@ -475,19 +473,19 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                                 <div class="ocp-action-btn__icon ocp-action-btn__icon--freeze"><i class="fa fa-pause-circle"></i></div>
                                 <span class="ocp-action-btn__label">تجميد المتابعة</span>
                             </button>
-                            <button class="ocp-action-btn" onclick="$('#customerImagesModal').modal('show')">
+                            <button class="ocp-action-btn" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('customerImagesModal')).show()">
                                 <div class="ocp-action-btn__icon" style="background:#E8F5E9;color:#388E3C"><i class="fa fa-image"></i></div>
                                 <span class="ocp-action-btn__label">صور العملاء</span>
                             </button>
-                            <button class="ocp-action-btn" onclick="$('#changeStatusModal').modal('show')">
+                            <button class="ocp-action-btn" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('changeStatusModal')).show()">
                                 <div class="ocp-action-btn__icon" style="background:#FFF3E0;color:#E65100"><i class="fa fa-exchange"></i></div>
                                 <span class="ocp-action-btn__label">تغيير حالة العقد</span>
                             </button>
-                            <button class="ocp-action-btn" onclick="$('#auditModal').modal('show')">
+                            <button class="ocp-action-btn" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('auditModal')).show()">
                                 <div class="ocp-action-btn__icon" style="background:#E3F2FD;color:#1565C0"><i class="fa fa-check-square-o"></i></div>
                                 <span class="ocp-action-btn__label">للتدقيق</span>
                             </button>
-                            <button class="ocp-action-btn" onclick="$('#settlementModal').modal('show')">
+                            <button class="ocp-action-btn" onclick="bootstrap.Modal.getOrCreateInstance(document.getElementById('settlementModal')).show()">
                                 <div class="ocp-action-btn__icon" style="background:#F3E5F5;color:#7B1FA2"><i class="fa fa-balance-scale"></i></div>
                                 <span class="ocp-action-btn__label">إضافة تسوية</span>
                             </button>
@@ -557,8 +555,22 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
     <?= $this->render('modals.php', ['contractCalculations' => $contractCalculations, 'contract_id' => $contract_id]) ?>
 
     <?php // ═══ AJAX CRUD MODAL (for phone numbers, settlements etc.) ═══ ?>
-    <?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
-    <?php Modal::end() ?>
+    <div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align:center;padding:40px">
+                        <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                    </div>
+                </div>
+                <div class="modal-footer"></div>
+            </div>
+        </div>
+    </div>
 
     <?php
     $this->registerJs(<<<'JS'

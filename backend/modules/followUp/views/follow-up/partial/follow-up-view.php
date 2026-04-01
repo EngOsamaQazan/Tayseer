@@ -2,10 +2,7 @@
 
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
-use johnitvn\ajaxcrud\BulkButtonWidget;
 use yii\widgets\ActiveForm;
 use yii\data\ActiveDataProvider;
 use backend\modules\contractInstallment\models\ContractInstallment;
@@ -22,7 +19,6 @@ use yii\base\View;
 /* @var $form yii\widgets\ActiveForm */
 
 $contractCalculations = new ContractCalculations($contract_id);
-CrudAsset::register($this);
 ?>
 
 

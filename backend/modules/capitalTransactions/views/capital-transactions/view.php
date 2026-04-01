@@ -119,7 +119,7 @@ if ($isDeposit) {
         <?php endif ?>
 
         <div class="ct-view-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index', 'company_id' => $model->company_id], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index', 'company_id' => $model->company_id], ['class' => 'btn btn-secondary']) ?>
             <?php if ($canManage): ?>
                 <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
                 <?= Html::a('<i class="fa fa-trash"></i> حذف', ['delete', 'id' => $model->id], [

@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-use yii\bootstrap\Alert;
+use yii\bootstrap5\Alert;
 
 /**
  * @var dektrium\user\Module $module
@@ -18,7 +18,7 @@ use yii\bootstrap\Alert;
 
 <?php if ($module->enableFlashMessages): ?>
     <div class="row">
-        <div class="col-xs-12">
+        <div class="col-12">
             <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
                 <?php if (in_array($type, ['success', 'danger', 'warning', 'info'])): ?>
                     <?= Alert::widget([

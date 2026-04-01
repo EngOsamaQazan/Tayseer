@@ -6,14 +6,15 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
-use yii\bootstrap\Modal;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use johnitvn\ajaxcrud\CrudAsset;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\followUp\helper\ContractCalculations;
 
-CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 $calc = new ContractCalculations($contract_id);
 $isNew = $model->isNewRecord;
 
@@ -38,11 +39,11 @@ if (!$isNew) {
 <!-- حالة العقد -->
 <div class="text-center" style="margin:15px 0">
     <?php
-    $statusColors = ['active' => 'success', 'pending' => 'warning', 'judiciary' => 'danger', 'legal_department' => 'info', 'finished' => 'default', 'canceled' => 'default'];
+    $statusBadgeClass = ['active' => 'bg-success', 'pending' => 'bg-warning text-dark', 'judiciary' => 'bg-danger', 'legal_department' => 'bg-info', 'finished' => 'bg-secondary', 'canceled' => 'bg-secondary'];
     $statusLabels = ['active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء', 'legal_department' => 'قانوني', 'finished' => 'منتهي', 'canceled' => 'ملغي', 'settlement' => 'تسوية'];
     $st = $calc->contract_model->status;
     ?>
-    <span class="label label-<?= $statusColors[$st] ?? 'default' ?>" style="font-size:16px;padding:8px 20px">
+    <span class="badge <?= $statusBadgeClass[$st] ?? 'bg-secondary' ?>" style="font-size:16px;padding:8px 20px">
         حالة العقد: <?= $statusLabels[$st] ?? $st ?>
     </span>
     <?php if ($calc->contract_model->is_can_not_contact == 1): ?>
@@ -118,8 +119,22 @@ $form = ActiveForm::begin($formConfig);
 
 <?php ActiveForm::end() ?>
 
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
-<?php Modal::end() ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
 
 <?= $this->render('modals.php', ['contractCalculations' => $calc, 'contract_id' => $contract_id]) ?>
 

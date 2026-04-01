@@ -33,7 +33,7 @@ $customersCount = $model->getCustomersCount();
                 <?= $model->getStatusBadge() ?>
             </h3>
             <?php if ($model->jobType): ?>
-                <span class="label label-info"><?= Html::encode($model->jobType->name) ?></span>
+                <span class="badge bg-info"><?= Html::encode($model->jobType->name) ?></span>
             <?php endif; ?>
         </div>
         <div class="col-md-4 text-left">
@@ -45,7 +45,7 @@ $customersCount = $model->getCustomersCount();
                     'method' => 'post',
                 ],
             ]) ?>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> رجوع', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> رجوع', ['index'], ['class' => 'btn btn-secondary']) ?>
         </div>
     </div>
 
@@ -92,30 +92,30 @@ $customersCount = $model->getCustomersCount();
     <!-- =============== Tabs =============== -->
     <div class="nav-tabs-custom">
         <ul class="nav nav-tabs">
-            <li class="active">
-                <a href="#tab-info" data-toggle="tab">
+            <li class="nav-item">
+                <a class="nav-link active" href="#tab-info" data-bs-toggle="tab">
                     <i class="fa fa-info-circle"></i> البيانات الأساسية
                 </a>
             </li>
-            <li>
-                <a href="#tab-phones" data-toggle="tab">
+            <li class="nav-item">
+                <a class="nav-link" href="#tab-phones" data-bs-toggle="tab">
                     <i class="fa fa-phone"></i> أرقام الهواتف
                     <span class="badge"><?= count($phones) ?></span>
                 </a>
             </li>
-            <li>
-                <a href="#tab-hours" data-toggle="tab">
+            <li class="nav-item">
+                <a class="nav-link" href="#tab-hours" data-bs-toggle="tab">
                     <i class="fa fa-clock-o"></i> أوقات العمل
                 </a>
             </li>
-            <li>
-                <a href="#tab-ratings" data-toggle="tab">
+            <li class="nav-item">
+                <a class="nav-link" href="#tab-ratings" data-bs-toggle="tab">
                     <i class="fa fa-star"></i> التقييمات
                     <span class="badge"><?= count($ratings) ?></span>
                 </a>
             </li>
-            <li>
-                <a href="#tab-customers" data-toggle="tab">
+            <li class="nav-item">
+                <a class="nav-link" href="#tab-customers" data-bs-toggle="tab">
                     <i class="fa fa-users"></i> العملاء
                     <span class="badge"><?= $customersCount ?></span>
                 </a>
@@ -125,7 +125,7 @@ $customersCount = $model->getCustomersCount();
         <div class="tab-content">
 
             <!-- ====== Tab: Basic Info ====== -->
-            <div class="tab-pane active" id="tab-info">
+            <div class="tab-pane fade show active" id="tab-info">
                 <div class="row">
                     <div class="col-md-6">
                         <h4><i class="fa fa-building-o"></i> معلومات جهة العمل</h4>
@@ -229,7 +229,7 @@ $customersCount = $model->getCustomersCount();
             </div>
 
             <!-- ====== Tab: Phone Numbers ====== -->
-            <div class="tab-pane" id="tab-phones" x-data="{ showPhoneForm: false }">
+            <div class="tab-pane fade" id="tab-phones" x-data="{ showPhoneForm: false }">
                 <div class="row" style="margin-bottom: 15px;">
                     <div class="col-md-12">
                         <button type="button" class="btn btn-success btn-sm" id="btn-add-phone" @click="showPhoneForm = !showPhoneForm">
@@ -371,7 +371,7 @@ $customersCount = $model->getCustomersCount();
             </div>
 
             <!-- ====== Tab: Working Hours ====== -->
-            <div class="tab-pane" id="tab-hours">
+            <div class="tab-pane fade" id="tab-hours">
                 <?php if (empty($workingHours)): ?>
                     <div class="alert alert-info">
                         <i class="fa fa-info-circle"></i> لم يتم تحديد أوقات العمل بعد.
@@ -404,9 +404,9 @@ $customersCount = $model->getCustomersCount();
                                     <td dir="ltr" class="text-center"><?= ($wh && !$wh->is_closed) ? $wh->closing_time : '-' ?></td>
                                     <td class="text-center">
                                         <?php if ($wh && $wh->is_closed): ?>
-                                            <span class="label label-danger">مغلق</span>
+                                            <span class="badge bg-danger">مغلق</span>
                                         <?php elseif ($wh): ?>
-                                            <span class="label label-success">مفتوح</span>
+                                            <span class="badge bg-success">مفتوح</span>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
@@ -420,7 +420,7 @@ $customersCount = $model->getCustomersCount();
             </div>
 
             <!-- ====== Tab: Ratings ====== -->
-            <div class="tab-pane" id="tab-ratings" x-data="{ showRatingForm: false }">
+            <div class="tab-pane fade" id="tab-ratings" x-data="{ showRatingForm: false }">
                 <div class="row" style="margin-bottom: 15px;">
                     <div class="col-md-12">
                         <button type="button" class="btn btn-success btn-sm" id="btn-add-rating" @click="showRatingForm = !showRatingForm">
@@ -555,7 +555,7 @@ $customersCount = $model->getCustomersCount();
             </div>
 
             <!-- ====== Tab: Customers ====== -->
-            <div class="tab-pane" id="tab-customers">
+            <div class="tab-pane fade" id="tab-customers">
                 <?php
                 $customers = \backend\modules\customers\models\Customers::find()
                     ->where(['job_title' => $model->id])

@@ -80,7 +80,7 @@ $total    = (int)($stats['total'] ?? 0);
     <div class="ab-header">
         <h1><i class="fa fa-calendar-check-o"></i> <?= $this->title ?></h1>
         <div class="actions">
-            <a href="<?= Url::to(['/hr/hr-tracking-api/live-map']) ?>" class="btn btn-default btn-sm">
+            <a href="<?= Url::to(['/hr/hr-tracking-api/live-map']) ?>" class="btn btn-secondary btn-sm">
                 <i class="fa fa-map"></i> الخريطة المباشرة
             </a>
         </div>

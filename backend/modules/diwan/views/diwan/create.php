@@ -109,7 +109,7 @@ $this->title = 'قسم الديوان';
     <!-- أزرار -->
     <div class="dw-form-btns">
         <?= Html::submitButton('<i class="fa fa-save"></i> حفظ المعاملة', ['class' => 'btn dw-btn-primary']) ?>
-        <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px; padding:10px 28px;']) ?>
+        <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-secondary', 'style' => 'border-radius:8px; padding:10px 28px;']) ?>
     </div>
 
     <?php ActiveForm::end(); ?>

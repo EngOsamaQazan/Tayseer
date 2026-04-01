@@ -22,8 +22,8 @@ $typeLabelsJson = json_encode($typeLabels, JSON_UNESCAPED_UNICODE);
             <div class="jv-title"><i class="fa fa-clock-o" style="color:#DC2626"></i> <?= $this->title ?></div>
         </div>
         <div class="jv-actions" style="display:flex;gap:8px">
-            <button onclick="DL.load(DL.tab,1)" class="btn btn-default" style="border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px"><i class="fa fa-refresh"></i> تحديث</button>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
+            <button onclick="DL.load(DL.tab,1)" class="btn btn-secondary" style="border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px"><i class="fa fa-refresh"></i> تحديث</button>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-secondary', 'style' => 'border-radius:8px;font-size:13px;font-weight:600;padding:8px 18px']) ?>
         </div>
     </div>
 

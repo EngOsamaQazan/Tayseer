@@ -50,6 +50,7 @@ return [
         'class' => 'kartik\grid\ActionColumn',
         'dropdown' => false,
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => ''],
         'template' => '{delete}',
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
@@ -59,7 +60,7 @@ return [
             'data-confirm' => false,
             'data-method' => false,
             'data-request-method' => 'post',
-            'data-toggle' => 'tooltip',
+            'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => Yii::t('app', 'هل أنت متأكد؟'),
             'data-confirm-message' => Yii::t('app', 'هل أنت متأكد من حذف هذا العنصر؟'),
         ],

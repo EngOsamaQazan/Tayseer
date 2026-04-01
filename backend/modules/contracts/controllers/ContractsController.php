@@ -731,7 +731,7 @@ class ContractsController extends Controller
             return [
                 'title'   => "العقد #$id",
                 'content' => $this->renderAjax('view', ['model' => $this->findModel($id)]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                            . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -1204,7 +1204,7 @@ class ContractsController extends Controller
             return [
                 'title'   => "العقد #$id",
                 'content' => $this->renderAjax('_contract_print', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                            . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -1220,7 +1220,7 @@ class ContractsController extends Controller
             return [
                 'title'   => "العقد #$id",
                 'content' => $this->renderAjax('_draft_print', ['model' => $model]),
-                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal'])
+                'footer'  => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal'])
                            . Html::a('تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }

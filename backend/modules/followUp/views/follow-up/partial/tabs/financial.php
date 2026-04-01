@@ -1,7 +1,6 @@
 <?php
 
 use yii\helpers\Url;
-use yii\bootstrap\Modal;
 
 use kartik\form\ActiveForm;
 use yii\helpers\ArrayHelper;

@@ -85,7 +85,7 @@ $arabicMonths = [
     <div class="hr-page-header">
         <h1><i class="fa fa-calendar-check-o"></i> <?= Html::encode($this->title) ?></h1>
         <div>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> لوحة الحضور', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> لوحة الحضور', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
         </div>
     </div>
 

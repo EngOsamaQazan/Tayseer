@@ -23,8 +23,8 @@ DynamicFormWidget::begin([
 
 <div class="container-items2">
     <?php foreach ($modelsPhoneNumbers as $i => $phone): ?>
-        <div class="phone-numbers-item panel panel-default">
-            <div class="panel-body">
+        <div class="phone-numbers-item card">
+            <div class="card-body">
                 <?php if (!$phone->isNewRecord) echo Html::activeHiddenInput($phone, "[{$i}]id") ?>
                 <div class="row">
                     <div class="col-md-3">

@@ -1,5 +1,5 @@
 <?php
-use yii\bootstrap\Tabs;
+use yii\bootstrap5\Tabs;
 
 /* @var $this yii\web\View */
 /* @var $model backend\models\Employee */
@@ -17,7 +17,7 @@ use yii\bootstrap\Tabs;
             [
                 'label' => '<i class="fa fa-list-alt"></i> ' . Yii::t('app', 'leave policy'),
                 'content' => '',
-                'headerOptions' => ['class' => 'disabled'],
+                'disabled' => true,
             ],
         ],
     ]) ?>

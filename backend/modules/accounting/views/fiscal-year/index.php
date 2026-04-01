@@ -42,7 +42,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     'label' => 'السنة المالية',
                     'format' => 'raw',
                     'value' => function ($model) {
-                        $badge = $model->is_current ? ' <span class="label label-primary">الحالية</span>' : '';
+                        $badge = $model->is_current ? ' <span class="badge bg-primary">الحالية</span>' : '';
                         return '<strong>' . Html::encode($model->name) . '</strong>' . $badge;
                     },
                 ],

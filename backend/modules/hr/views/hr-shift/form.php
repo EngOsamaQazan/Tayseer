@@ -61,7 +61,7 @@ $selectedDays = is_array($model->working_days) ? $model->working_days : [0, 1, 2
 
 <div class="hr-page">
     <div class="hr-page-header">
-        <a href="<?= Url::to(['index']) ?>" class="btn btn-default btn-sm">
+        <a href="<?= Url::to(['index']) ?>" class="btn btn-secondary btn-sm">
             <i class="fa fa-arrow-right"></i>
         </a>
         <h1><i class="fa fa-clock-o"></i> <?= $this->title ?></h1>
@@ -148,7 +148,7 @@ $selectedDays = is_array($model->working_days) ? $model->working_days : [0, 1, 2
     </div>
 
     <div class="sf-actions">
-        <a href="<?= Url::to(['index']) ?>" class="btn btn-default">إلغاء</a>
+        <a href="<?= Url::to(['index']) ?>" class="btn btn-secondary">إلغاء</a>
         <?= Html::submitButton($model->isNewRecord ? 'إنشاء الوردية' : 'حفظ التعديلات', [
             'class' => 'btn btn-primary',
         ]) ?>

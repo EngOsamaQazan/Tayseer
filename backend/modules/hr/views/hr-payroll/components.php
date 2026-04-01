@@ -198,7 +198,7 @@ $componentTypeMap = [
                             return Html::a(
                                 '<i class="fa fa-pencil"></i> تعديل',
                                 ['component-update', 'id' => $model->id],
-                                ['class' => 'btn btn-xs btn-default']
+                                ['class' => 'btn btn-xs btn-secondary']
                             );
                         },
                     ],

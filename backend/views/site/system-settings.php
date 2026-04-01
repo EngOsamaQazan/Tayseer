@@ -112,7 +112,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
         <div class="sys-content">
             <?php foreach (Yii::$app->session->getAllFlashes() as $type => $message): ?>
                 <div class="alert alert-<?= $type === 'error' ? 'danger' : $type ?> alert-dismissible sys-alert">
-                    <button type="button" class="close" data-dismiss="alert">&times;</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     <i class="fa fa-<?= $type === 'success' ? 'check-circle' : 'exclamation-triangle' ?>"></i>
                     <?= $message ?>
                 </div>

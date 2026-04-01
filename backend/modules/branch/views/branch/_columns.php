@@ -83,14 +83,14 @@ return [
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
-        'viewOptions' => ['role' => 'modal-remote', 'title' => 'عرض', 'data-toggle' => 'tooltip'],
-        'updateOptions' => ['role' => 'modal-remote', 'title' => 'تعديل', 'data-toggle' => 'tooltip'],
+        'viewOptions' => ['role' => 'modal-remote', 'title' => 'عرض', 'data-bs-toggle' => 'tooltip'],
+        'updateOptions' => ['role' => 'modal-remote', 'title' => 'تعديل', 'data-bs-toggle' => 'tooltip'],
         'deleteOptions' => [
             'title' => 'حذف',
             'data-confirm' => false,
             'data-method' => false,
             'data-request-method' => 'post',
-            'data-toggle' => 'tooltip',
+            'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => 'تأكيد الحذف',
             'data-confirm-message' => 'هل أنت متأكد من حذف هذا الفرع؟',
         ],

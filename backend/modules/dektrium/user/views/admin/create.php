@@ -9,9 +9,9 @@
  * file that was distributed with this source code.
  */
 
-use yii\bootstrap\ActiveForm;
-use yii\bootstrap\Nav;
+use yii\bootstrap5\Nav;
 use yii\helpers\Html;
+use yii\widgets\ActiveForm;
 
 /**
  * @var yii\web\View $this
@@ -29,49 +29,49 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="row">
     <div class="col-md-3">
-        <div class="panel panel-default">
-            <div class="panel-body">
+        <div class="card mb-3">
+            <div class="card-body">
                 <?= Nav::widget([
                     'options' => [
-                        'class' => 'nav-pills nav-stacked',
+                        'class' => 'nav-pills flex-column',
                     ],
                     'items' => [
                         ['label' => Yii::t('user', 'Account details'), 'url' => ['/user/admin/create']],
-                        ['label' => Yii::t('user', 'Profile details'), 'options' => [
-                            'class' => 'disabled',
-                            'onclick' => 'return false;',
-                        ]],
-                        ['label' => Yii::t('user', 'Information'), 'options' => [
-                            'class' => 'disabled',
-                            'onclick' => 'return false;',
-                        ]],
+                        [
+                            'label' => Yii::t('user', 'Profile details'),
+                            'disabled' => true,
+                        ],
+                        [
+                            'label' => Yii::t('user', 'Information'),
+                            'disabled' => true,
+                        ],
                     ],
                 ]) ?>
             </div>
         </div>
     </div>
     <div class="col-md-9">
-        <div class="panel panel-default">
-            <div class="panel-body">
+        <div class="card mb-3">
+            <div class="card-body">
                 <div class="alert alert-info">
                     <?= Yii::t('user', 'Credentials will be sent to the user by email') ?>.
                     <?= Yii::t('user', 'A password will be generated automatically if not provided') ?>.
                 </div>
                 <?php $form = ActiveForm::begin([
-                    'layout' => 'horizontal',
+                    'options' => ['class' => ''],
                     'enableAjaxValidation' => true,
                     'enableClientValidation' => false,
                     'fieldConfig' => [
-                        'horizontalCssClasses' => [
-                            'wrapper' => 'col-sm-9',
-                        ],
+                        'options' => ['class' => 'row mb-3'],
+                        'template' => "{label}\n<div class=\"col-lg-9\">{input}</div>\n<div class=\"offset-lg-3 col-lg-9\">{error}\n{hint}</div>",
+                        'labelOptions' => ['class' => 'col-lg-3 col-form-label'],
                     ],
                 ]); ?>
 
                 <?= $this->render('_user', ['form' => $form, 'user' => $user]) ?>
 
-                <div class="form-group">
-                    <div class="col-lg-offset-3 col-lg-9">
+                <div class="row mb-3">
+                    <div class="offset-lg-3 col-lg-9">
                         <?= Html::submitButton(Yii::t('user', 'Save'), ['class' => 'btn btn-block btn-success']) ?>
                     </div>
                 </div>

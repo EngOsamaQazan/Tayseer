@@ -61,18 +61,10 @@ return [
         'value' => function ($model) {
             $string = '';
             if (Yii::$app->user->can('مدير') && $model->manager_approved == 0) {
-                $string .= '<button type="button" class="btn btn-info glyphicon glyphicon-ok "  id = "managerApproved" data-id = "' . $model->id . ' " >
-موافقة المدير
-</button> 
-
- ';
+                $string .= '<button type="button" class="btn btn-info" id="managerApproved" data-id="' . $model->id . '"><i class="fa fa-check"></i> موافقة المدير</button> ';
             }
             if (Yii::$app->user->id == $model->created_by  && $model->approved_by_employee == 0) {
-                $string .= '<button type="button" class="  btn btn-success glyphicon glyphicon-ok "  id = "employee-approved" data-id = "' . $model->id . ' " >
-موافقة الموظف
-</button> 
-
- ';
+                $string .= '<button type="button" class="btn btn-success" id="employee-approved" data-id="' . $model->id . '"><i class="fa fa-check"></i> موافقة الموظف</button> ';
             }
             return $string;
 

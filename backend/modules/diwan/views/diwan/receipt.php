@@ -52,7 +52,7 @@ $this->title = 'قسم الديوان';
         <i class="fa fa-print"></i> طباعة الإيصال
     </button>
     <?= Html::a('<i class="fa fa-arrow-right"></i> رجوع', ['view', 'id' => $model->id], [
-        'class' => 'btn btn-default btn-sm', 'style' => 'border-radius:6px; margin-right:6px;',
+        'class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:6px; margin-right:6px;',
     ]) ?>
 </div>
 

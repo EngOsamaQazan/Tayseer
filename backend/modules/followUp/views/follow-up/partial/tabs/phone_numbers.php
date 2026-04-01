@@ -90,7 +90,7 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                     <i class="fa <?= $type === 'client' ? 'fa-user' : 'fa-shield' ?>"></i>
                 </div>
                 <div>
-                    <a href="javascript:void(0)" class="pn-party-name custmer-popup" data-target="#customerInfoModal" data-toggle="modal" customer-id="<?= $cust->id ?>">
+                    <a href="javascript:void(0)" class="pn-party-name custmer-popup" data-bs-target="#customerInfoModal" data-bs-toggle="modal" customer-id="<?= $cust->id ?>">
                         <?= Html::encode($cust->name) ?>
                     </a>
                     <div style="margin-top:2px">
@@ -120,7 +120,7 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                         <?php else: ?>
                         <span class="pn-contact-btn facebook empty" title="لا يوجد حساب فيسبوك"><i class="fa fa-facebook"></i></span>
                         <?php endif; ?>
-                        <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($ppWa) ?>')" data-toggle="modal" data-target="#smsModal" title="إرسال رسالة"><i class="fa fa-comment"></i></button>
+                        <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($ppWa) ?>')" data-bs-toggle="modal" data-bs-target="#smsModal" title="إرسال رسالة"><i class="fa fa-comment"></i></button>
                         <?= Html::a('<i class="fa fa-pencil"></i>', ['/customers/update-contact', 'id' => $cust->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل بيانات الاتصال']) ?>
                     </div>
                 </div>
@@ -151,7 +151,7 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
                             <?php else: ?>
                             <span class="pn-contact-btn facebook empty"><i class="fa fa-facebook"></i></span>
                             <?php endif; ?>
-                            <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($pnWa) ?>')" data-toggle="modal" data-target="#smsModal" title="رسالة"><i class="fa fa-comment"></i></button>
+                            <button type="button" class="pn-contact-btn sms" onclick="setPhoneNumebr('<?= Html::encode($pnWa) ?>')" data-bs-toggle="modal" data-bs-target="#smsModal" title="رسالة"><i class="fa fa-comment"></i></button>
                             <?= Html::a('<i class="fa fa-pencil"></i>', ['/phoneNumbers/phone-numbers/update', 'id' => $pn->id], ['role' => 'modal-remote', 'class' => 'pn-contact-btn edit', 'title' => 'تعديل']) ?>
                             <?= Html::a('<i class="fa fa-trash-o"></i>', ['/phoneNumbers/phone-numbers/delete', 'id' => $pn->id], ['class' => 'pn-contact-btn edit', 'style' => 'color:#EF4444', 'title' => 'حذف', 'data-request-method' => 'post', 'data-confirm-message' => 'هل أنت متأكد من حذف هذا الرقم؟']) ?>
                         </div>

@@ -211,7 +211,7 @@ $existingLines = $isUpdate ? $model->lines : [];
 
     <div class="se-card">
         <div class="se-submit-bar">
-            <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
             <?= Html::submitButton($model->isNewRecord ? '<i class="fa fa-save"></i> حفظ التوزيع' : '<i class="fa fa-save"></i> حفظ التعديلات', [
                 'class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary',
                 'style' => 'background:var(--se-primary);border-color:var(--se-primary)',

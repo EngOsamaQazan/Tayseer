@@ -51,7 +51,7 @@ return [
         'buttons' => [
             'delete' => function ($url, $model, $key) {
                 return Html::a(
-                    '<span class="glyphicon glyphicon-trash"></span>',
+                    '<span class="fa fa-trash"></span>',
                     $url,
                     [
                         'title' => 'حذف',

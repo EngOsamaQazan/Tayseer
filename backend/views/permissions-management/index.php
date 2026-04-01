@@ -422,7 +422,7 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                     <h4 class="perm-modal-header-name" id="modalUserName" style="font-size:18px;font-weight:700;margin:0;color:#fff!important;line-height:1.3;">—</h4>
                     <p class="perm-modal-header-sub" id="modalUserEmail" style="font-size:13px;opacity:.8;margin:2px 0 0;color:#fff!important;">—</p>
                 </div>
-                <button type="button" class="perm-modal-close" data-dismiss="modal" aria-label="إغلاق" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;">
+                <button type="button" class="perm-modal-close" data-bs-dismiss="modal" aria-label="إغلاق" style="background:rgba(255,255,255,.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;">
                     <i class="fa fa-times"></i>
                 </button>
             </div>
@@ -533,7 +533,7 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                     يتم حفظ التغييرات فورياً عند الضغط على حفظ
                 </div>
                 <div style="display:flex;gap:8px">
-                    <button type="button" class="perm-btn perm-btn--outline" data-dismiss="modal">إلغاء</button>
+                    <button type="button" class="perm-btn perm-btn--outline" data-bs-dismiss="modal">إلغاء</button>
                     <button type="button" class="perm-btn perm-btn--success" id="btnSavePerms">
                         <i class="fa fa-check"></i> حفظ الصلاحيات
                     </button>
@@ -556,7 +556,7 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                     <h4 class="perm-modal-header-name" id="roleModalTitle">إنشاء دور جديد</h4>
                     <p class="perm-modal-header-sub">حدد اسم الدور والصلاحيات التابعة له</p>
                 </div>
-                <button type="button" class="perm-modal-close" data-dismiss="modal" aria-label="إغلاق">
+                <button type="button" class="perm-modal-close" data-bs-dismiss="modal" aria-label="إغلاق">
                     <i class="fa fa-times"></i>
                 </button>
             </div>
@@ -619,7 +619,7 @@ $defaultAvatar = Yii::getAlias('@web') . '/img/default-avatar.png';
                     المحدد: <strong id="rolePermCount">0</strong> صلاحية
                 </span>
                 <div style="display:flex;gap:8px">
-                    <button type="button" class="perm-btn perm-btn--outline" data-dismiss="modal">إلغاء</button>
+                    <button type="button" class="perm-btn perm-btn--outline" data-bs-dismiss="modal">إلغاء</button>
                     <button type="button" class="perm-btn perm-btn--primary" id="btnSaveRole">
                         <i class="fa fa-check"></i> حفظ الدور
                     </button>
@@ -747,7 +747,7 @@ $js = <<<'JSBLOCK'
         $('#cloneMenu').html(cloneHtml || '<div style="padding:12px;text-align:center;color:#999;font-size:13px">لا يوجد مستخدمون</div>');
 
         /* فتح المودال */
-        $('#permEditorModal').modal('show');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('permEditorModal')).show();
 
         /* تحميل الصلاحيات عبر AJAX */
         $.getJSON(GET_USER_PERMS_URL_PLACEHOLDER, { id: currentUserId }, function(resp){
@@ -960,7 +960,7 @@ $js = <<<'JSBLOCK'
                     $card.find('.perm-user-badge--perms').html('<i class="fa fa-key"></i> ' + resp.newCount + ' صلاحية');
                     $card.data('perm-count', resp.newCount);
                     $card.toggleClass('perm-user-card--no-perms', resp.newCount === 0);
-                    $('#permEditorModal').modal('hide');
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('permEditorModal')).hide();
                 } else {
                     showToast(resp.message || 'حدث خطأ', 'error');
                 }
@@ -991,7 +991,7 @@ $js = <<<'JSBLOCK'
             }
         }
         updateRolePermCount();
-        $('#roleModal').modal('show');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('roleModal')).show();
     }
 
     function updateRolePermCount() {
@@ -1070,7 +1070,7 @@ $js = <<<'JSBLOCK'
             success: function(resp){
                 if (resp.success) {
                     showToast(resp.message, 'success');
-                    $('#roleModal').modal('hide');
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('roleModal')).hide();
                     setTimeout(function(){ location.reload(); }, 800);
                 } else {
                     showToast(resp.message, 'error');

@@ -26,7 +26,7 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
         <div class="ju-nav">
             <?= Html::a('<i class="fa fa-eye"></i> عرض القضية', ['view', 'id' => $model->id], ['class' => 'btn btn-info']) ?>
-            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-secondary']) ?>
         </div>
     </div>
 

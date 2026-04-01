@@ -156,7 +156,7 @@ $netSalary = (float) ($payslip->net_salary ?? 0);
     <div class="hr-page-header">
         <h1><i class="fa fa-file-text"></i> <?= Html::encode($this->title) ?></h1>
         <div class="hr-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للمسيرة', ['view', 'id' => $run->id], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للمسيرة', ['view', 'id' => $run->id], ['class' => 'btn btn-secondary btn-sm']) ?>
             <?= Html::button('<i class="fa fa-print"></i> طباعة', [
                 'class' => 'btn btn-primary btn-sm',
                 'onclick' => 'window.print()',

@@ -83,8 +83,8 @@ $value = ($diffInMonths * $model->amount) - $revares;
         ],
         'toolbar' => [
             ['content' =>
-                Html::a('<i class="glyphicon glyphicon-repeat"></i>', [''],
-                    ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'Reset Grid']) .
+                Html::a('<i class="fa fa-refresh"></i>', [''],
+                    ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'Reset Grid']) .
                 '{toggleData}' .
                 ExportButtons::widget([
                     'excelRoute' => ['export-view-excel', 'id' => $model->id],

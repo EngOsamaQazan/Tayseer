@@ -15,7 +15,7 @@ $months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', '
     <div class="box-header with-border">
         <h3 class="box-title"><i class="fa fa-bar-chart"></i> تقرير الانحراف عن الموازنة</h3>
         <div class="box-tools">
-            <?= Html::a('<i class="fa fa-arrow-left"></i> العودة للموازنة', ['view', 'id' => $model->id], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('<i class="fa fa-arrow-left"></i> العودة للموازنة', ['view', 'id' => $model->id], ['class' => 'btn btn-secondary btn-sm']) ?>
         </div>
     </div>
     <div class="box-body" style="overflow-x:auto;">

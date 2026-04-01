@@ -148,7 +148,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
                 <div class="modal-header">
                     <h4 class="modal-title"><i class="fa fa-money"></i> تسجيل دفعة</h4>
-                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <button type="button" class="close" data-bs-dismiss="modal">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
@@ -162,7 +162,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> تسجيل</button>
-                    <button type="button" class="btn btn-default" data-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                 </div>
             </form>
         </div>
@@ -177,7 +177,7 @@ $(document).on('click', '.pay-btn', function() {
     $('#modal-balance').val(parseFloat(balance).toFixed(2));
     $('#modal-payment').attr('max', balance).val('');
     $('#payment-form').attr('action', 'record-payment?id=' + id);
-    $('#paymentModal').modal('show');
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('paymentModal')).show();
 });
 ");
 ?>

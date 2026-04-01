@@ -123,7 +123,7 @@ $netTotal = $grossTotal - $discount;
         </div>
         <?php if (!$isAjax): ?>
         <div class="inv-view-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للقائمة', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة للقائمة', ['index'], ['class' => 'btn btn-secondary']) ?>
             <?php if (Permissions::can(Permissions::INVINV_UPDATE)): ?>
                 <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $model->id], ['class' => 'btn btn-info']) ?>
             <?php endif ?>

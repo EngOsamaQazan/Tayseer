@@ -101,7 +101,7 @@ use backend\modules\capitalTransactions\models\CapitalTransactions;
                 ? ['index', 'company_id' => $company->id]
                 : ['index'];
             ?>
-            <?= Html::a('إلغاء', $cancelUrl, ['class' => 'btn btn-default']) ?>
+            <?= Html::a('إلغاء', $cancelUrl, ['class' => 'btn btn-secondary']) ?>
             <?= Html::submitButton($model->isNewRecord ? 'إضافة حركة' : 'حفظ التعديلات', [
                 'class' => $model->isNewRecord ? 'btn btn-warning' : 'btn btn-primary',
                 'style' => $model->isNewRecord ? 'background:#f59e0b;border-color:#f59e0b;color:#fff' : '',

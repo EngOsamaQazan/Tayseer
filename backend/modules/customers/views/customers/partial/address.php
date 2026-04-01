@@ -28,15 +28,15 @@ DynamicFormWidget::begin([
 
 <div class="container-items">
     <?php foreach ($modelsAddress as $i => $addr): ?>
-        <div class="addrres-item panel panel-default addr-panel" data-addr-idx="<?= $i ?>">
-            <div class="panel-heading addr-panel-hdr">
+        <div class="addrres-item card addr-panel" data-addr-idx="<?= $i ?>">
+            <div class="card-header addr-panel-hdr">
                 <span class="addr-type-badge"><?= $addr->address_type == 1 ? 'عنوان العمل' : ($addr->address_type == 2 ? 'عنوان السكن' : 'عنوان') ?></span>
                 <div class="addr-panel-actions">
                     <button type="button" class="btn btn-xs btn-info addr-toggle-map" title="إظهار/إخفاء الخريطة"><i class="fa fa-map"></i></button>
                     <button type="button" class="addrres-remove-item btn btn-danger btn-xs" title="حذف"><i class="fa fa-trash"></i></button>
                 </div>
             </div>
-            <div class="panel-body">
+            <div class="card-body">
                 <?php if (!$addr->isNewRecord) echo Html::activeHiddenInput($addr, "[{$i}]id") ?>
 
                 <div class="row">

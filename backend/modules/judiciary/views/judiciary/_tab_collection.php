@@ -125,13 +125,13 @@ use backend\widgets\ExportButtons;
                     'urlCreator' => function ($action, $model, $key, $index) {
                         return Url::to(['/collection/collection/' . $action, 'id' => $key]);
                     },
-                    'viewOptions' => ['title' => 'عرض', 'data-toggle' => 'tooltip'],
-                    'updateOptions' => ['title' => 'تعديل', 'data-toggle' => 'tooltip'],
+                    'viewOptions' => ['title' => 'عرض', 'data-bs-toggle' => 'tooltip'],
+                    'updateOptions' => ['title' => 'تعديل', 'data-bs-toggle' => 'tooltip'],
                     'deleteOptions' => [
                         'title' => 'حذف',
                         'data-confirm' => false, 'data-method' => false,
                         'data-request-method' => 'post',
-                        'data-toggle' => 'tooltip',
+                        'data-bs-toggle' => 'tooltip',
                         'data-confirm-title' => 'هل أنت متأكد؟',
                         'data-confirm-message' => 'هل تريد حذف هذا العنصر؟',
                     ],
@@ -140,7 +140,7 @@ use backend\widgets\ExportButtons;
             'toolbar' => [
                 ['content' =>
                     Html::a('<i class="fa fa-refresh"></i>', Url::to(['/judiciary/judiciary/index', 'tab' => 'collection']),
-                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
+                        ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => ['/collection/collection/export-excel'],

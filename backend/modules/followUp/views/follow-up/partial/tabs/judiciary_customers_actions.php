@@ -33,7 +33,7 @@ use yii\helpers\Url;
         'toolbar' => [
             [
                 'content' =>
-                Html::a('<i class="glyphicon glyphicon-plus"></i>', Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]), ['role' => 'modal-remote', 'title' => 'إنشاء إجراءات قضائية', 'class' => 'btn btn-default'])
+                Html::a('<i class="fa fa-plus"></i>', Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/create-followup-judicary-custamer-action', 'contractID' => $contract_id]), ['role' => 'modal-remote', 'title' => 'إنشاء إجراءات قضائية', 'class' => 'btn btn-secondary'])
 
 
             ],
@@ -118,12 +118,12 @@ use yii\helpers\Url;
                         return Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/update-followup-judicary-custamer-action', 'id' => $model->id, 'contractID' => $contract_id]);
                     }
                 },
-                'updateOptions' => ['role' => 'modal-remote', 'title' => 'Update', 'data-toggle' => 'tooltip'],
+                'updateOptions' => ['role' => 'modal-remote', 'title' => 'Update', 'data-bs-toggle' => 'tooltip'],
                 'deleteOptions' => [
                     'role' => 'modal-remote', 'title' => 'Delete',
                     'data-confirm' => false, 'data-method' => false, // for overide yii data api
                     'data-request-method' => 'post',
-                    'data-toggle' => 'tooltip',
+                    'data-bs-toggle' => 'tooltip',
                     'data-confirm-title' => 'Are you sure?',
                     'data-confirm-message' => 'Are you sure want to delete this item'
                 ],

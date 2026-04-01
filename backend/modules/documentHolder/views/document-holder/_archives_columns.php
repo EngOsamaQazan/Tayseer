@@ -44,10 +44,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'attribute' => 'ready',
         'value' => function ($model) {
-            return '<button type="button" class="glyphicon glyphicon-ok "  id = "ready" data-id = "' . $model->id . ' " >
-
-</button> 
- ';
+            return '<button type="button" class="btn btn-sm btn-success js-doc-holder-ready" data-id="' . $model->id . '"><i class="fa fa-check"></i></button>';
         },
         'format' => 'raw',
     ],
@@ -55,16 +52,17 @@ return [
         'class' => 'kartik\grid\ActionColumn',
         'dropdown' => false,
         'vAlign' => 'middle',
+        'contentOptions' => ['data-label' => ''],
         'template' => "{update}",
         'urlCreator' => function ($action, $model, $key, $index) {
             return Url::to([$action, 'id' => $key]);
         },
-        'viewOptions' => ['title' => 'View', 'data-toggle' => 'tooltip'],
-        'updateOptions' => ['title' => 'Update', 'data-toggle' => 'tooltip'],
+        'viewOptions' => ['title' => 'View', 'data-bs-toggle' => 'tooltip'],
+        'updateOptions' => ['title' => 'Update', 'data-bs-toggle' => 'tooltip'],
         'deleteOptions' => ['title' => 'Delete',
             'data-confirm' => false, 'data-method' => false,// for overide yii data api
             'data-request-method' => 'post',
-            'data-toggle' => 'tooltip',
+            'data-bs-toggle' => 'tooltip',
             'data-confirm-title' => 'Are you sure?',
             'data-confirm-message' => 'Are you sure want to delete this item'],
     ],

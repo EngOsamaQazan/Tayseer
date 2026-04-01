@@ -59,8 +59,8 @@ return [
                     ->exists();
             }
             return $cache[$m->id]
-                ? '<span class="label label-danger" style="padding:3px 10px;border-radius:10px;font-size:11px">نعم</span>'
-                : '<span class="label label-success" style="padding:3px 10px;border-radius:10px;font-size:11px">لا</span>';
+                ? '<span class="badge bg-danger" style="padding:3px 10px;border-radius:10px;font-size:11px">نعم</span>'
+                : '<span class="badge bg-success" style="padding:3px 10px;border-radius:10px;font-size:11px">لا</span>';
         },
         'contentOptions' => ['style' => 'text-align:center;width:70px', 'data-label' => 'مشتكى عليه'],
     ],
@@ -78,7 +78,7 @@ return [
             $links = [];
             foreach ($contracts as $cid) {
                 $links[] = Html::a(
-                    '<span class="label label-info" style="padding:2px 8px;border-radius:8px;font-size:11px">' . $cid . '</span>',
+                    '<span class="badge bg-info" style="padding:2px 8px;border-radius:8px;font-size:11px">' . $cid . '</span>',
                     ['/followUp/follow-up/index', 'contract_id' => $cid],
                     ['data-pjax' => '0', 'title' => "متابعة العقد $cid"]
                 );

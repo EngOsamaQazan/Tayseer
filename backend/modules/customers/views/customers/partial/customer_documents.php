@@ -25,8 +25,8 @@ DynamicFormWidget::begin([
 
 <div class="container-items3">
     <?php foreach ($customerDocumentsModel as $i => $doc): ?>
-        <div class="customer-documents-item panel panel-default">
-            <div class="panel-body">
+        <div class="customer-documents-item card">
+            <div class="card-body">
                 <?php if (!$doc->isNewRecord) echo Html::activeHiddenInput($doc, "[{$i}]id") ?>
                 <div class="row">
                     <div class="col-md-3">

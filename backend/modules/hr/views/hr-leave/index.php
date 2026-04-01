@@ -1194,8 +1194,12 @@ function toggleDayOff(sel) {
     }
 }
 
-/* ─── Tooltips ─── */
-$('[data-toggle="tooltip"]').tooltip({container: 'body', placement: 'top'});
+/* ─── Tooltips (Bootstrap 5) ─── */
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+    var t = bootstrap.Tooltip.getInstance(el);
+    if (t) { t.dispose(); }
+    new bootstrap.Tooltip(el, { container: 'body', placement: 'top' });
+});
 
 JS;
 $this->registerJs($js, \yii\web\View::POS_READY);

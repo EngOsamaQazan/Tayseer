@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-use yii\bootstrap\Nav;
+use yii\bootstrap5\Nav;
 
 /**
  * @var \yii\web\View $this
@@ -28,11 +28,11 @@ $this->params['breadcrumbs'][] = $this->title;
 
 <div class="row">
     <div class="col-md-3">
-        <div class="panel panel-default">
-            <div class="panel-body">
+        <div class="card mb-3">
+            <div class="card-body">
                 <?= Nav::widget([
                     'options' => [
-                        'class' => 'nav-pills nav-stacked',
+                        'class' => 'nav-pills flex-column',
                     ],
                     'items' => [
                         [
@@ -49,7 +49,7 @@ $this->params['breadcrumbs'][] = $this->title;
                             'url' => ['/user/admin/assignments', 'id' => $user->id],
                             'visible' => isset(Yii::$app->extensions['dektrium/yii2-rbac']),
                         ],
-                        '<hr>',
+                        '<hr class="my-2">',
                         [
                             'label' => Yii::t('user', 'Confirm'),
                             'url' => ['/user/admin/confirm', 'id' => $user->id],
@@ -95,8 +95,8 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
     </div>
     <div class="col-md-9">
-        <div class="panel panel-default">
-            <div class="panel-body">
+        <div class="card mb-3">
+            <div class="card-body">
                 <?= $content ?>
             </div>
         </div>

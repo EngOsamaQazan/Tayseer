@@ -34,7 +34,7 @@ $calc = new ContractCalculations($contract_id);
             <?= $this->title ?>
         </div>
         <div class="jc-nav">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> القضايا', ['index'], ['class' => 'btn btn-secondary']) ?>
         </div>
     </div>
 

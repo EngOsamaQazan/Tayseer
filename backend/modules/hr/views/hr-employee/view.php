@@ -96,7 +96,7 @@ if (!empty($user->job_title)) {
          ║  زر العودة                            ║
          ╚═══════════════════════════════════════╝ -->
     <div style="margin-bottom:16px;">
-        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة إلى سجل الموظفين', ['index'], ['class' => 'btn btn-default btn-sm', 'style' => 'border-radius:8px']) ?>
+        <?= Html::a('<i class="fa fa-arrow-right"></i> العودة إلى سجل الموظفين', ['index'], ['class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:8px']) ?>
     </div>
 
     <!-- ╔═══════════════════════════════════════╗
@@ -163,42 +163,42 @@ if (!empty($user->job_title)) {
          ╚═══════════════════════════════════════╝ -->
     <div class="hr-tabs-wrapper">
         <ul class="nav nav-tabs hr-nav-tabs" role="tablist">
-            <li role="presentation" class="active">
-                <a href="#tab-personal" aria-controls="tab-personal" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link active" href="#tab-personal" aria-controls="tab-personal" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-user"></i> البيانات الشخصية
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#tab-emergency" aria-controls="tab-emergency" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="#tab-emergency" aria-controls="tab-emergency" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-phone-square"></i> جهات الطوارئ
                     <?php if (!empty($emergencyContacts)): ?>
                         <span class="badge hr-tab-badge"><?= count($emergencyContacts) ?></span>
                     <?php endif ?>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#tab-documents" aria-controls="tab-documents" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="#tab-documents" aria-controls="tab-documents" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-file-text"></i> المستندات
                     <?php if (!empty($documents)): ?>
                         <span class="badge hr-tab-badge"><?= count($documents) ?></span>
                     <?php endif ?>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#tab-attendance" aria-controls="tab-attendance" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="#tab-attendance" aria-controls="tab-attendance" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-clock-o"></i> الحضور
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#tab-salary" aria-controls="tab-salary" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="#tab-salary" aria-controls="tab-salary" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-money"></i> الراتب
                     <?php if (!empty($salaryComponents)): ?>
                         <span class="badge hr-tab-badge"><?= count($salaryComponents) ?></span>
                     <?php endif ?>
                 </a>
             </li>
-            <li role="presentation">
-                <a href="#tab-increments" aria-controls="tab-increments" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="#tab-increments" aria-controls="tab-increments" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-line-chart"></i> العلاوات السنوية
                     <?php if (!empty($increments)): ?>
                         <span class="badge hr-tab-badge"><?= count($increments) ?></span>
@@ -206,8 +206,8 @@ if (!empty($user->job_title)) {
                 </a>
             </li>
             <?php if ($extended && $extended->is_field_staff): ?>
-            <li role="presentation">
-                <a href="#tab-field" aria-controls="tab-field" role="tab" data-toggle="tab">
+            <li class="nav-item" role="presentation">
+                <a class="nav-link" href="#tab-field" aria-controls="tab-field" role="tab" data-bs-toggle="tab">
                     <i class="fa fa-map-marker"></i> الميداني
                 </a>
             </li>
@@ -219,7 +219,7 @@ if (!empty($user->job_title)) {
             <!-- ═════════════════════════════════
                  تبويب: البيانات الشخصية
                  ═════════════════════════════════ -->
-            <div role="tabpanel" class="tab-pane fade in active" id="tab-personal">
+            <div role="tabpanel" class="tab-pane fade show active" id="tab-personal">
                 <?php if ($extended === null): ?>
                     <div class="hr-empty-state">
                         <i class="fa fa-info-circle"></i>
@@ -274,7 +274,7 @@ if (!empty($user->job_title)) {
                                         $cEnd = $ext('contract_end');
                                         echo Html::encode($cEnd);
                                         if ($cEnd !== '—' && strtotime($cEnd) < time()) {
-                                            echo ' <span class="label label-warning" style="font-size:10px">منتهي</span>';
+                                            echo ' <span class="badge bg-warning text-dark" style="font-size:10px">منتهي</span>';
                                         }
                                         ?>
                                     </td>
@@ -414,11 +414,11 @@ if (!empty($user->job_title)) {
                                     <td><?= Html::encode($doc->expiry_date ?: '—') ?></td>
                                     <td>
                                         <?php if ($isExpired): ?>
-                                            <span class="label label-danger">منتهي</span>
+                                            <span class="badge bg-danger">منتهي</span>
                                         <?php elseif ($isExpiringSoon): ?>
-                                            <span class="label label-warning">ينتهي قريباً</span>
+                                            <span class="badge bg-warning text-dark">ينتهي قريباً</span>
                                         <?php elseif (!empty($doc->expiry_date)): ?>
-                                            <span class="label label-success">ساري</span>
+                                            <span class="badge bg-success">ساري</span>
                                         <?php else: ?>
                                             <span class="text-muted">—</span>
                                         <?php endif ?>
@@ -426,7 +426,7 @@ if (!empty($user->job_title)) {
                                     <td>
                                         <?php if (!empty($doc->file_path)): ?>
                                             <?= Html::a('<i class="fa fa-download"></i>', $doc->file_path, [
-                                                'class' => 'btn btn-xs btn-default',
+                                                'class' => 'btn btn-xs btn-secondary',
                                                 'target' => '_blank',
                                                 'title' => 'تحميل',
                                                 'style' => 'border-radius:6px',
@@ -545,11 +545,11 @@ if (!empty($user->job_title)) {
                                     <td><strong><?= Html::encode($compName) ?></strong></td>
                                     <td>
                                         <?php if ($compType === 'earning' || $compType === 'allowance'): ?>
-                                            <span class="label label-success">استحقاق</span>
+                                            <span class="badge bg-success">استحقاق</span>
                                         <?php elseif ($compType === 'deduction'): ?>
-                                            <span class="label label-danger">خصم</span>
+                                            <span class="badge bg-danger">خصم</span>
                                         <?php else: ?>
-                                            <span class="label label-default"><?= Html::encode($compType) ?></span>
+                                            <span class="badge bg-secondary"><?= Html::encode($compType) ?></span>
                                         <?php endif ?>
                                     </td>
                                     <td><strong><?= number_format($sc->amount, 2) ?></strong></td>
@@ -636,9 +636,9 @@ if (!empty($user->job_title)) {
                                     <td>
                                         <?php
                                         $st = $incStatusMap[$inc->status] ?? $inc->status;
-                                        $stClass = $inc->status === 'applied' ? 'label-success' : ($inc->status === 'pending' ? 'label-warning' : 'label-default');
+                                        $stClass = $inc->status === 'applied' ? 'bg-success' : ($inc->status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary');
                                         ?>
-                                        <span class="label <?= $stClass ?>"><?= $st ?></span>
+                                        <span class="badge <?= $stClass ?>"><?= $st ?></span>
                                     </td>
                                     <td>
                                         <?php if ($inc->status === 'pending'): ?>
@@ -670,7 +670,7 @@ if (!empty($user->job_title)) {
                         <tr>
                             <th>موظف ميداني</th>
                             <td>
-                                <span class="label label-success"><i class="fa fa-check"></i> نعم</span>
+                                <span class="badge bg-success"><i class="fa fa-check"></i> نعم</span>
                             </td>
                         </tr>
                         <?php if (!empty($extended->field_role)): ?>

@@ -15,12 +15,16 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
-use yii\bootstrap\Modal;
 use backend\modules\financialTransaction\models\FinancialTransaction;
 use common\helper\Permissions;
 
 $this->title = 'الإدارة المالية';
 $this->params['breadcrumbs'][] = $this->title;
+
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 /* ═══ صلاحيات ═══ */
 $isManager    = Yii::$app->user->can(Permissions::MANAGER);
@@ -311,7 +315,7 @@ $dataProvider->query->with(['company']);
                         <td class="fin-td fin-td--acts">
                             <div class="fin-acts-wrap">
                                 <?php if (!empty($m->bank_description)): ?>
-                                <button type="button" class="fin-act fin-act--notes js-notes-btn" data-id="<?= $m->id ?>" data-toggle="modal" data-target="#notesModal" title="ملاحظات"><i class="fa fa-sticky-note-o"></i></button>
+                                <button type="button" class="fin-act fin-act--notes js-notes-btn" data-id="<?= $m->id ?>" data-bs-toggle="modal" data-bs-target="#notesModal" title="ملاحظات"><i class="fa fa-sticky-note-o"></i></button>
                                 <?php endif ?>
                                 <?php if ($canFinEdit): ?>
                                 <?= Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $m->id], ['class' => 'fin-act fin-act--edit', 'title' => 'تعديل']) ?>
@@ -405,8 +409,22 @@ $dataProvider->query->with(['company']);
     </div>
 </div>
 
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '']) ?>
-<?php Modal::end() ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
 
 <?php
 /* ═══════════════════════════════════════════════════════════
@@ -484,7 +502,7 @@ $(document).on("click",".js-save-notes",function(){
     b.prop("disabled",1).html('<i class="fa fa-spinner fa-spin"></i>');
     $.post(finUrls.saveNotes,{text:$(".js-notes-text").val(),id:$(".js-notes-id").val()},function(){
         b.prop("disabled",0).html('<i class="fa fa-save"></i> حفظ');
-        $("#notesModal").modal("hide");
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("notesModal")).hide();
     });
 });
 

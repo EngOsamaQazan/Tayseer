@@ -10,7 +10,6 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use kartik\grid\GridView;
-use yii\bootstrap\Modal;
 use yii\widgets\Pjax;
 use backend\helpers\NameHelper;
 use common\helper\Permissions;
@@ -27,6 +26,10 @@ $this->title = 'سجل الموظفين';
 
 /* ─── تسجيل CSS ─── */
 $this->registerCssFile(Yii::getAlias('@web') . '/css/hr.css', ['depends' => ['yii\web\YiiAsset']]);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 /* ─── URLs ─── */
 $indexUrl  = Url::to(['index']);
@@ -76,7 +79,7 @@ $employmentTypeMap = [
             <?= Html::a(
                 '<i class="fa fa-file-excel-o"></i> تصدير',
                 $exportUrl,
-                ['class' => 'btn btn-default hr-btn-export']
+                ['class' => 'btn btn-secondary hr-btn-export']
             ) ?>
         </div>
     </div>
@@ -129,7 +132,7 @@ $employmentTypeMap = [
                     'class' => 'btn hr-btn-primary btn-sm',
                 ]) ?>
                 <?= Html::a('<i class="fa fa-times"></i> مسح', $indexUrl, [
-                    'class' => 'btn btn-default btn-sm',
+                    'class' => 'btn btn-secondary btn-sm',
                 ]) ?>
             </div>
 
@@ -279,7 +282,7 @@ $employmentTypeMap = [
                             [
                                 'class' => 'btn btn-sm ' . $btnClass,
                                 'title' => $title,
-                                'data-toggle' => 'tooltip',
+                                'data-bs-toggle' => 'tooltip',
                                 'data-confirm' => $confirmMsg,
                                 'data-method' => 'post',
                                 'data-pjax' => '1',
@@ -294,7 +297,7 @@ $employmentTypeMap = [
                                 'class' => 'btn btn-sm hr-action-btn',
                                 'style' => 'background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe',
                                 'title' => 'كشف الحساب السنوي',
-                                'data-toggle' => 'tooltip',
+                                'data-bs-toggle' => 'tooltip',
                             ]
                         );
                     },
@@ -305,7 +308,7 @@ $employmentTypeMap = [
                             [
                                 'class' => 'btn btn-sm hr-action-btn hr-action-btn--view',
                                 'title' => 'عرض',
-                                'data-toggle' => 'tooltip',
+                                'data-bs-toggle' => 'tooltip',
                             ]
                         );
                     },
@@ -320,7 +323,7 @@ $employmentTypeMap = [
                                 [
                                     'class' => 'btn btn-sm hr-action-btn hr-action-btn--create',
                                     'title' => 'إنشاء ملف موسع',
-                                    'data-toggle' => 'tooltip',
+                                    'data-bs-toggle' => 'tooltip',
                                 ]
                             );
                         }
@@ -330,7 +333,7 @@ $employmentTypeMap = [
                             [
                                 'class' => 'btn btn-sm hr-action-btn hr-action-btn--edit',
                                 'title' => 'تعديل',
-                                'data-toggle' => 'tooltip',
+                                'data-bs-toggle' => 'tooltip',
                             ]
                         );
                     },
@@ -344,7 +347,7 @@ $employmentTypeMap = [
                             [
                                 'class' => 'btn btn-sm hr-action-btn hr-action-btn--delete',
                                 'title' => 'حذف',
-                                'data-toggle' => 'tooltip',
+                                'data-bs-toggle' => 'tooltip',
                                 'data-confirm' => 'هل أنت متأكد من حذف سجل هذا الموظف؟',
                                 'data-method' => 'post',
                                 'data-pjax' => '1',
@@ -396,22 +399,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <!-- ══════════════════════════════════════════════════════
-     مودال AJAX للعرض والتعديل
+     مودال AJAX للعرض والتعديل (Bootstrap 5)
      ══════════════════════════════════════════════════════ -->
-<?php
-Modal::begin([
-    'id' => 'hr-modal',
-    'size' => Modal::SIZE_LARGE,
-    'header' => '<h4 class="modal-title" id="hr-modal-title"></h4>',
-    'headerOptions' => ['class' => 'hr-modal-header'],
-    'options' => [
-        'tabindex' => false,
-        'class' => 'hr-modal',
-    ],
-]);
-echo '<div id="hr-modal-content"></div>';
-Modal::end();
-?>
+<div class="modal fade hr-modal" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header hr-modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
 
 
 <?php
@@ -420,13 +425,18 @@ Modal::end();
  * ═══════════════════════════════════════════════════════════════ */
 $js = <<<JS
 
-// Tooltips
-$('[data-toggle="tooltip"]').tooltip({container: 'body', placement: 'top'});
-
-// Re-init tooltips after Pjax reload
-$(document).on('pjax:complete', function() {
-    $('[data-toggle="tooltip"]').tooltip({container: 'body', placement: 'top'});
-});
+// Tooltips (Bootstrap 5)
+function initHrEmployeeTooltips() {
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (el) {
+        if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+            var existing = bootstrap.Tooltip.getInstance(el);
+            if (existing) existing.dispose();
+            new bootstrap.Tooltip(el, { container: 'body', placement: 'top' });
+        }
+    });
+}
+initHrEmployeeTooltips();
+$(document).on('pjax:complete', initHrEmployeeTooltips);
 
 JS;
 
@@ -698,9 +708,9 @@ $css = <<<CSS
     border-bottom: none;
     padding: 16px 20px;
 }
-.hr-modal .modal-header .close {
-    color: #fff;
-    opacity: 0.8;
+.hr-modal .modal-header .btn-close {
+    filter: invert(1);
+    opacity: 0.85;
 }
 .hr-modal .modal-title {
     color: #fff;

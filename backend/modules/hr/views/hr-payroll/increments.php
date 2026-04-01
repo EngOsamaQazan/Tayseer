@@ -78,7 +78,7 @@ $typeMap = [
                 'style' => 'border-radius:8px;margin-right:6px',
             ]) ?>
             <?= Html::a('<i class="fa fa-arrow-right"></i> مسيرات الرواتب', ['index'], [
-                'class' => 'btn btn-default btn-sm',
+                'class' => 'btn btn-secondary btn-sm',
                 'style' => 'border-radius:8px;margin-right:8px',
             ]) ?>
         </div>

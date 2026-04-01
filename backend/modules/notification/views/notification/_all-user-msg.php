@@ -1,11 +1,6 @@
 <?php
 
-use yii\helpers\Url;
-use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
-use johnitvn\ajaxcrud\BulkButtonWidget;
 
 /* @var $this yii\web\View */
 /* @var $searchModel common\models\NotificationSearch */
@@ -14,7 +9,10 @@ use johnitvn\ajaxcrud\BulkButtonWidget;
 $this->title = Yii::t('app', 'Notifications');
 $this->params['breadcrumbs'][] = $this->title;
 
-CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 ?>
 <div class="questions-bank box box-primary">
@@ -33,8 +31,20 @@ CrudAsset::register($this);
             ]) ?>
         </div>
     </div>
-    <?php Modal::begin(["id" => "ajaxCrudModal",
-        "footer" => "",// always need it for jquery plugin
-    ]) ?>
-    <?php Modal::end(); ?>
+    <div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+                </div>
+                <div class="modal-body">
+                    <div style="text-align:center;padding:40px">
+                        <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                    </div>
+                </div>
+                <div class="modal-footer"></div>
+            </div>
+        </div>
+    </div>
 </div>

@@ -96,12 +96,12 @@ $canDiwanDelete = Permissions::can(Permissions::DIWAN_DELETE) || Yii::$app->user
                 'buttons' => [
                     'view' => function ($url, $m) {
                         return Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $m->id], [
-                            'class' => 'btn btn-xs btn-default', 'title' => 'عرض',
+                            'class' => 'btn btn-xs btn-secondary', 'title' => 'عرض',
                         ]);
                     },
                     'receipt' => function ($url, $m) {
                         return Html::a('<i class="fa fa-print"></i>', ['receipt', 'id' => $m->id], [
-                            'class' => 'btn btn-xs btn-default', 'title' => 'إيصال', 'target' => '_blank',
+                            'class' => 'btn btn-xs btn-secondary', 'title' => 'إيصال', 'target' => '_blank',
                         ]);
                     },
                     'delete' => function ($url, $m) {

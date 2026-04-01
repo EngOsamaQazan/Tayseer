@@ -69,7 +69,7 @@ $defaultRadius = $model->radius_meters ?: 100;
 
 <div class="hr-page">
     <div class="hr-page-header">
-        <a href="<?= Url::to(['index']) ?>" class="btn btn-default btn-sm">
+        <a href="<?= Url::to(['index']) ?>" class="btn btn-secondary btn-sm">
             <i class="fa fa-arrow-right"></i>
         </a>
         <h1><i class="fa fa-map-marker"></i> <?= $this->title ?></h1>
@@ -141,7 +141,7 @@ $defaultRadius = $model->radius_meters ?: 100;
     </div>
 
     <div class="wz-f-actions">
-        <a href="<?= Url::to(['index']) ?>" class="btn btn-default">إلغاء</a>
+        <a href="<?= Url::to(['index']) ?>" class="btn btn-secondary">إلغاء</a>
         <?= Html::submitButton($model->isNewRecord ? 'إنشاء المنطقة' : 'حفظ التعديلات', ['class' => 'btn btn-primary']) ?>
     </div>
 

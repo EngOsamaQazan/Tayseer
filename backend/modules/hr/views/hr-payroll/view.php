@@ -146,7 +146,7 @@ foreach ($payslips as $ps) {
             </span>
         </h1>
         <div class="hr-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-default btn-sm']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
 
             <?php if (in_array($st, ['draft', 'calculated'])): ?>
                 <?= Html::a('<i class="fa fa-sliders"></i> عمولات وتعديلات', ['adjustments', 'id' => $model->id], [

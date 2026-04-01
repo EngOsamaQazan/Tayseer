@@ -361,7 +361,7 @@ $useGoogleMaps     = !empty($googleMapsKey) && strpos($googleMapsKey, 'AIza') ==
                                 <div class="sloc-radius"><i class="fa fa-circle-o"></i> نطاق: <?= $loc['radius'] ?> متر</div>
                             </div>
                             <div class="sloc-actions">
-                                <button class="btn btn-default btn-xs btn-edit-loc" title="تعديل"><i class="fa fa-pencil"></i></button>
+                                <button class="btn btn-secondary btn-xs btn-edit-loc" title="تعديل"><i class="fa fa-pencil"></i></button>
                                 <button class="btn btn-danger btn-xs btn-del-loc" title="حذف"><i class="fa fa-trash"></i></button>
                             </div>
                         </li>
@@ -435,7 +435,7 @@ $useGoogleMaps     = !empty($googleMapsKey) && strpos($googleMapsKey, 'AIza') ==
         </div>
         <p style="font-size:11px;color:#888;margin-top:4px"><i class="fa fa-info-circle"></i> انقر على الخريطة لتحديد الإحداثيات، أو اسحب الدبوس.</p>
         <div class="loc-modal-actions">
-            <button class="btn btn-default" id="locModalCancel">إلغاء</button>
+            <button class="btn btn-secondary" id="locModalCancel">إلغاء</button>
             <button class="btn btn-primary" id="locModalSave"><i class="fa fa-check"></i> حفظ الموقع</button>
         </div>
     </div>
@@ -789,7 +789,7 @@ function initFieldMap() {
                 '<li class="sloc-item" data-id="'+loc.id+'" data-lat="'+loc.latitude+'" data-lng="'+loc.longitude+'" data-radius="'+loc.radius+'">' +
                 '<span class="sloc-icon"><i class="fa fa-map-pin"></i></span>' +
                 '<div class="sloc-info"><div class="sloc-name">'+loc.name+'</div>'+desc+'<div class="sloc-radius"><i class="fa fa-circle-o"></i> نطاق: '+loc.radius+' متر</div></div>' +
-                '<div class="sloc-actions"><button class="btn btn-default btn-xs btn-edit-loc" title="تعديل"><i class="fa fa-pencil"></i></button><button class="btn btn-danger btn-xs btn-del-loc" title="حذف"><i class="fa fa-trash"></i></button></div></li>'
+                '<div class="sloc-actions"><button class="btn btn-secondary btn-xs btn-edit-loc" title="تعديل"><i class="fa fa-pencil"></i></button><button class="btn btn-danger btn-xs btn-del-loc" title="حذف"><i class="fa fa-trash"></i></button></div></li>'
             );
         });
     }
@@ -954,7 +954,7 @@ function initFieldMap() {
         if(!_savedLocs.length){l.html('<div class="fms__empty"><i class="fa fa-map-pin"></i><p>لا يوجد مواقع مسماة</p></div>');return;}
         _savedLocs.forEach(function(loc){
             var d=loc.description?'<div class="sloc-desc">'+loc.description+'</div>':'';
-            l.append('<li class="sloc-item" data-id="'+loc.id+'" data-lat="'+loc.latitude+'" data-lng="'+loc.longitude+'" data-radius="'+loc.radius+'"><span class="sloc-icon"><i class="fa fa-map-pin"></i></span><div class="sloc-info"><div class="sloc-name">'+loc.name+'</div>'+d+'<div class="sloc-radius"><i class="fa fa-circle-o"></i> نطاق: '+loc.radius+' متر</div></div><div class="sloc-actions"><button class="btn btn-default btn-xs btn-edit-loc" title="تعديل"><i class="fa fa-pencil"></i></button><button class="btn btn-danger btn-xs btn-del-loc" title="حذف"><i class="fa fa-trash"></i></button></div></li>');
+            l.append('<li class="sloc-item" data-id="'+loc.id+'" data-lat="'+loc.latitude+'" data-lng="'+loc.longitude+'" data-radius="'+loc.radius+'"><span class="sloc-icon"><i class="fa fa-map-pin"></i></span><div class="sloc-info"><div class="sloc-name">'+loc.name+'</div>'+d+'<div class="sloc-radius"><i class="fa fa-circle-o"></i> نطاق: '+loc.radius+' متر</div></div><div class="sloc-actions"><button class="btn btn-secondary btn-xs btn-edit-loc" title="تعديل"><i class="fa fa-pencil"></i></button><button class="btn btn-danger btn-xs btn-del-loc" title="حذف"><i class="fa fa-trash"></i></button></div></li>');
         });
     }
 

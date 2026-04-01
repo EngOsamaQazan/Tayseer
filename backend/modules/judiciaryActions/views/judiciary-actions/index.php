@@ -1,16 +1,17 @@
 <?php
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
 use backend\modules\judiciaryActions\models\JudiciaryActions;
 use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة الإجراءات القضائية';
 $this->params['breadcrumbs'][] = $this->title;
 
-CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 
 $totalActive = (int)($searchCounter ?? 0);
 $natureStats = (new \yii\db\Query())
@@ -225,12 +226,13 @@ $this->params['breadcrumbs'] = [];
             <?= ExportButtons::widget([
                 'excelRoute' => ['export-excel'],
                 'pdfRoute' => ['export-pdf'],
-                'excelBtnClass' => 'btn btn-default',
-                'pdfBtnClass' => 'btn btn-default',
+                'excelBtnClass' => 'btn btn-secondary',
+                'pdfBtnClass' => 'btn btn-secondary',
             ]) ?>
             <?= Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['create'], [
                 'class' => 'btn btn-primary',
                 'role' => 'modal-remote',
+                'data-pjax' => 0,
             ]) ?>
         </div>
     </div>
@@ -282,12 +284,13 @@ $this->params['breadcrumbs'] = [];
                         ['content' =>
                             Html::a('<i class="fa fa-plus"></i>', ['create'], [
                                 'title' => 'إضافة إجراء جديد',
-                                'class' => 'btn btn-default',
+                                'class' => 'btn btn-secondary',
                                 'role' => 'modal-remote',
+                                'data-pjax' => 0,
                             ]) .
-                            Html::a('<i class="fa fa-repeat"></i>', [''], [
+                            Html::a('<i class="fa fa-refresh"></i>', [''], [
                                 'data-pjax' => 1,
-                                'class' => 'btn btn-default',
+                                'class' => 'btn btn-secondary',
                                 'title' => 'تحديث',
                             ])
                         ],
@@ -364,7 +367,7 @@ $this->params['breadcrumbs'] = [];
             return Html::a(
                 '<i class="fa fa-check-circle"></i> ' . number_format($count) . ' استخدام',
                 $url,
-                ['role' => 'modal-remote', 'title' => 'عرض القضايا المرتبطة', 'class' => 'ja-tree-badge ja-tree-badge-link', 'style' => "background:$bg;color:$color"]
+                ['role' => 'modal-remote', 'title' => 'عرض القضايا المرتبطة', 'class' => 'ja-tree-badge ja-tree-badge-link', 'style' => "background:$bg;color:$color", 'data-pjax' => 0]
             );
         };
 
@@ -375,9 +378,9 @@ $this->params['breadcrumbs'] = [];
                 . '</div>';
             return '<div class="ja-tree-node-actions">'
                 . $moveBtn
-                . Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $id], ['role' => 'modal-remote', 'title' => 'عرض', 'class' => 'ja-tree-edit-btn'])
-                . Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $id], ['role' => 'modal-remote', 'title' => 'تعديل', 'class' => 'ja-tree-edit-btn'])
-                . Html::a('<i class="fa fa-trash-o"></i>', ['confirm-delete', 'id' => $id], ['role' => 'modal-remote', 'title' => 'حذف', 'class' => 'ja-tree-edit-btn ja-tree-delete-btn', 'data-confirm' => false, 'data-method' => false])
+                . Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $id], ['role' => 'modal-remote', 'title' => 'عرض', 'class' => 'ja-tree-edit-btn', 'data-pjax' => 0])
+                . Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $id], ['role' => 'modal-remote', 'title' => 'تعديل', 'class' => 'ja-tree-edit-btn', 'data-pjax' => 0])
+                . Html::a('<i class="fa fa-trash-o"></i>', ['confirm-delete', 'id' => $id], ['role' => 'modal-remote', 'title' => 'حذف', 'class' => 'ja-tree-edit-btn ja-tree-delete-btn', 'data-confirm' => false, 'data-method' => false, 'data-pjax' => 0])
                 . '</div>';
         };
 
@@ -486,8 +489,22 @@ $this->params['breadcrumbs'] = [];
 
 </div>
 
-<?php Modal::begin(['id' => 'ajaxCrudModal', 'footer' => '', 'size' => Modal::SIZE_LARGE]) ?>
-<?php Modal::end(); ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>
 
 <script>
 document.addEventListener('click', function(e) {

@@ -152,7 +152,7 @@ $csrfToken = Yii::$app->request->csrfToken;
     <div class="modal-dialog modal-transfer-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
                 <h4 class="modal-title">نقل بيانات المورد ثم الحذف</h4>
             </div>
             <div class="modal-body modal-transfer-body"
@@ -163,7 +163,7 @@ $csrfToken = Yii::$app->request->csrfToken;
                     <label>نقل الفواتير والأصناف والحركات إلى المورد:</label>
                     <div id="transfer-to-supplier-list" class="transfer-supplier-list">
                         <?php foreach ($suppliers as $s): ?>
-                        <button type="button" class="btn btn-default btn-block transfer-supplier-option transfer-option-supplier"
+                        <button type="button" class="btn btn-secondary btn-block transfer-supplier-option transfer-option-supplier"
                                 data-id="<?= (int)$s->id ?>" data-name="<?= Html::encode($s->name) ?>"
                                 style="text-align: right; margin-bottom: 6px;"
                                 x-show="hiddenSupplierId != <?= (int)$s->id ?>"
@@ -183,7 +183,7 @@ $csrfToken = Yii::$app->request->csrfToken;
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                 <button type="button" class="btn btn-primary" id="btn-transfer-then-delete">نقل ثم حذف</button>
             </div>
         </div>
@@ -257,7 +257,7 @@ $(document).on('click', '.st-btn-delete-supplier', function(){
                 */
                 _tData.showNoOther = true;
             }
-            $('#modal-transfer-supplier').modal('show');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-transfer-supplier')).show();
         }
     }, 'json');
 });
@@ -274,7 +274,7 @@ $('#btn-transfer-then-delete').on('click', function(){
     btn.prop('disabled', true);
     $.post('$transferSupplierUrl', { from_id: deleteSupplierId, to_id: toId, _csrf: '$csrfToken' }, function(resp){
         if (resp.success) {
-            $('#modal-transfer-supplier').modal('hide');
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-transfer-supplier')).hide();
             location.reload();
         } else {
             alert(resp.message || 'حدث خطأ');

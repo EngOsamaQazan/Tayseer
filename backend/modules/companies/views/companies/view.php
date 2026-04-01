@@ -102,7 +102,7 @@ $this->params['breadcrumbs'][] = $model->name;
         <?php endif ?>
 
         <div class="inv-view-actions">
-            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('<i class="fa fa-arrow-right"></i> العودة', ['index'], ['class' => 'btn btn-secondary']) ?>
             <?php if (Permissions::can(Permissions::COMP_UPDATE)): ?>
                 <?= Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $model->id], ['class' => 'btn btn-primary']) ?>
             <?php endif ?>

@@ -119,7 +119,7 @@ return [
             if ($count === 0) return '<span style="color:#CBD5E1;font-size:11px">0</span>';
             $color = $count > 50 ? '#16A34A' : ($count > 10 ? '#2563EB' : '#94A3B8');
             $url = Url::to(['usage-details', 'id' => $model->id]);
-            return '<a href="' . $url . '" role="modal-remote" title="عرض القضايا المرتبطة" '
+            return '<a href="' . $url . '" role="modal-remote" data-pjax="0" title="عرض القضايا المرتبطة" '
                 . 'style="font-weight:700;font-size:11px;color:' . $color . ';cursor:pointer;text-decoration:none;'
                 . 'display:inline-flex;align-items:center;gap:2px;padding:2px 6px;border-radius:5px;'
                 . 'background:' . ($count > 50 ? '#F0FDF4' : ($count > 10 ? '#EFF6FF' : '#F8FAFC')) . '">'
@@ -135,9 +135,9 @@ return [
         'value' => function ($model) {
             $id = $model->id;
             return '<div class="ja-action-btns">'
-                . Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $id], ['role' => 'modal-remote', 'title' => 'عرض', 'class' => 'ja-act ja-act-view'])
-                . Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $id], ['role' => 'modal-remote', 'title' => 'تعديل', 'class' => 'ja-act ja-act-edit'])
-                . Html::a('<i class="fa fa-trash-o"></i>', ['confirm-delete', 'id' => $id], ['role' => 'modal-remote', 'title' => 'حذف', 'class' => 'ja-act ja-act-del', 'data-confirm' => false, 'data-method' => false])
+                . Html::a('<i class="fa fa-eye"></i>', ['view', 'id' => $id], ['role' => 'modal-remote', 'title' => 'عرض', 'class' => 'ja-act ja-act-view', 'data-pjax' => 0])
+                . Html::a('<i class="fa fa-pencil"></i>', ['update', 'id' => $id], ['role' => 'modal-remote', 'title' => 'تعديل', 'class' => 'ja-act ja-act-edit', 'data-pjax' => 0])
+                . Html::a('<i class="fa fa-trash-o"></i>', ['confirm-delete', 'id' => $id], ['role' => 'modal-remote', 'title' => 'حذف', 'class' => 'ja-act ja-act-del', 'data-confirm' => false, 'data-method' => false, 'data-pjax' => 0])
                 . '</div>';
         },
         'headerOptions' => ['style' => 'width:10%;text-align:center;padding:5px 2px'],

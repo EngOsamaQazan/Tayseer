@@ -2,10 +2,7 @@
 
 use yii\helpers\Url;
 use yii\helpers\Html;
-use yii\bootstrap\Modal;
 use kartik\grid\GridView;
-use johnitvn\ajaxcrud\CrudAsset;
-use johnitvn\ajaxcrud\BulkButtonWidget;
 use common\helper\Permissions;
 use backend\widgets\ExportButtons;
 
@@ -16,7 +13,10 @@ use backend\widgets\ExportButtons;
 $this->title = Yii::t('app', 'Collections');
 $this->params['breadcrumbs'][] = $this->title;
 
-CrudAsset::register($this);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
 ?>
 
 <div class="ty-stats-grid" style="margin-bottom:20px">
@@ -40,7 +40,7 @@ CrudAsset::register($this);
             'toolbar' => [
                 ['content' =>
                     Html::a('<i class="fa fa-sync"></i>', [''],
-                        ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
+                        ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .
                     '{toggleData}' .
                     ExportButtons::widget([
                         'excelRoute' => ['export-excel'],
@@ -57,8 +57,19 @@ CrudAsset::register($this);
         ]) ?>
     </div>
 </div>
-<?php Modal::begin([
-    "id" => "ajaxCrudModal",
-    "footer" => "",
-]) ?>
-<?php Modal::end(); ?>
+<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align:center;padding:40px">
+                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
+                </div>
+            </div>
+            <div class="modal-footer"></div>
+        </div>
+    </div>
+</div>

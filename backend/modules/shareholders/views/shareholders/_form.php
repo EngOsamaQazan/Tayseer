@@ -75,7 +75,7 @@ use yii\helpers\Url;
 
     <div class="sh-card">
         <div class="sh-submit-bar">
-            <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-default']) ?>
+            <?= Html::a('إلغاء', ['index'], ['class' => 'btn btn-secondary']) ?>
             <?= Html::submitButton($model->isNewRecord ? 'إضافة مساهم' : 'حفظ التعديلات', [
                 'class' => $model->isNewRecord ? 'btn btn-success' : 'btn btn-primary',
             ]) ?>

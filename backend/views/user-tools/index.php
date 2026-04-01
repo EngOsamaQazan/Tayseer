@@ -34,9 +34,9 @@ $this->title = 'أدوات المستخدم';
         <div class="alert alert-success">تم تعيين كلمة المرور بنجاح.</div>
     <?php endif; ?>
 
-    <div class="panel panel-default">
-        <div class="panel-heading">البريد أو اسم المستخدم</div>
-        <div class="panel-body">
+    <div class="card">
+        <div class="card-header">البريد أو اسم المستخدم</div>
+        <div class="card-body">
             <?php $form = \yii\widgets\ActiveForm::begin(['method' => 'post', 'action' => ['index']]); ?>
             <div class="form-group">
                 <label>البريد أو اسم المستخدم</label>
@@ -47,7 +47,7 @@ $this->title = 'أدوات المستخدم';
                 <input type="password" name="password" class="form-control" value="" placeholder="اتركه فارغاً إن لم ترد تعيين كلمة مرور" />
             </div>
             <div class="form-group">
-                <button type="submit" name="action" value="check" class="btn btn-default">فحص الحساب</button>
+                <button type="submit" name="action" value="check" class="btn btn-secondary">فحص الحساب</button>
                 <button type="submit" name="action" value="fix" class="btn btn-warning">إصلاح (تأكيد + إلغاء حظر)</button>
                 <button type="submit" name="action" value="set_password" class="btn btn-primary">تعيين كلمة المرور</button>
             </div>
@@ -56,9 +56,9 @@ $this->title = 'أدوات المستخدم';
     </div>
 
     <?php if (!empty($result)): ?>
-        <div class="panel panel-info">
-            <div class="panel-heading">نتيجة الفحص</div>
-            <div class="panel-body">
+        <div class="card border-info">
+            <div class="card-header text-bg-info">نتيجة الفحص</div>
+            <div class="card-body">
                 <p><strong>المستخدم:</strong> <?= Html::encode($result['username']) ?> (<?= Html::encode($result['email']) ?>) — id: <?= (int)$result['id'] ?></p>
                 <p><strong>تأكيد البريد:</strong> <?= $result['confirmed_at'] ? Html::encode($result['confirmed_at']) : '<span class="text-warning">غير مؤكد</span>' ?></p>
                 <p><strong>الحظر:</strong> <?= $result['blocked_at'] ? '<span class="text-danger">محظور منذ ' . Html::encode($result['blocked_at']) . '</span>' : 'غير محظور' ?></p>

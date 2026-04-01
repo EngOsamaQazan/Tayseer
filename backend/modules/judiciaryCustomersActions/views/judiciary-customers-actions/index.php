@@ -59,7 +59,7 @@ $this->params['breadcrumbs'][] = $this->title;
                 [
                     'content' =>
                         Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['create'], ['class' => 'btn btn-success', 'role' => 'modal-remote']) .
-                        Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-default', 'title' => 'تحديث']) .
+                        Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .
                         ExportButtons::widget([
                             'excelRoute' => ['export-excel'],
                             'pdfRoute' => ['export-pdf'],

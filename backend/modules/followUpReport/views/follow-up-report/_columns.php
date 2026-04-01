@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
-use yii\bootstrap\ButtonDropdown;
 use common\helper\LoanContract;
 use backend\modules\contractInstallment\models\ContractInstallment;
 use backend\modules\followUp\helper\ContractCalculations;
@@ -109,14 +108,14 @@ return [
             'followup' => function ($url, $model, $key) {
                 if (!$model->contract->is_locked($model->contract)) {
                     return Html::a(
-                                    '<span class="glyphicon glyphicon-eye-open"> ' . \Yii::t('app', 'Add Follow Up') . '</span>', ['/followUp/follow-up/index', 'contract_id' => $key], [
+                                    '<span class="fa fa-eye"> ' . \Yii::t('app', 'Add Follow Up') . '</span>', ['/followUp/follow-up/index', 'contract_id' => $key], [
                                 'title' => 'Follow Up',
                                 'data-pjax' => '0',
                                     ]
                     );
                 }else{
                    return Html::a(
-                                    '<span class="glyphicon glyphicon-eye-close"> متابع من قبل موظف اخر</span>',null, [
+                                    '<span class="fa fa-eye-slash"> متابع من قبل موظف اخر</span>',null, [
                                 'title' => 'Follow Up',
                                 'data-pjax' => '0',
                                     ]
@@ -169,7 +168,7 @@ return [
 //                                        ],
 //                                    ],
 //                                    'options' => [
-//                                        'class' => 'btn-default',
+//                                        'class' => 'btn-secondary',
 //                                        'style' => 'padding-left: 5px; padding-right: 5px;', // btn-success, btn-info, et cetera
 //                                    ],
 //                                    'split' => true, // if you want a split button

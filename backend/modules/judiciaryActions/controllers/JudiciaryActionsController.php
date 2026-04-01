@@ -97,7 +97,7 @@ class JudiciaryActionsController extends Controller
             return [
                 'title' => 'عرض الإجراء #' . $id,
                 'content' => $this->renderAjax('view', ['model' => $this->findModel($id)]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                     Html::a('<i class="fa fa-pencil"></i> تعديل', ['update', 'id' => $id], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
             ];
         }
@@ -119,7 +119,7 @@ class JudiciaryActionsController extends Controller
                 return [
                     'title' => '<i class="fa fa-plus"></i> إضافة إجراء قضائي جديد',
                     'content' => $this->renderAjax('create', ['model' => $model]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -133,7 +133,7 @@ class JudiciaryActionsController extends Controller
                         'forceReload' => '#crud-datatable-pjax',
                         'title' => 'إضافة إجراء قضائي',
                         'content' => '<div style="text-align:center;padding:20px"><i class="fa fa-check-circle" style="font-size:48px;color:#10B981"></i><h4 style="margin-top:12px;color:#1E293B">تم إضافة الإجراء بنجاح</h4><p style="color:#64748B">' . Html::encode($model->name) . '</p></div>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                             Html::a('<i class="fa fa-plus"></i> إضافة آخر', ['create'], ['class' => 'btn btn-primary', 'role' => 'modal-remote']),
                     ];
                 }
@@ -142,7 +142,7 @@ class JudiciaryActionsController extends Controller
             return [
                 'title' => '<i class="fa fa-plus"></i> إضافة إجراء قضائي جديد',
                 'content' => $this->renderAjax('create', ['model' => $model]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                     Html::button('<i class="fa fa-plus"></i> إضافة', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -172,7 +172,7 @@ class JudiciaryActionsController extends Controller
                 return [
                     'title' => '<i class="fa fa-pencil"></i> تعديل: ' . Html::encode($model->name),
                     'content' => $this->renderAjax('update', ['model' => $model]),
-                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-save"></i> حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
                 ];
             }
@@ -185,7 +185,7 @@ class JudiciaryActionsController extends Controller
                         'forceReload' => '#crud-datatable-pjax',
                         'title' => 'تعديل الإجراء',
                         'content' => '<div style="text-align:center;padding:20px"><i class="fa fa-check-circle" style="font-size:48px;color:#10B981"></i><h4 style="margin-top:12px;color:#1E293B">تم حفظ التعديلات</h4></div>',
-                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']),
+                        'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']),
                     ];
                 }
             }
@@ -193,7 +193,7 @@ class JudiciaryActionsController extends Controller
             return [
                 'title' => '<i class="fa fa-pencil"></i> تعديل: ' . Html::encode($model->name),
                 'content' => $this->renderAjax('update', ['model' => $model]),
-                'footer' => Html::button('إغلاق', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                     Html::button('<i class="fa fa-save"></i> حفظ', ['class' => 'btn btn-primary', 'type' => 'submit']),
             ];
         }
@@ -244,7 +244,7 @@ class JudiciaryActionsController extends Controller
                         'otherActions' => $otherActions,
                         'error' => 'يجب اختيار إجراء بديل لترحيل السجلات إليه',
                     ]),
-                    'footer' => Html::button('إلغاء', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+                    'footer' => Html::button('إلغاء', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                         Html::button('<i class="fa fa-trash"></i> تأكيد الحذف', [
                             'class' => 'btn btn-danger',
                             'type' => 'submit',
@@ -297,7 +297,7 @@ class JudiciaryActionsController extends Controller
                 'usageCount' => $usageCount,
                 'otherActions' => $otherActions,
             ]),
-            'footer' => Html::button('إلغاء', ['class' => 'btn btn-default pull-left', 'data-dismiss' => 'modal']) .
+            'footer' => Html::button('إلغاء', ['class' => 'btn btn-secondary pull-left', 'data-dismiss' => 'modal']) .
                 Html::button('<i class="fa fa-trash"></i> تأكيد الحذف', [
                     'class' => 'btn btn-danger',
                     'type' => 'submit',
@@ -343,7 +343,7 @@ class JudiciaryActionsController extends Controller
                 'model' => $model,
                 'rows' => $rows,
             ]),
-            'footer' => Html::button('إغلاق', ['class' => 'btn btn-default', 'data-dismiss' => 'modal']),
+            'footer' => Html::button('إغلاق', ['class' => 'btn btn-secondary', 'data-dismiss' => 'modal']),
         ];
     }
 

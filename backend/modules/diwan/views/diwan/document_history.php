@@ -120,7 +120,7 @@ $this->title = 'قسم الديوان';
 
     <div style="margin-top:20px;">
         <?= Html::a('<i class="fa fa-arrow-right"></i> رجوع للبحث', ['search'], [
-            'class' => 'btn btn-default btn-sm', 'style' => 'border-radius:6px;',
+            'class' => 'btn btn-secondary btn-sm', 'style' => 'border-radius:6px;',
         ]) ?>
     </div>
 </div>

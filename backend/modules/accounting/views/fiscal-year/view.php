@@ -27,7 +27,7 @@ $this->params['breadcrumbs'][] = $this->title;
                     <tr><th>الحالة</th><td><?= $model->getStatusBadge() ?></td></tr>
                     <tr>
                         <th>السنة الحالية</th>
-                        <td><?= $model->is_current ? '<span class="label label-primary">نعم</span>' : 'لا' ?></td>
+                        <td><?= $model->is_current ? '<span class="badge bg-primary">نعم</span>' : 'لا' ?></td>
                     </tr>
                 </table>
 

@@ -133,7 +133,9 @@ class Payable extends ActiveRecord
         ];
         $color = $colors[$this->status] ?? 'default';
         $label = self::getStatuses()[$this->status] ?? $this->status;
-        return '<span class="label label-' . $color . '">' . $label . '</span>';
+        $map = ['info' => 'badge bg-info', 'warning' => 'badge bg-warning text-dark', 'success' => 'badge bg-success', 'danger' => 'badge bg-danger', 'default' => 'badge bg-secondary', 'primary' => 'badge bg-primary'];
+        $bc = $map[$color] ?? 'badge bg-secondary';
+        return '<span class="' . $bc . '">' . $label . '</span>';
     }
 
     public function recordPayment($paymentAmount)
