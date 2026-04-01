@@ -5,7 +5,10 @@
 set -euo pipefail
 
 BRANCH="main"
-LOG="/var/log/deploy-pull.log"
+LOG="/var/www/jadal.aqssat.co/backend/runtime/logs/deploy-pull.log"
+
+# Ensure log is writable
+touch "$LOG" 2>/dev/null || LOG="/dev/null"
 
 exec >> "$LOG" 2>&1
 echo "--- $(date '+%Y-%m-%d %H:%M:%S') --- webhook pull triggered ---"
@@ -39,8 +42,9 @@ pull_site "/var/www/namaa.aqssat.co" "prod_namaa" &
 pull_site "/var/www/watar.aqssat.co" "prod_watar" &
 wait
 
-# Clear OPcache without restarting PHP-FPM (fast)
-php -r 'opcache_reset();' 2>/dev/null || true
+# Clear OPcache via PHP-FPM restart (opcache_reset in CLI doesn't affect FPM)
+PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "8.5")
+systemctl reload "php${PHP_VER}-fpm" 2>/dev/null || true
 
 # Landing page
 LANDING_SRC="/var/www/jadal.aqssat.co/landing/index.html"
