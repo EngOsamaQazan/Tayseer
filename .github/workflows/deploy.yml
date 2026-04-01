@@ -156,7 +156,7 @@ jobs:
             echo "Secret first 8 chars: $(head -c 8 /opt/.webhook-secret 2>/dev/null)"
             echo "Secret file perms: $(ls -la /opt/.webhook-secret 2>/dev/null)"
             echo "Deploy script exists: $([ -f /opt/deploy-pull.sh ] && echo YES || echo NO)"
-            echo "Debug log: $(cat /tmp/gh-deploy-debug.log 2>/dev/null || echo 'no log yet')"
+            echo "Debug log: $(cat /var/www/jadal.aqssat.co/backend/runtime/logs/gh-deploy-debug.log 2>/dev/null || echo 'no log yet')"
             echo "PHP file check: $(head -3 /var/www/jadal.aqssat.co/backend/web/gh-deploy.php 2>/dev/null)"
             echo "PHP file has debug: $(grep -c 'debugLog' /var/www/jadal.aqssat.co/backend/web/gh-deploy.php 2>/dev/null || echo 0)"
             
