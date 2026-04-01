@@ -150,6 +150,15 @@ jobs:
               echo "  >>> Add this secret to the GitHub webhook configuration <<<"
             fi
             
+            # Debug webhook — print diagnostic info
+            echo "=== Webhook Debug ==="
+            echo "Secret file exists: $([ -f /opt/.webhook-secret ] && echo YES || echo NO)"
+            echo "Secret first 8 chars: $(head -c 8 /opt/.webhook-secret 2>/dev/null)"
+            echo "Secret file perms: $(ls -la /opt/.webhook-secret 2>/dev/null)"
+            echo "Deploy script exists: $([ -f /opt/deploy-pull.sh ] && echo YES || echo NO)"
+            echo "Debug log: $(cat /var/log/gh-deploy-debug.log 2>/dev/null || echo 'no log yet')"
+            echo "Apache document root: $(grep -r 'DocumentRoot' /etc/apache2/sites-enabled/ 2>/dev/null | head -5)"
+            
             # Deploy landing page to root domain aqssat.co
             echo "=== Deploying landing page to aqssat.co ==="
             LANDING_SRC="/var/www/jadal.aqssat.co/landing/index.html"
