@@ -80,11 +80,10 @@ CrudAsset::register($this);
                     ])->label('إلى تاريخ') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'created_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
-                        'options' => ['placeholder' => 'اختر الموظف...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('الموظف') ?>
+                    <?= $form->field($searchModel, 'created_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
+                        ['prompt' => '-- اختر الموظف --', 'class' => 'form-control']
+                    )->label('الموظف') ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($searchModel, 'number_row')->textInput(['maxlength' => true, 'placeholder' => 'عدد النتائج'])->label('عدد الصفوف') ?>

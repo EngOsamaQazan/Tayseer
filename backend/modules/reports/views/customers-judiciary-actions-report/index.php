@@ -76,12 +76,10 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
                     <?= $form->field($searchModel, 'customer_name')->textInput(['placeholder' => 'اسم العميل'])->label('اسم العميل') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'court_name')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map($court, 'name', 'name'),
-                        'language' => 'ar',
-                        'options' => ['placeholder' => 'اختر المحكمة...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('المحكمة') ?>
+                    <?= $form->field($searchModel, 'court_name')->dropDownList(
+                        yii\helpers\ArrayHelper::map($court, 'name', 'name'),
+                        ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control']
+                    )->label('المحكمة') ?>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">

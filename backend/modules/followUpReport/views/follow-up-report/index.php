@@ -10,14 +10,17 @@ use yii\helpers\ArrayHelper;
 use yii\widgets\LinkPager;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 use backend\widgets\ExportButtons;
-use backend\widgets\UnifiedSearchWidget;
 use backend\helpers\NameHelper;
+use yii\web\View;
 
 /* Assets */
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/contracts-v2.css?v=' . Yii::$app->params['assetVersion']);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/unified-search.css?v=' . Yii::$app->params['assetVersion']);
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/contracts-v2.js?v=' . Yii::$app->params['assetVersion'], [
+    'depends' => [\yii\web\JqueryAsset::class],
+]);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/unified-search.js?v=' . Yii::$app->params['assetVersion'], [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
 $this->registerCssFile(Yii::$app->request->baseUrl . '/css/pin-system.css?v=' . Yii::$app->params['assetVersion']);
@@ -193,57 +196,106 @@ a.fur-id-link:hover{text-decoration:underline}
             <div class="ct-filter-body">
                 <?php $form = ActiveForm::begin(['id'=>'fur-search','method'=>'get','action'=>['index'],'options'=>['class'=>'ct-filter-form']]); ?>
                 <?= $form->field($searchModel, 'is_can_not_contact', ['template' => '{input}'])->hiddenInput()->label(false) ?>
-                <div class="ct-filter-grid">
-                    <div class="ct-filter-group ct-filter-wide">
-                        <label><i class="fa fa-search"></i> بحث</label>
-                        <?= UnifiedSearchWidget::widget([
-                            'name'        => 'FollowUpReportSearch[q]',
-                            'value'       => $searchModel->q,
-                            'searchUrl'   => Url::to(['search-suggest']),
-                            'placeholder' => 'رقم العقد، اسم العميل، رقم الهوية، رقم الهاتف...',
-                            'formSelector'=> '#fur-search',
-                        ]) ?>
+                <div class="ct-filter-row">
+                    <div class="ct-filter-col-wide ct-filter-search">
+                        <label><i class="fa fa-user"></i> اسم العميل</label>
+                        <div class="us-wrap" id="fur-name-wrap">
+                            <?= Html::activeTextInput($searchModel, 'customer_name', [
+                                'id' => 'fur-name',
+                                'class' => 'form-control us-input',
+                                'placeholder' => 'ابحث باسم العميل...',
+                                'aria-label' => 'بحث باسم العميل',
+                                'autocomplete' => 'off',
+                            ]) ?>
+                            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+                            <div class="us-dropdown" style="display:none"></div>
+                        </div>
                     </div>
-                    <div class="ct-filter-group">
+                    <div class="ct-filter-col ct-filter-search">
+                        <label><i class="fa fa-hashtag"></i> رقم العقد</label>
+                        <div class="us-wrap" id="fur-id-wrap">
+                            <?= Html::activeTextInput($searchModel, 'id', [
+                                'id' => 'fur-id',
+                                'class' => 'form-control us-input',
+                                'placeholder' => 'رقم العقد...',
+                                'aria-label' => 'بحث برقم العقد',
+                                'autocomplete' => 'off',
+                            ]) ?>
+                            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+                            <div class="us-dropdown" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="ct-filter-col ct-filter-search">
+                        <label><i class="fa fa-id-card"></i> الرقم الوطني</label>
+                        <div class="us-wrap" id="fur-idn-wrap">
+                            <?= Html::activeTextInput($searchModel, 'id_number', [
+                                'id' => 'fur-idn',
+                                'class' => 'form-control us-input',
+                                'placeholder' => 'الرقم الوطني...',
+                                'aria-label' => 'بحث بالرقم الوطني',
+                                'autocomplete' => 'off',
+                            ]) ?>
+                            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+                            <div class="us-dropdown" style="display:none"></div>
+                        </div>
+                    </div>
+                    <div class="ct-filter-col ct-filter-search">
+                        <label><i class="fa fa-phone"></i> رقم الهاتف</label>
+                        <div class="us-wrap" id="fur-phone-wrap">
+                            <?= Html::activeTextInput($searchModel, 'phone_number', [
+                                'id' => 'fur-phone',
+                                'class' => 'form-control us-input',
+                                'placeholder' => 'رقم الهاتف...',
+                                'aria-label' => 'بحث برقم الهاتف',
+                                'autocomplete' => 'off',
+                            ]) ?>
+                            <span class="us-spinner" style="display:none"><i class="fa fa-circle-o-notch fa-spin"></i></span>
+                            <div class="us-dropdown" style="display:none"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ct-filter-row">
+                    <div class="ct-filter-col">
                         <label>حالة العقد</label>
-                        <?= $form->field($searchModel, 'status', ['template'=>'{input}'])->dropDownList($statusList, ['class'=>'ct-input']) ?>
+                        <?= $form->field($searchModel, 'status', ['template'=>'{input}'])->dropDownList($statusList, ['class'=>'form-control']) ?>
                     </div>
                     <?php if ($isManager): ?>
-                    <div class="ct-filter-group">
+                    <div class="ct-filter-col">
                         <label>المتابع</label>
-                        <?= $form->field($searchModel, 'followed_by', ['template'=>'{input}'])->widget(Select2::class, [
-                            'data'=>$allUsers,'options'=>['placeholder'=>'اختر المتابع'],
-                            'pluginOptions'=>['allowClear'=>true,'dir'=>'rtl'],
+                        <?= $form->field($searchModel, 'followed_by', ['template'=>'{input}'])->dropDownList($allUsers, [
+                            'prompt' => '-- المتابع --',
+                            'class' => 'form-control',
+                            'aria-label' => 'المتابع',
                         ]) ?>
                     </div>
                     <?php endif ?>
                     <?php if (!$isNoContact): ?>
-                    <div class="ct-filter-group">
+                    <div class="ct-filter-col">
                         <label>حالة المتابعة</label>
                         <?= $form->field($searchModel, 'never_followed', ['template'=>'{input}'])->dropDownList([
                             ''=>'الكل','1'=>'لم يُتابع أبداً','0'=>'تمت متابعته',
-                        ], ['class'=>'ct-input']) ?>
+                        ], ['class'=>'form-control']) ?>
                     </div>
-                    <div class="ct-filter-group">
+                    <div class="ct-filter-col">
                         <label>التذكير حتى</label>
                         <?= $form->field($searchModel, 'reminder', ['template'=>'{input}'])->widget(FlatpickrWidget::class, [
-                            'options'=>['placeholder'=>'التذكير حتى','class'=>'ct-input','autocomplete'=>'off'],
+                            'options'=>['placeholder'=>'التذكير حتى','class'=>'form-control','autocomplete'=>'off'],
                             'pluginOptions'=>['dateFormat'=>'Y-m-d'],
                         ]) ?>
                     </div>
-                    <div class="ct-filter-group">
+                    <div class="ct-filter-col">
                         <label>وعد بالدفع حتى</label>
                         <?= $form->field($searchModel, 'promise_to_pay_at', ['template'=>'{input}'])->widget(FlatpickrWidget::class, [
-                            'options'=>['placeholder'=>'وعد بالدفع حتى','class'=>'ct-input','autocomplete'=>'off'],
+                            'options'=>['placeholder'=>'وعد بالدفع حتى','class'=>'form-control','autocomplete'=>'off'],
                             'pluginOptions'=>['dateFormat'=>'Y-m-d'],
                         ]) ?>
                     </div>
                     <?php endif ?>
-                    <div class="ct-filter-group">
+                    <div class="ct-filter-col">
                         <label>عدد النتائج</label>
                         <?= $form->field($searchModel, 'number_row', ['template'=>'{input}'])->dropDownList([
                             ''=>'افتراضي (10)','20'=>'20','50'=>'50','100'=>'100','200'=>'200',
-                        ], ['class'=>'ct-input']) ?>
+                        ], ['class'=>'form-control']) ?>
                     </div>
                 </div>
                 <div class="ct-filter-actions">
@@ -366,6 +418,19 @@ a.fur-id-link:hover{text-decoration:underline}
     <?php endif ?>
 
 </div>
+
+<?php
+$suggestUrl = Url::to(['field-suggest']);
+$this->registerJs(<<<JS
+if (typeof UnifiedSearch !== 'undefined') {
+    UnifiedSearch.init({inputId:'fur-name',  url:'{$suggestUrl}?field=customer_name', minChars:2, delay:300, formSelector:'#fur-search'});
+    UnifiedSearch.init({inputId:'fur-id',    url:'{$suggestUrl}?field=id',            minChars:1, delay:300, formSelector:'#fur-search'});
+    UnifiedSearch.init({inputId:'fur-idn',   url:'{$suggestUrl}?field=id_number',     minChars:2, delay:300, formSelector:'#fur-search'});
+    UnifiedSearch.init({inputId:'fur-phone', url:'{$suggestUrl}?field=phone_number',  minChars:2, delay:300, formSelector:'#fur-search'});
+}
+JS
+, View::POS_READY);
+?>
 
 <?php
 $this->registerJs(<<<'JS'

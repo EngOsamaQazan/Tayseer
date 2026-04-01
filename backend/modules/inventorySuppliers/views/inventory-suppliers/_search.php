@@ -2,7 +2,6 @@
 
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use yii\helpers\ArrayHelper;
 use common\models\User;
 use backend\modules\companies\models\Companies;
@@ -19,24 +18,16 @@ use backend\modules\companies\models\Companies;
     ]); ?>
     <div class="row">
         <div class="col-lg-6">
-            <?= $form->field($model, 'company_id')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(Companies::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a company.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'company_id')->dropDownList(
+                yii\helpers\ArrayHelper::map(Companies::find()->all(), 'id', 'name'),
+                ['prompt' => '-- اختر الشركة --', 'class' => 'form-control']
+            ); ?>
         </div>
         <div class="col-lg-6">
-            <?= $form->field($model, 'name')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(\backend\modules\inventorySuppliers\models\InventorySuppliers::find()->all(), 'name', 'name'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a company.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]); ?>
+            <?= $form->field($model, 'name')->dropDownList(
+                yii\helpers\ArrayHelper::map(\backend\modules\inventorySuppliers\models\InventorySuppliers::find()->all(), 'name', 'name'),
+                ['prompt' => '-- اختر المورد --', 'class' => 'form-control']
+            ); ?>
         </div>
     </div>
     <div class="row">

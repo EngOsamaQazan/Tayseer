@@ -5,7 +5,6 @@
 use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use kartik\select2\Select2;
 use backend\helpers\FlatpickrWidget;
 use backend\modules\court\models\Court;
 use backend\modules\lawyers\models\Lawyers;
@@ -54,9 +53,8 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
                 <?= $form->field($model, 'party_name')->textInput(['placeholder' => 'اسم العميل أو الكفيل'])->label('اسم الطرف') ?>
             </div>
             <div class="jud-filter-col-wide">
-                <?= $form->field($model, 'court_id')->widget(Select2::class, [
-                    'data' => $courts, 'options' => ['placeholder' => 'الكل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                <?= $form->field($model, 'court_id')->dropDownList($courts, [
+                    'prompt' => '-- الكل --', 'class' => 'form-control',
                 ])->label('المحكمة') ?>
             </div>
         </div>
@@ -64,15 +62,13 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
         <!-- الصف الثاني: نوع + محامي + سنة + تواريخ + أزرار -->
         <div class="jud-filter-row">
             <div class="jud-filter-col">
-                <?= $form->field($model, 'type_id')->widget(Select2::class, [
-                    'data' => $types, 'options' => ['placeholder' => 'الكل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                <?= $form->field($model, 'type_id')->dropDownList($types, [
+                    'prompt' => '-- الكل --', 'class' => 'form-control',
                 ])->label('النوع') ?>
             </div>
             <div class="jud-filter-col-wide">
-                <?= $form->field($model, 'lawyer_id')->widget(Select2::class, [
-                    'data' => $lawyers, 'options' => ['placeholder' => 'الكل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                <?= $form->field($model, 'lawyer_id')->dropDownList($lawyers, [
+                    'prompt' => '-- الكل --', 'class' => 'form-control',
                 ])->label('المحامي') ?>
             </div>
             <div class="jud-filter-col">
@@ -91,9 +87,8 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
                 ])->label('ورود إلى') ?>
             </div>
             <div class="jud-filter-col-wide">
-                <?= $form->field($model, 'last_party_action')->widget(Select2::class, [
-                    'data' => $judActions, 'options' => ['placeholder' => 'الكل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                <?= $form->field($model, 'last_party_action')->dropDownList($judActions, [
+                    'prompt' => '-- الكل --', 'class' => 'form-control',
                 ])->label('آخر إجراء على الأطراف') ?>
             </div>
         </div>
@@ -101,15 +96,13 @@ $hasFilters = $model->judiciary_number || $model->contract_id || $model->court_i
         <!-- الصف الثالث: وظيفة + نوع وظيفة + أزرار -->
         <div class="jud-filter-row">
             <div class="jud-filter-col-wide">
-                <?= $form->field($model, 'job_title')->widget(Select2::class, [
-                    'data' => $jobs, 'options' => ['placeholder' => 'الكل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                <?= $form->field($model, 'job_title')->dropDownList($jobs, [
+                    'prompt' => '-- الكل --', 'class' => 'form-control',
                 ])->label('جهة العمل') ?>
             </div>
             <div class="jud-filter-col-wide">
-                <?= $form->field($model, 'jobs_type')->widget(Select2::class, [
-                    'data' => $jobsTypes, 'options' => ['placeholder' => 'الكل'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'dropdownAutoWidth' => true],
+                <?= $form->field($model, 'jobs_type')->dropDownList($jobsTypes, [
+                    'prompt' => '-- الكل --', 'class' => 'form-control',
                 ])->label('نوع الوظيفة') ?>
             </div>
             <div class="jud-search-actions">

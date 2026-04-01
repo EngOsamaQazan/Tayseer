@@ -69,31 +69,28 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             ?>
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'created_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
+                    <?= $form->field($searchModel, 'created_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
                         }, Yii::$app->params['time_duration']), 'id', 'username'),
-                        'options' => ['placeholder' => 'اختر الموظف...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('الموظف') ?>
+                        ['prompt' => '-- اختر الموظف --', 'class' => 'form-control']
+                    )->label('الموظف') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'type')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_category"], function () {
+                    <?= $form->field($searchModel, 'type')->dropDownList(
+                        yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_category"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['income_category_query'])->queryAll();
                         }, Yii::$app->params['time_duration']), 'id', 'name'),
-                        'options' => ['placeholder' => 'اختر التصنيف...', 'multiple' => true],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('تصنيف الإيراد') ?>
+                        ['prompt' => '-- اختر التصنيف --', 'class' => 'form-control']
+                    )->label('تصنيف الإيراد') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, '_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(array_filter(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
+                    <?= $form->field($searchModel, '_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map(array_filter(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['income_by_query'])->queryAll();
                         }, Yii::$app->params['time_duration']), fn($row) => $row['_by'] !== null), '_by', '_by'),
-                        'options' => ['placeholder' => 'اختر العميل...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('العميل') ?>
+                        ['prompt' => '-- اختر العميل --', 'class' => 'form-control']
+                    )->label('العميل') ?>
                 </div>
             </div>
             <div class="row">
@@ -124,13 +121,12 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             </div>
             <div class="row">
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'followed_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
+                    <?= $form->field($searchModel, 'followed_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
                         }, Yii::$app->params['time_duration']), 'id', 'username'),
-                        'options' => ['placeholder' => 'اختر المتابع...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('المتابع') ?>
+                        ['prompt' => '-- اختر المتابع --', 'class' => 'form-control']
+                    )->label('المتابع') ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($searchModel, 'income_status')->widget(kartik\select2\Select2::class, [
@@ -141,22 +137,20 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
                     ])->label('الحالة') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'company_id')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_company"], function () {
+                    <?= $form->field($searchModel, 'company_id')->dropDownList(
+                        yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_company"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['company_query'])->queryAll();
                         }, Yii::$app->params['time_duration']), 'id', 'name'),
-                        'options' => ['placeholder' => 'اختر الشركة...', 'multiple' => true],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('الشركة') ?>
+                        ['prompt' => '-- اختر الشركة --', 'class' => 'form-control']
+                    )->label('الشركة') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'payment_type')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_payment_type"], function () {
+                    <?= $form->field($searchModel, 'payment_type')->dropDownList(
+                        yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_payment_type"], function () {
                             return Yii::$app->db->createCommand(Yii::$app->params['payment_type_query'])->queryAll();
                         }, Yii::$app->params['time_duration']), 'id', 'name'),
-                        'options' => ['placeholder' => 'اختر طريقة الدفع...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('طريقة الدفع') ?>
+                        ['prompt' => '-- اختر طريقة الدفع --', 'class' => 'form-control']
+                    )->label('طريقة الدفع') ?>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">

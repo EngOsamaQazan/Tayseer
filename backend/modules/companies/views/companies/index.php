@@ -2,7 +2,7 @@
 
 use yii\helpers\Url;
 use yii\helpers\Html;
-use backend\widgets\UnifiedSearchWidget;
+use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
 
 /** @var yii\web\View $this */
@@ -164,13 +164,9 @@ echo $this->render('@backend/views/_section_tabs', [
     <form method="get" action="<?= Url::to(['index']) ?>" class="inv-search" id="inv-search-form">
         <div class="form-group" style="flex:3;min-width:250px">
             <label><i class="fa fa-search"></i> بحث</label>
-            <?= UnifiedSearchWidget::widget([
-                'name'         => 'CompaniesSearch[q]',
-                'value'        => $searchModel->q,
-                'searchUrl'    => Url::to(['search-suggest']),
-                'placeholder'  => 'الاسم، رقم الهاتف...',
-                'formSelector' => '#inv-search-form',
-            ]) ?>
+            <input type="text" name="CompaniesSearch[q]" value="<?= Html::encode($searchModel->q) ?>"
+                   class="form-control" placeholder="الاسم، رقم الهاتف..."
+                   aria-label="بحث" autocomplete="off">
         </div>
         <button type="submit" class="inv-search-btn"><i class="fa fa-search"></i> بحث</button>
         <?php if (!empty($searchModel->q)): ?>

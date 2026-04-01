@@ -76,40 +76,36 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
             ?>
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'court_id')->widget(kartik\select2\Select2::class, [
-                        'data' => ArrayHelper::map($court, 'id', 'name'),
-                        'options' => ['placeholder' => 'اختر المحكمة...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('المحكمة') ?>
+                    <?= $form->field($searchModel, 'court_id')->dropDownList(
+                        ArrayHelper::map($court, 'id', 'name'),
+                        ['prompt' => '-- اختر المحكمة --', 'class' => 'form-control']
+                    )->label('المحكمة') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'type_id')->widget(kartik\select2\Select2::class, [
-                        'data' => Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_type"], function () {
+                    <?= $form->field($searchModel, 'type_id')->dropDownList(
+                        Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_type"], function () {
                             return ArrayHelper::map(JudiciaryType::find()->all(), 'id', 'name');
                         }, Yii::$app->params['time_duration']),
-                        'options' => ['placeholder' => 'اختر النوع...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('نوع القضية') ?>
+                        ['prompt' => '-- اختر النوع --', 'class' => 'form-control']
+                    )->label('نوع القضية') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'lawyer_id')->widget(kartik\select2\Select2::class, [
-                        'data' => Yii::$app->cache->getOrSet(Yii::$app->params["key_lawyer"], function () {
+                    <?= $form->field($searchModel, 'lawyer_id')->dropDownList(
+                        Yii::$app->cache->getOrSet(Yii::$app->params["key_lawyer"], function () {
                             return ArrayHelper::map(Lawyers::find()->all(), 'id', 'name');
                         }, Yii::$app->params['time_duration']),
-                        'options' => ['placeholder' => 'اختر المحامي...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('المحامي') ?>
+                        ['prompt' => '-- اختر المحامي --', 'class' => 'form-control']
+                    )->label('المحامي') ?>
                 </div>
             </div>
             <div class="row">
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'contract_id')->widget(kartik\select2\Select2::class, [
-                        'data' => Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_contract"], function () {
+                    <?= $form->field($searchModel, 'contract_id')->dropDownList(
+                        Yii::$app->cache->getOrSet(Yii::$app->params["key_judiciary_contract"], function () {
                             return ArrayHelper::map(\backend\modules\judiciary\models\Judiciary::find()->all(), 'contract_id', 'contract_id');
                         }, Yii::$app->params['time_duration']),
-                        'options' => ['placeholder' => 'اختر العقد...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('رقم العقد') ?>
+                        ['prompt' => '-- اختر العقد --', 'class' => 'form-control']
+                    )->label('رقم العقد') ?>
                 </div>
                 <div class="col-md-3">
                     <?= $form->field($searchModel, 'from_income_date')->widget(FlatpickrWidget::class, [
@@ -124,11 +120,10 @@ $court = Yii::$app->cache->getOrSet("l1", function () {
                     ])->label('إلى تاريخ الورود') ?>
                 </div>
                 <div class="col-md-3">
-                    <?= $form->field($searchModel, 'year')->widget(kartik\select2\Select2::class, [
-                        'data' => $searchModel->year(),
-                        'options' => ['placeholder' => 'اختر السنة...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('السنة') ?>
+                    <?= $form->field($searchModel, 'year')->dropDownList(
+                        $searchModel->year(),
+                        ['prompt' => '-- اختر السنة --', 'class' => 'form-control']
+                    )->label('السنة') ?>
                 </div>
             </div>
             <div class="row">

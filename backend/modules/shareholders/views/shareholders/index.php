@@ -3,7 +3,7 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use backend\modules\companies\models\Companies;
-use backend\widgets\UnifiedSearchWidget;
+use yii\helpers\ArrayHelper;
 use common\helper\Permissions;
 
 /** @var yii\web\View $this */
@@ -157,13 +157,9 @@ $companyTotalShares = $primaryCompany ? (int) $primaryCompany->total_shares : 0;
     <form method="get" action="<?= Url::to(['index']) ?>" class="sh-search" id="sh-search-form">
         <div class="form-group" style="flex:3;min-width:250px">
             <label><i class="fa fa-search"></i> بحث</label>
-            <?= UnifiedSearchWidget::widget([
-                'name'         => 'ShareholdersSearch[q]',
-                'value'        => $searchModel->q,
-                'searchUrl'    => Url::to(['search-suggest']),
-                'placeholder'  => 'الاسم، رقم الهاتف، رقم الهوية...',
-                'formSelector' => '#sh-search-form',
-            ]) ?>
+            <input type="text" name="ShareholdersSearch[q]" value="<?= Html::encode($searchModel->q) ?>"
+                   class="form-control" placeholder="الاسم، رقم الهاتف، رقم الهوية..."
+                   aria-label="بحث" autocomplete="off">
         </div>
         <button type="submit" class="sh-search-btn"><i class="fa fa-search"></i> بحث</button>
         <?php if (!empty($searchModel->q)): ?>

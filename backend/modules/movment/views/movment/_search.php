@@ -4,7 +4,6 @@ use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
-use kartik\select2\Select2;
 use common\models\User;
 
 /* @var $model */
@@ -17,14 +16,10 @@ use common\models\User;
     <div class="row">
         <div class="col-lg-6">
             <?=
-            $form->field($model, 'user_id')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(User::find()->all(), 'id', 'username'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a user.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
+            $form->field($model, 'user_id')->dropDownList(
+                yii\helpers\ArrayHelper::map(User::find()->all(), 'id', 'username'),
+                ['prompt' => '-- اختر المستخدم --', 'class' => 'form-control']
+            );
             ?>
         </div>
         <div class="col-lg-6">

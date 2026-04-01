@@ -19,35 +19,22 @@ use backend\helpers\FlatpickrWidget;
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'created_by')->widget(kartik\select2\Select2::class, [
-                    'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
-    return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
-}, Yii::$app->params['time_duration']), 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'created_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
+                        return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
+                    }, Yii::$app->params['time_duration']), 'id', 'username'),
+                    ['prompt' => '-- اختر الموظف --', 'class' => 'form-control']
+                );
                 ?>
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'type')->widget(kartik\select2\Select2::class, [
-                    'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_category"], function () {
+                $form->field($model, 'type')->dropDownList(
+                    yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_category"], function () {
                         return Yii::$app->db->createCommand(Yii::$app->params['income_category_query'])->queryAll();
                     }, Yii::$app->params['time_duration']), 'id', 'name'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                        'multiple' => true
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                    ['prompt' => '-- اختر التصنيف --', 'class' => 'form-control']
+                );
                 ?>
             </div>
         </div>
@@ -69,65 +56,42 @@ use backend\helpers\FlatpickrWidget;
         </div>
         <div class="row">
             <div class="col-lg-6">
-                <?= $form->field($model, '_by')->widget(kartik\select2\Select2::class, [
-                    'data' => yii\helpers\ArrayHelper::map(array_filter(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
+                <?= $form->field($model, '_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map(array_filter(Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], function () {
                         return Yii::$app->db->createCommand(Yii::$app->params['income_by_query'])->queryAll();
                     }, Yii::$app->params['time_duration']), fn($row) => $row['_by'] !== null), '_by', '_by'),
-                    'options' => [
-                        'placeholder' => 'Select a customer name.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                    ['prompt' => '-- اختر العميل --', 'class' => 'form-control']
+                );
                 ?>
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'followed_by')->widget(kartik\select2\Select2::class, [
-                    'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
+                $form->field($model, 'followed_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_users"], function () {
                         return Yii::$app->db->createCommand(Yii::$app->params['users_query'])->queryAll();
                     }, Yii::$app->params['time_duration']), 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                    ['prompt' => '-- اختر المتابع --', 'class' => 'form-control']
+                );
                 ?>
             </div>
         </div>
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'income_status')->widget(kartik\select2\Select2::class, [
-                    'data' => ['', \Yii::t('app', 'active'), \Yii::t('app', 'judiciary')],
-                    'language' => 'ar',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'income_status')->dropDownList(
+                    ['', \Yii::t('app', 'active'), \Yii::t('app', 'judiciary')],
+                    ['prompt' => '-- اختر الحالة --', 'class' => 'form-control']
+                );
                 ?>
             </div>
             <div class="col-lg-6">
 
-                <?= $form->field($model, 'company_id')->widget(kartik\select2\Select2::class, [
-                    'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_company"], function () {
+                <?= $form->field($model, 'company_id')->dropDownList(
+                    yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_company"], function () {
                         return Yii::$app->db->createCommand(Yii::$app->params['company_query'])->queryAll();
                     }, Yii::$app->params['time_duration']), 'id', 'name'),
-                    'options' => [
-                        'placeholder' => 'Select a company name.',
-                        'multiple' => true
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                    ['prompt' => '-- اختر الشركة --', 'class' => 'form-control']
+                );
                 ?>
             </div>
         </div>
@@ -153,18 +117,12 @@ use backend\helpers\FlatpickrWidget;
                 <?= $form->field($model, 'number_row')->textInput(['maxlength' => true]) ?>
             </div>
             <div class="col-lg-6">
-                <?= $form->field($model, 'payment_type')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_payment_type"], function () {
-    return Yii::$app->db->createCommand(Yii::$app->params['payment_type_query'])->queryAll();
-}, Yii::$app->params['time_duration']), 'id', 'name'),
-
-                    'options' => [
-                        'placeholder' => 'Select a payment type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ])->label(Yii::t('app','Payment Type'));
+                <?= $form->field($model, 'payment_type')->dropDownList(
+                    yii\helpers\ArrayHelper::map(Yii::$app->cache->getOrSet(Yii::$app->params["key_payment_type"], function () {
+                        return Yii::$app->db->createCommand(Yii::$app->params['payment_type_query'])->queryAll();
+                    }, Yii::$app->params['time_duration']), 'id', 'name'),
+                    ['prompt' => '-- اختر طريقة الدفع --', 'class' => 'form-control']
+                )->label(Yii::t('app','Payment Type'));
                 ?>
         </div>
         <div class="form-group">

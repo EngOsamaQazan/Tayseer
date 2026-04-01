@@ -7,7 +7,6 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 
 /* بيانات مرجعية من الكاش */
 $cache = Yii::$app->cache;
@@ -45,27 +44,13 @@ $legalContracts = ArrayHelper::map(
 
         <div class="row">
             <div class="col-md-2">
-                <?= $form->field($model, 'id')->widget(Select2::class, [
-                    'data' => $legalContracts,
-                    'options' => ['placeholder' => 'رقم العقد'],
-                    'pluginOptions' => ['allowClear' => true],
+                <?= $form->field($model, 'id')->dropDownList($legalContracts, [
+                    'prompt' => '-- رقم العقد --', 'class' => 'form-control',
                 ])->label('رقم العقد') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'customer_name')->widget(Select2::class, [
-                    'initValueText' => $model->customer_name,
-                    'options' => ['placeholder' => 'ابحث بالاسم أو الرقم الوطني...'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
-                        'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/search-customers', 'mode' => 'name']),
-                            'dataType' => 'json', 'delay' => 250,
-                            'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                            'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                            'cache' => true,
-                        ],
-                        'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
-                        'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                    ],
+                <?= $form->field($model, 'customer_name')->textInput([
+                    'placeholder' => 'ابحث بالاسم أو الرقم الوطني...', 'class' => 'form-control',
                 ])->label('العميل') ?>
             </div>
             <div class="col-md-2">
@@ -81,30 +66,24 @@ $legalContracts = ArrayHelper::map(
                 ])->label('إلى') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'seller_id')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($users, 'id', 'username'),
-                    'options' => ['placeholder' => 'البائع'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'seller_id')->dropDownList(ArrayHelper::map($users, 'id', 'username'), [
+                    'prompt' => '-- البائع --', 'class' => 'form-control',
                 ])->label('البائع') ?>
             </div>
         </div>
 
         <div class="row">
             <div class="col-md-3">
-                <?= $form->field($model, 'followed_by')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($users, 'id', 'username'),
-                    'options' => ['placeholder' => 'المتابع'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'followed_by')->dropDownList(ArrayHelper::map($users, 'id', 'username'), [
+                    'prompt' => '-- المتابع --', 'class' => 'form-control',
                 ])->label('المتابع') ?>
             </div>
             <div class="col-md-2">
                 <?= $form->field($model, 'type')->dropDownList(\backend\modules\contracts\models\Contracts::getTypeLabels(), ['prompt' => '-- النوع --'])->label('نوع العقد') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'job_title')->widget(Select2::class, [
-                    'data' => ArrayHelper::map($jobs, 'id', 'name'),
-                    'options' => ['placeholder' => 'الوظيفة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'job_title')->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
+                    'prompt' => '-- الوظيفة --', 'class' => 'form-control',
                 ])->label('الوظيفة') ?>
             </div>
             <div class="col-md-2">

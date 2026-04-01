@@ -19,16 +19,10 @@ use yii\widgets\ActiveForm;
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'city')->widget(kartik\select2\Select2::classname(), [
-                    'data' => backend\modules\court\models\Court::CITY,
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'city')->dropDownList(
+                    backend\modules\court\models\Court::CITY,
+                    ['prompt' => '-- اختر المدينة --', 'class' => 'form-control']
+                );
                 ?>
             </div>
         </div>
@@ -43,30 +37,18 @@ use yii\widgets\ActiveForm;
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'created_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'created_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
+                    ['prompt' => '-- اختر المنشئ --', 'class' => 'form-control']
+                );
                 ?>
             </div>
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'last_updated_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a last updated by.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'last_updated_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map(\common\models\User::find()->all(), 'id', 'username'),
+                    ['prompt' => '-- آخر تعديل بواسطة --', 'class' => 'form-control']
+                );
                 ?>
             </div>
         </div>

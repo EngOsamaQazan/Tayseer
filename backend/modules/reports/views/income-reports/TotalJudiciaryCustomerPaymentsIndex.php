@@ -73,25 +73,22 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
             ?>
             <div class="row">
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'created_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map($users, 'id', 'username'),
-                        'options' => ['placeholder' => 'اختر الموظف...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('الموظف') ?>
+                    <?= $form->field($searchModel, 'created_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map($users, 'id', 'username'),
+                        ['prompt' => '-- اختر الموظف --', 'class' => 'form-control']
+                    )->label('الموظف') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, '_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map(array_filter($_by, fn($row) => $row['_by'] !== null), '_by', '_by'),
-                        'options' => ['placeholder' => 'اختر العميل...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('العميل') ?>
+                    <?= $form->field($searchModel, '_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map(array_filter($_by, fn($row) => $row['_by'] !== null), '_by', '_by'),
+                        ['prompt' => '-- اختر العميل --', 'class' => 'form-control']
+                    )->label('العميل') ?>
                 </div>
                 <div class="col-md-4">
-                    <?= $form->field($searchModel, 'followed_by')->widget(kartik\select2\Select2::class, [
-                        'data' => yii\helpers\ArrayHelper::map($users, 'id', 'username'),
-                        'options' => ['placeholder' => 'اختر المتابع...'],
-                        'pluginOptions' => ['allowClear' => true],
-                    ])->label('المتابع') ?>
+                    <?= $form->field($searchModel, 'followed_by')->dropDownList(
+                        yii\helpers\ArrayHelper::map($users, 'id', 'username'),
+                        ['prompt' => '-- اختر المتابع --', 'class' => 'form-control']
+                    )->label('المتابع') ?>
                 </div>
             </div>
             <div class="row">

@@ -21,28 +21,17 @@ $_by  =   Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], functio
         <div class ="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'created_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map($users, 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'created_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map($users, 'id', 'username'),
+                    ['prompt' => '-- اختر الموظف --', 'class' => 'form-control']
+                );
                 ?>
             </div>
             <div class="col-lg-6">
-                <?= $form->field($model, '_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map(array_filter($_by, fn($row) => $row['_by'] !== null), '_by', '_by'),
-                    'options' => [
-                        'placeholder' => 'Select a customer name.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                <?= $form->field($model, '_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map(array_filter($_by, fn($row) => $row['_by'] !== null), '_by', '_by'),
+                    ['prompt' => '-- اختر العميل --', 'class' => 'form-control']
+                );
                 ?>
             </div>
         </div>
@@ -66,16 +55,10 @@ $_by  =   Yii::$app->cache->getOrSet(Yii::$app->params["key_income_by"], functio
         <div class="row">
             <div class="col-lg-6">
                 <?=
-                $form->field($model, 'followed_by')->widget(kartik\select2\Select2::classname(), [
-                    'data' => yii\helpers\ArrayHelper::map($users, 'id', 'username'),
-                    'language' => 'de',
-                    'options' => [
-                        'placeholder' => 'Select a type.',
-                    ],
-                    'pluginOptions' => [
-                        'allowClear' => true
-                    ],
-                ]);
+                $form->field($model, 'followed_by')->dropDownList(
+                    yii\helpers\ArrayHelper::map($users, 'id', 'username'),
+                    ['prompt' => '-- اختر المتابع --', 'class' => 'form-control']
+                );
                 ?>
             </div>
 

@@ -36,7 +36,7 @@ class FollowUpReportController extends Controller
                     [
                         'actions' => ['logout', 'index', 'update', 'create', 'delete', 'no-contact',
                         'export-excel', 'export-pdf', 'export-no-contact-excel', 'export-no-contact-pdf',
-                        'search-suggest'],
+                        'search-suggest', 'field-suggest'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -136,6 +136,92 @@ class FollowUpReportController extends Controller
                 'icon'  => 'fa-gavel',
             ];
         }
+        return ['results' => $results];
+    }
+
+    /**
+     * AJAX autocomplete for individual filter fields.
+     */
+    public function actionFieldSuggest($field = '', $q = '')
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q = trim($q);
+
+        $allowed = ['customer_name', 'id', 'id_number', 'phone_number'];
+        if (!in_array($field, $allowed) || mb_strlen($q) < 1) {
+            return ['results' => []];
+        }
+
+        $db = Yii::$app->db;
+        $results = [];
+        $base = "FROM {{%contracts}} c
+                 LEFT JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id
+                 LEFT JOIN {{%customers}} cu ON cu.id = cc.customer_id
+                 WHERE (c.is_deleted = 0 OR c.is_deleted IS NULL)
+                   AND c.status NOT IN ('finished','canceled')";
+
+        switch ($field) {
+            case 'customer_name':
+                $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(cu.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+                $words = preg_split('/\s+/u', $q, -1, PREG_SPLIT_NO_EMPTY);
+                $clauses = [];
+                $params = [];
+                foreach ($words as $i => $w) {
+                    $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+                    $wNorm = str_replace('ة', 'ه', $wNorm);
+                    $wNorm = str_replace('ى', 'ي', $wNorm);
+                    $p = ':fw' . $i;
+                    $clauses[] = "$nameNorm LIKE $p";
+                    $params[$p] = '%' . $wNorm . '%';
+                }
+                $clause = implode(' AND ', $clauses);
+                $rows = $db->createCommand(
+                    "SELECT DISTINCT cu.name, c.id AS contract_id
+                     $base AND ($clause)
+                     ORDER BY cu.name LIMIT 10", $params
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = ['value' => $r['name'], 'label' => $r['name'] . ' (عقد #' . $r['contract_id'] . ')'];
+                }
+                break;
+
+            case 'id':
+                $rows = $db->createCommand(
+                    "SELECT DISTINCT c.id
+                     $base AND c.id LIKE :q
+                     ORDER BY c.id DESC LIMIT 10",
+                    [':q' => $q . '%']
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = ['value' => $r['id'], 'label' => 'عقد #' . $r['id']];
+                }
+                break;
+
+            case 'id_number':
+                $rows = $db->createCommand(
+                    "SELECT DISTINCT cu.id_number, cu.name
+                     $base AND cu.id_number LIKE :q
+                     ORDER BY cu.id_number LIMIT 10",
+                    [':q' => '%' . $q . '%']
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = ['value' => $r['id_number'], 'label' => $r['id_number'] . ' — ' . $r['name']];
+                }
+                break;
+
+            case 'phone_number':
+                $rows = $db->createCommand(
+                    "SELECT DISTINCT cu.primary_phone_number AS phone, cu.name
+                     $base AND cu.primary_phone_number LIKE :q
+                     ORDER BY cu.primary_phone_number LIMIT 10",
+                    [':q' => '%' . $q . '%']
+                )->queryAll();
+                foreach ($rows as $r) {
+                    $results[] = ['value' => $r['phone'], 'label' => $r['phone'] . ' — ' . $r['name']];
+                }
+                break;
+        }
+
         return ['results' => $results];
     }
 

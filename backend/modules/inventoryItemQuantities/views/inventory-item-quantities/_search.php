@@ -5,7 +5,6 @@ use yii\widgets\ActiveForm;
 use backend\modules\inventorySuppliers\models\InventorySuppliers;
 use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use yii\helpers\ArrayHelper;
-use kartik\select2\Select2;
 use backend\modules\inventoryItems\models\InventoryItems;
 
 /* @var $model */
@@ -21,14 +20,10 @@ use backend\modules\inventoryItems\models\InventoryItems;
     <div class="row">
         <div class="col-lg-6">
             <?=
-            $form->field($model, 'item_id')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(InventoryItems::find()->all(), 'id', 'item_name'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a item.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
+            $form->field($model, 'item_id')->dropDownList(
+                yii\helpers\ArrayHelper::map(InventoryItems::find()->all(), 'id', 'item_name'),
+                ['prompt' => '-- اختر المنتج --', 'class' => 'form-control']
+            );
             ?>
         </div>
 
@@ -49,14 +44,10 @@ use backend\modules\inventoryItems\models\InventoryItems;
     <div class="row">
         <div class="col-lg-6">
             <?=
-            $form->field($model, 'suppliers_id')->widget(Select2::classname(), [
-                'data' => yii\helpers\ArrayHelper::map(InventorySuppliers::find()->all(), 'id', 'name'),
-                'language' => 'de',
-                'options' => ['placeholder' => 'Select a Suppliers.'],
-                'pluginOptions' => [
-                    'allowClear' => true
-                ],
-            ]);
+            $form->field($model, 'suppliers_id')->dropDownList(
+                yii\helpers\ArrayHelper::map(InventorySuppliers::find()->all(), 'id', 'name'),
+                ['prompt' => '-- اختر المورد --', 'class' => 'form-control']
+            );
             ?>
         </div>
         <div class="col-lg-6">

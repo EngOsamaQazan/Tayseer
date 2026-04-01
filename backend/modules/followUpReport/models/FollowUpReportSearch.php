@@ -21,6 +21,8 @@ class FollowUpReportSearch extends FollowUpReport
     public $followed_by;
     public $never_followed;
     public $is_can_not_contact;
+    public $phone_number;
+    public $id_number;
 
     /**
      * @inheritdoc
@@ -31,7 +33,7 @@ class FollowUpReportSearch extends FollowUpReport
             [['id', 'seller_id', 'is_deleted', 'number_row', 'followed_by', 'never_followed', 'is_can_not_contact'], 'integer'],
             [['type', 'Date_of_sale', 'first_installment_date', 'notes', 'status', 'updated_at',
               'selected_image', 'company_id', 'customer_name', 'seller_name',
-              'last_follow_up', 'promise_to_pay_at', 'reminder', 'q'], 'safe'],
+              'last_follow_up', 'promise_to_pay_at', 'reminder', 'q', 'phone_number', 'id_number'], 'safe'],
             [['total_value', 'first_installment_value', 'monthly_installment_value', 'users_follow_up', 'effective_installment'], 'number'],
         ];
     }
@@ -42,6 +44,19 @@ class FollowUpReportSearch extends FollowUpReport
     public function scenarios()
     {
         return Model::scenarios();
+    }
+
+    private function applyNormalizedNameFilter($query, string $name): void
+    {
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(c.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'ى', 'ي')";
+        $words = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY);
+        foreach ($words as $i => $w) {
+            $wNorm = self::arabicNormalize($w);
+            $p = ':fnf' . $i;
+            $query->andWhere(
+                new \yii\db\Expression("$nameNorm LIKE $p", [$p => '%' . $wNorm . '%'])
+            );
+        }
     }
 
     private static $cwIdx = 0;
@@ -176,7 +191,13 @@ class FollowUpReportSearch extends FollowUpReport
             ->andFilterWhere(['like', 'notes', $this->notes])
             ->andFilterWhere(['like', 'company_id', $this->company_id]);
 
-        $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
+        if (!empty($this->customer_name)) {
+            $this->applyNormalizedNameFilter($query, $this->customer_name);
+        } else {
+            $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
+        }
+        $query->andFilterWhere(['like', 'c.id_number', $this->id_number]);
+        $query->andFilterWhere(['like', 'c.primary_phone_number', $this->phone_number]);
         $query->andFilterWhere(['=', 'c.is_deleted', false]);
 
         if (!empty($this->seller_name)) {

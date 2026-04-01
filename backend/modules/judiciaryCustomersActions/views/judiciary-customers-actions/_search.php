@@ -6,7 +6,6 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 
 /* بيانات مرجعية - كاش */
 $cache = Yii::$app->cache;
@@ -48,34 +47,18 @@ $years = ArrayHelper::map(
                 <?= $form->field($model, 'judiciary_number')->textInput(['placeholder' => 'رقم القضية (مثل 2313)'])->label('رقم القضية') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'customers_id')->widget(Select2::class, [
-                    'initValueText' => $model->customers_id,
-                    'options' => ['placeholder' => 'ابحث بالاسم أو الرقم الوطني...'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl', 'minimumInputLength' => 1,
-                        'ajax' => [
-                            'url' => \yii\helpers\Url::to(['/customers/search-customers']),
-                            'dataType' => 'json', 'delay' => 250,
-                            'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                            'processResults' => new \yii\web\JsExpression('function(d){return d}'),
-                            'cache' => true,
-                        ],
-                        'templateResult' => new \yii\web\JsExpression("function(i){if(i.loading)return i.text;var h='<div><b>'+i.text+'</b>';if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';return $(h+'</div>')}"),
-                        'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                    ],
+                <?= $form->field($model, 'customers_id')->textInput([
+                    'placeholder' => 'ابحث بالاسم أو الرقم الوطني...', 'class' => 'form-control',
                 ])->label('العميل') ?>
             </div>
             <div class="col-md-3">
-                <?= $form->field($model, 'judiciary_actions_id')->widget(Select2::class, [
-                    'data' => $actions,
-                    'options' => ['placeholder' => 'الإجراء', 'multiple' => true],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'judiciary_actions_id')->dropDownList($actions, [
+                    'prompt' => '-- الإجراء --', 'class' => 'form-control',
                 ])->label('الإجراء') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'year')->widget(Select2::class, [
-                    'data' => $years,
-                    'options' => ['placeholder' => 'السنة'],
-                    'pluginOptions' => ['allowClear' => true],
+                <?= $form->field($model, 'year')->dropDownList($years, [
+                    'prompt' => '-- السنة --', 'class' => 'form-control',
                 ])->label('السنة') ?>
             </div>
             <div class="col-md-2">
@@ -85,10 +68,8 @@ $years = ArrayHelper::map(
 
         <div class="row">
             <div class="col-md-2">
-                <?= $form->field($model, 'court_name')->widget(Select2::class, [
-                    'data' => $courts,
-                    'options' => ['placeholder' => 'المحكمة'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'court_name')->dropDownList($courts, [
+                    'prompt' => '-- المحكمة --', 'class' => 'form-control',
                 ])->label('المحكمة') ?>
             </div>
             <div class="col-md-2">
@@ -99,10 +80,8 @@ $years = ArrayHelper::map(
                 ])->label('المحامي') ?>
             </div>
             <div class="col-md-2">
-                <?= $form->field($model, 'created_by')->widget(Select2::class, [
-                    'data' => $users,
-                    'options' => ['placeholder' => 'المنشئ'],
-                    'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+                <?= $form->field($model, 'created_by')->dropDownList($users, [
+                    'prompt' => '-- المنشئ --', 'class' => 'form-control',
                 ])->label('المنشئ') ?>
             </div>
             <div class="col-md-2">

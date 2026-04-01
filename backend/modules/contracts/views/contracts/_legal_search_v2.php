@@ -8,7 +8,6 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-use kartik\select2\Select2;
 
 $cache = Yii::$app->cache;
 $p     = Yii::$app->params;
@@ -39,41 +38,15 @@ $legalContracts = ArrayHelper::map(
     <div class="ct-lf-row">
         <div class="ct-filter-group" style="width:110px">
             <label>رقم العقد</label>
-            <?= $form->field($model, 'id', ['template' => '{input}'])->widget(Select2::class, [
-                'data' => $legalContracts,
-                'options' => ['placeholder' => 'رقم العقد', 'aria-label' => 'رقم العقد'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+            <?= $form->field($model, 'id', ['template' => '{input}'])->dropDownList($legalContracts, [
+                'prompt' => '-- رقم العقد --', 'class' => 'form-control', 'aria-label' => 'رقم العقد',
             ]) ?>
         </div>
         <div class="ct-filter-group" style="flex:1;min-width:160px">
             <label>العميل</label>
-            <?= $form->field($model, 'customer_name', ['template' => '{input}'])->widget(Select2::class, [
-                'initValueText' => $model->customer_name,
-                'options' => [
-                    'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
-                    'aria-label' => 'بحث العميل',
-                ],
-                'pluginOptions' => [
-                    'allowClear' => true,
-                    'dir' => 'rtl',
-                    'minimumInputLength' => 1,
-                    'ajax' => [
-                        'url' => Url::to(['/customers/search-customers', 'mode' => 'name']),
-                        'dataType' => 'json',
-                        'delay' => 250,
-                        'data' => new \yii\web\JsExpression('function(p){return{q:p.term}}'),
-                        'processResults' => 'function(d){return d}',
-                        'cache' => true,
-                    ],
-                    'templateResult' => new \yii\web\JsExpression(
-                        "function(i){if(i.loading)return i.text;" .
-                        "var h='<div><b>'+i.text+'</b>';" .
-                        "if(i.id_number)h+=' <small style=\"color:#64748b\">· '+i.id_number+'</small>';" .
-                        "if(i.phone)h+=' <small style=\"color:#0891b2\">☎ '+i.phone+'</small>';" .
-                        "return $(h+'</div>')}"
-                    ),
-                    'templateSelection' => new \yii\web\JsExpression("function(i){return i.text||i.id}"),
-                ],
+            <?= $form->field($model, 'customer_name', ['template' => '{input}'])->textInput([
+                'placeholder' => 'ابحث بالاسم أو الرقم الوطني...',
+                'class' => 'form-control', 'aria-label' => 'بحث العميل',
             ]) ?>
         </div>
         <div class="ct-lf-date-pair">
@@ -105,18 +78,14 @@ $legalContracts = ArrayHelper::map(
         </div>
         <div class="ct-filter-group" style="flex:1;min-width:120px">
             <label>الوظيفة</label>
-            <?= $form->field($model, 'job_title', ['template' => '{input}'])->widget(Select2::class, [
-                'data' => ArrayHelper::map($jobs, 'id', 'name'),
-                'options' => ['placeholder' => 'الوظيفة', 'aria-label' => 'الوظيفة'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+            <?= $form->field($model, 'job_title', ['template' => '{input}'])->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
+                'prompt' => '-- الوظيفة --', 'class' => 'form-control', 'aria-label' => 'الوظيفة',
             ]) ?>
         </div>
         <div class="ct-filter-group" style="flex:1;min-width:120px">
             <label>نوع الوظيفة</label>
-            <?= $form->field($model, 'job_Type', ['template' => '{input}'])->widget(Select2::class, [
-                'data' => ArrayHelper::map($jobTypes, 'id', 'name'),
-                'options' => ['placeholder' => 'نوع الوظيفة', 'aria-label' => 'نوع الوظيفة'],
-                'pluginOptions' => ['allowClear' => true, 'dir' => 'rtl'],
+            <?= $form->field($model, 'job_Type', ['template' => '{input}'])->dropDownList(ArrayHelper::map($jobTypes, 'id', 'name'), [
+                'prompt' => '-- نوع الوظيفة --', 'class' => 'form-control', 'aria-label' => 'نوع الوظيفة',
             ]) ?>
         </div>
         <div class="ct-filter-actions">
