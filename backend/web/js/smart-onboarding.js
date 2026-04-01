@@ -210,7 +210,7 @@
         data.total_salary    = parseFloat($f.find('#customers-total_salary').val()) || 0;
         data.additional_income = parseFloat($f.find('#fin-additional-income').val()) || 0;
         data.monthly_obligations = parseFloat($f.find('#fin-obligations').val()) || 0;
-        data.employment_type = $f.find('#fin-employment-type').val();
+        data.job_title       = $f.find('#customers-job_title').val();
         data.years_at_job    = parseFloat($f.find('#fin-years-at-job').val()) || 0;
         data.bank_name       = $f.find('#customers-bank_name').val();
         data.is_social_security = $f.find('#customers-is_social_security').val();
@@ -635,6 +635,63 @@
        ══════════════════════════════════════════ */
     $(document).on('click', '.btn-add-job', function() {
         window.open('/jobs/jobs/create', '_blank');
+    });
+
+    /* ══════════════════════════════════════════
+       JOB INFO: fetch updated_at / created_at + staleness warning
+       ══════════════════════════════════════════ */
+    function fetchJobInfo(jobId) {
+        var $info  = $('#job-update-info');
+        var $badge = $('#job-update-badge');
+
+        if (!jobId) {
+            $info.hide();
+            return;
+        }
+
+        var url = (window.soConfig && window.soConfig.jobInfoUrl)
+            ? window.soConfig.jobInfoUrl.replace('__JOB_ID__', jobId)
+            : '/jobs/jobs/job-info?id=' + jobId;
+
+        $.getJSON(url).done(function(res) {
+            if (!res.success) { $info.hide(); return; }
+
+            var dateLabel = res.date_label || 'آخر تحديث';
+            var dateVal   = res.display_date;
+            var months    = res.months_since || 0;
+
+            if (!dateVal) {
+                $badge.html('<i class="fa fa-question-circle"></i> لا تتوفر بيانات تاريخية لهذه الجهة');
+                $badge.attr('class', 'job-update-badge job-update-stale');
+                $info.show();
+                return;
+            }
+
+            if (months >= 3) {
+                $badge.html(
+                    '<i class="fa fa-exclamation-triangle"></i> ' +
+                    dateLabel + ': <strong>' + escHtml(dateVal) + '</strong>' +
+                    ' — <span class="job-stale-warn">مضى ' + months + ' شهر، يُنصح بتحديث البيانات</span>'
+                );
+                $badge.attr('class', 'job-update-badge job-update-stale');
+            } else {
+                $badge.html(
+                    '<i class="fa fa-check-circle"></i> ' +
+                    dateLabel + ': <strong>' + escHtml(dateVal) + '</strong>'
+                );
+                $badge.attr('class', 'job-update-badge job-update-fresh');
+            }
+            $info.show();
+        });
+    }
+
+    $(document).on('change', '#customers-job_title', function() {
+        fetchJobInfo($(this).val());
+    });
+
+    $(function() {
+        var initial = $('#customers-job_title').val();
+        if (initial) fetchJobInfo(initial);
     });
 
     function showToast(msg, type) {

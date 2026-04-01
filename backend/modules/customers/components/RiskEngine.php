@@ -14,6 +14,7 @@ namespace backend\modules\customers\components;
 use Yii;
 use yii\base\BaseObject;
 use backend\modules\customers\models\Customers;
+use backend\modules\jobs\models\Jobs;
 
 class RiskEngine extends BaseObject
 {
@@ -168,9 +169,41 @@ class RiskEngine extends BaseObject
         return 7;
     }
 
+    /**
+     * Derive employment category from os_jobs.job_type → os_jobs_type.name.
+     */
+    private static function resolveEmploymentType(array $d): ?string
+    {
+        $jobId = $d['job_title'] ?? null;
+        if (!$jobId) return null;
+
+        static $cache = [];
+        if (isset($cache[$jobId])) return $cache[$jobId];
+
+        try {
+            $job = Jobs::find()->where(['id' => (int) $jobId])->one();
+            if ($job && $job->jobType) {
+                $name = $job->jobType->name;
+                $map = [
+                    'حكومي'    => 'government',
+                    'عسكري'    => 'military',
+                    'قطاع خاص' => 'private',
+                    'خاص'      => 'private',
+                    'عمل حر'   => 'self_employed',
+                    'متقاعد'   => 'retired',
+                ];
+                $cache[$jobId] = $map[$name] ?? 'private';
+                return $cache[$jobId];
+            }
+        } catch (\Exception $e) {}
+
+        $cache[$jobId] = null;
+        return null;
+    }
+
     private static function scoreEmployment(array $d): float
     {
-        $type = $d['employment_type'] ?? null;
+        $type = self::resolveEmploymentType($d);
         $years = (float)($d['years_at_job'] ?? 0);
 
         $map = [
@@ -348,7 +381,7 @@ class RiskEngine extends BaseObject
             !empty($d['birth_date']),
             !empty($d['phone']),
             !empty($d['city']),
-            !empty($d['employment_type']),
+            !empty($d['job_title']),
             (float)($d['total_salary'] ?? 0) > 0,
             !empty($d['bank_name']),
             (int)($d['documents_count'] ?? 0) > 0,
@@ -498,7 +531,7 @@ class RiskEngine extends BaseObject
             'total_salary'       => $customer->total_salary,
             'additional_income'  => 0,
             'monthly_obligations'=> 0,
-            'employment_type'    => null,
+            'job_title'          => $customer->job_title,
             'years_at_job'       => 0,
             'bank_name'          => $customer->bank_name,
             'is_social_security' => $customer->is_social_security,

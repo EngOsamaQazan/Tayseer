@@ -43,12 +43,7 @@ try {
     $financials = $db->createCommand("SELECT * FROM os_customer_financials WHERE customer_id=:cid", [':cid' => $cid])->queryOne();
 } catch (\Exception $e) {}
 
-$employmentTypes = [
-    'government' => 'حكومي', 'military' => 'عسكري', 'private' => 'قطاع خاص',
-    'self_employed' => 'عمل حر', 'retired' => 'متقاعد', 'unemployed' => 'بدون عمل', 'other' => 'أخرى',
-];
-$empType = $financials['employment_type'] ?? '';
-$empTypeLabel = $employmentTypes[$empType] ?? '—';
+$jobTypeName = ($model->jobs && $model->jobs->jobType) ? $model->jobs->jobType->name : '—';
 
 try { $addresses = $db->createCommand("SELECT * FROM os_address WHERE customers_id=:cid AND is_deleted=0", [':cid' => $cid])->queryAll(); } catch (\Exception $e) { $addresses = []; }
 try { $phones = $db->createCommand("SELECT * FROM os_phone_numbers WHERE customers_id=:cid AND is_deleted=0", [':cid' => $cid])->queryAll(); } catch (\Exception $e) { $phones = []; }
@@ -168,8 +163,8 @@ $statusLabels = [
                         <span class="cv-value"><?= Html::encode($financials['employer_name'] ?? '—') ?></span>
                     </div>
                     <div class="cv-field">
-                        <span class="cv-label">نوع التوظيف</span>
-                        <span class="cv-value"><?= $empTypeLabel ?></span>
+                        <span class="cv-label">نوع جهة العمل</span>
+                        <span class="cv-value"><?= Html::encode($jobTypeName) ?></span>
                     </div>
                 </div>
                 <div class="so-grid so-grid-3" style="margin-top:16px">

@@ -16,6 +16,6 @@ return [
      */
     'customerImagesBaseUrl' => null,
 
-    /** Asset cache-busting: changes on every deploy (git reset --hard updates file mtimes) */
+    /** Asset version — auto-bumped on CSS/JS changes */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];

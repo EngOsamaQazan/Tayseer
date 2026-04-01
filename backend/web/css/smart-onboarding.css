@@ -667,6 +667,38 @@
 }
 .job-title-wrapper .select2-container { width: calc(100% - 42px) !important; }
 
+/* ═══ Job Update Info Badge ═══ */
+.job-update-info {
+    padding: 0 4px;
+}
+.job-update-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    font-family: var(--font-primary, 'Cairo', sans-serif);
+}
+.job-update-badge i { font-size: 14px; }
+.job-update-fresh {
+    background: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+.job-update-fresh i { color: #059669; }
+.job-update-stale {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+}
+.job-update-stale i { color: #d97706; }
+.job-stale-warn {
+    color: #dc2626;
+    font-weight: 700;
+}
+
 /* ═══ Edit Mode Responsive ═══ */
 @media (max-width: 767px) {
     .so-mode-edit .so-steps {

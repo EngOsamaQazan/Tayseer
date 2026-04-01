@@ -199,6 +199,38 @@ class JobsController extends Controller
     // ========================
 
     /**
+     * AJAX: returns job meta (updated_at, job_type) for the smart onboarding form.
+     */
+    public function actionJobInfo($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $job = Jobs::find()->where(['id' => (int) $id])->one();
+        if (!$job) {
+            return ['success' => false];
+        }
+
+        $timestamp = $job->updated_at ?: $job->created_at;
+        $dateLabel = $job->updated_at ? 'آخر تحديث للبيانات' : 'تاريخ الإنشاء (لم تُحدَّث سابقاً)';
+        $displayDate = null;
+        $months = null;
+
+        if ($timestamp) {
+            $displayDate = date('Y-m-d H:i', $timestamp);
+            $months = (int) round((time() - $timestamp) / (30 * 86400));
+        }
+
+        return [
+            'success'      => true,
+            'display_date' => $displayDate,
+            'date_label'   => $dateLabel,
+            'months_since' => $months,
+            'job_type_id'  => $job->job_type,
+            'job_type_name' => $job->jobType ? $job->jobType->name : null,
+        ];
+    }
+
+    /**
      * AJAX endpoint for Select2: search jobs by name (case-insensitive, partial match).
      * Returns {results:[{id,text}]} format compatible with Select2.
      */

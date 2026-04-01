@@ -43,6 +43,7 @@ $this->registerJs("window.soConfig = " . json_encode([
     'riskCalcUrl'       => Url::to(['calculate-risk']),
     'duplicateCheckUrl' => Url::to(['check-duplicate']),
     'customerViewUrl'   => Url::to(['view', 'id' => '__ID__']),
+    'jobInfoUrl'        => Url::to(['/jobs/jobs/job-info', 'id' => '__JOB_ID__']),
     'isEditMode'        => !$isNew,
 ]) . ";", \yii\web\View::POS_HEAD);
 
@@ -76,17 +77,6 @@ if (!$isNew) {
         }
     } catch (\Exception $e) {}
 }
-
-/* Employment types */
-$employmentTypes = [
-    'government'    => 'حكومي',
-    'military'      => 'عسكري',
-    'private'       => 'قطاع خاص',
-    'self_employed' => 'عمل حر',
-    'retired'       => 'متقاعد',
-    'unemployed'    => 'بدون عمل',
-    'other'         => 'أخرى',
-];
 
 /* Customer financials (if exists) */
 $financials = null;
@@ -201,7 +191,7 @@ if (!$isNew) {
             <div class="so-section" data-step="1">
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية</h3>
-                    <div class="so-grid so-grid-3">
+                    <div class="so-grid so-grid-2">
                         <div class="job-title-wrapper">
                             <?= $form->field($model, 'job_title')->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
                                 'prompt' => '-- جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title',
@@ -214,17 +204,9 @@ if (!$isNew) {
                                 <input type="text" id="fin-employer-name" name="CustomerFinancials[employer_name]" class="form-control" value="<?= Html::encode($financials['employer_name'] ?? '') ?>" placeholder="مثال: محاسب، سائق، مهندس">
                             </div>
                         </div>
-                        <div>
-                            <div class="form-group">
-                                <label for="fin-employment-type">نوع التوظيف</label>
-                                <select id="fin-employment-type" name="CustomerFinancials[employment_type]" class="form-control">
-                                    <option value="">-- اختر --</option>
-                                    <?php foreach ($employmentTypes as $k => $v): ?>
-                                        <option value="<?= $k ?>" <?= ($financials['employment_type'] ?? '') === $k ? 'selected' : '' ?>><?= $v ?></option>
-                                    <?php endforeach ?>
-                                </select>
-                            </div>
-                        </div>
+                    </div>
+                    <div id="job-update-info" class="job-update-info" style="display:none; margin-top:10px">
+                        <span class="job-update-badge" id="job-update-badge"></span>
                     </div>
                     <div class="so-grid so-grid-3" style="margin-top: 16px">
                         <div><?= $form->field($model, 'job_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوظيفي'])->label('الرقم الوظيفي') ?></div>
