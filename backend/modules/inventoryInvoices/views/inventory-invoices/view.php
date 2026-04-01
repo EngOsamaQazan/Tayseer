@@ -243,27 +243,30 @@ $netTotal = $grossTotal - $discount;
         </div>
         <div style="padding:20px;display:flex;flex-wrap:wrap;gap:10px;">
             <?php if ($model->status === InventoryInvoices::STATUS_PENDING_RECEPTION && $canApprove): ?>
-                <?= Html::a('<i class="fa fa-check"></i> موافقة استلام (الفرع)', ['approve-reception', 'id' => $model->id], [
-                    'class' => 'btn btn-success', 'data-method' => 'post',
-                    'data-confirm' => 'تأكيد الموافقة على استلام الفاتورة؟',
-                    'style' => 'font-weight:700;border-radius:8px;padding:10px 24px',
-                ]) ?>
+                <button type="button" class="btn btn-success inv-approval-btn"
+                    data-action-url="<?= Url::to(['approve-reception', 'id' => $model->id]) ?>"
+                    data-confirm-msg="تأكيد الموافقة على استلام الفاتورة؟"
+                    style="font-weight:700;border-radius:8px;padding:10px 24px">
+                    <i class="fa fa-check"></i> موافقة استلام (الفرع)
+                </button>
                 <?= Html::a('<i class="fa fa-times"></i> رفض استلام', ['reject-reception', 'id' => $model->id], [
                     'class' => 'btn btn-warning',
                     'style' => 'font-weight:700;border-radius:8px;padding:10px 24px',
                 ]) ?>
             <?php endif ?>
             <?php if ($model->status === InventoryInvoices::STATUS_PENDING_MANAGER): ?>
-                <?= Html::a('<i class="fa fa-check-circle"></i> موافقة المدير وترحيل', ['approve-manager', 'id' => $model->id], [
-                    'class' => 'btn btn-primary', 'data-method' => 'post',
-                    'data-confirm' => 'تأكيد الموافقة النهائية وترحيل الفاتورة إلى المخزون؟',
-                    'style' => 'font-weight:700;border-radius:8px;padding:10px 24px',
-                ]) ?>
-                <?= Html::a('<i class="fa fa-ban"></i> رفض المدير', ['reject-manager', 'id' => $model->id], [
-                    'class' => 'btn btn-danger', 'data-method' => 'post',
-                    'data-confirm' => 'تأكيد رفض الفاتورة؟',
-                    'style' => 'font-weight:700;border-radius:8px;padding:10px 24px',
-                ]) ?>
+                <button type="button" class="btn btn-primary inv-approval-btn"
+                    data-action-url="<?= Url::to(['approve-manager', 'id' => $model->id]) ?>"
+                    data-confirm-msg="تأكيد الموافقة النهائية وترحيل الفاتورة إلى المخزون؟"
+                    style="font-weight:700;border-radius:8px;padding:10px 24px">
+                    <i class="fa fa-check-circle"></i> موافقة المدير وترحيل
+                </button>
+                <button type="button" class="btn btn-danger inv-approval-btn"
+                    data-action-url="<?= Url::to(['reject-manager', 'id' => $model->id]) ?>"
+                    data-confirm-msg="تأكيد رفض الفاتورة؟"
+                    style="font-weight:700;border-radius:8px;padding:10px 24px">
+                    <i class="fa fa-ban"></i> رفض المدير
+                </button>
             <?php endif ?>
         </div>
     </div>
@@ -307,3 +310,37 @@ $netTotal = $grossTotal - $discount;
         </div>
     </div>
 </div>
+<?php
+$csrfParam = Yii::$app->request->csrfParam;
+$csrfToken = Yii::$app->request->getCsrfToken();
+$js = <<<JS
+$(document).off('click.invApproval').on('click.invApproval', '.inv-approval-btn', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var btn = this;
+    var url = $(btn).data('action-url');
+    var msg = $(btn).data('confirm-msg') || 'هل أنت متأكد؟';
+    var origHtml = btn.innerHTML;
+    (typeof TayseerConfirm === 'function'
+        ? TayseerConfirm(msg, 'تأكيد العملية')
+        : Promise.resolve(confirm(msg))
+    ).then(function(ok) {
+        if (!ok) return;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري التنفيذ...';
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = url;
+        form.style.display = 'none';
+        var csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = '$csrfParam';
+        csrf.value = '$csrfToken';
+        form.appendChild(csrf);
+        document.body.appendChild(form);
+        form.submit();
+    });
+});
+JS;
+$this->registerJs($js);
+?>
