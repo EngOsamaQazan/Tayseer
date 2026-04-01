@@ -145,10 +145,11 @@ jobs:
             # Create webhook secret if not exists
             if [ ! -f /opt/.webhook-secret ]; then
               openssl rand -hex 32 > /opt/.webhook-secret
-              chmod 600 /opt/.webhook-secret
               echo "  Webhook secret generated: $(cat /opt/.webhook-secret)"
               echo "  >>> Add this secret to the GitHub webhook configuration <<<"
             fi
+            chown root:www-data /opt/.webhook-secret
+            chmod 640 /opt/.webhook-secret
             
             # Debug webhook — print diagnostic info
             echo "=== Webhook Debug ==="
