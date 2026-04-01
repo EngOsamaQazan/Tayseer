@@ -241,39 +241,45 @@ $netTotal = $grossTotal - $discount;
         <div class="inv-section-hdr" style="background:#fafaf9">
             <i class="fa fa-gavel"></i> إجراءات الموافقة
         </div>
+        <?php
+            $csrfParam = Yii::$app->request->csrfParam;
+            $csrfToken = Yii::$app->request->getCsrfToken();
+        ?>
         <div style="padding:20px;display:flex;flex-wrap:wrap;gap:10px;">
-            <?php
-                $csrfParam = Yii::$app->request->csrfParam;
-                $csrfToken = Yii::$app->request->getCsrfToken();
-            ?>
             <?php if ($model->status === InventoryInvoices::STATUS_PENDING_RECEPTION && $canApprove): ?>
-                <form method="post" action="<?= Url::to(['approve-reception', 'id' => $model->id]) ?>" style="display:inline" data-native-submit="1"
-                    onsubmit="var f=this;if(f.dataset.confirmed)return true;event.preventDefault();(typeof Swal!=='undefined'?Swal.fire({title:'تأكيد العملية',text:'تأكيد الموافقة على استلام الفاتورة؟',icon:'question',showCancelButton:true,confirmButtonText:'نعم، تأكيد',cancelButtonText:'إلغاء',confirmButtonColor:'#800020',reverseButtons:true}).then(function(r){if(r.isConfirmed){f.dataset.confirmed='1';f.submit()}}):confirm('تأكيد الموافقة على استلام الفاتورة؟')&&(f.dataset.confirmed='1',f.submit()));">
-                    <input type="hidden" name="<?= $csrfParam ?>" value="<?= $csrfToken ?>">
-                    <button type="submit" class="btn btn-success" style="font-weight:700;border-radius:8px;padding:10px 24px">
-                        <i class="fa fa-check"></i> موافقة استلام (الفرع)
-                    </button>
-                </form>
+                <button type="button" class="btn btn-success inv-post-action"
+                    data-action-url="<?= Url::to(['approve-reception', 'id' => $model->id]) ?>"
+                    data-confirm-text="تأكيد الموافقة على استلام الفاتورة؟"
+                    data-csrf-param="<?= Html::encode($csrfParam) ?>"
+                    data-csrf-token="<?= Html::encode($csrfToken) ?>"
+                    style="font-weight:700;border-radius:8px;padding:10px 24px">
+                    <i class="fa fa-check"></i> موافقة استلام (الفرع)
+                </button>
                 <?= Html::a('<i class="fa fa-times"></i> رفض استلام', ['reject-reception', 'id' => $model->id], [
                     'class' => 'btn btn-warning',
                     'style' => 'font-weight:700;border-radius:8px;padding:10px 24px',
                 ]) ?>
             <?php endif ?>
             <?php if ($model->status === InventoryInvoices::STATUS_PENDING_MANAGER): ?>
-                <form method="post" action="<?= Url::to(['approve-manager', 'id' => $model->id]) ?>" style="display:inline" data-native-submit="1"
-                    onsubmit="var f=this;if(f.dataset.confirmed)return true;event.preventDefault();(typeof Swal!=='undefined'?Swal.fire({title:'تأكيد العملية',text:'تأكيد الموافقة النهائية وترحيل الفاتورة إلى المخزون؟',icon:'question',showCancelButton:true,confirmButtonText:'نعم، تأكيد',cancelButtonText:'إلغاء',confirmButtonColor:'#800020',reverseButtons:true}).then(function(r){if(r.isConfirmed){f.dataset.confirmed='1';f.submit()}}):confirm('تأكيد الموافقة النهائية؟')&&(f.dataset.confirmed='1',f.submit()));">
-                    <input type="hidden" name="<?= $csrfParam ?>" value="<?= $csrfToken ?>">
-                    <button type="submit" class="btn btn-primary" style="font-weight:700;border-radius:8px;padding:10px 24px">
-                        <i class="fa fa-check-circle"></i> موافقة المدير وترحيل
-                    </button>
-                </form>
-                <form method="post" action="<?= Url::to(['reject-manager', 'id' => $model->id]) ?>" style="display:inline" data-native-submit="1"
-                    onsubmit="var f=this;if(f.dataset.confirmed)return true;event.preventDefault();(typeof Swal!=='undefined'?Swal.fire({title:'تأكيد العملية',text:'تأكيد رفض الفاتورة؟',icon:'warning',showCancelButton:true,confirmButtonText:'نعم، رفض',cancelButtonText:'إلغاء',confirmButtonColor:'#dc2626',reverseButtons:true}).then(function(r){if(r.isConfirmed){f.dataset.confirmed='1';f.submit()}}):confirm('تأكيد رفض الفاتورة؟')&&(f.dataset.confirmed='1',f.submit()));">
-                    <input type="hidden" name="<?= $csrfParam ?>" value="<?= $csrfToken ?>">
-                    <button type="submit" class="btn btn-danger" style="font-weight:700;border-radius:8px;padding:10px 24px">
-                        <i class="fa fa-ban"></i> رفض المدير
-                    </button>
-                </form>
+                <button type="button" class="btn btn-primary inv-post-action"
+                    data-action-url="<?= Url::to(['approve-manager', 'id' => $model->id]) ?>"
+                    data-confirm-text="تأكيد الموافقة النهائية وترحيل الفاتورة إلى المخزون؟"
+                    data-csrf-param="<?= Html::encode($csrfParam) ?>"
+                    data-csrf-token="<?= Html::encode($csrfToken) ?>"
+                    style="font-weight:700;border-radius:8px;padding:10px 24px">
+                    <i class="fa fa-check-circle"></i> موافقة المدير وترحيل
+                </button>
+                <button type="button" class="btn btn-danger inv-post-action"
+                    data-action-url="<?= Url::to(['reject-manager', 'id' => $model->id]) ?>"
+                    data-confirm-text="تأكيد رفض الفاتورة؟"
+                    data-confirm-icon="warning"
+                    data-btn-color="#dc2626"
+                    data-btn-text="نعم، رفض"
+                    data-csrf-param="<?= Html::encode($csrfParam) ?>"
+                    data-csrf-token="<?= Html::encode($csrfToken) ?>"
+                    style="font-weight:700;border-radius:8px;padding:10px 24px">
+                    <i class="fa fa-ban"></i> رفض المدير
+                </button>
             <?php endif ?>
         </div>
     </div>
@@ -317,3 +323,55 @@ $netTotal = $grossTotal - $discount;
         </div>
     </div>
 </div>
+
+<?php
+$invActionJs = <<<'JS'
+$(document).off('click.invPostAction').on('click.invPostAction', '.inv-post-action', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+    var btn = this;
+    if (btn.disabled) return;
+    var url       = btn.getAttribute('data-action-url');
+    var text      = btn.getAttribute('data-confirm-text') || 'هل أنت متأكد؟';
+    var icon      = btn.getAttribute('data-confirm-icon') || 'question';
+    var btnColor  = btn.getAttribute('data-btn-color') || '#800020';
+    var btnText   = btn.getAttribute('data-btn-text') || 'نعم، تأكيد';
+    var csrfName  = btn.getAttribute('data-csrf-param');
+    var csrfVal   = btn.getAttribute('data-csrf-token');
+
+    function submitAction() {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري المعالجة...';
+        var f = document.createElement('form');
+        f.method = 'POST';
+        f.action = url;
+        f.style.display = 'none';
+        var inp = document.createElement('input');
+        inp.type = 'hidden';
+        inp.name = csrfName;
+        inp.value = csrfVal;
+        f.appendChild(inp);
+        document.body.appendChild(f);
+        f.submit();
+    }
+
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: 'تأكيد العملية',
+            text: text,
+            icon: icon,
+            showCancelButton: true,
+            confirmButtonText: btnText,
+            cancelButtonText: 'إلغاء',
+            confirmButtonColor: btnColor,
+            reverseButtons: true,
+            target: document.body
+        }).then(function(r) { if (r.isConfirmed) submitAction(); });
+    } else if (confirm(text)) {
+        submitAction();
+    }
+});
+JS;
+$this->registerJs($invActionJs, \yii\web\View::POS_READY, 'inv-post-action-handler');
+?>
