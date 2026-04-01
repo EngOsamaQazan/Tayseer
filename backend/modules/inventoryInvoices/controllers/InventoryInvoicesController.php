@@ -364,9 +364,14 @@ class InventoryInvoicesController extends Controller
                         $invoice->total_amount = $totalAmount;
                         $invoice->save(false);
 
-                        $this->notifyApprovers($invoice, Notification::INVOICE_PENDING_RECEPTION,
-                            'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام');
                         $transaction->commit();
+
+                        try {
+                            $this->notifyApprovers($invoice, Notification::INVOICE_PENDING_RECEPTION,
+                                'فاتورة توريد جديدة #' . $invoice->id . ' بانتظار الاستلام');
+                        } catch (\Exception $ne) {
+                            Yii::error('Notification after invoice #' . $invoice->id . ' failed: ' . $ne->getMessage(), __METHOD__);
+                        }
 
                         if ($isAjax) {
                             Yii::$app->response->format = Response::FORMAT_JSON;
@@ -381,8 +386,12 @@ class InventoryInvoicesController extends Controller
                             preg_match("/Duplicate entry '([^']+)'/", $rawMsg, $m);
                             $dupSn = $m[1] ?? '';
                             $errorMsg = 'الرقم التسلسلي "' . $dupSn . '" مسجّل مسبقاً في النظام. يرجى التحقق وإزالة المكرر.';
+                        } elseif (strpos($rawMsg, 'Integrity constraint violation') !== false) {
+                            preg_match("/Duplicate entry '([^']+)'/", $rawMsg, $m);
+                            $errorMsg = 'خطأ في قيد قاعدة البيانات' . (isset($m[1]) ? ': القيمة "' . $m[1] . '" مكررة' : '') . '.';
+                            Yii::error('Wizard DB constraint error: ' . $rawMsg, __METHOD__);
                         } else {
-                            $errorMsg = 'حدث خطأ أثناء حفظ الفاتورة. يرجى المحاولة مرة أخرى.';
+                            $errorMsg = $rawMsg;
                             Yii::error('Wizard save error: ' . $rawMsg, __METHOD__);
                         }
                         if ($isAjax) {
