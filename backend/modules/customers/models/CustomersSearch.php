@@ -20,12 +20,14 @@ class CustomersSearch extends Customers
     public $number_row;
     public $job_type;
     public $q;
+    public $customer_name;
+    public $phone_number;
 
     public function rules()
     {
         return [
-            [['id', 'job_title','number_row','job_type'], 'integer'],
-            [['name', 'status', 'city', 'job_title', 'id_number', 'primary_phone_number', 'contract_type', 'q'], 'safe'],
+            [['id', 'job_title', 'number_row', 'job_type'], 'integer'],
+            [['name', 'status', 'city', 'job_title', 'id_number', 'primary_phone_number', 'contract_type', 'q', 'customer_name', 'phone_number'], 'safe'],
         ];
     }
 
@@ -112,10 +114,18 @@ class CustomersSearch extends Customers
             ->andFilterWhere(['like', 'primary_phone_number', $this->primary_phone_number])->andWhere(['os_customers.is_deleted' => false]);
         $query->andFilterWhere(['=', 'name', $this->name]);
 
+        if (!empty($this->customer_name)) {
+            $this->applyNormalizedNameFilter($query, $this->customer_name);
+        }
+        if (!empty($this->phone_number)) {
+            $query->andFilterWhere(['like', 'os_customers.primary_phone_number', $this->phone_number]);
+        }
+
         if (!empty($this->q)) {
             $this->applyUnifiedSearch($query);
         }
 
+        $query->distinct();
         return $dataProvider;
     }
 
@@ -173,6 +183,21 @@ class CustomersSearch extends Customers
         }
 
         return $query->count();
+    }
+
+    private function applyNormalizedNameFilter($query, string $name): void
+    {
+        $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(os_customers.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ى', 'ي')";
+        $words = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY);
+        foreach ($words as $i => $w) {
+            $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+            $wNorm = str_replace('ة', 'ه', $wNorm);
+            $wNorm = str_replace('ى', 'ي', $wNorm);
+            $p = ':cnf' . $i;
+            $query->andWhere(
+                new \yii\db\Expression("$nameNorm LIKE $p", [$p => '%' . $wNorm . '%'])
+            );
+        }
     }
 
     private static $cwIdx = 0;
