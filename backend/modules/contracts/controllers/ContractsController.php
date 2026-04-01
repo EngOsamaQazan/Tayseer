@@ -308,7 +308,7 @@ class ContractsController extends Controller
             );
 
             $adjustments = ArrayHelper::map(
-                $db->createCommand("SELECT contract_id, COALESCE(SUM(amount), 0) AS total FROM {{%contract_adjustment}} WHERE contract_id IN ($idList) AND is_deleted = 0 GROUP BY contract_id")->queryAll(),
+                $db->createCommand("SELECT contract_id, COALESCE(SUM(amount), 0) AS total FROM {{%contract_adjustments}} WHERE contract_id IN ($idList) AND is_deleted = 0 GROUP BY contract_id")->queryAll(),
                 'contract_id', 'total'
             );
 
