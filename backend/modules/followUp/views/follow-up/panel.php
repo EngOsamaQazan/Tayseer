@@ -56,6 +56,10 @@ $this->registerJs("window.OCP_CONFIG = " . Json::encode([
         'aiFeedback' => Url::to(['/followUp/follow-up/ai-feedback']),
         'getTimeline' => Url::to(['/followUp/follow-up/get-timeline', 'contract_id' => $contractId]),
         'sendSms' => Url::to(['/followUp/follow-up/send-sms']),
+        'bulkSendSms' => Url::to(['/followUp/follow-up/bulk-send-sms']),
+        'smsDraftList' => Url::to(['/followUp/follow-up/sms-draft-list']),
+        'smsDraftSave' => Url::to(['/followUp/follow-up/sms-draft-save']),
+        'smsDraftDelete' => Url::to(['/followUp/follow-up/sms-draft-delete']),
         'changeStatus' => Url::to(['/followUp/follow-up/change-status']),
         'customerInfo' => Url::to(['/followUp/follow-up/custamer-info']),
         'updateJudiciaryCheck' => Url::to(['/followUp/follow-up/update-judiciary-check']),
@@ -68,9 +72,33 @@ $this->registerJs("window.OCP_CONFIG = " . Json::encode([
 $this->registerJsVar('is_loan', $contractCalculations->contract_model->is_loan ?? 0, \yii\web\View::POS_HEAD);
 $this->registerJsVar('change_status_url', Url::to(['/followUp/follow-up/change-status']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), \yii\web\View::POS_HEAD);
+$this->registerJsVar('bulk_send_sms', Url::to(['/followUp/follow-up/bulk-send-sms']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), \yii\web\View::POS_HEAD);
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
+
+$_lastPay = $riskData['last_payment'] ?? ['date' => '-', 'amount' => 0];
+$_custShort = $customer ? NameHelper::short($customer->name) : 'غير محدد';
+$_statusLbl = ($contractCalculations->contract_model->is_loan ?? 0)
+    ? 'قضائي مسدد'
+    : \backend\modules\followUp\helper\RiskEngine::statusLabel($contract->status);
+$this->registerJs("window.SMS_VARS=" . \yii\helpers\Json::encode([
+    'اسم_العميل'   => $_custShort,
+    'رقم_العقد'     => (string)$contract->id,
+    'حالة_العقد'    => $_statusLbl,
+    'المبلغ_الإجمالي' => number_format($financials['total'] ?? 0, 2),
+    'المدفوع'       => number_format($financials['paid'] ?? 0, 2),
+    'المتبقي'       => number_format($financials['remaining'] ?? 0, 2),
+    'المستحق'       => number_format($financials['should_paid'] ?? 0, 2),
+    'المتأخر'       => number_format($financials['overdue'] ?? 0, 2),
+    'القسط_الشهري'  => number_format($financials['monthly_installment'] ?? 0, 2),
+    'أقساط_متأخرة'  => (string)($financials['overdue_installments'] ?? 0),
+    'أقساط_متبقية'  => (string)($financials['remaining_installments'] ?? 0),
+    'أيام_التأخير'  => (string)($riskData['dpd'] ?? 0),
+    'آخر_دفعة'      => number_format($_lastPay['amount'] ?? 0, 2),
+    'تاريخ_آخر_دفعة' => $_lastPay['date'] ?? '-',
+    'أتعاب_المحاماة' => number_format($financials['lawyer_costs'] ?? 0, 2),
+]) . ";", \yii\web\View::POS_HEAD);
 
 $dpd = $riskData['dpd'] ?? 0;
 $dpdClass = $dpd <= 0 ? 'ok' : ($dpd <= 7 ? 'warning' : ($dpd <= 30 ? 'danger' : 'critical'));

@@ -10,25 +10,352 @@ use backend\modules\contracts\models\Contracts;
 $contractModel = $contractCalculations->contract_model;
 ?>
 
+<!-- ═══ CSS مشترك — شريط المسودات والمتغيرات ═══ -->
+<style>
+.sdt-toolbar{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
+.sdt-btn{border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:all .15s;font-family:inherit}
+.sdt-btn-vars{background:linear-gradient(135deg,#6366F1,#4F46E5);color:#fff}
+.sdt-btn-vars:hover{box-shadow:0 2px 10px rgba(99,102,241,.35)}
+.sdt-btn-drafts{background:linear-gradient(135deg,#F59E0B,#D97706);color:#fff}
+.sdt-btn-drafts:hover{box-shadow:0 2px 10px rgba(245,158,11,.35)}
+.sdt-btn-save{background:linear-gradient(135deg,#10B981,#059669);color:#fff}
+.sdt-btn-save:hover{box-shadow:0 2px 10px rgba(16,185,129,.35)}
+
+.sdt-panel{display:none;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;padding:10px;margin-top:6px;animation:sdt-fadeIn .15s ease}
+.sdt-panel.open{display:block}
+.sdt-panel-title{font-size:10px;font-weight:700;color:#64748B;margin-bottom:8px;display:flex;align-items:center;gap:5px;letter-spacing:.3px}
+
+.sdt-vars-grid{display:flex;flex-wrap:wrap;gap:4px}
+.sdt-var-chip{border:none;background:#fff;border-radius:8px;padding:5px 10px;cursor:pointer;display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;transition:all .12s;border:1px solid #E2E8F0;font-family:inherit}
+.sdt-var-chip:hover{border-color:#6366F1;background:#EEF2FF;transform:translateY(-1px);box-shadow:0 2px 8px rgba(99,102,241,.15)}
+.sdt-var-name{font-size:10px;font-weight:800;color:#4F46E5;direction:rtl}
+.sdt-var-val{font-size:9px;color:#94A3B8;direction:rtl;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.sdt-drafts-list{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto}
+.sdt-draft-item{display:flex;align-items:center;background:#fff;border:1px solid #E2E8F0;border-radius:8px;overflow:hidden;transition:all .12s}
+.sdt-draft-item:hover{border-color:#F59E0B;box-shadow:0 2px 8px rgba(245,158,11,.12)}
+.sdt-draft-load{flex:1;padding:7px 10px;cursor:pointer;min-width:0}
+.sdt-draft-name{font-size:11px;font-weight:700;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sdt-draft-preview{font-size:9px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;direction:rtl;margin-top:1px}
+.sdt-draft-del{border:none;background:#FEF2F2;color:#EF4444;padding:8px 10px;cursor:pointer;font-size:13px;transition:all .12s;flex-shrink:0}
+.sdt-draft-del:hover{background:#EF4444;color:#fff}
+.sdt-empty{text-align:center;padding:16px;color:#94A3B8;font-size:12px;font-weight:600}
+.sdt-empty i{font-size:20px;display:block;margin-bottom:6px}
+@keyframes sdt-fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+</style>
+
 <!-- ═══ نافذة إرسال رسالة SMS ═══ -->
-<div class="modal fade" id="smsModal" tabindex="-1" role="dialog">
+<style>
+.ssms-modal .modal-content{border:none;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.25)}
+.ssms-modal .modal-dialog{max-width:520px}
+.ssms-hdr{background:linear-gradient(135deg,#0F766E 0%,#0D9488 50%,#14B8A6 100%);padding:16px 24px;position:relative;overflow:hidden}
+.ssms-hdr::before{content:'';position:absolute;top:-50%;right:-15%;width:160px;height:160px;background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);border-radius:50%}
+.ssms-hdr-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.ssms-hdr-title{display:flex;align-items:center;gap:12px}
+.ssms-hdr-title .ssms-hdr-icon{width:38px;height:38px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+.ssms-hdr-title h4{margin:0;font-size:17px;font-weight:800;color:#fff}
+.ssms-hdr-title h4 small{display:block;font-size:11px;font-weight:500;color:rgba(255,255,255,.7);margin-top:1px}
+.ssms-hdr .ssms-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:30px;height:30px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative;z-index:1}
+.ssms-hdr .ssms-close:hover{background:rgba(255,255,255,.3)}
+.ssms-phone-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(6px);padding:5px 14px;border-radius:20px;margin-top:10px;position:relative;z-index:1}
+.ssms-phone-badge i{color:rgba(255,255,255,.7);font-size:12px}
+.ssms-phone-badge span{color:#fff;font-weight:700;font-size:14px;direction:ltr;font-family:'Courier New',monospace;letter-spacing:.5px}
+.ssms-body{padding:16px 20px;background:#F8FAFC}
+.ssms-textarea-wrap{position:relative;margin-bottom:10px}
+.ssms-textarea-wrap textarea{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:14px 16px 36px;font-size:14px;line-height:1.6;resize:vertical;min-height:110px;outline:none;transition:all .2s;background:#fff;color:#1E293B}
+.ssms-textarea-wrap textarea:focus{border-color:#0D9488;box-shadow:0 0 0 3px rgba(13,148,136,.1)}
+.ssms-textarea-wrap textarea::placeholder{color:#94A3B8;font-size:12px}
+.ssms-emoji-btn{position:absolute;bottom:8px;left:10px;background:none;border:none;font-size:20px;cursor:pointer;opacity:.45;transition:all .2s;padding:2px;line-height:1;border-radius:6px}
+.ssms-emoji-btn:hover{opacity:1;background:rgba(13,148,136,.06)}
+.ssms-emoji-panel{display:none;background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px;margin-bottom:10px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-height:140px;overflow-y:auto}
+.ssms-emoji-panel.open{display:block;animation:ssms-fadeIn .15s ease}
+.ssms-emoji-panel .ssms-emoji-cat{font-size:8px;font-weight:800;color:#9CA3AF;margin:6px 0 3px;text-transform:uppercase;letter-spacing:.4px}
+.ssms-emoji-panel .ssms-emoji-cat:first-child{margin-top:0}
+.ssms-emoji-grid{display:flex;flex-wrap:wrap;gap:1px}
+.ssms-emoji-grid span{font-size:19px;cursor:pointer;padding:3px 4px;border-radius:6px;transition:all .1s;line-height:1.2}
+.ssms-emoji-grid span:hover{background:#F0FDFA;transform:scale(1.15)}
+.ssms-clear-btn{background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;margin-bottom:6px}
+.ssms-clear-btn:hover{filter:brightness(.92)}
+.ssms-stats{display:flex;flex-direction:column;gap:4px}
+.ssms-stat-bar{display:flex;align-items:center;border-radius:8px;overflow:hidden;font-size:11px;font-weight:700;height:30px;transition:transform .1s}
+.ssms-stat-bar:hover{transform:translateX(-2px)}
+.ssms-stat-bar .ssms-sb-label{flex:1;text-align:center;padding:0 10px;white-space:nowrap;letter-spacing:.2px}
+.ssms-stat-bar .ssms-sb-value{padding:0 12px;font-size:13px;font-weight:800;min-width:48px;text-align:center;background:rgba(0,0,0,.12);height:100%;display:flex;align-items:center;justify-content:center}
+.ssms-stat-bar.sbar-parts{background:linear-gradient(90deg,#14B8A6,#0D9488);color:#fff}
+.ssms-stat-bar.sbar-used{background:linear-gradient(90deg,#14B8A6,#0D9488);color:#fff}
+.ssms-stat-bar.sbar-remain{background:linear-gradient(90deg,#14B8A6,#0D9488);color:#fff}
+.ssms-stat-bar.sbar-encoding{background:linear-gradient(90deg,#6366F1,#4F46E5);color:#fff}
+.ssms-footer{background:#fff;border-top:1px solid #E2E8F0;padding:12px 20px;display:flex;gap:8px;flex-direction:row-reverse}
+.ssms-footer .ssms-btn-send{background:linear-gradient(135deg,#0D9488,#0F766E);color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 2px 12px rgba(13,148,136,.3)}
+.ssms-footer .ssms-btn-send:hover{box-shadow:0 4px 20px rgba(13,148,136,.4);transform:translateY(-1px)}
+.ssms-footer .ssms-btn-close{background:#F1F5F9;color:#475569;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.ssms-footer .ssms-btn-close:hover{background:#E2E8F0}
+@keyframes ssms-fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+<div class="modal fade ssms-modal" id="smsModal" tabindex="-1" role="dialog">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-bs-dismiss="modal"><span>&times;</span></button>
-                <h4 class="modal-title"><i class="fa fa-envelope"></i> إرسال رسالة نصية</h4>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="phone_number" value="0">
-                <div class="form-group">
-                    <label>نص الرسالة</label>
-                    <textarea id="sms_text" class="form-control" rows="4" placeholder="اكتب نص الرسالة هنا..."></textarea>
+            <div class="ssms-hdr">
+                <div class="ssms-hdr-top">
+                    <div class="ssms-hdr-title">
+                        <div class="ssms-hdr-icon"><i class="fa fa-comment"></i></div>
+                        <h4>إرسال رسالة نصية<small>SMS لرقم واحد</small></h4>
+                    </div>
+                    <button type="button" class="ssms-close" data-bs-dismiss="modal">&times;</button>
                 </div>
-                <div class="text-muted">عدد الأحرف: <span id="char_count">0</span></div>
+                <div class="ssms-phone-badge">
+                    <i class="fa fa-phone"></i>
+                    <span id="ssms-phone-display">—</span>
+                </div>
+                <input type="hidden" id="phone_number" value="0">
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fa fa-times"></i> إلغاء</button>
-                <button type="button" class="btn btn-primary" id="send_sms" data-bs-dismiss="modal"><i class="fa fa-paper-plane"></i> إرسال</button>
+            <div class="ssms-body">
+                <div class="ssms-textarea-wrap">
+                    <textarea id="sms_text" placeholder="اكتب نص الرسالة هنا..." rows="4"></textarea>
+                    <button type="button" class="ssms-emoji-btn" onclick="SingleSms.toggleEmoji()" title="إضافة رمز تعبيري">😊</button>
+                </div>
+                <div class="ssms-emoji-panel" id="ssms-emoji-panel">
+                    <div class="ssms-emoji-cat">وجوه</div>
+                    <div class="ssms-emoji-grid">
+                        <span onclick="SingleSms.insertEmoji('😊')">😊</span><span onclick="SingleSms.insertEmoji('😂')">😂</span><span onclick="SingleSms.insertEmoji('❤️')">❤️</span><span onclick="SingleSms.insertEmoji('😍')">😍</span><span onclick="SingleSms.insertEmoji('🥰')">🥰</span><span onclick="SingleSms.insertEmoji('😘')">😘</span><span onclick="SingleSms.insertEmoji('😁')">😁</span><span onclick="SingleSms.insertEmoji('😎')">😎</span><span onclick="SingleSms.insertEmoji('🤗')">🤗</span><span onclick="SingleSms.insertEmoji('😢')">😢</span><span onclick="SingleSms.insertEmoji('😭')">😭</span><span onclick="SingleSms.insertEmoji('😡')">😡</span><span onclick="SingleSms.insertEmoji('🤔')">🤔</span><span onclick="SingleSms.insertEmoji('😅')">😅</span><span onclick="SingleSms.insertEmoji('🙏')">🙏</span><span onclick="SingleSms.insertEmoji('🤝')">🤝</span>
+                    </div>
+                    <div class="ssms-emoji-cat">إشارات</div>
+                    <div class="ssms-emoji-grid">
+                        <span onclick="SingleSms.insertEmoji('👍')">👍</span><span onclick="SingleSms.insertEmoji('👋')">👋</span><span onclick="SingleSms.insertEmoji('✅')">✅</span><span onclick="SingleSms.insertEmoji('❌')">❌</span><span onclick="SingleSms.insertEmoji('⚠️')">⚠️</span><span onclick="SingleSms.insertEmoji('📞')">📞</span><span onclick="SingleSms.insertEmoji('💰')">💰</span><span onclick="SingleSms.insertEmoji('📋')">📋</span><span onclick="SingleSms.insertEmoji('🔔')">🔔</span><span onclick="SingleSms.insertEmoji('⏰')">⏰</span><span onclick="SingleSms.insertEmoji('📅')">📅</span><span onclick="SingleSms.insertEmoji('💳')">💳</span><span onclick="SingleSms.insertEmoji('🏦')">🏦</span><span onclick="SingleSms.insertEmoji('📱')">📱</span><span onclick="SingleSms.insertEmoji('🎉')">🎉</span><span onclick="SingleSms.insertEmoji('⭐')">⭐</span>
+                    </div>
+                </div>
+                <!-- شريط المسودات والمتغيرات -->
+                <div class="sdt-toolbar">
+                    <button type="button" class="sdt-btn sdt-btn-vars" onclick="SmsDrafts.togglePanel('ssms-vars-panel')"><i class="fa fa-code"></i> متغيرات</button>
+                    <button type="button" class="sdt-btn sdt-btn-drafts" onclick="SmsDrafts.togglePanel('ssms-drafts-panel')"><i class="fa fa-bookmark"></i> مسودات</button>
+                    <button type="button" class="sdt-btn sdt-btn-save" onclick="SmsDrafts.promptSave('sms_text')"><i class="fa fa-floppy-o"></i> حفظ كمسودة</button>
+                    <button type="button" class="ssms-clear-btn" style="width:auto;flex:none;margin:0;padding:6px 12px;font-size:11px" onclick="SingleSms.clearText()"><i class="fa fa-trash"></i> مسح</button>
+                </div>
+                <div class="sdt-panel" id="ssms-vars-panel">
+                    <div class="sdt-panel-title"><i class="fa fa-code"></i> إدراج متغير — يتم تعبئته تلقائياً حسب العقد الحالي</div>
+                    <div class="sdt-vars-grid" id="ssms-vars-list"></div>
+                </div>
+                <div class="sdt-panel" id="ssms-drafts-panel">
+                    <div class="sdt-panel-title"><i class="fa fa-bookmark"></i> المسودات المحفوظة (حتى 10)</div>
+                    <div class="sdt-drafts-list" id="ssms-drafts-list"></div>
+                </div>
+                <div class="ssms-stats">
+                    <div class="ssms-stat-bar sbar-parts"><span class="ssms-sb-label">عدد الرسائل</span><span class="ssms-sb-value" id="ssms-s-parts">1</span></div>
+                    <div class="ssms-stat-bar sbar-used"><span class="ssms-sb-label">الأحرف المستهلكة</span><span class="ssms-sb-value" id="ssms-s-used">0</span></div>
+                    <div class="ssms-stat-bar sbar-remain"><span class="ssms-sb-label">الأحرف المتبقية</span><span class="ssms-sb-value" id="ssms-s-remain">70</span></div>
+                    <div class="ssms-stat-bar sbar-encoding"><span class="ssms-sb-label">نوع الترميز</span><span class="ssms-sb-value" id="ssms-s-encoding">عربي</span></div>
+                </div>
+            </div>
+            <div class="ssms-footer">
+                <button type="button" class="ssms-btn-send" id="send_sms"><i class="fa fa-paper-plane"></i> إرسال</button>
+                <button type="button" class="ssms-btn-close" data-bs-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ نافذة إرسال رسالة SMS جماعية ═══ -->
+<style>
+.bsms-modal .modal-content{border:none;border-radius:16px;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,.25)}
+.bsms-modal .modal-dialog{max-width:920px;margin:30px auto}
+
+.bsms-hdr{background:linear-gradient(135deg,#1E1B4B 0%,#312E81 40%,#4C1D95 100%);padding:16px 24px;position:relative;overflow:hidden}
+.bsms-hdr::before{content:'';position:absolute;top:-60%;right:-15%;width:180px;height:180px;background:radial-gradient(circle,rgba(255,255,255,.06) 0%,transparent 70%);border-radius:50%}
+.bsms-hdr-top{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.bsms-hdr-title{display:flex;align-items:center;gap:12px}
+.bsms-hdr-title .bsms-hdr-icon{width:38px;height:38px;background:rgba(255,255,255,.15);backdrop-filter:blur(8px);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#E0E7FF}
+.bsms-hdr-title h4{margin:0;font-size:17px;font-weight:800;color:#fff;letter-spacing:-.2px}
+.bsms-hdr-title h4 small{display:block;font-size:11px;font-weight:500;color:#C4B5FD;margin-top:1px}
+.bsms-hdr .bsms-close{background:rgba(255,255,255,.12);border:none;color:#E0E7FF;width:30px;height:30px;border-radius:8px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;position:relative;z-index:1}
+.bsms-hdr .bsms-close:hover{background:rgba(255,255,255,.25);color:#fff}
+
+.bsms-body{padding:0;background:#F8FAFC}
+
+.bsms-cols{display:flex;min-height:0}
+.bsms-col-right{flex:0 0 380px;border-left:1px solid #E2E8F0;display:flex;flex-direction:column;background:#fff}
+.bsms-col-left{flex:1;display:flex;flex-direction:column;min-width:0}
+
+.bsms-sec{padding:12px 16px}
+.bsms-sec-title{font-size:10px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.bsms-sec-title i{color:#7C3AED;font-size:12px}
+
+.bsms-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.bsms-toolbar .bsms-toggle-all{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;border:1.5px solid #E2E8F0;background:#fff;cursor:pointer;font-size:10px;font-weight:700;color:#475569;transition:all .2s}
+.bsms-toolbar .bsms-toggle-all:hover{border-color:#7C3AED;color:#7C3AED}
+.bsms-toolbar .bsms-selected-count{font-size:11px;color:#7C3AED;font-weight:700;background:#F5F3FF;padding:3px 10px;border-radius:20px;margin-right:auto}
+
+.bsms-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding:0 16px 12px;max-height:380px;scrollbar-width:thin;scrollbar-color:#CBD5E1 transparent}
+.bsms-list::-webkit-scrollbar{width:3px}
+.bsms-list::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
+
+.bsms-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#FAFBFC;border:1px solid #F1F5F9;border-radius:8px;cursor:pointer;transition:all .15s}
+.bsms-item:hover{border-color:#DDD6FE;background:#FAFAFE;box-shadow:0 1px 4px rgba(124,58,237,.06)}
+.bsms-item.excluded{opacity:.3;background:#F9FAFB}
+.bsms-item.excluded .bsms-num,.bsms-item.excluded .bsms-name{text-decoration:line-through}
+.bsms-item input[type=checkbox]{width:15px;height:15px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0}
+.bsms-item .bsms-num{font-size:12px;font-weight:700;color:#1E293B;direction:ltr;font-family:'Courier New',monospace;min-width:95px;letter-spacing:.3px}
+.bsms-item .bsms-name{font-size:11px;color:#64748B;flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bsms-item .bsms-tag{font-size:8px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap;letter-spacing:.2px}
+.bsms-item .bsms-tag.primary{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0}
+.bsms-item .bsms-tag.extra{background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE}
+
+.bsms-textarea-wrap{position:relative}
+.bsms-textarea-wrap textarea{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:12px 14px 32px;font-size:13px;line-height:1.6;resize:vertical;min-height:120px;outline:none;transition:all .2s;background:#FAFBFC;color:#1E293B}
+.bsms-textarea-wrap textarea:focus{border-color:#7C3AED;box-shadow:0 0 0 3px rgba(124,58,237,.08);background:#fff}
+.bsms-textarea-wrap textarea::placeholder{color:#94A3B8;font-size:12px}
+.bsms-emoji-btn{position:absolute;bottom:8px;left:10px;background:none;border:none;font-size:20px;cursor:pointer;opacity:.45;transition:all .2s;padding:2px;line-height:1;border-radius:6px}
+.bsms-emoji-btn:hover{opacity:1;background:rgba(124,58,237,.06)}
+
+.bsms-emoji-panel{display:none;background:#fff;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px;margin-top:6px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-height:130px;overflow-y:auto}
+.bsms-emoji-panel.open{display:block;animation:bsms-fadeIn .15s ease}
+.bsms-emoji-panel .bsms-emoji-cat{font-size:8px;font-weight:800;color:#9CA3AF;margin:6px 0 3px;text-transform:uppercase;letter-spacing:.4px}
+.bsms-emoji-panel .bsms-emoji-cat:first-child{margin-top:0}
+.bsms-emoji-grid{display:flex;flex-wrap:wrap;gap:1px}
+.bsms-emoji-grid span{font-size:19px;cursor:pointer;padding:3px 4px;border-radius:6px;transition:all .1s;line-height:1.2}
+.bsms-emoji-grid span:hover{background:#F5F3FF;transform:scale(1.15)}
+
+.bsms-clear-btn{background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff;border:none;border-radius:8px;padding:8px;font-size:12px;font-weight:700;cursor:pointer;width:100%;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s;margin-bottom:6px}
+.bsms-clear-btn:hover{filter:brightness(.92)}
+
+.bsms-stats{display:flex;flex-direction:column;gap:4px}
+.bsms-stat-bar{display:flex;align-items:center;border-radius:8px;overflow:hidden;font-size:11px;font-weight:700;height:30px;transition:transform .1s}
+.bsms-stat-bar:hover{transform:translateX(-2px)}
+.bsms-stat-bar .bsms-sb-label{flex:1;text-align:center;padding:0 10px;white-space:nowrap;letter-spacing:.2px}
+.bsms-stat-bar .bsms-sb-value{padding:0 12px;font-size:13px;font-weight:800;min-width:48px;text-align:center;background:rgba(0,0,0,.12);height:100%;display:flex;align-items:center;justify-content:center}
+.bsms-stat-bar.bar-parts{background:linear-gradient(90deg,#14B8A6,#0D9488);color:#fff}
+.bsms-stat-bar.bar-used{background:linear-gradient(90deg,#14B8A6,#0D9488);color:#fff}
+.bsms-stat-bar.bar-remain{background:linear-gradient(90deg,#14B8A6,#0D9488);color:#fff}
+.bsms-stat-bar.bar-encoding{background:linear-gradient(90deg,#6366F1,#4F46E5);color:#fff}
+.bsms-stat-bar.bar-total{background:linear-gradient(90deg,#F43F5E,#E11D48);color:#fff;box-shadow:0 2px 6px rgba(244,63,94,.2)}
+
+.bsms-progress{padding:12px 16px;display:none}
+.bsms-progress-bar-wrap{background:#E2E8F0;border-radius:10px;height:5px;overflow:hidden;margin-bottom:8px}
+.bsms-progress-bar-fill{height:100%;background:linear-gradient(90deg,#7C3AED,#A78BFA);border-radius:10px;transition:width .3s ease;width:0}
+.bsms-progress-text{font-size:11px;color:#475569;text-align:center;font-weight:600}
+
+.bsms-results{padding:6px 16px 12px;display:none;max-height:150px;overflow-y:auto}
+.bsms-result-item{display:flex;align-items:center;gap:6px;padding:4px 10px;font-size:11px;background:#fff;border-radius:6px;margin-bottom:2px;border:1px solid #F1F5F9}
+.bsms-result-item .fa-check-circle{color:#16A34A;font-size:13px}
+.bsms-result-item .fa-times-circle{color:#EF4444;font-size:13px}
+.bsms-result-item .bsms-r-num{direction:ltr;font-family:'Courier New',monospace;font-weight:700;min-width:95px;color:#1E293B;font-size:11px}
+
+.bsms-footer{background:#fff;border-top:1px solid #E2E8F0;padding:12px 20px;display:flex;gap:8px;flex-direction:row-reverse}
+.bsms-footer .bsms-btn-send{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 2px 12px rgba(124,58,237,.3)}
+.bsms-footer .bsms-btn-send:hover:not(:disabled){box-shadow:0 4px 20px rgba(124,58,237,.4);transform:translateY(-1px)}
+.bsms-footer .bsms-btn-send:disabled{opacity:.5;cursor:not-allowed}
+.bsms-footer .bsms-btn-close{background:#F1F5F9;color:#475569;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+.bsms-footer .bsms-btn-close:hover{background:#E2E8F0;border-color:#CBD5E1}
+
+@keyframes bsms-fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){
+.bsms-modal .modal-dialog{max-width:95%;margin:15px auto}
+.bsms-cols{flex-direction:column}
+.bsms-col-right{flex:none;border-left:none;border-bottom:1px solid #E2E8F0}
+.bsms-list{max-height:180px}
+}
+</style>
+<div class="modal fade bsms-modal" id="bulkSmsModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <!-- Header -->
+            <div class="bsms-hdr">
+                <div class="bsms-hdr-top">
+                    <div class="bsms-hdr-title">
+                        <div class="bsms-hdr-icon"><i class="fa fa-paper-plane"></i></div>
+                        <h4>رسالة SMS جماعية<small>إرسال رسالة واحدة لجميع الأرقام المحددة</small></h4>
+                    </div>
+                    <button type="button" class="bsms-close" data-bs-dismiss="modal">&times;</button>
+                </div>
+            </div>
+
+            <!-- Body — two columns -->
+            <div class="bsms-body">
+                <div class="bsms-cols">
+                    <!-- العمود الأيمن: الأرقام -->
+                    <div class="bsms-col-right">
+                        <div class="bsms-sec" style="padding-bottom:0">
+                            <div class="bsms-sec-title"><i class="fa fa-phone"></i> المستلمون</div>
+                            <div class="bsms-toolbar">
+                                <button type="button" class="bsms-toggle-all" onclick="BulkSms.toggleAll()">
+                                    <i class="fa fa-check-square-o" id="bsms-toggle-icon"></i>
+                                    <span id="bsms-toggle-text">إلغاء تحديد الكل</span>
+                                </button>
+                                <span class="bsms-selected-count"><i class="fa fa-users"></i> <span id="bsms-sel-count">0</span> / <span id="bsms-total-count">0</span></span>
+                            </div>
+                        </div>
+                        <div class="bsms-list" id="bsms-list"></div>
+                    </div>
+
+                    <!-- العمود الأيسر: الرسالة + الإحصائيات -->
+                    <div class="bsms-col-left">
+                        <!-- كتابة الرسالة -->
+                        <div class="bsms-sec" style="flex:1">
+                            <div class="bsms-sec-title"><i class="fa fa-pencil-square-o"></i> نص الرسالة</div>
+                            <div class="bsms-textarea-wrap">
+                                <textarea id="bsms-text" placeholder="اكتب نص الرسالة هنا..." rows="4"></textarea>
+                                <button type="button" class="bsms-emoji-btn" onclick="BulkSms.toggleEmoji()" title="إضافة رمز تعبيري">😊</button>
+                            </div>
+                            <div class="bsms-emoji-panel" id="bsms-emoji-panel">
+                                <div class="bsms-emoji-cat">وجوه</div>
+                                <div class="bsms-emoji-grid">
+                                    <span onclick="BulkSms.insertEmoji('😊')">😊</span><span onclick="BulkSms.insertEmoji('😂')">😂</span><span onclick="BulkSms.insertEmoji('❤️')">❤️</span><span onclick="BulkSms.insertEmoji('😍')">😍</span><span onclick="BulkSms.insertEmoji('🥰')">🥰</span><span onclick="BulkSms.insertEmoji('😘')">😘</span><span onclick="BulkSms.insertEmoji('😁')">😁</span><span onclick="BulkSms.insertEmoji('😎')">😎</span><span onclick="BulkSms.insertEmoji('🤗')">🤗</span><span onclick="BulkSms.insertEmoji('😢')">😢</span><span onclick="BulkSms.insertEmoji('😭')">😭</span><span onclick="BulkSms.insertEmoji('😡')">😡</span><span onclick="BulkSms.insertEmoji('🤔')">🤔</span><span onclick="BulkSms.insertEmoji('😅')">😅</span><span onclick="BulkSms.insertEmoji('🙏')">🙏</span><span onclick="BulkSms.insertEmoji('🤝')">🤝</span>
+                                </div>
+                                <div class="bsms-emoji-cat">إشارات</div>
+                                <div class="bsms-emoji-grid">
+                                    <span onclick="BulkSms.insertEmoji('👍')">👍</span><span onclick="BulkSms.insertEmoji('👋')">👋</span><span onclick="BulkSms.insertEmoji('✅')">✅</span><span onclick="BulkSms.insertEmoji('❌')">❌</span><span onclick="BulkSms.insertEmoji('⚠️')">⚠️</span><span onclick="BulkSms.insertEmoji('📞')">📞</span><span onclick="BulkSms.insertEmoji('💰')">💰</span><span onclick="BulkSms.insertEmoji('📋')">📋</span><span onclick="BulkSms.insertEmoji('🔔')">🔔</span><span onclick="BulkSms.insertEmoji('⏰')">⏰</span><span onclick="BulkSms.insertEmoji('📅')">📅</span><span onclick="BulkSms.insertEmoji('💳')">💳</span><span onclick="BulkSms.insertEmoji('🏦')">🏦</span><span onclick="BulkSms.insertEmoji('📱')">📱</span><span onclick="BulkSms.insertEmoji('🎉')">🎉</span><span onclick="BulkSms.insertEmoji('⭐')">⭐</span>
+                                </div>
+                                <div class="bsms-emoji-cat">أرقام</div>
+                                <div class="bsms-emoji-grid">
+                                    <span onclick="BulkSms.insertEmoji('0️⃣')">0️⃣</span><span onclick="BulkSms.insertEmoji('1️⃣')">1️⃣</span><span onclick="BulkSms.insertEmoji('2️⃣')">2️⃣</span><span onclick="BulkSms.insertEmoji('3️⃣')">3️⃣</span><span onclick="BulkSms.insertEmoji('4️⃣')">4️⃣</span><span onclick="BulkSms.insertEmoji('5️⃣')">5️⃣</span><span onclick="BulkSms.insertEmoji('6️⃣')">6️⃣</span><span onclick="BulkSms.insertEmoji('7️⃣')">7️⃣</span><span onclick="BulkSms.insertEmoji('8️⃣')">8️⃣</span><span onclick="BulkSms.insertEmoji('9️⃣')">9️⃣</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- شريط المسودات والمتغيرات -->
+                        <div class="bsms-sec" style="padding-top:4px;padding-bottom:0">
+                            <div class="sdt-toolbar">
+                                <button type="button" class="sdt-btn sdt-btn-vars" onclick="SmsDrafts.togglePanel('bsms-vars-panel')"><i class="fa fa-code"></i> متغيرات</button>
+                                <button type="button" class="sdt-btn sdt-btn-drafts" onclick="SmsDrafts.togglePanel('bsms-drafts-panel')"><i class="fa fa-bookmark"></i> مسودات</button>
+                                <button type="button" class="sdt-btn sdt-btn-save" onclick="SmsDrafts.promptSave('bsms-text')"><i class="fa fa-floppy-o"></i> حفظ كمسودة</button>
+                                <button type="button" class="bsms-clear-btn" style="width:auto;flex:none;margin:0;padding:6px 12px;font-size:11px" onclick="BulkSms.clearText()"><i class="fa fa-trash"></i> مسح</button>
+                            </div>
+                            <div class="sdt-panel" id="bsms-vars-panel">
+                                <div class="sdt-panel-title"><i class="fa fa-code"></i> إدراج متغير — يتم تعبئته تلقائياً حسب العقد الحالي</div>
+                                <div class="sdt-vars-grid" id="bsms-vars-list"></div>
+                            </div>
+                            <div class="sdt-panel" id="bsms-drafts-panel">
+                                <div class="sdt-panel-title"><i class="fa fa-bookmark"></i> المسودات المحفوظة (حتى 10)</div>
+                                <div class="sdt-drafts-list" id="bsms-drafts-list"></div>
+                            </div>
+                        </div>
+
+                        <!-- الإحصائيات -->
+                        <div class="bsms-sec" style="padding-top:6px;background:#F8FAFC;border-top:1px solid #E2E8F0">
+                            <div class="bsms-stats" id="bsms-stats">
+                                <div class="bsms-stat-bar bar-parts"><span class="bsms-sb-label">عدد الرسائل</span><span class="bsms-sb-value" id="bsms-s-parts">1</span></div>
+                                <div class="bsms-stat-bar bar-used"><span class="bsms-sb-label">الأحرف المستهلكة</span><span class="bsms-sb-value" id="bsms-s-used">0</span></div>
+                                <div class="bsms-stat-bar bar-remain"><span class="bsms-sb-label">الأحرف المتبقية</span><span class="bsms-sb-value" id="bsms-s-remain">70</span></div>
+                                <div class="bsms-stat-bar bar-encoding"><span class="bsms-sb-label">نوع الترميز</span><span class="bsms-sb-value" id="bsms-s-encoding">عربي</span></div>
+                                <div class="bsms-stat-bar bar-total"><span class="bsms-sb-label">إجمالي الرسائل (الكل)</span><span class="bsms-sb-value" id="bsms-s-total">0</span></div>
+                            </div>
+                        </div>
+
+                        <!-- تقدم الإرسال -->
+                        <div class="bsms-progress" id="bsms-progress">
+                            <div class="bsms-progress-bar-wrap"><div class="bsms-progress-bar-fill" id="bsms-progress-fill"></div></div>
+                            <div class="bsms-progress-text" id="bsms-progress-text">جاري الإرسال...</div>
+                        </div>
+                        <div class="bsms-results" id="bsms-results"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bsms-footer">
+                <button type="button" class="bsms-btn-send" id="bsms-send-btn" onclick="BulkSms.send()">
+                    <i class="fa fa-paper-plane"></i> إرسال للمحددين
+                </button>
+                <button type="button" class="bsms-btn-close" data-bs-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
             </div>
         </div>
     </div>

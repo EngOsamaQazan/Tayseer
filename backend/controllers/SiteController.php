@@ -323,34 +323,33 @@ class SiteController extends Controller
                 return $this->redirect(['system-settings', 'tab' => 'google_apis']);
             }
 
-            // ── SMS API Settings ──
+            // ── SMS API Settings (Multi-Provider) ──
             if ($tab === 'sms_api') {
                 $data = [
                     'enabled'      => $post['sms_enabled'] ?? '0',
                     'provider'     => trim($post['sms_provider'] ?? ''),
+                    'sender_id'    => trim($post['sms_sender_id'] ?? ''),
                     'api_url'      => trim($post['sms_api_url'] ?? ''),
                     'api_key'      => trim($post['sms_api_key'] ?? ''),
                     'api_secret'   => trim($post['sms_api_secret'] ?? ''),
-                    'sender_id'    => trim($post['sms_sender_id'] ?? ''),
                     'username'     => trim($post['sms_username'] ?? ''),
                     'password'     => trim($post['sms_password'] ?? ''),
                 ];
 
-                if ($data['api_key'] === '' || $data['api_key'] === '••••••••••') {
-                    $data['api_key'] = SystemSettings::get('sms_api', 'api_key', '');
-                }
-                if ($data['api_secret'] === '' || $data['api_secret'] === '••••••••••') {
-                    $data['api_secret'] = SystemSettings::get('sms_api', 'api_secret', '');
-                }
-                if ($data['password'] === '' || $data['password'] === '••••••••••') {
-                    $data['password'] = SystemSettings::get('sms_api', 'password', '');
+                $masked = '••••••••••';
+                foreach (['api_key', 'api_secret', 'password'] as $sk) {
+                    if ($data[$sk] === '' || $data[$sk] === $masked) {
+                        $data[$sk] = SystemSettings::get('sms_api', $sk, '');
+                    }
                 }
 
                 $encryptedKeys = ['api_key', 'api_secret', 'password'];
                 $saved = SystemSettings::setGroup('sms_api', $data, $encryptedKeys);
 
+                $providerNames = ['smsapril'=>'SMS April','twilio'=>'Twilio','vonage'=>'Vonage','unifonic'=>'Unifonic','taqnyat'=>'Taqnyat','gateway_sa'=>'Gateway.sa','msegat'=>'Msegat','other'=>'مزوّد آخر'];
+                $pName = $providerNames[$data['provider']] ?? $data['provider'];
                 Yii::$app->session->setFlash($saved ? 'success' : 'error',
-                    $saved ? 'تم حفظ إعدادات SMS API بنجاح' : 'حدث خطأ أثناء حفظ الإعدادات');
+                    $saved ? "تم حفظ إعدادات {$pName} بنجاح" : 'حدث خطأ أثناء حفظ الإعدادات');
                 return $this->redirect(['system-settings', 'tab' => 'messaging']);
             }
 
@@ -402,7 +401,7 @@ class SiteController extends Controller
             'configured' => $googleMapsKey !== '',
         ];
 
-        // SMS API settings
+        // SMS API settings (Multi-Provider)
         $smsSettings = SystemSettings::getGroup('sms_api');
         $smsDisplay = $smsSettings;
         foreach (['api_key', 'api_secret', 'password'] as $sensitiveKey) {
@@ -605,7 +604,7 @@ class SiteController extends Controller
     }
 
     /**
-     * اختبار اتصال SMS API (AJAX)
+     * اختبار اتصال SMS API — يدعم عدة مزوّدين
      */
     public function actionTestSmsConnection()
     {
@@ -615,40 +614,137 @@ class SiteController extends Controller
             return ['success' => false, 'error' => 'طلب غير صالح'];
         }
 
-        $provider = SystemSettings::get('sms_api', 'provider', '');
-        $apiUrl   = SystemSettings::get('sms_api', 'api_url', '');
-        $apiKey   = SystemSettings::get('sms_api', 'api_key', '');
-        $username = SystemSettings::get('sms_api', 'username', '');
+        $provider  = SystemSettings::get('sms_api', 'provider', '');
+        $senderId  = SystemSettings::get('sms_api', 'sender_id', '');
+        $apiUrl    = SystemSettings::get('sms_api', 'api_url', '');
+        $apiKey    = SystemSettings::get('sms_api', 'api_key', '');
+        $apiSecret = SystemSettings::get('sms_api', 'api_secret', '');
+        $username  = SystemSettings::get('sms_api', 'username', '');
+        $password  = SystemSettings::get('sms_api', 'password', '');
 
-        if (empty($apiUrl) && empty($apiKey)) {
-            return ['success' => false, 'error' => 'لم يتم إعداد بيانات SMS API بعد — أدخل رابط API والمفتاح أولاً'];
+        if (empty($provider)) {
+            return ['success' => false, 'error' => 'لم يتم اختيار مزوّد خدمة SMS بعد'];
         }
 
+        $providerNames = ['smsapril'=>'SMS April','twilio'=>'Twilio','vonage'=>'Vonage','unifonic'=>'Unifonic','taqnyat'=>'Taqnyat','gateway_sa'=>'Gateway.sa','msegat'=>'Msegat','other'=>'مزوّد آخر'];
+        $pName = $providerNames[$provider] ?? $provider;
+
         try {
-            $ch = curl_init($apiUrl);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_TIMEOUT        => 15,
-                CURLOPT_SSL_VERIFYPEER => !YII_DEBUG,
-                CURLOPT_NOBODY         => true,
-            ]);
-            curl_exec($ch);
-            $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
+            switch ($provider) {
+                case 'smsapril':
+                    if (empty($username) || empty($password)) {
+                        return ['success' => false, 'error' => 'أدخل اسم المستخدم وكلمة المرور أولاً'];
+                    }
+                    $url = 'http://www.smsapril.com/api.php?comm=sendsms';
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, [
+                        CURLOPT_RETURNTRANSFER => true,
+                        CURLOPT_TIMEOUT        => 15,
+                        CURLOPT_POST           => true,
+                        CURLOPT_POSTFIELDS     => http_build_query([
+                            'user' => $username, 'pass' => $password, 'sender' => $senderId,
+                            'to' => '', 'message' => 'test',
+                        ]),
+                    ]);
+                    $output = trim(curl_exec($ch));
+                    $curlErr = curl_error($ch);
+                    unset($ch);
+                    if ($curlErr) return ['success' => false, 'error' => "خطأ اتصال: {$curlErr}"];
+                    $errMap = [
+                        '-110' => 'اسم المستخدم أو كلمة المرور خاطئة',
+                        '-111' => 'الحساب غير مفعّل',
+                        '-112' => 'الحساب مُجمَّد',
+                        '-115' => 'المرسل غير متوفر',
+                        '-116' => 'اسم المرسل غير صالح',
+                    ];
+                    if ($output === '-110' || $output === '-111' || $output === '-112') {
+                        return ['success' => false, 'error' => $errMap[$output]];
+                    }
+                    if ($output === '-100' || $output === '-113' || $output === '-114' || $output === '-115' || $output === '-116' || is_numeric($output)) {
+                        $msg = "SMS April — بيانات الدخول صحيحة";
+                        if ($output === '-113') $msg .= ' (تنبيه: لا يوجد رصيد كافٍ)';
+                        if ($output === '-115' || $output === '-116') $msg .= ' (تنبيه: ' . ($errMap[$output] ?? '') . ')';
+                        return ['success' => true, 'message' => $msg . ($senderId ? " | المرسل: {$senderId}" : '')];
+                    }
+                    return ['success' => false, 'error' => "رد غير متوقع من SMS April (كود: {$output})"];
 
-            if ($curlError) {
-                return ['success' => false, 'error' => "خطأ في الاتصال بالسيرفر: {$curlError}"];
+                case 'twilio':
+                    if (empty($apiKey) || empty($apiSecret)) {
+                        return ['success' => false, 'error' => 'أدخل Account SID و Auth Token أولاً'];
+                    }
+                    $url = "https://api.twilio.com/2010-04-01/Accounts/{$apiKey}.json";
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_USERPWD => "{$apiKey}:{$apiSecret}"]);
+                    $resp = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlErr = curl_error($ch);
+                    unset($ch);
+                    if ($curlErr) return ['success' => false, 'error' => "خطأ اتصال: {$curlErr}"];
+                    if ($code === 200) {
+                        $data = json_decode($resp, true);
+                        $status = $data['status'] ?? '';
+                        return ['success' => true, 'message' => "Twilio — الحساب فعّال ({$status})" . ($senderId ? " | المرسل: {$senderId}" : '')];
+                    }
+                    if ($code === 401) return ['success' => false, 'error' => 'Account SID أو Auth Token غير صحيح'];
+                    return ['success' => false, 'error' => "Twilio أرجع HTTP {$code}"];
+
+                case 'taqnyat':
+                    if (empty($apiKey)) {
+                        return ['success' => false, 'error' => 'أدخل Bearer Token أولاً'];
+                    }
+                    $url = 'https://api.taqnyat.sa/system/credit/balance';
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_HTTPHEADER => ["Authorization: Bearer {$apiKey}"]]);
+                    $resp = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlErr = curl_error($ch);
+                    unset($ch);
+                    if ($curlErr) return ['success' => false, 'error' => "خطأ اتصال: {$curlErr}"];
+                    if ($code === 200) {
+                        $data = json_decode($resp, true);
+                        $bal = $data['balance'] ?? $data['Balance'] ?? '?';
+                        return ['success' => true, 'message' => "Taqnyat — الرصيد: {$bal}" . ($senderId ? " | المرسل: {$senderId}" : '')];
+                    }
+                    if ($code === 401) return ['success' => false, 'error' => 'Bearer Token غير صحيح'];
+                    return ['success' => false, 'error' => "Taqnyat أرجع HTTP {$code}"];
+
+                case 'unifonic':
+                    if (empty($apiKey)) {
+                        return ['success' => false, 'error' => 'أدخل App SID أولاً'];
+                    }
+                    $url = 'https://el.cloud.unifonic.com/rest/SMS/GetBalance';
+                    $ch = curl_init($url);
+                    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_POST => true, CURLOPT_POSTFIELDS => http_build_query(['AppSid' => $apiKey])]);
+                    $resp = curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlErr = curl_error($ch);
+                    unset($ch);
+                    if ($curlErr) return ['success' => false, 'error' => "خطأ اتصال: {$curlErr}"];
+                    $data = json_decode($resp, true);
+                    if (isset($data['success']) && $data['success'] === true) {
+                        $bal = $data['data']['Balance'] ?? '?';
+                        return ['success' => true, 'message' => "Unifonic — الرصيد: {$bal}" . ($senderId ? " | المرسل: {$senderId}" : '')];
+                    }
+                    $errMsg = $data['message'] ?? $data['errorCode'] ?? "HTTP {$code}";
+                    return ['success' => false, 'error' => "Unifonic: {$errMsg}"];
+
+                default:
+                    $testUrl = $apiUrl ?: '';
+                    if (empty($testUrl)) {
+                        return ['success' => false, 'error' => "المزوّد {$pName}: لا يوجد رابط API للاختبار — تأكد من إدخال البيانات"];
+                    }
+                    $ch = curl_init($testUrl);
+                    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_NOBODY => true, CURLOPT_SSL_VERIFYPEER => !YII_DEBUG]);
+                    curl_exec($ch);
+                    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                    $curlErr = curl_error($ch);
+                    unset($ch);
+                    if ($curlErr) return ['success' => false, 'error' => "خطأ اتصال: {$curlErr}"];
+                    if ($code >= 200 && $code < 500) {
+                        return ['success' => true, 'message' => "{$pName} — السيرفر يستجيب (HTTP {$code})" . ($senderId ? " | المرسل: {$senderId}" : '')];
+                    }
+                    return ['success' => false, 'error' => "السيرفر أرجع HTTP {$code}"];
             }
-
-            if ($httpCode >= 200 && $httpCode < 500) {
-                return [
-                    'success' => true,
-                    'message' => "السيرفر يستجيب (HTTP {$httpCode}) — المزوّد: " . ($provider ?: 'غير محدد'),
-                ];
-            }
-
-            return ['success' => false, 'error' => "السيرفر أرجع كود خطأ: HTTP {$httpCode}"];
         } catch (\Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -685,7 +781,7 @@ class SiteController extends Controller
             $response  = curl_exec($ch);
             $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
-            curl_close($ch);
+            unset($ch);
 
             if ($curlError) {
                 return ['success' => false, 'error' => "خطأ في الاتصال: {$curlError}"];
@@ -768,7 +864,7 @@ class SiteController extends Controller
             $response  = curl_exec($ch);
             $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $curlError = curl_error($ch);
-            curl_close($ch);
+            unset($ch);
 
             if ($curlError) {
                 return ['success' => false, 'error' => "خطأ في الاتصال: {$curlError}"];

@@ -1195,8 +1195,9 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                 </div>
 
                 <!-- ════════════════════════════════════════════════ -->
-                <!--  SMS API Panel                                  -->
+                <!--  SMS API Panel (Multi-Provider)                 -->
                 <!-- ════════════════════════════════════════════════ -->
+                <?php $curProvider = $smsSettings['provider'] ?? ''; ?>
                 <div class="g-inner-panel active" id="g-panel-sms">
                 <form method="post" action="<?= Url::to(['system-settings']) ?>" id="sms-settings-form">
                     <?= Html::hiddenInput(Yii::$app->request->csrfParam, Yii::$app->request->csrfToken) ?>
@@ -1214,12 +1215,16 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </div>
                         <div class="sys-card-body">
                             <div class="sys-connection-status" id="sms-connection-status">
-                                <?php if (!empty($smsSettings['enabled']) && $smsSettings['enabled'] === '1' && !empty($smsSettings['has_api_key'])): ?>
+                                <?php
+                                $smsConfigured = !empty($smsSettings['enabled']) && $smsSettings['enabled'] === '1'
+                                    && !empty($curProvider);
+                                ?>
+                                <?php if ($smsConfigured): ?>
                                     <div class="sys-status-indicator configured">
                                         <i class="fa fa-check-circle fa-2x"></i>
                                         <div>
                                             <strong>تم التكوين</strong>
-                                            <p>بيانات SMS API محفوظة — اضغط "اختبار الاتصال" للتحقق</p>
+                                            <p>بيانات المزوّد محفوظة — اضغط "اختبار الاتصال" للتحقق</p>
                                         </div>
                                     </div>
                                 <?php else: ?>
@@ -1227,7 +1232,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                         <i class="fa fa-exclamation-circle fa-2x"></i>
                                         <div>
                                             <strong>غير مكوّن</strong>
-                                            <p>أدخل بيانات مزوّد خدمة الرسائل النصية لتفعيل إرسال SMS</p>
+                                            <p>اختر مزوّد خدمة SMS وأدخل بيانات الاعتماد لتفعيل الإرسال</p>
                                         </div>
                                     </div>
                                 <?php endif; ?>
@@ -1243,7 +1248,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                     <i class="fa fa-power-off sys-toggle-icon"></i>
                                     <div>
                                         <strong>تفعيل خدمة الرسائل النصية SMS</strong>
-                                        <p>عند التفعيل، سيتم إرسال رسائل SMS للعملاء (تذكيرات، إشعارات، تأكيدات)</p>
+                                        <p>عند التفعيل، سيتم إرسال رسائل SMS للعملاء عبر المزوّد المختار</p>
                                     </div>
                                 </div>
                                 <label class="sys-switch">
@@ -1255,261 +1260,106 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </div>
                     </div>
 
-                    <!-- ═══════════ Setup Guide (Collapsible) ═══════════ -->
-                    <div class="sys-card sys-guide-card">
-                        <div class="sys-card-header sys-guide-toggle" onclick="toggleSmsGuide()">
-                            <div class="sys-card-title">
-                                <i class="fa fa-graduation-cap"></i> دليل الإعداد خطوة بخطوة
-                            </div>
-                            <div class="sys-guide-toggle-hint">
-                                <span id="sms-guide-toggle-text">عرض الدليل</span>
-                                <i class="fa fa-chevron-down" id="sms-guide-chevron"></i>
-                            </div>
-                        </div>
-                        <div class="sys-guide-body" id="sms-setup-guide" style="display:none;">
-
-                            <!-- Step Progress -->
-                            <div class="gc-steps-progress">
-                                <div class="gc-step-dot active" data-step="s1"><span>1</span></div>
-                                <div class="gc-step-line"></div>
-                                <div class="gc-step-dot" data-step="s2"><span>2</span></div>
-                                <div class="gc-step-line"></div>
-                                <div class="gc-step-dot" data-step="s3"><span>3</span></div>
-                                <div class="gc-step-line"></div>
-                                <div class="gc-step-dot" data-step="s4"><span>4</span></div>
-                            </div>
-
-                            <!-- Step 1: Choose Provider -->
-                            <div class="gc-step active" id="sms-step-1">
-                                <div class="gc-step-header">
-                                    <div class="gc-step-number">1</div>
-                                    <div>
-                                        <h3>اختيار مزوّد خدمة SMS</h3>
-                                        <p>اختر مزوّد خدمة رسائل نصية يدعم منطقتك</p>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-instructions">
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">1</span>
-                                        <span>اختر أحد المزوّدين المعروفين مثل:
-                                            <strong>Twilio</strong> · <strong>Vonage (Nexmo)</strong> · <strong>Unifonic</strong> · <strong>Gateway.sa</strong> · <strong>Taqnyat</strong>
-                                        </span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">2</span>
-                                        <span>أنشئ حساباً جديداً في موقع المزوّد</span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">3</span>
-                                        <span>فعّل حسابك واشحن رصيداً (بعض المزوّدين يوفرون رصيداً تجريبياً مجانياً)</span>
-                                    </div>
-                                    <div class="gc-instruction-item gc-note-item">
-                                        <i class="fa fa-info-circle"></i>
-                                        <span>المزوّدون المحليون مثل <strong>Unifonic</strong> و <strong>Taqnyat</strong> يوفّرون أسعاراً أفضل للرسائل داخل المملكة العربية السعودية والأردن</span>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-nav">
-                                    <div></div>
-                                    <button type="button" class="gc-next-btn" onclick="goToSmsStep(2)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
-                                </div>
-                            </div>
-
-                            <!-- Step 2: Get API Credentials -->
-                            <div class="gc-step" id="sms-step-2">
-                                <div class="gc-step-header">
-                                    <div class="gc-step-number">2</div>
-                                    <div>
-                                        <h3>الحصول على بيانات API</h3>
-                                        <p>استخرج بيانات الاعتماد من لوحة تحكم المزوّد</p>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-instructions">
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">1</span>
-                                        <span>سجّل الدخول إلى لوحة تحكم المزوّد</span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">2</span>
-                                        <span>اذهب إلى قسم <strong>API Settings</strong> أو <strong>Developer</strong> أو <strong>Integrations</strong></span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">3</span>
-                                        <span>انسخ <strong>API Key</strong> (أو Account SID) و <strong>API Secret</strong> (أو Auth Token)</span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">4</span>
-                                        <span>انسخ <strong>رابط API</strong> (API URL/Endpoint) — عادةً يكون بالشكل: <code>https://api.provider.com/v1/messages</code></span>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-nav">
-                                    <button type="button" class="gc-prev-btn" onclick="goToSmsStep(1)"><i class="fa fa-arrow-right"></i> السابق</button>
-                                    <button type="button" class="gc-next-btn" onclick="goToSmsStep(3)">الخطوة التالية <i class="fa fa-arrow-left"></i></button>
-                                </div>
-                            </div>
-
-                            <!-- Step 3: Configure Sender ID -->
-                            <div class="gc-step" id="sms-step-3">
-                                <div class="gc-step-header">
-                                    <div class="gc-step-number">3</div>
-                                    <div>
-                                        <h3>إعداد اسم المرسل (Sender ID)</h3>
-                                        <p>تسجيل اسم المرسل الذي سيظهر للعملاء عند استلام الرسالة</p>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-instructions">
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">1</span>
-                                        <span>من لوحة تحكم المزوّد، اذهب إلى <strong>Sender IDs</strong> أو <strong>اسم المرسل</strong></span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">2</span>
-                                        <span>سجّل اسم المرسل (مثلاً: <code>TAYSEER</code> أو اسم شركتك)</span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">3</span>
-                                        <span>انتظر الموافقة (قد تستغرق 1-3 أيام عمل في بعض الدول)</span>
-                                    </div>
-                                    <div class="gc-instruction-item gc-note-item gc-warning-item">
-                                        <i class="fa fa-exclamation-triangle"></i>
-                                        <span>في السعودية والأردن، يجب تسجيل Sender ID رسمياً عبر المزوّد — الأسماء غير المسجّلة قد تُحجب</span>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-nav">
-                                    <button type="button" class="gc-prev-btn" onclick="goToSmsStep(2)"><i class="fa fa-arrow-right"></i> السابق</button>
-                                    <button type="button" class="gc-next-btn" onclick="goToSmsStep(4)">الخطوة الأخيرة <i class="fa fa-arrow-left"></i></button>
-                                </div>
-                            </div>
-
-                            <!-- Step 4: Fill Form -->
-                            <div class="gc-step" id="sms-step-4">
-                                <div class="gc-step-header">
-                                    <div class="gc-step-number">4</div>
-                                    <div>
-                                        <h3>إدخال البيانات وحفظ الإعدادات</h3>
-                                        <p>أدخل جميع البيانات التي حصلت عليها في النموذج أدناه</p>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-instructions">
-                                    <div class="gc-instruction-item gc-note-item gc-success-item">
-                                        <i class="fa fa-check-circle"></i>
-                                        <span>بعد ملء الحقول أدناه، اضغط <strong>"حفظ الإعدادات"</strong> ثم <strong>"اختبار الاتصال"</strong> للتأكد من صحة البيانات</span>
-                                    </div>
-                                </div>
-
-                                <div class="gc-step-nav">
-                                    <button type="button" class="gc-prev-btn" onclick="goToSmsStep(3)"><i class="fa fa-arrow-right"></i> السابق</button>
-                                    <button type="button" class="gc-next-btn gc-done-btn" onclick="toggleSmsGuide()"><i class="fa fa-check"></i> إغلاق الدليل</button>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <!-- ═══════════ Credentials Card ═══════════ -->
+                    <!-- ═══════════ Provider + Credentials Card ═══════════ -->
                     <div class="sys-card">
                         <div class="sys-card-header">
                             <div class="sys-card-title">
-                                <i class="fa fa-key"></i> بيانات اعتماد SMS API
+                                <i class="fa fa-key"></i> المزوّد وبيانات الاعتماد
                             </div>
                             <span class="sys-card-badge"><i class="fa fa-lock"></i> مشفّرة</span>
                         </div>
                         <div class="sys-card-body">
                             <div class="sys-form-grid">
-                                <div class="sys-field">
+
+                                <!-- Provider Selection -->
+                                <div class="sys-field sys-field-full">
                                     <label class="sys-label" for="sms_provider">
-                                        <i class="fa fa-building"></i> مزوّد الخدمة (Provider)
+                                        <i class="fa fa-building"></i> مزوّد الخدمة
                                     </label>
-                                    <select class="sys-input" id="sms_provider" name="sms_provider">
+                                    <select class="sys-input" id="sms_provider" name="sms_provider" onchange="SmsProviderUI.onChange()">
                                         <option value="">— اختر المزوّد —</option>
-                                        <option value="twilio" <?= ($smsSettings['provider'] ?? '') === 'twilio' ? 'selected' : '' ?>>Twilio</option>
-                                        <option value="vonage" <?= ($smsSettings['provider'] ?? '') === 'vonage' ? 'selected' : '' ?>>Vonage (Nexmo)</option>
-                                        <option value="unifonic" <?= ($smsSettings['provider'] ?? '') === 'unifonic' ? 'selected' : '' ?>>Unifonic</option>
-                                        <option value="taqnyat" <?= ($smsSettings['provider'] ?? '') === 'taqnyat' ? 'selected' : '' ?>>Taqnyat (تقنيات)</option>
-                                        <option value="gateway_sa" <?= ($smsSettings['provider'] ?? '') === 'gateway_sa' ? 'selected' : '' ?>>Gateway.sa</option>
-                                        <option value="msegat" <?= ($smsSettings['provider'] ?? '') === 'msegat' ? 'selected' : '' ?>>Msegat</option>
-                                        <option value="other" <?= ($smsSettings['provider'] ?? '') === 'other' ? 'selected' : '' ?>>مزوّد آخر</option>
+                                        <option value="smsapril" <?= $curProvider === 'smsapril' ? 'selected' : '' ?>>SMS April</option>
+                                        <option value="twilio" <?= $curProvider === 'twilio' ? 'selected' : '' ?>>Twilio</option>
+                                        <option value="vonage" <?= $curProvider === 'vonage' ? 'selected' : '' ?>>Vonage (Nexmo)</option>
+                                        <option value="unifonic" <?= $curProvider === 'unifonic' ? 'selected' : '' ?>>Unifonic</option>
+                                        <option value="taqnyat" <?= $curProvider === 'taqnyat' ? 'selected' : '' ?>>Taqnyat (تقنيات)</option>
+                                        <option value="gateway_sa" <?= $curProvider === 'gateway_sa' ? 'selected' : '' ?>>Gateway.sa</option>
+                                        <option value="msegat" <?= $curProvider === 'msegat' ? 'selected' : '' ?>>Msegat</option>
+                                        <option value="other" <?= $curProvider === 'other' ? 'selected' : '' ?>>مزوّد آخر</option>
                                     </select>
                                 </div>
 
-                                <div class="sys-field">
+                                <!-- Provider Info Banner (dynamic) -->
+                                <div class="sys-field sys-field-full" id="sms-provider-info" style="display:none">
+                                    <div id="sms-provider-info-inner" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px">
+                                    </div>
+                                </div>
+
+                                <!-- ── Dynamic fields: each wrapped in a div with data-sms-field ── -->
+
+                                <div class="sys-field" data-sms-field="sender_id" style="display:none">
                                     <label class="sys-label" for="sms_sender_id">
-                                        <i class="fa fa-id-card"></i> اسم المرسل (Sender ID)
+                                        <i class="fa fa-id-card"></i> <span class="sms-field-label">اسم المرسل (Sender ID)</span>
                                     </label>
                                     <input type="text" class="sys-input" id="sms_sender_id" name="sms_sender_id"
                                            value="<?= Html::encode($smsSettings['sender_id'] ?? '') ?>"
-                                           placeholder="TAYSEER"
-                                           dir="ltr">
+                                           placeholder="" dir="ltr">
+                                    <p class="sys-field-hint sms-field-hint"></p>
                                 </div>
 
-                                <div class="sys-field sys-field-full">
+                                <div class="sys-field sys-field-full" data-sms-field="api_url" style="display:none">
                                     <label class="sys-label" for="sms_api_url">
-                                        <i class="fa fa-link"></i> رابط API (Endpoint URL)
+                                        <i class="fa fa-link"></i> <span class="sms-field-label">رابط API (Endpoint URL)</span>
                                     </label>
                                     <input type="url" class="sys-input" id="sms_api_url" name="sms_api_url"
                                            value="<?= Html::encode($smsSettings['api_url'] ?? '') ?>"
-                                           placeholder="https://api.provider.com/v1/messages"
-                                           dir="ltr">
-                                    <p class="sys-field-hint">رابط إرسال الرسائل الأساسي الخاص بالمزوّد</p>
+                                           placeholder="" dir="ltr">
+                                    <p class="sys-field-hint sms-field-hint"></p>
                                 </div>
 
-                                <div class="sys-field">
+                                <div class="sys-field" data-sms-field="api_key" style="display:none">
                                     <label class="sys-label" for="sms_api_key">
-                                        <i class="fa fa-key"></i> مفتاح API (API Key / Account SID)
+                                        <i class="fa fa-key"></i> <span class="sms-field-label">API Key</span>
                                     </label>
                                     <input type="text" class="sys-input" id="sms_api_key" name="sms_api_key"
                                            value="<?= !empty($smsSettings['has_api_key']) ? '••••••••••' : '' ?>"
-                                           placeholder="أدخل مفتاح API"
-                                           dir="ltr">
+                                           placeholder="" dir="ltr">
                                     <?php if (!empty($smsSettings['has_api_key'])): ?>
-                                        <div class="sys-key-notice">
-                                            <i class="fa fa-check-circle"></i>
-                                            مفتاح محفوظ ومشفّر — اتركه كما هو للاحتفاظ بالمفتاح الحالي
-                                        </div>
+                                        <div class="sys-key-notice"><i class="fa fa-check-circle"></i> محفوظ ومشفّر — اتركه للاحتفاظ بالقيمة الحالية</div>
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="sys-field">
+                                <div class="sys-field" data-sms-field="api_secret" style="display:none">
                                     <label class="sys-label" for="sms_api_secret">
-                                        <i class="fa fa-shield"></i> كلمة سر API (API Secret / Auth Token)
+                                        <i class="fa fa-shield"></i> <span class="sms-field-label">API Secret</span>
                                     </label>
-                                    <input type="text" class="sys-input" id="sms_api_secret" name="sms_api_secret"
+                                    <input type="password" class="sys-input" id="sms_api_secret" name="sms_api_secret"
                                            value="<?= !empty($smsSettings['has_api_secret']) ? '••••••••••' : '' ?>"
-                                           placeholder="أدخل كلمة سر API"
-                                           dir="ltr">
+                                           placeholder="" dir="ltr">
                                     <?php if (!empty($smsSettings['has_api_secret'])): ?>
-                                        <div class="sys-key-notice">
-                                            <i class="fa fa-check-circle"></i>
-                                            كلمة السر محفوظة ومشفّرة
-                                        </div>
+                                        <div class="sys-key-notice"><i class="fa fa-check-circle"></i> محفوظ ومشفّر</div>
                                     <?php endif; ?>
                                 </div>
 
-                                <div class="sys-field">
+                                <div class="sys-field" data-sms-field="username" style="display:none">
                                     <label class="sys-label" for="sms_username">
-                                        <i class="fa fa-user"></i> اسم المستخدم (اختياري)
+                                        <i class="fa fa-user"></i> <span class="sms-field-label">اسم المستخدم</span>
                                     </label>
                                     <input type="text" class="sys-input" id="sms_username" name="sms_username"
                                            value="<?= Html::encode($smsSettings['username'] ?? '') ?>"
-                                           placeholder="اسم المستخدم لدى المزوّد"
-                                           dir="ltr">
-                                    <p class="sys-field-hint">بعض المزوّدين يطلبون اسم مستخدم بالإضافة إلى مفتاح API</p>
+                                           placeholder="" dir="ltr">
                                 </div>
 
-                                <div class="sys-field">
+                                <div class="sys-field" data-sms-field="password" style="display:none">
                                     <label class="sys-label" for="sms_password">
-                                        <i class="fa fa-lock"></i> كلمة المرور (اختياري)
+                                        <i class="fa fa-lock"></i> <span class="sms-field-label">كلمة المرور</span>
                                     </label>
                                     <input type="password" class="sys-input" id="sms_password" name="sms_password"
                                            value="<?= !empty($smsSettings['has_password']) ? '••••••••••' : '' ?>"
-                                           placeholder="كلمة المرور لدى المزوّد"
-                                           dir="ltr">
+                                           placeholder="" dir="ltr">
+                                    <?php if (!empty($smsSettings['has_password'])): ?>
+                                        <div class="sys-key-notice"><i class="fa fa-check-circle"></i> محفوظة ومشفّرة</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -3404,31 +3254,114 @@ window.copyBackupCmd = function(el) {
 //  SMS API
 // ═══════════════════════════════════════════════════════════
 
-window.toggleSmsGuide = function() {
-    var body = $('#sms-setup-guide');
-    var text = $('#sms-guide-toggle-text');
-    var chevron = $('#sms-guide-chevron');
-    if (body.is(':visible')) {
-        body.slideUp(300);
-        text.text('عرض الدليل');
-        chevron.css('transform', 'rotate(0deg)');
-    } else {
-        body.slideDown(300);
-        text.text('إخفاء الدليل');
-        chevron.css('transform', 'rotate(180deg)');
-    }
-};
+// ── SMS Provider UI — dynamic fields per provider ──
+var SmsProviderUI = (function() {
+    var providers = {
+        smsapril: {
+            name: 'SMS April', url: 'http://www.smsapril.com', api: 'smsapril.com/api.php',
+            fields: ['sender_id', 'username', 'password'],
+            labels: { sender_id: 'اسم المرسل (Sender ID)', username: 'اسم المستخدم (Username)', password: 'كلمة المرور (Password)' },
+            placeholders: { sender_id: 'مثال: JADAL', username: 'اسم المستخدم في SMS April', password: 'كلمة المرور' },
+            hints: { sender_id: 'الاسم الذي يظهر للعميل كمُرسل الرسالة' }
+        },
+        twilio: {
+            name: 'Twilio', url: 'https://www.twilio.com', api: 'api.twilio.com',
+            fields: ['sender_id', 'api_key', 'api_secret'],
+            labels: { sender_id: 'رقم المرسل (Phone Number)', api_key: 'Account SID', api_secret: 'Auth Token' },
+            placeholders: { sender_id: '+962...', api_key: 'ACxxxxxxxxxx', api_secret: 'Auth Token' },
+            hints: { sender_id: 'رقم الهاتف المسجّل في Twilio بصيغة دولية' }
+        },
+        vonage: {
+            name: 'Vonage (Nexmo)', url: 'https://www.vonage.com', api: 'rest.nexmo.com',
+            fields: ['sender_id', 'api_key', 'api_secret'],
+            labels: { sender_id: 'اسم المرسل (Sender ID)', api_key: 'API Key', api_secret: 'API Secret' },
+            placeholders: { sender_id: 'TAYSEER', api_key: 'API Key', api_secret: 'API Secret' },
+            hints: { sender_id: 'اسم المرسل المسجّل في Vonage' }
+        },
+        unifonic: {
+            name: 'Unifonic', url: 'https://www.unifonic.com', api: 'el.cloud.unifonic.com',
+            fields: ['sender_id', 'api_key'],
+            labels: { sender_id: 'اسم المرسل (Sender ID)', api_key: 'App SID' },
+            placeholders: { sender_id: 'TAYSEER', api_key: 'App SID من لوحة التحكم' },
+            hints: { sender_id: 'اسم المرسل المعتمد من Unifonic' }
+        },
+        taqnyat: {
+            name: 'Taqnyat (تقنيات)', url: 'https://www.taqnyat.sa', api: 'api.taqnyat.sa',
+            fields: ['sender_id', 'api_key'],
+            labels: { sender_id: 'اسم المرسل (Sender ID)', api_key: 'Bearer Token' },
+            placeholders: { sender_id: 'TAYSEER', api_key: 'Bearer Token من لوحة التحكم' },
+            hints: { sender_id: 'اسم المرسل المعتمد من تقنيات' }
+        },
+        gateway_sa: {
+            name: 'Gateway.sa', url: 'https://www.gateway.sa', api: 'gw.hisms.ws',
+            fields: ['sender_id', 'api_key', 'username', 'password'],
+            labels: { sender_id: 'اسم المرسل', api_key: 'API ID', username: 'اسم المستخدم', password: 'كلمة المرور' },
+            placeholders: { sender_id: 'TAYSEER', api_key: 'API ID', username: 'اسم المستخدم', password: 'كلمة المرور' },
+            hints: { sender_id: 'اسم المرسل المسجّل في Gateway' }
+        },
+        msegat: {
+            name: 'Msegat', url: 'https://www.msegat.com', api: 'www.msegat.com/gw',
+            fields: ['sender_id', 'api_key', 'username'],
+            labels: { sender_id: 'اسم المرسل (Sender Name)', api_key: 'API Key', username: 'اسم المستخدم' },
+            placeholders: { sender_id: 'TAYSEER', api_key: 'API Key', username: 'اسم المستخدم' },
+            hints: { sender_id: 'اسم المرسل المعتمد من Msegat' }
+        },
+        other: {
+            name: 'مزوّد آخر', url: '', api: '',
+            fields: ['sender_id', 'api_url', 'api_key', 'api_secret', 'username', 'password'],
+            labels: { sender_id: 'اسم المرسل', api_url: 'رابط API (Endpoint)', api_key: 'API Key', api_secret: 'API Secret', username: 'اسم المستخدم', password: 'كلمة المرور' },
+            placeholders: { sender_id: 'TAYSEER', api_url: 'https://api.provider.com/v1/send', api_key: 'API Key', api_secret: 'API Secret', username: 'اختياري', password: 'اختياري' },
+            hints: { sender_id: 'اسم المرسل لدى المزوّد', api_url: 'رابط إرسال الرسائل (POST endpoint)' }
+        }
+    };
 
-window.goToSmsStep = function(step) {
-    $('#sms-setup-guide .gc-step').removeClass('active');
-    $('#sms-step-' + step).addClass('active');
-    $('#sms-setup-guide .gc-step-dot').removeClass('active completed');
-    for (var i = 1; i < step; i++) {
-        $('#sms-setup-guide .gc-step-dot[data-step="s' + i + '"]').addClass('completed');
+    function onChange() {
+        var sel = document.getElementById('sms_provider').value;
+        var allFields = document.querySelectorAll('[data-sms-field]');
+        var infoBox = document.getElementById('sms-provider-info');
+        var infoInner = document.getElementById('sms-provider-info-inner');
+
+        // Hide all fields
+        for (var i = 0; i < allFields.length; i++) allFields[i].style.display = 'none';
+
+        if (!sel || !providers[sel]) {
+            infoBox.style.display = 'none';
+            return;
+        }
+
+        var p = providers[sel];
+
+        // Show provider info banner
+        if (p.url) {
+            infoInner.innerHTML =
+                '<div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#6B1D3D,#9B2C5A);display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="fa fa-commenting" style="color:#fff;font-size:16px"></i></div>' +
+                '<div style="flex:1;min-width:160px"><div style="font-weight:700;font-size:13px;color:#1E293B">' + p.name + '</div>' +
+                '<div style="font-size:11px;color:#64748B"><a href="' + p.url + '" target="_blank" style="color:#2563EB">' + p.url.replace('https://','').replace('http://','') + '</a></div></div>' +
+                (p.api ? '<div style="font-size:10px;color:#94A3B8;background:#F1F5F9;padding:3px 8px;border-radius:5px"><i class="fa fa-link"></i> ' + p.api + '</div>' : '');
+            infoBox.style.display = '';
+        } else {
+            infoBox.style.display = 'none';
+        }
+
+        // Show relevant fields with correct labels/placeholders
+        for (var f = 0; f < p.fields.length; f++) {
+            var fName = p.fields[f];
+            var el = document.querySelector('[data-sms-field="' + fName + '"]');
+            if (!el) continue;
+            el.style.display = '';
+            var lbl = el.querySelector('.sms-field-label');
+            var inp = el.querySelector('.sys-input');
+            var hint = el.querySelector('.sms-field-hint');
+            if (lbl && p.labels[fName]) lbl.textContent = p.labels[fName];
+            if (inp && p.placeholders && p.placeholders[fName]) inp.placeholder = p.placeholders[fName];
+            if (hint) { hint.textContent = (p.hints && p.hints[fName]) ? p.hints[fName] : ''; hint.style.display = (p.hints && p.hints[fName]) ? '' : 'none'; }
+        }
     }
-    $('#sms-setup-guide .gc-step-dot[data-step="s' + step + '"]').addClass('active');
-    $('#sms-setup-guide')[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
+
+    return { onChange: onChange, providers: providers };
+})();
+// Initialize immediately (this JS runs inside jQuery ready via registerJs POS_READY)
+SmsProviderUI.onChange();
 
 window.testSmsConnection = function() {
     var btn = document.getElementById('btn-test-sms');

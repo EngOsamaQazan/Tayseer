@@ -231,15 +231,9 @@ var ContractForm = (function () {
             legalEl.value = '1';
         }
 
-        var tvEl = document.getElementById('cf-tv');
-        var fvEl = document.getElementById('cf-fv');
         var mvEl = document.getElementById('cf-mv');
-        if (tvEl && fvEl) {
-            fvEl.value = tvEl.value || '0';
-            fvEl.dispatchEvent(new Event('input'));
-        }
-        if (mvEl) {
-            mvEl.value = '0';
+        if (mvEl && !mvEl.value) {
+            mvEl.value = '20';
             mvEl.dispatchEvent(new Event('input'));
         }
     }
@@ -691,10 +685,6 @@ var ContractForm = (function () {
         }
 
         if (saleEl) saleEl.addEventListener('change', reapply);
-        if (tvEl) {
-            tvEl.addEventListener('input', reapply);
-            tvEl.addEventListener('change', reapply);
-        }
     }
 
     return { init: init };

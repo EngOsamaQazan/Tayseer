@@ -62,7 +62,8 @@ class FollowUpController extends Controller
                     ],
                     [
                         'actions' => ['create', 'save-follow-up', 'create-task',
-                            'send-sms', 'add-new-loan'],
+                            'send-sms', 'bulk-send-sms', 'add-new-loan',
+                            'sms-draft-list', 'sms-draft-save', 'sms-draft-delete'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -343,15 +344,35 @@ class FollowUpController extends Controller
         $phone_number = strip_tags($phone_number, '+');
         $phone_number = \backend\helpers\PhoneHelper::toWhatsApp($phone_number);
         $text = Yii::$app->request->post('text');
+
+        $result = \common\helper\SMSHelper::send($phone_number, $text);
+
+        if ($result['success']) {
+            return Json::encode(['status' => $result['raw'], 'message' => '']);
+        }
+        return Json::encode(['status' => $result['raw'], 'message' => $result['error'] ?? 'خطأ في الإرسال']);
+    }
+
+    public function actionBulkSendSms()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $phone = Yii::$app->request->post('phone_number');
+        $phone = strip_tags($phone, '+');
+        $phone = \backend\helpers\PhoneHelper::toWhatsApp($phone);
+        $text = Yii::$app->request->post('text');
+
+        if (empty($phone) || empty($text)) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
         $url = 'http://www.smsapril.com/api.php?comm=sendsms';
-        $params = array(
-            'to' => $phone_number,
+        $params = [
+            'to' => $phone,
             'sender' => Yii::$app->params['sender'],
             'user' => Yii::$app->params['user'],
             'pass' => Yii::$app->params['pass'],
             'message' => $text,
-        );
-
+        ];
 
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -359,8 +380,9 @@ class FollowUpController extends Controller
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         $output = curl_exec($ch);
+        curl_close($ch);
 
-        $response = [
+        $errors = [
             '-100' => 'المعلومات ناقصه',
             '-110' => 'اسم المستخدم أو كلمة المرور خاطئة',
             '-111' => 'الحساب غير مفعل',
@@ -368,10 +390,44 @@ class FollowUpController extends Controller
             '-113' => 'لا يوجد رصيد كافٍ',
             '-114' => 'الخدمة غير متوفرة في الوقت الحالي',
             '-115' => 'المرسل غير متوفر',
-            '-116' => 'اسم المرسل غير صالح'
+            '-116' => 'اسم المرسل غير صالح',
         ];
 
-        return Json::encode(['status' => $output, 'message' => (isset($response[$output]) ? $response[$output] : '')]);
+        $ok = !isset($errors[$output]);
+        return [
+            'success' => $ok,
+            'phone' => $phone,
+            'message' => $ok ? '' : ($errors[$output] ?? 'خطأ غير معروف: ' . $output),
+        ];
+    }
+
+    public function actionSmsDraftList()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        return ['success' => true, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+    }
+
+    public function actionSmsDraftSave()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $name = trim(Yii::$app->request->post('name', ''));
+        $text = trim(Yii::$app->request->post('text', ''));
+        if ($name === '' || $text === '') {
+            return ['success' => false, 'message' => 'الاسم والنص مطلوبان'];
+        }
+        $ok = \backend\modules\followUp\models\SmsDraft::saveDraft($name, $text);
+        return ['success' => $ok, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+    }
+
+    public function actionSmsDraftDelete()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        $id = (int)Yii::$app->request->post('id', 0);
+        $model = \backend\modules\followUp\models\SmsDraft::findOne($id);
+        if ($model) {
+            $model->delete();
+        }
+        return ['success' => true, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
     }
 
     public function actionAddNewLoan()

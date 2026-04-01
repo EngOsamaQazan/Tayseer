@@ -238,27 +238,6 @@ function copyText(element) {
 }
 /////
 
-$(document).on('click', '#send_sms', function () {
-    let phone_number = $('#phone_number').val();
-    let text = $('#sms_text').val();
-    $.post(send_sms, { text: text, phone_number: phone_number }, function (data) {
-        let msg = JSON.parse(data)
-        if (msg.message == '') {
-            alert('تم ارسال الرسالة بنجاح');
-        } else
-            alert(msg.message);
-    })
-})
-///////
-$(document).ready(function () {
-    var textarea = $("#sms_text");
-    textarea.keydown(function (event) {
-        var numbOfchars = textarea.val();
-        var len = numbOfchars.length;
-        $("#char_count").text(len);
-    });
-});
-//////
 $(document).on('click', '.statse-change', function () {
     let id = $('.statse-change').attr('contract-id');
     let statusContent = $('.status-content').val();
@@ -266,7 +245,560 @@ $(document).on('click', '.statse-change', function () {
         location.reload();
     })
 })
-////
+
 function setPhoneNumebr(number) {
     $("#phone_number").val(number);
+    var display = document.getElementById('ssms-phone-display');
+    if (display) display.textContent = number || '—';
 }
+
+/* ══════════════════════════════════════════════════
+   SmsCalc — shared SMS encoding/counting utility
+   ══════════════════════════════════════════════════ */
+var SmsCalc = (function () {
+    var GSM7_BASIC = '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\x1BÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà';
+    var GSM7_EXT = '^{}\\[~]|€';
+
+    function countGsm7(text) {
+        var count = 0;
+        for (var i = 0; i < text.length; i++) {
+            var ch = text.charAt(i);
+            if (GSM7_BASIC.indexOf(ch) !== -1) count++;
+            else if (GSM7_EXT.indexOf(ch) !== -1) count += 2;
+            else return { isGsm: false };
+        }
+        return { isGsm: true, count: count };
+    }
+
+    function calc(text) {
+        if (!text || text.length === 0) {
+            return { charCount: 0, parts: 1, maxSingle: 70, maxMulti: 67, remaining: 70, encoding: 'arabic' };
+        }
+        var gsm = countGsm7(text);
+        var charCount, maxSingle, maxMulti, encoding;
+        if (gsm.isGsm) {
+            charCount = gsm.count; maxSingle = 160; maxMulti = 153; encoding = 'english';
+        } else {
+            charCount = text.length; maxSingle = 70; maxMulti = 67; encoding = 'arabic';
+        }
+        var parts, remaining;
+        if (charCount <= maxSingle) { parts = 1; remaining = maxSingle - charCount; }
+        else { parts = Math.ceil(charCount / maxMulti); remaining = (parts * maxMulti) - charCount; }
+        return { charCount: charCount, parts: parts, maxSingle: maxSingle, maxMulti: maxMulti, remaining: remaining, encoding: encoding };
+    }
+
+    return { calc: calc };
+})();
+
+/* ══════════════════════════════════════════════════
+   SmsDrafts — shared drafts & variable system
+   (server-side storage, shared among all users)
+   ══════════════════════════════════════════════════ */
+var SmsDrafts = (function () {
+    var _cache = null;
+
+    function _urls() {
+        var u = (typeof OCP_CONFIG !== 'undefined' && OCP_CONFIG.urls) ? OCP_CONFIG.urls : {};
+        return {
+            list: u.smsDraftList || '',
+            save: u.smsDraftSave || '',
+            del: u.smsDraftDelete || ''
+        };
+    }
+
+    function _esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function _getRefreshFn(textareaId) {
+        if (textareaId === 'sms_text') return function () { if (typeof SingleSms !== 'undefined') SingleSms.refreshStats(); };
+        if (textareaId === 'bsms-text') return function () { if (typeof BulkSms !== 'undefined') BulkSms.refreshStats(); };
+        return function () {};
+    }
+
+    function resolveVars(text) {
+        var vars = window.SMS_VARS || {};
+        return text.replace(/\{([^}]+)\}/g, function (match, key) {
+            return vars[key] !== undefined ? vars[key] : match;
+        });
+    }
+
+    function getVarKeys() {
+        return Object.keys(window.SMS_VARS || {});
+    }
+
+    function insertVar(textareaId, varKey, refreshFn) {
+        var ta = document.getElementById(textareaId);
+        if (!ta) return;
+        var start = ta.selectionStart, end = ta.selectionEnd;
+        var tag = '{' + varKey + '}';
+        ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
+        var pos = start + tag.length;
+        ta.setSelectionRange(pos, pos);
+        ta.focus();
+        if (refreshFn) refreshFn();
+    }
+
+    function renderVarsPanel(containerId, textareaId) {
+        var keys = getVarKeys();
+        var vars = window.SMS_VARS || {};
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        var html = '';
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var preview = vars[k].length > 20 ? vars[k].substring(0, 20) + '...' : vars[k];
+            html += '<button type="button" class="sdt-var-chip" data-var="' + _esc(k) + '" data-ta="' + textareaId + '" title="' + _esc(vars[k]) + '">';
+            html += '<span class="sdt-var-name">{' + _esc(k) + '}</span>';
+            html += '<span class="sdt-var-val">' + _esc(preview) + '</span>';
+            html += '</button>';
+        }
+        el.innerHTML = html;
+        el.querySelectorAll('.sdt-var-chip').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                insertVar(this.getAttribute('data-ta'), this.getAttribute('data-var'), _getRefreshFn(this.getAttribute('data-ta')));
+            });
+        });
+    }
+
+    function _buildDraftHtml(list, containerId, textareaId) {
+        if (!list.length) {
+            return '<div class="sdt-empty"><i class="fa fa-inbox"></i> لا توجد مسودات محفوظة</div>';
+        }
+        var html = '';
+        for (var i = 0; i < list.length; i++) {
+            var d = list[i];
+            var preview = d.text.length > 50 ? d.text.substring(0, 50) + '...' : d.text;
+            html += '<div class="sdt-draft-item" data-id="' + d.id + '">';
+            html += '<div class="sdt-draft-load" data-did="' + d.id + '" data-ta="' + textareaId + '">';
+            html += '<div class="sdt-draft-name">' + _esc(d.name) + '</div>';
+            html += '<div class="sdt-draft-preview">' + _esc(preview) + '</div>';
+            html += '</div>';
+            html += '<button type="button" class="sdt-draft-del" data-did="' + d.id + '" data-list="' + containerId + '" data-ta="' + textareaId + '" title="حذف"><i class="fa fa-trash-o"></i></button>';
+            html += '</div>';
+        }
+        return html;
+    }
+
+    function _bindDraftEvents(el) {
+        el.querySelectorAll('.sdt-draft-load').forEach(function (loadEl) {
+            loadEl.addEventListener('click', function () {
+                loadDraft(parseInt(this.getAttribute('data-did')), this.getAttribute('data-ta'));
+            });
+        });
+        el.querySelectorAll('.sdt-draft-del').forEach(function (delEl) {
+            delEl.addEventListener('click', function () {
+                deleteDraft(parseInt(this.getAttribute('data-did')));
+            });
+        });
+    }
+
+    function renderDraftsList(containerId, textareaId) {
+        var el = document.getElementById(containerId);
+        if (!el) return;
+        if (_cache) {
+            el.innerHTML = _buildDraftHtml(_cache, containerId, textareaId);
+            _bindDraftEvents(el);
+            return;
+        }
+        el.innerHTML = '<div class="sdt-empty"><i class="fa fa-spinner fa-spin"></i> جاري التحميل...</div>';
+        $.get(_urls().list, function (res) {
+            _cache = (res && res.drafts) ? res.drafts : [];
+            el.innerHTML = _buildDraftHtml(_cache, containerId, textareaId);
+            _bindDraftEvents(el);
+        }).fail(function () {
+            el.innerHTML = '<div class="sdt-empty" style="color:#EF4444"><i class="fa fa-exclamation-triangle"></i> خطأ في تحميل المسودات</div>';
+        });
+    }
+
+    function _refreshAllDraftPanels(drafts) {
+        _cache = drafts;
+        var panels = [
+            { list: 'ssms-drafts-list', ta: 'sms_text' },
+            { list: 'bsms-drafts-list', ta: 'bsms-text' }
+        ];
+        for (var i = 0; i < panels.length; i++) {
+            var p = panels[i];
+            var el = document.getElementById(p.list);
+            if (el) {
+                el.innerHTML = _buildDraftHtml(drafts, p.list, p.ta);
+                _bindDraftEvents(el);
+            }
+        }
+    }
+
+    function loadDraft(id, textareaId) {
+        var list = _cache || [];
+        var draft = null;
+        for (var i = 0; i < list.length; i++) {
+            if (list[i].id === id) { draft = list[i]; break; }
+        }
+        if (!draft) return;
+        var ta = document.getElementById(textareaId);
+        if (!ta) return;
+        ta.value = resolveVars(draft.text);
+        ta.focus();
+        _getRefreshFn(textareaId)();
+    }
+
+    function deleteDraft(id) {
+        $.post(_urls().del, { id: id }, function (res) {
+            if (res && res.drafts) _refreshAllDraftPanels(res.drafts);
+        });
+    }
+
+    function promptSave(textareaId) {
+        var ta = document.getElementById(textareaId);
+        if (!ta || !ta.value.trim()) {
+            ta && (ta.style.borderColor = '#EF4444');
+            setTimeout(function () { ta && (ta.style.borderColor = ''); }, 1500);
+            return;
+        }
+        var name = prompt('اسم المسودة:');
+        if (!name) return;
+        $.post(_urls().save, { name: name, text: ta.value }, function (res) {
+            if (res && res.success) {
+                _refreshAllDraftPanels(res.drafts);
+            } else {
+                alert(res && res.message ? res.message : 'خطأ في الحفظ');
+            }
+        }).fail(function () {
+            alert('خطأ في الاتصال بالسيرفر');
+        });
+    }
+
+    function togglePanel(panelId) {
+        var panel = document.getElementById(panelId);
+        if (!panel) return;
+        var isOpen = panel.classList.contains('open');
+        document.querySelectorAll('.sdt-panel').forEach(function (p) { p.classList.remove('open'); });
+        if (!isOpen) panel.classList.add('open');
+    }
+
+    function invalidateCache() { _cache = null; }
+
+    return {
+        resolveVars: resolveVars,
+        getVarKeys: getVarKeys,
+        insertVar: insertVar,
+        renderVarsPanel: renderVarsPanel,
+        renderDraftsList: renderDraftsList,
+        loadDraft: loadDraft,
+        deleteDraft: deleteDraft,
+        promptSave: promptSave,
+        togglePanel: togglePanel,
+        invalidateCache: invalidateCache
+    };
+})();
+
+/* ══════════════════════════════════════════════════
+   SingleSms — individual SMS modal logic
+   ══════════════════════════════════════════════════ */
+var SingleSms = (function () {
+    function refreshStats() {
+        var text = document.getElementById('sms_text').value;
+        var s = SmsCalc.calc(text);
+        document.getElementById('ssms-s-parts').textContent = s.parts;
+        document.getElementById('ssms-s-used').textContent = s.charCount;
+        document.getElementById('ssms-s-remain').textContent = s.remaining;
+        document.getElementById('ssms-s-encoding').textContent = s.encoding === 'arabic' ? 'عربي (70)' : 'إنجليزي (160)';
+    }
+
+    function toggleEmoji() {
+        var panel = document.getElementById('ssms-emoji-panel');
+        panel.classList.toggle('open');
+    }
+
+    function insertEmoji(emoji) {
+        var ta = document.getElementById('sms_text');
+        var start = ta.selectionStart, end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + emoji + ta.value.substring(end);
+        var pos = start + emoji.length;
+        ta.setSelectionRange(pos, pos);
+        ta.focus();
+        refreshStats();
+    }
+
+    function clearText() {
+        document.getElementById('sms_text').value = '';
+        document.getElementById('sms_text').focus();
+        refreshStats();
+    }
+
+    $(document).on('input', '#sms_text', function () { refreshStats(); });
+
+    $(document).on('click', '#send_sms', function () {
+        var phone_number = $('#phone_number').val();
+        var text = $('#sms_text').val().trim();
+        if (!text) {
+            $('#sms_text').css('border-color', '#EF4444').focus();
+            setTimeout(function () { $('#sms_text').css('border-color', ''); }, 2000);
+            return;
+        }
+        var $btn = $(this);
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...');
+        $.post(send_sms, { text: text, phone_number: phone_number }, function (data) {
+            var msg = typeof data === 'string' ? JSON.parse(data) : data;
+            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            if (msg.message === '' || msg.message === undefined) {
+                $btn.html('<i class="fa fa-check"></i> تم الإرسال').css({ background: 'linear-gradient(135deg,#16A34A,#15803D)', borderColor: '#16A34A' });
+                setTimeout(function () {
+                    $btn.html('<i class="fa fa-paper-plane"></i> إرسال').css({ background: '', borderColor: '' });
+                    $('#smsModal').modal('hide');
+                }, 1500);
+            } else {
+                alert(msg.message);
+            }
+        }).fail(function () {
+            $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إرسال');
+            alert('خطأ في الاتصال');
+        });
+    });
+
+    function initDrafts() {
+        SmsDrafts.invalidateCache();
+        SmsDrafts.renderVarsPanel('ssms-vars-list', 'sms_text');
+        SmsDrafts.renderDraftsList('ssms-drafts-list', 'sms_text');
+    }
+
+    $('#smsModal').on('show.bs.modal', function () {
+        var panel = document.getElementById('ssms-emoji-panel');
+        if (panel) panel.classList.remove('open');
+        document.querySelectorAll('#smsModal .sdt-panel').forEach(function (p) { p.classList.remove('open'); });
+        refreshStats();
+        initDrafts();
+    });
+
+    return { toggleEmoji: toggleEmoji, insertEmoji: insertEmoji, clearText: clearText, refreshStats: refreshStats };
+})();
+
+/* ══════════════════════════════════════════════════
+   BulkSms — Send SMS to multiple numbers at once
+   with accurate GSM-7 / UCS-2 character counting
+   ══════════════════════════════════════════════════ */
+var BulkSms = (function () {
+    var phones = [];
+    var sending = false;
+
+    function esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function refreshStats() {
+        var text = document.getElementById('bsms-text').value;
+        var s = SmsCalc.calc(text);
+        var selectedCount = document.querySelectorAll('#bsms-list input[type=checkbox]:checked').length;
+
+        document.getElementById('bsms-s-parts').textContent = s.parts;
+        document.getElementById('bsms-s-used').textContent = s.charCount;
+        document.getElementById('bsms-s-remain').textContent = s.remaining;
+        document.getElementById('bsms-s-encoding').textContent = s.encoding === 'arabic' ? 'عربي (70)' : 'إنجليزي (160)';
+        document.getElementById('bsms-s-total').textContent = s.parts * selectedCount;
+    }
+
+    function open() {
+        phones = (window._bulkSmsPhones || []).slice();
+        if (!phones.length) return;
+
+        sending = false;
+        document.getElementById('bsms-text').value = '';
+        document.getElementById('bsms-progress').style.display = 'none';
+        document.getElementById('bsms-results').style.display = 'none';
+        document.getElementById('bsms-results').innerHTML = '';
+        document.getElementById('bsms-send-btn').disabled = false;
+        document.getElementById('bsms-send-btn').innerHTML = '<i class="fa fa-paper-plane"></i> إرسال للمحددين';
+        var emojiPanel = document.getElementById('bsms-emoji-panel');
+        if (emojiPanel) emojiPanel.classList.remove('open');
+
+        var html = '';
+        for (var i = 0; i < phones.length; i++) {
+            var p = phones[i];
+            var tagCls = p.primary ? 'primary' : 'extra';
+            var tagText = p.primary ? 'رئيسي' : p.label;
+            html += '<label class="bsms-item" data-idx="' + i + '">';
+            html += '<input type="checkbox" checked data-idx="' + i + '">';
+            html += '<span class="bsms-num">' + esc(p.local) + '</span>';
+            html += '<span class="bsms-name">' + esc(p.name) + '</span>';
+            html += '<span class="bsms-tag ' + tagCls + '">' + esc(tagText) + '</span>';
+            html += '</label>';
+        }
+        document.getElementById('bsms-list').innerHTML = html;
+        document.getElementById('bsms-total-count').textContent = phones.length;
+        updateCount();
+        refreshStats();
+
+        document.querySelectorAll('#bsms-list input[type=checkbox]').forEach(function (cb) {
+            cb.addEventListener('change', function () {
+                this.closest('.bsms-item').classList.toggle('excluded', !this.checked);
+                updateCount();
+                refreshStats();
+            });
+        });
+
+        SmsDrafts.invalidateCache();
+        SmsDrafts.renderVarsPanel('bsms-vars-list', 'bsms-text');
+        SmsDrafts.renderDraftsList('bsms-drafts-list', 'bsms-text');
+        document.querySelectorAll('#bulkSmsModal .sdt-panel').forEach(function (p) { p.classList.remove('open'); });
+
+        $('#bulkSmsModal').modal('show');
+    }
+
+    function updateCount() {
+        var checked = document.querySelectorAll('#bsms-list input[type=checkbox]:checked').length;
+        document.getElementById('bsms-sel-count').textContent = checked;
+        var btn = document.getElementById('bsms-send-btn');
+        if (!sending) {
+            btn.disabled = checked === 0;
+        }
+        var allChecked = checked === phones.length;
+        document.getElementById('bsms-toggle-icon').className = 'fa ' + (allChecked ? 'fa-check-square-o' : 'fa-square-o');
+        document.getElementById('bsms-toggle-text').textContent = allChecked ? 'إلغاء تحديد الكل' : 'تحديد الكل';
+    }
+
+    function toggleAll() {
+        var cbs = document.querySelectorAll('#bsms-list input[type=checkbox]');
+        var allChecked = document.querySelectorAll('#bsms-list input[type=checkbox]:checked').length === cbs.length;
+        cbs.forEach(function (cb) {
+            cb.checked = !allChecked;
+            cb.closest('.bsms-item').classList.toggle('excluded', allChecked);
+        });
+        updateCount();
+        refreshStats();
+    }
+
+    function toggleEmoji() {
+        var panel = document.getElementById('bsms-emoji-panel');
+        panel.classList.toggle('open');
+    }
+
+    function insertEmoji(emoji) {
+        var ta = document.getElementById('bsms-text');
+        var start = ta.selectionStart;
+        var end = ta.selectionEnd;
+        var before = ta.value.substring(0, start);
+        var after = ta.value.substring(end);
+        ta.value = before + emoji + after;
+        var newPos = start + emoji.length;
+        ta.setSelectionRange(newPos, newPos);
+        ta.focus();
+        refreshStats();
+    }
+
+    function clearText() {
+        document.getElementById('bsms-text').value = '';
+        document.getElementById('bsms-text').focus();
+        refreshStats();
+    }
+
+    function send() {
+        var text = document.getElementById('bsms-text').value.trim();
+        if (!text) {
+            document.getElementById('bsms-text').style.borderColor = '#EF4444';
+            document.getElementById('bsms-text').focus();
+            setTimeout(function () { document.getElementById('bsms-text').style.borderColor = ''; }, 2000);
+            return;
+        }
+
+        var selected = [];
+        document.querySelectorAll('#bsms-list input[type=checkbox]:checked').forEach(function (cb) {
+            selected.push(phones[parseInt(cb.getAttribute('data-idx'))]);
+        });
+        if (!selected.length) return;
+
+        sending = true;
+        var btn = document.getElementById('bsms-send-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...';
+
+        document.getElementById('bsms-progress').style.display = 'block';
+        document.getElementById('bsms-results').style.display = 'block';
+        document.getElementById('bsms-results').innerHTML = '';
+
+        var total = selected.length;
+        var done = 0;
+        var successCount = 0;
+        var failCount = 0;
+        var smsUrl = (typeof OCP_CONFIG !== 'undefined' && OCP_CONFIG.urls && OCP_CONFIG.urls.bulkSendSms)
+            ? OCP_CONFIG.urls.bulkSendSms
+            : (typeof bulk_send_sms !== 'undefined' ? bulk_send_sms : send_sms);
+
+        function sendNext(idx) {
+            if (idx >= total) {
+                btn.innerHTML = '<i class="fa fa-check"></i> تم الإرسال';
+                document.getElementById('bsms-progress-text').innerHTML =
+                    '<i class="fa fa-check-circle" style="color:#16A34A"></i> اكتمل — ' +
+                    '<b style="color:#16A34A">' + successCount + ' نجح</b>' +
+                    (failCount > 0 ? ' · <b style="color:#EF4444">' + failCount + ' فشل</b>' : '');
+                sending = false;
+                return;
+            }
+
+            var p = selected[idx];
+            document.getElementById('bsms-progress-text').textContent =
+                'جاري إرسال ' + (idx + 1) + ' من ' + total + ' — ' + p.local;
+
+            $.post(smsUrl, { text: text, phone_number: p.number }, function (data) {
+                var res;
+                if (typeof data === 'string') {
+                    try { res = JSON.parse(data); } catch (e) { res = { success: false, message: data }; }
+                } else {
+                    res = data;
+                }
+
+                done++;
+                var pct = Math.round((done / total) * 100);
+                document.getElementById('bsms-progress-fill').style.width = pct + '%';
+
+                var ok = res.success || res.message === '' || res.message === undefined;
+                if (ok) successCount++; else failCount++;
+
+                var icon = ok ? 'fa-check-circle' : 'fa-times-circle';
+                var resultHtml = '<div class="bsms-result-item">';
+                resultHtml += '<i class="fa ' + icon + '"></i>';
+                resultHtml += '<span class="bsms-r-num">' + esc(p.local) + '</span>';
+                resultHtml += '<span>' + esc(p.name) + '</span>';
+                if (!ok && res.message) resultHtml += ' <span style="color:#EF4444;font-size:11px">(' + esc(res.message) + ')</span>';
+                resultHtml += '</div>';
+                document.getElementById('bsms-results').innerHTML += resultHtml;
+
+                var resultsDiv = document.getElementById('bsms-results');
+                resultsDiv.scrollTop = resultsDiv.scrollHeight;
+
+                setTimeout(function () { sendNext(idx + 1); }, 300);
+            }).fail(function () {
+                done++;
+                failCount++;
+                var pct = Math.round((done / total) * 100);
+                document.getElementById('bsms-progress-fill').style.width = pct + '%';
+
+                document.getElementById('bsms-results').innerHTML +=
+                    '<div class="bsms-result-item"><i class="fa fa-times-circle"></i>' +
+                    '<span class="bsms-r-num">' + esc(p.local) + '</span>' +
+                    '<span>' + esc(p.name) + '</span>' +
+                    ' <span style="color:#EF4444;font-size:11px">(خطأ في الاتصال)</span></div>';
+
+                setTimeout(function () { sendNext(idx + 1); }, 300);
+            });
+        }
+
+        sendNext(0);
+    }
+
+    $(document).on('input', '#bsms-text', function () {
+        refreshStats();
+    });
+
+    return {
+        open: open,
+        toggleAll: toggleAll,
+        toggleEmoji: toggleEmoji,
+        insertEmoji: insertEmoji,
+        clearText: clearText,
+        send: send,
+        refreshStats: refreshStats
+    };
+})();

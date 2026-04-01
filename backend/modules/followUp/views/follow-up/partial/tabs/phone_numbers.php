@@ -59,11 +59,44 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
 .pn-add-btn:hover{filter:brightness(.9);color:#fff;text-decoration:none}
 </style>
 
+<?php
+$allPhonesList = [];
+foreach ($allParties as $_cc) {
+    $_cust = $_cc->customer;
+    if (!$_cust) continue;
+    $_partyType = $_cc->customer_type === 'client' ? 'مشتري' : 'كفيل';
+    if ($_cust->primary_phone_number) {
+        $allPhonesList[] = [
+            'number' => PhoneHelper::toWhatsApp($_cust->primary_phone_number),
+            'local'  => PhoneHelper::toLocal($_cust->primary_phone_number),
+            'name'   => $_cust->name,
+            'label'  => $_partyType . ' — الرقم الرئيسي',
+            'primary' => true,
+        ];
+    }
+    foreach ($_cust->phoneNumbers ?? [] as $_pn) {
+        $_rel = \backend\modules\cousins\models\Cousins::findOne(['id' => $_pn->phone_number_owner]);
+        $allPhonesList[] = [
+            'number' => PhoneHelper::toWhatsApp($_pn->phone_number),
+            'local'  => PhoneHelper::toLocal($_pn->phone_number),
+            'name'   => $_pn->owner_name ?: $_cust->name,
+            'label'  => $_rel ? $_rel->name : ($_partyType),
+            'primary' => false,
+        ];
+    }
+}
+?>
+
 <div class="pn-page">
     <div class="pn-section">
         <div class="pn-section-title">
             <i class="fa fa-users"></i> أطراف العقد وأرقام الهواتف
             <span class="pn-count"><?= count($allParties) ?> طرف</span>
+            <?php if (count($allPhonesList) > 0): ?>
+            <button type="button" class="pn-add-btn" style="margin-right:auto;background:#BE185D" onclick="BulkSms.open()" title="إرسال رسالة جماعية لجميع الأرقام">
+                <i class="fa fa-paper-plane"></i> رسالة SMS للكل (<?= count($allPhonesList) ?>)
+            </button>
+            <?php endif; ?>
         </div>
 
         <?php if (empty($allParties)): ?>
@@ -166,3 +199,7 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
         <?php endforeach; ?>
     </div>
 </div>
+
+<script>
+window._bulkSmsPhones = <?= json_encode($allPhonesList, JSON_UNESCAPED_UNICODE) ?>;
+</script>
