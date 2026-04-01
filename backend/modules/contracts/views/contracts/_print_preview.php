@@ -26,6 +26,8 @@ $total      = $model->total_value ?: 0;
 $first      = $model->first_installment_value ?: 0;
 $monthly    = $model->monthly_installment_value ?: 0;
 $afterFirst = $total - $first;
+$lawyerFees = $total * 0.15;
+$totalWithFees = $total * 1.15;
 $today      = date('Y-m-d');
 
 $gCount      = count($guarantors);
@@ -297,6 +299,46 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
 .density-tight .kmb-p          {font-size:12px;margin:3px 0}
 .density-tight .ovl-wrap       {margin:5px 0}
 
+/* ═══════════════════════════════════════════════════════
+   الطبقة 3: ضغط إضافي — أطراف متعددة + كثافة عالية
+   ═══════════════════════════════════════════════════════ */
+.parties-3.density-tight .ct-terms       {font-size:11px;line-height:1.45}
+.parties-3.density-tight .ct-terms p     {margin-bottom:4px}
+.parties-3.density-tight .ct-solidarity  {padding:4px 8px;margin:3px 0}
+.parties-3.density-tight .ct-solidarity p{font-size:11px}
+.parties-3.density-tight .ct-fin-tbl td  {padding:3px 8px;font-size:11.5px}
+.parties-3.density-tight .ct-fin-tbl th  {padding:4px 8px;font-size:11px}
+.parties-3.density-tight .ct-section     {margin-bottom:6px}
+.parties-3.density-tight .ct-notes       {padding:4px 8px;font-size:10px}
+
+.parties-4.density-tight .ct-terms       {font-size:10.5px;line-height:1.4}
+.parties-4.density-tight .ct-terms p     {margin-bottom:3px}
+.parties-4.density-tight .ct-solidarity  {padding:3px 7px;margin:2px 0}
+.parties-4.density-tight .ct-solidarity p{font-size:10.5px}
+.parties-4.density-tight .ct-fin-tbl td  {padding:2px 7px;font-size:11px}
+.parties-4.density-tight .ct-fin-tbl th  {padding:3px 7px;font-size:10.5px}
+.parties-4.density-tight .ct-section     {margin-bottom:4px}
+.parties-4.density-tight .ct-section-title{font-size:11.5px;margin-bottom:4px;padding-bottom:2px}
+.parties-4.density-tight .ct-hdr         {padding:6px 0 4px}
+.parties-4.density-tight .ct-photos img  {width:48px;height:60px}
+.parties-4.density-tight .ct-sig-tbl .ct-sig-tbl-signs td{height:30px}
+.parties-4.density-tight .ct-sig-tbl th  {font-size:10px;padding:3px 4px}
+.parties-4.density-tight .ct-notes       {padding:3px 7px;font-size:9.5px}
+
+.parties-5.density-tight .ct-terms       {font-size:10px;line-height:1.35}
+.parties-5.density-tight .ct-terms p     {margin-bottom:2px}
+.parties-5.density-tight .ct-solidarity  {padding:2px 6px;margin:2px 0}
+.parties-5.density-tight .ct-solidarity p{font-size:10px}
+.parties-5.density-tight .ct-fin-tbl td  {padding:2px 6px;font-size:10.5px}
+.parties-5.density-tight .ct-fin-tbl th  {padding:2px 6px;font-size:10px}
+.parties-5.density-tight .ct-section     {margin-bottom:3px}
+.parties-5.density-tight .ct-section-title{font-size:11px;margin-bottom:3px;padding-bottom:2px}
+.parties-5.density-tight .ct-hdr         {padding:4px 0 3px}
+.parties-5.density-tight .ct-photos img  {width:42px;height:52px}
+.parties-5.density-tight .ct-sig-tbl .ct-sig-tbl-signs td{height:25px}
+.parties-5.density-tight .ct-sig-tbl th  {font-size:9.5px;padding:2px 3px}
+.parties-5.density-tight .ct-notes       {padding:2px 6px;font-size:9px}
+
 /* ═══ طباعة / شاشة ═══ */
 @media print{
     body{-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff!important}
@@ -396,6 +438,12 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
             <p><span class="ct-num">3.</span> <b>طريقة الدفع:</b> نلتزم بدفع الأقساط في موعدها من خلال eFAWATEERcom — تبويب تمويل وخدمات مالية — <?= $companyName ?> — تسديد قسط — إدخال الرقم (<b style="color:#c62828"><?= $model->id ?></b>) ثم إتمام الدفع، أو في حساب الشركة في <b><?= $companyBanks ?></b>.</p>
             <p><span class="ct-num">4.</span> <b>الكفالة والإرجاع:</b> كفالة الوكيل حسب الشركة الموزعة. البضاعة المباعة لا تُرد ولا تُستبدل. نلتزم بخسارة (<b><?= $model->loss_commitment ?: 'صفر' ?></b>) دينار في حال إرجاع البضاعة خلال 24 ساعة من تاريخ البيع. لا يمكن إرجاع البضاعة بعد 24 ساعة مهما كانت الظروف.</p>
             <p><span class="ct-num">5.</span> <b>إخلاء المسؤولية:</b> الشركة غير مسؤولة عن سعر البضاعة خارج فروعها وعن أي اتفاقية أو مبلغ غير موثق في هذا العقد.</p>
+            <p><span class="ct-num">6.</span> <b>السندات التنفيذية (الكمبيالات):</b> يُقرّ الطرف الثاني بتوقيعه على الكمبيالات التالية: <?php foreach ($notes as $ni => $note): ?>كمبيالة رقم (<b><?= $note->getDisplayNumber() ?></b>) بقيمة (<b><?= number_format($note->amount, 2) ?></b>) دينار أردني<?= $ni < count($notes) - 1 ? '، ' : '.' ?><?php endforeach; ?> وتُعبّر جميعها عن دين واحد لا يتجزأ، وقد تم التوقيع عليها لغايات حفظ الحق فقط، ولا يجوز المطالبة بسداد الدين أكثر من مرة بحجة تعدد السندات التنفيذية.</p>
+            <?php if ($model->type === 'direct_deduction'): ?>
+            <div class="ct-solidarity" style="border-color:#c62828;background:#fef2f2">
+                <p style="font-family:'DinNextBold',sans-serif;font-size:13px"><b><span class="ct-num" style="color:#c62828">7.</span> الاقتطاع المباشر والتحصيل: يُقرّ الطرف الثاني بأن سداد الأقساط يتم بالاقتطاع المباشر من راتبه الشهري. وفي حال لم يتجاوز مبلغ الاقتطاع (20) عشرين ديناراً شهرياً، يحق للطرف الأول طلب الحجز على جميع أملاك الطرف الثاني المنقولة وغير المنقولة واتخاذ كافة السبل القانونية لتحصيل الدين، ويُعتبر الدين بأكمله مستحقاً فوراً وفقاً للسند التنفيذي (الكمبيالة). ولا يتحمل الطرف الأول أي مسؤولية عن مقدار الاقتطاع الشهري بالغاً ما بلغ ما دام في حدود الدين المُطالب به.</b></p>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -404,12 +452,16 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
         <table class="ct-fin-tbl">
             <thead><tr><th>البيان</th><th>القيمة</th></tr></thead>
             <tbody>
-                <tr><td>المبلغ الإجمالي للعقد</td><td class="ct-money"><?= number_format($total) ?> د.أ</td></tr>
                 <tr><td>الدفعة الأولى</td><td class="ct-money"><?= number_format($first) ?> د.أ</td></tr>
-                <tr><td>الرصيد المتبقي بعد الدفعة</td><td class="ct-money"><?= number_format($afterFirst) ?> د.أ</td></tr>
+                <tr><td>صافي المطالبة بعد الدفعة الأولى</td><td class="ct-money"><b><?= number_format($afterFirst) ?></b> د.أ</td></tr>
+                <?php if ($model->type !== 'direct_deduction'): ?>
                 <tr><td>القسط الشهري</td><td class="ct-money"><?= number_format($monthly) ?> د.أ</td></tr>
                 <tr><td>تاريخ أول قسط</td><td><?= $model->first_installment_date ?></td></tr>
                 <tr><td>تاريخ الاستحقاق النهائي</td><td><b><?= $model->due_date ?></b></td></tr>
+                <?php else: ?>
+                <tr><td>أتعاب المحاماة (15%)</td><td class="ct-money"><?= number_format($lawyerFees) ?> د.أ</td></tr>
+                <tr><td>المبلغ الإجمالي شاملاً أتعاب المحاماة</td><td class="ct-money"><b><?= number_format($totalWithFees) ?></b> د.أ</td></tr>
+                <?php endif; ?>
                 <tr><td>نوع العقد</td><td><?= $model->getTypeLabel() ?></td></tr>
                 <tr><td>البائع</td><td><?= $sellerName ?: '—' ?></td></tr>
             </tbody>
@@ -634,7 +686,7 @@ $(function(){
             page.style.zoom = '';
             var h = page.scrollHeight;
             if(h > pageH){
-                var scale = Math.max(0.88, pageH / h);
+                var scale = Math.max(0.78, pageH / h);
                 page.style.zoom = scale.toFixed(4);
             }
         });

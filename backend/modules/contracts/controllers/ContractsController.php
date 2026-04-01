@@ -1176,12 +1176,20 @@ class ContractsController extends Controller
             $len = mb_strlen($p->name, 'UTF-8');
             if ($len > $maxNameLen) $maxNameLen = $len;
         }
-        $density = ($pCount >= 4 || $maxNameLen > 30) ? 'tight' : 'normal';
+        $density = ($pCount >= 3 || $maxNameLen > 30 || $model->type === 'direct_deduction') ? 'tight' : 'normal';
 
         $sellerName = '';
         if ($model->seller_id) {
-            $profile = \dektrium\user\models\Profile::findOne(['user_id' => $model->seller_id]);
-            $sellerName = $profile ? $profile->name : ($model->seller->username ?? '');
+            $profile = \common\models\Profile::findOne(['user_id' => $model->seller_id]);
+            if ($profile) {
+                $nameParts = array_filter([$profile->name, $profile->middle_name, $profile->last_name]);
+                $sellerName = implode(' ', $nameParts);
+            }
+            if (empty($sellerName) && $model->seller) {
+                $seller = $model->seller;
+                $nameParts = array_filter([$seller->name, $seller->middle_name, $seller->last_name]);
+                $sellerName = implode(' ', $nameParts) ?: ($seller->username ?? '');
+            }
         }
 
         return $this->renderPartial('_print_preview', [
