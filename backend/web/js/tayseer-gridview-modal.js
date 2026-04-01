@@ -226,11 +226,13 @@
 
   // ── 8. EVENT: form submit inside modal ──
   $modal.on('submit', 'form', function (e) {
+    if ($(this).data('native-submit')) return true;
     e.preventDefault();
     submitModalForm($(this));
   });
   $modal.on('click', '[type="submit"]', function (e) {
-    var $form = $modal.find('form');
+    if ($(this).closest('form').data('native-submit')) return true;
+    var $form = $modal.find('form').not('[data-native-submit]');
     if ($form.length) {
       e.preventDefault();
       submitModalForm($form);
