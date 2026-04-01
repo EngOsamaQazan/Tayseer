@@ -151,6 +151,10 @@ jobs:
             chown root:www-data /opt/.webhook-secret
             chmod 640 /opt/.webhook-secret
             
+            # Allow www-data to run deploy-pull.sh as root without password
+            echo "www-data ALL=(root) NOPASSWD: /opt/deploy-pull.sh" > /etc/sudoers.d/deploy-pull
+            chmod 440 /etc/sudoers.d/deploy-pull
+            
             # Deploy landing page to root domain aqssat.co
             echo "=== Deploying landing page to aqssat.co ==="
             LANDING_SRC="/var/www/jadal.aqssat.co/landing/index.html"

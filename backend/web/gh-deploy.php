@@ -42,7 +42,7 @@ if ($ref !== 'refs/heads/main') {
     exit('Ignored: not main branch');
 }
 
-exec('/opt/deploy-pull.sh > /dev/null 2>&1 &');
+exec('sudo /opt/deploy-pull.sh > /dev/null 2>&1 &');
 
 http_response_code(200);
 echo 'OK';
