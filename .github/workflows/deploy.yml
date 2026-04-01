@@ -75,9 +75,16 @@ jobs:
                 fi
               done
               
-              # Install / update Composer dependencies
-              echo "  Installing Composer dependencies..."
-              composer install --no-dev --no-interaction --optimize-autoloader 2>&1 || echo "  Warning: composer install had issues"
+              # Composer: skip if composer.lock unchanged
+              NEW_HASH=$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1)
+              OLD_HASH=$(cat .composer-hash 2>/dev/null || echo "")
+              if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+                echo "  Installing Composer dependencies..."
+                composer install --no-dev --no-interaction --optimize-autoloader 2>&1 || echo "  Warning: composer install had issues"
+                echo "$NEW_HASH" > .composer-hash
+              else
+                echo "  Composer unchanged — skipping install"
+              fi
               
               # Fix permissions
               chown -R www-data:www-data backend/ common/ console/ frontend/ api/ vendor/ 2>/dev/null || true
@@ -121,10 +128,27 @@ jobs:
               echo "  Done!"
             }
             
-            # Deploy main domains
-            deploy_site "/var/www/jadal.aqssat.co" "prod_jadal"
-            deploy_site "/var/www/namaa.aqssat.co" "prod_namaa"
-            deploy_site "/var/www/watar.aqssat.co" "prod_watar"
+            # Deploy all 3 sites in parallel
+            deploy_site "/var/www/jadal.aqssat.co" "prod_jadal" &
+            PID1=$!
+            deploy_site "/var/www/namaa.aqssat.co" "prod_namaa" &
+            PID2=$!
+            deploy_site "/var/www/watar.aqssat.co" "prod_watar" &
+            PID3=$!
+            wait $PID1 $PID2 $PID3
+            
+            # Install webhook deploy script on server
+            echo "=== Installing webhook deploy script ==="
+            cp -f /var/www/jadal.aqssat.co/.github/deploy-pull.sh /opt/deploy-pull.sh
+            chmod +x /opt/deploy-pull.sh
+            
+            # Create webhook secret if not exists
+            if [ ! -f /opt/.webhook-secret ]; then
+              openssl rand -hex 32 > /opt/.webhook-secret
+              chmod 600 /opt/.webhook-secret
+              echo "  Webhook secret generated: $(cat /opt/.webhook-secret)"
+              echo "  >>> Add this secret to the GitHub webhook configuration <<<"
+            fi
             
             # Deploy landing page to root domain aqssat.co
             echo "=== Deploying landing page to aqssat.co ==="
