@@ -201,7 +201,7 @@ a.fur-id-link:hover{text-decoration:underline}
             <div class="ct-filter-body">
                 <?php $form = ActiveForm::begin(['id'=>'fur-search','method'=>'get','action'=>['index'],'options'=>['class'=>'ct-filter-form']]); ?>
                 <?= $form->field($searchModel, 'is_can_not_contact', ['template' => '{input}'])->hiddenInput()->label(false) ?>
-                <div class="ct-filter-row">
+                <div class="ct-filter-rows">
                     <div class="ct-filter-col-wide ct-filter-search">
                         <label><i class="fa fa-user"></i> اسم العميل</label>
                         <div class="us-wrap" id="fur-name-wrap">
@@ -258,8 +258,6 @@ a.fur-id-link:hover{text-decoration:underline}
                             <div class="us-dropdown" style="display:none"></div>
                         </div>
                     </div>
-                </div>
-                <div class="ct-filter-row">
                     <div class="ct-filter-col">
                         <label>حالة العقد</label>
                         <?= $form->field($searchModel, 'status', ['template'=>'{input}'])->dropDownList($statusList, ['class'=>'form-control']) ?>
@@ -305,15 +303,15 @@ a.fur-id-link:hover{text-decoration:underline}
                     </div>
                     <?php endif ?>
                     <div class="ct-filter-col">
-                        <label>عدد النتائج</label>
+                        <label>نتائج/صفحة</label>
                         <?= $form->field($searchModel, 'number_row', ['template'=>'{input}'])->dropDownList([
-                            ''=>'افتراضي (10)','20'=>'20','50'=>'50','100'=>'100','200'=>'200',
+                            ''=>'20','50'=>'50','100'=>'100','200'=>'200',
                         ], ['class'=>'form-control']) ?>
                     </div>
-                </div>
-                <div class="ct-filter-actions">
-                    <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class'=>'ct-btn ct-btn-primary']) ?>
-                    <a href="<?= Url::to($isNoContact ? ['index','FollowUpReportSearch[is_can_not_contact]'=>1] : ['index']) ?>" class="ct-btn ct-btn-outline"><i class="fa fa-refresh"></i> مسح الفلاتر</a>
+                    <div class="ct-filter-actions">
+                        <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class'=>'ct-btn ct-btn-primary']) ?>
+                        <a href="<?= Url::to($isNoContact ? ['index','FollowUpReportSearch[is_can_not_contact]'=>1] : ['index']) ?>" class="ct-btn ct-btn-outline"><i class="fa fa-refresh"></i> مسح</a>
+                    </div>
                 </div>
                 <?php ActiveForm::end(); ?>
             </div>
