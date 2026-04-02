@@ -1,21 +1,20 @@
 @echo off
-chcp 65001 >nul 2>&1
-title Tayseer ERP — ADB Installer
+title Tayseer ERP - ADB Call Service Setup
 color 1F
 
 echo.
-echo  ╔══════════════════════════════════════════════╗
-echo  ║     Tayseer ERP - ADB Call Service Setup     ║
-echo  ║          تثبيت خدمة الاتصال عبر USB          ║
-echo  ╚══════════════════════════════════════════════╝
+echo  ======================================================
+echo       Tayseer ERP - ADB Call Service Installer
+echo       USB Direct Call Setup (No Bluetooth needed)
+echo  ======================================================
 echo.
 
 :: Check for admin privileges
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-    echo  [!] يجب تشغيل هذا الملف كمسؤول ^(Run as Administrator^)
+    echo  [!] ERROR: This installer must run as Administrator.
     echo.
-    echo  اضغط بزر الفأرة الأيمن على الملف واختر "Run as administrator"
+    echo      Right-click the file and choose "Run as administrator"
     echo.
     pause
     exit /b 1
@@ -28,82 +27,93 @@ set "ZIP_FILE=%TEMP%\platform-tools.zip"
 
 :: Check if already installed
 if exist "%ADB_EXE%" (
-    echo  [OK] ADB مثبت مسبقاً في %ADB_DIR%
+    echo  [OK] ADB is already installed at %ADB_DIR%
     echo.
     "%ADB_EXE%" version 2>nul
     echo.
     goto :check_device
 )
 
-echo  [1/3] جاري تحميل Android Platform Tools...
-echo        من: %DOWNLOAD_URL%
+echo  [1/3] Downloading Android Platform Tools...
+echo        From: Google Official Repository
 echo.
 
-:: Download using PowerShell
-powershell -NoProfile -Command "try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%ZIP_FILE%' -UseBasicParsing; Write-Host '  [OK] تم التحميل بنجاح' } catch { Write-Host '  [FAIL] فشل التحميل:' $_.Exception.Message; exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri '%DOWNLOAD_URL%' -OutFile '%ZIP_FILE%' -UseBasicParsing; Write-Host '  [OK] Download completed successfully.' } catch { Write-Host '  [FAIL] Download failed:' $_.Exception.Message; exit 1 }"
+
 if %errorlevel% neq 0 (
     echo.
-    echo  [!] فشل التحميل. تأكد من اتصال الإنترنت وحاول مرة أخرى.
+    echo  [!] Download failed. Check your internet connection and try again.
     pause
     exit /b 1
 )
 
 echo.
-echo  [2/3] جاري فك الضغط إلى %ADB_DIR%...
+echo  [2/3] Extracting to %ADB_DIR%...
 
-:: Extract using PowerShell
-powershell -NoProfile -Command "try { Expand-Archive -Path '%ZIP_FILE%' -DestinationPath 'C:\' -Force; Write-Host '  [OK] تم فك الضغط بنجاح' } catch { Write-Host '  [FAIL] فشل فك الضغط:' $_.Exception.Message; exit 1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "try { Expand-Archive -Path '%ZIP_FILE%' -DestinationPath 'C:\' -Force; Write-Host '  [OK] Extraction completed successfully.' } catch { Write-Host '  [FAIL] Extraction failed:' $_.Exception.Message; exit 1 }"
+
 if %errorlevel% neq 0 (
     echo.
-    echo  [!] فشل فك الضغط.
+    echo  [!] Extraction failed.
     pause
     exit /b 1
 )
 
-:: Cleanup
+:: Cleanup temp file
 del "%ZIP_FILE%" >nul 2>&1
 
-:: Verify installation
+:: Verify
 if not exist "%ADB_EXE%" (
     echo.
-    echo  [!] فشل التثبيت — الملف غير موجود: %ADB_EXE%
+    echo  [!] Installation failed - file not found: %ADB_EXE%
     pause
     exit /b 1
 )
 
 echo.
-echo  [3/3] تم التثبيت بنجاح!
+echo  [3/3] Installation successful!
 echo.
 "%ADB_EXE%" version 2>nul
 echo.
 
 :check_device
-echo  ─────────────────────────────────────────────
-echo   فحص الأجهزة المتصلة...
-echo  ─────────────────────────────────────────────
+echo  ------------------------------------------------------
+echo   Checking connected devices...
+echo  ------------------------------------------------------
 echo.
 
-"%ADB_EXE%" devices 2>nul | findstr /C:"device" | findstr /V /C:"attached" >nul 2>&1
+"%ADB_EXE%" devices 2>nul
+
+:: Check if any authorized device is connected
+"%ADB_EXE%" devices 2>nul | findstr /R /C:"	device$" >nul 2>&1
 if %errorlevel% equ 0 (
-    "%ADB_EXE%" devices
     echo.
-    echo  [OK] تم العثور على جهاز متصل!
-    echo.
-    echo  ╔══════════════════════════════════════════════╗
-    echo  ║   التثبيت مكتمل — الخدمة جاهزة للاستخدام   ║
-    echo  ╚══════════════════════════════════════════════╝
+    echo  ======================================================
+    echo   [OK] Device found and authorized!
+    echo   Installation complete - USB Call Service is READY.
+    echo  ======================================================
 ) else (
-    "%ADB_EXE%" devices
-    echo.
-    echo  [!] لا يوجد جهاز متصل أو الجهاز غير مصرّح.
-    echo.
-    echo  تأكد من:
-    echo    1. الموبايل متصل بكيبل USB
-    echo    2. Developer Options مفعّلة على الموبايل
-    echo    3. USB Debugging مفعّل
-    echo    4. اضغط "Allow" على إشعار USB Debugging على الموبايل
-    echo.
-    echo  بعد الإعداد، شغّل هذا الملف مرة أخرى للتأكد.
+    "%ADB_EXE%" devices 2>nul | findstr /C:"unauthorized" >nul 2>&1
+    if %errorlevel% equ 0 (
+        echo.
+        echo  [!] Device found but NOT authorized.
+        echo      Check your phone screen and tap "Allow" on the
+        echo      USB Debugging prompt. Then run this installer again.
+    ) else (
+        echo.
+        echo  [!] No device connected.
+        echo.
+        echo  Setup steps on your phone:
+        echo    1. Connect phone via USB cable
+        echo    2. Go to Settings ^> About phone
+        echo    3. Tap "Build number" 7 times to enable Developer Options
+        echo    4. Go to Settings ^> Developer Options
+        echo    5. Enable "USB Debugging"
+        echo    6. Tap "Allow" on the USB Debugging prompt
+        echo    7. Run this installer again to verify
+    )
 )
 
 echo.
