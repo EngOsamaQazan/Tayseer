@@ -21,8 +21,9 @@ $guarantors = $model->customersGuarantor;
 
 $stageList = Judiciary::getStageList();
 $stageOrder = Judiciary::STAGE_ORDER;
-$furthestRank = Judiciary::getStageRank($model->furthest_stage);
-$bottleneckRank = Judiciary::getStageRank($model->bottleneck_stage);
+$hasStageCols = $model->hasAttribute('furthest_stage');
+$furthestRank = $hasStageCols ? Judiciary::getStageRank($model->furthest_stage) : -1;
+$bottleneckRank = $hasStageCols ? Judiciary::getStageRank($model->bottleneck_stage) : -1;
 
 $statusMap = [
     'open' => ['label' => 'مفتوحة', 'color' => '#2563EB', 'bg' => '#EFF6FF', 'icon' => 'fa-folder-open'],
@@ -316,16 +317,20 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
     <?php endif; ?>
 
     <!-- ═══ Workflow Stage Progress Bar ═══ -->
-    <?php if ($model->furthest_stage || !empty($defendantStages)): ?>
+    <?php
+        $fStage = $hasStageCols ? $model->furthest_stage : null;
+        $bStage = $hasStageCols ? $model->bottleneck_stage : null;
+    ?>
+    <?php if ($fStage || !empty($defendantStages)): ?>
     <div class="jv-card" style="margin-bottom:24px">
         <div class="jv-card-title"><i class="fa fa-tasks"></i> مراحل سير القضية</div>
         <div class="jv-stage-bar">
             <?php foreach ($stageOrder as $i => $stageKey):
                 $label = $stageList[$stageKey] ?? $stageKey;
                 $rank = $i;
-                $isCurrent = ($stageKey === $model->furthest_stage);
+                $isCurrent = ($stageKey === $fStage);
                 $isCompleted = ($furthestRank >= 0 && $rank < $furthestRank);
-                $isBottleneck = ($stageKey === $model->bottleneck_stage && $model->furthest_stage !== $model->bottleneck_stage);
+                $isBottleneck = ($stageKey === $bStage && $fStage !== $bStage);
                 $stepClass = 'jv-stage-step';
                 if ($isCurrent) $stepClass .= ' current';
                 elseif ($isCompleted) $stepClass .= ' completed';
@@ -351,23 +356,23 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
             <?php endforeach; ?>
         </div>
 
-        <?php if ($model->furthest_stage && $model->bottleneck_stage): ?>
+        <?php if ($fStage && $bStage): ?>
         <div style="display:flex;gap:20px;margin-top:16px;flex-wrap:wrap;font-size:12px;padding:12px 16px;background:#F8FAFC;border-radius:8px">
             <div style="display:flex;align-items:center;gap:6px">
                 <span style="width:10px;height:10px;border-radius:50%;background:#2563EB;display:inline-block"></span>
                 <span style="color:#64748B">أبعد مرحلة:</span>
-                <strong style="color:#1E293B"><?= Judiciary::getStageLabel($model->furthest_stage) ?></strong>
+                <strong style="color:#1E293B"><?= Judiciary::getStageLabel($fStage) ?></strong>
             </div>
-            <?php if ($model->furthest_stage !== $model->bottleneck_stage): ?>
+            <?php if ($fStage !== $bStage): ?>
             <div style="display:flex;align-items:center;gap:6px">
                 <span style="width:10px;height:10px;border-radius:50%;background:#F59E0B;display:inline-block"></span>
                 <span style="color:#64748B">عنق الزجاجة:</span>
-                <strong style="color:#92400E"><?= Judiciary::getStageLabel($model->bottleneck_stage) ?></strong>
+                <strong style="color:#92400E"><?= Judiciary::getStageLabel($bStage) ?></strong>
             </div>
             <?php endif; ?>
             <div style="display:flex;align-items:center;gap:6px">
                 <span style="color:#64748B">الحالة:</span>
-                <strong style="color:#1E293B"><?= $model->getOverallStatus() ?></strong>
+                <strong style="color:#1E293B"><?= $hasStageCols ? $model->getOverallStatus() : 'غير محدد' ?></strong>
             </div>
         </div>
         <?php endif; ?>

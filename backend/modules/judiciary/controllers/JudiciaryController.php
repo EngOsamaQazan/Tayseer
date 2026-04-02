@@ -1302,13 +1302,42 @@ class JudiciaryController extends Controller
             ->limit(1)
             ->scalar();
 
-        $defendantStages = $model->getDefendantStages()->with('customer')->all();
-        $activeDeadlines = $model->getActiveDeadlines()
-            ->with(['customerAction.judiciaryActions', 'customerAction.customers'])
-            ->orderBy(['deadline_date' => SORT_ASC])->all();
-        $seizedAssets = $model->getSeizedAssets()->with('authority')->all();
-        $correspondences = $model->getCorrespondences()->orderBy(['correspondence_date' => SORT_DESC])->limit(10)->all();
-        $executionSummary = JudiciaryExecutionService::getExecutionSummary($model->id);
+        try {
+            $defendantStages = $model->getDefendantStages()->with('customer')->all();
+        } catch (\Throwable $e) {
+            Yii::warning('defendantStages query failed: ' . $e->getMessage(), __METHOD__);
+            $defendantStages = [];
+        }
+
+        try {
+            $activeDeadlines = $model->getActiveDeadlines()
+                ->with(['customerAction.judiciaryActions', 'customerAction.customers'])
+                ->orderBy(['deadline_date' => SORT_ASC])->all();
+        } catch (\Throwable $e) {
+            Yii::warning('activeDeadlines query failed: ' . $e->getMessage(), __METHOD__);
+            $activeDeadlines = [];
+        }
+
+        try {
+            $seizedAssets = $model->getSeizedAssets()->with('authority')->all();
+        } catch (\Throwable $e) {
+            Yii::warning('seizedAssets query failed: ' . $e->getMessage(), __METHOD__);
+            $seizedAssets = [];
+        }
+
+        try {
+            $correspondences = $model->getCorrespondences()->orderBy(['correspondence_date' => SORT_DESC])->limit(10)->all();
+        } catch (\Throwable $e) {
+            Yii::warning('correspondences query failed: ' . $e->getMessage(), __METHOD__);
+            $correspondences = [];
+        }
+
+        try {
+            $executionSummary = JudiciaryExecutionService::getExecutionSummary($model->id);
+        } catch (\Throwable $e) {
+            Yii::warning('Execution summary failed: ' . $e->getMessage(), __METHOD__);
+            $executionSummary = [];
+        }
 
         return $this->render('view', [
             'model' => $model,
