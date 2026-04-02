@@ -647,9 +647,10 @@
 .job-title-wrapper .form-group { margin-bottom: 0; }
 .btn-add-job {
     position: absolute;
-    top: 28px;
+    top: 26px;
     left: 0;
-    width: 34px; height: 34px;
+    right: auto;
+    width: 34px; height: 36px;
     border: 1px solid var(--clr-primary, #800020);
     border-radius: 6px;
     background: #fff;
@@ -713,13 +714,22 @@
    RTL — Full Right-to-Left Support
    ═══════════════════════════════════════════════════════════ */
 
-/* ── Page & Form Direction ── */
-.so-page,
-.so-page *,
+/* ── Page Direction ── */
+.so-page { direction: rtl; text-align: right; }
+
+/* ── Form Labels — override custom.css !important ── */
+.so-page .form-group label,
+.so-page .control-label,
+.so-page label.control-label,
+.so-page .so-fieldset .form-group label {
+    text-align: right !important;
+    display: block;
+}
+
+/* ── Form Controls ── */
 .so-page .form-control,
-.so-page select,
-.so-page textarea {
-    direction: rtl;
+.so-page select.form-control,
+.so-page textarea.form-control {
     text-align: right;
 }
 .so-page input[type="number"],
@@ -730,134 +740,108 @@
     text-align: left;
 }
 
-/* ── Form Labels ── */
-.so-page .form-group label,
-.so-page .control-label,
-.so-fieldset .form-group label {
+/* ── Fieldset Titles: icon then text, right-aligned ── */
+.so-page .so-fieldset-title {
+    direction: rtl;
     text-align: right;
-    display: block;
 }
 
-/* ── Fieldset Titles ── */
-.so-fieldset-title {
-    flex-direction: row-reverse;
-    justify-content: flex-end;
-}
-.so-fieldset-title i {
-    margin-left: 8px;
-    margin-right: 0;
-}
-
-/* ── Risk Panel ── */
-.so-risk-panel {
+/* ── Risk Panel border ── */
+.so-page .so-risk-panel {
     border-right: none;
     border-left: 1px solid var(--clr-border);
 }
 
 /* ── Wizard Step Connector ── */
-.so-step:not(:last-child)::after {
+.so-page .so-step:not(:last-child)::after {
     left: auto;
     right: -4px;
     transform: translateX(50%);
 }
 
-/* ── Inline Alerts (RTL: border on right) ── */
-.so-inline-alert-danger  { border-left: none; border-right: 3px solid #c62828; }
-.so-inline-alert-warning { border-left: none; border-right: 3px solid #f0ad4e; }
-.so-inline-alert-info    { border-left: none; border-right: 3px solid #1565c0; }
-.so-inline-alert-close   { margin-right: 0; margin-left: auto; }
+/* ── Inline Alerts ── */
+.so-page .so-inline-alert-danger  { border-left: none; border-right: 3px solid #c62828; }
+.so-page .so-inline-alert-warning { border-left: none; border-right: 3px solid #f0ad4e; }
+.so-page .so-inline-alert-info    { border-left: none; border-right: 3px solid #1565c0; }
+.so-page .so-inline-alert-close   { margin-right: 0; margin-left: auto; }
 
-/* ── Address Panel ── */
-.addr-panel-hdr { flex-direction: row-reverse; }
-.addr-panel-actions { flex-direction: row-reverse; }
+/* ── Address Panel header ── */
+.so-page .addr-panel-hdr {
+    direction: rtl;
+}
 
-/* Map search: icon on right in RTL */
-.addr-map-search {
+/* Map search: search icon on right */
+.so-page .addr-map-search {
     padding-left: 12px;
     padding-right: 40px;
 }
-.addr-map-search-btn {
+.so-page .addr-map-search-btn {
     left: auto;
     right: 4px;
 }
-.addr-map-search-results { text-align: right; }
-.addr-map-search-results .result-item { flex-direction: row-reverse; }
 
-/* Smart paste section */
-.addr-smart-loc label { text-align: right; }
-.addr-smart-hint { text-align: right; }
-
-/* ── Phone / Address Dynamic Form Cards ── */
-.so-fieldset .card .card-body .row { direction: rtl; }
-.so-fieldset .phone-numbers-remove-item,
-.so-fieldset .addrres-remove-item,
-.so-fieldset .customer-documents-remove-item {
+/* ── Dynamic Form delete buttons: pin to left (end in RTL) ── */
+.so-page .phone-numbers-remove-item,
+.so-page .addrres-remove-item,
+.so-page .customer-documents-remove-item {
     float: left;
 }
 
-/* ── Job Title: Add-Job Button RTL ── */
-.btn-add-job {
-    left: auto;
-    right: 0;
+/* ── Job Title: "+" button on LEFT (end side in RTL) ── */
+.so-page .btn-add-job {
+    left: 0;
+    right: auto;
 }
-.job-title-wrapper .select2-container {
-    margin-right: 0;
-    margin-left: auto;
+.so-page .job-title-wrapper .select2-container {
+    width: calc(100% - 42px) !important;
+    float: right;
 }
 
-/* ── Quick Links RTL ── */
-.rp-quick-link:hover {
-    transform: translateX(4px);
-}
-.rp-quick-link { flex-direction: row-reverse; }
+/* ── Quick Links ── */
+.so-page .rp-quick-link:hover { transform: translateX(4px); }
 
 /* ── Warning Hints ── */
-.so-warn-hint i { margin-left: 0; margin-right: 3px; }
+.so-page .so-warn-hint i { margin-left: 0; margin-right: 3px; }
 
-/* ── Duplicate Warning ── */
-.so-duplicate-warn { flex-direction: row-reverse; }
-
-/* ── Details Panel ── */
-.rp-details-row { flex-direction: row-reverse; }
-.rp-details-row i { margin-left: 0; margin-right: 4px; }
-
-/* ── Factors RTL ── */
-.rp-factor { flex-direction: row-reverse; }
-.rp-factor-val { text-align: right; }
+/* ── Risk Panel Factors ── */
+.so-page .rp-factor-val { text-align: start; }
 
 /* ── Error Messages ── */
 .so-page .help-block { text-align: right; }
-.so-page .has-error .help-block { text-align: right; }
 
 /* ── Select2 RTL ── */
 .so-page .select2-container { text-align: right; }
 .so-page .select2-container .select2-selection { direction: rtl; }
+.so-page .select2-container .select2-selection__rendered { text-align: right; }
+.so-page .select2-container .select2-selection__arrow {
+    left: 1px;
+    right: auto;
+}
+.so-page .select2-container .select2-selection--single {
+    padding-right: 8px;
+    padding-left: 28px;
+}
 
 /* ── Flatpickr RTL ── */
 .so-page .flatpickr-input { text-align: right; }
 
-/* ── Navigation Buttons ── */
-.so-nav { flex-direction: row-reverse; }
+/* ── Navigation Buttons: prev on right, next on left ── */
+.so-page .so-nav { direction: rtl; }
 
-/* ── intl-tel-input RTL ── */
+/* ── intl-tel-input: keep LTR ── */
 .so-page .iti { direction: ltr; }
 .so-page .iti__selected-dial-code { direction: ltr; }
 
-/* ── Leaflet Controls RTL ── */
-.addr-map-container .leaflet-control-layers { direction: ltr; }
-.addr-map-container .leaflet-control-zoom { direction: ltr; }
+/* ── Leaflet: keep LTR ── */
+.so-page .leaflet-container { direction: ltr; }
 
-/* ── Social Security Conditional Fields ── */
-.so-ss-fieldset .so-ss-row { text-align: right; }
-.so-ss-conditional { text-align: right; }
-
-/* ── Responsive RTL Fix ── */
+/* ── Responsive RTL ── */
 @media (max-width: 767px) {
-    .so-risk-panel {
+    .so-page .so-risk-panel {
         border-left: none;
         border-top: 2px solid var(--clr-primary);
     }
-    .so-inline-alerts {
+    .so-page .so-inline-alerts {
         left: 10px; right: 10px;
     }
 }
