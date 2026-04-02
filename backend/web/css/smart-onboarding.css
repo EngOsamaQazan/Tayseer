@@ -732,7 +732,10 @@
 .so-page textarea.form-control {
     text-align: right;
 }
-.so-page input[type="number"],
+.so-page input[type="number"] {
+    direction: ltr;
+    text-align: right;
+}
 .so-page input[type="tel"],
 .so-page input[type="email"],
 .so-page input[dir="ltr"] {
