@@ -498,8 +498,9 @@ var SmsDrafts = (function () {
    ══════════════════════════════════════════════════ */
 var SingleSms = (function () {
     function refreshStats() {
-        var text = document.getElementById('sms_text').value;
-        var s = SmsCalc.calc(text);
+        var raw = document.getElementById('sms_text').value;
+        var resolved = SmsDrafts.resolveVars(raw);
+        var s = SmsCalc.calc(resolved);
         document.getElementById('ssms-s-parts').textContent = s.parts;
         document.getElementById('ssms-s-used').textContent = s.charCount;
         document.getElementById('ssms-s-remain').textContent = s.remaining;
@@ -531,7 +532,7 @@ var SingleSms = (function () {
 
     $(document).on('click', '#send_sms', function () {
         var phone_number = $('#phone_number').val();
-        var text = $('#sms_text').val().trim();
+        var text = SmsDrafts.resolveVars($('#sms_text').val().trim());
         if (!text) {
             $('#sms_text').css('border-color', '#EF4444').focus();
             setTimeout(function () { $('#sms_text').css('border-color', ''); }, 2000);
@@ -589,8 +590,9 @@ var BulkSms = (function () {
     }
 
     function refreshStats() {
-        var text = document.getElementById('bsms-text').value;
-        var s = SmsCalc.calc(text);
+        var raw = document.getElementById('bsms-text').value;
+        var resolved = SmsDrafts.resolveVars(raw);
+        var s = SmsCalc.calc(resolved);
         var selectedCount = document.querySelectorAll('#bsms-list input[type=checkbox]:checked').length;
 
         document.getElementById('bsms-s-parts').textContent = s.parts;
@@ -694,8 +696,10 @@ var BulkSms = (function () {
         refreshStats();
     }
 
+    var CONCURRENCY = 3;
+
     function send() {
-        var text = document.getElementById('bsms-text').value.trim();
+        var text = SmsDrafts.resolveVars(document.getElementById('bsms-text').value.trim());
         if (!text) {
             document.getElementById('bsms-text').style.borderColor = '#EF4444';
             document.getElementById('bsms-text').focus();
@@ -722,25 +726,46 @@ var BulkSms = (function () {
         var done = 0;
         var successCount = 0;
         var failCount = 0;
+        var nextIdx = 0;
         var smsUrl = (typeof OCP_CONFIG !== 'undefined' && OCP_CONFIG.urls && OCP_CONFIG.urls.bulkSendSms)
             ? OCP_CONFIG.urls.bulkSendSms
             : (typeof bulk_send_sms !== 'undefined' ? bulk_send_sms : send_sms);
 
-        function sendNext(idx) {
-            if (idx >= total) {
+        function onComplete() {
+            if (done >= total) {
                 btn.innerHTML = '<i class="fa fa-check"></i> تم الإرسال';
                 document.getElementById('bsms-progress-text').innerHTML =
                     '<i class="fa fa-check-circle" style="color:#16A34A"></i> اكتمل — ' +
                     '<b style="color:#16A34A">' + successCount + ' نجح</b>' +
                     (failCount > 0 ? ' · <b style="color:#EF4444">' + failCount + ' فشل</b>' : '');
                 sending = false;
-                return;
             }
+        }
 
-            var p = selected[idx];
+        function appendResult(p, ok, errMsg) {
+            done++;
+            var pct = Math.round((done / total) * 100);
+            document.getElementById('bsms-progress-fill').style.width = pct + '%';
             document.getElementById('bsms-progress-text').textContent =
-                'جاري إرسال ' + (idx + 1) + ' من ' + total + ' — ' + p.local;
+                'تم ' + done + ' من ' + total;
+            if (ok) successCount++; else failCount++;
+            var icon = ok ? 'fa-check-circle' : 'fa-times-circle';
+            var html = '<div class="bsms-result-item"><i class="fa ' + icon + '"></i>';
+            html += '<span class="bsms-r-num">' + esc(p.local) + '</span>';
+            html += '<span>' + esc(p.name) + '</span>';
+            if (!ok && errMsg) html += ' <span style="color:#EF4444;font-size:11px">(' + esc(errMsg) + ')</span>';
+            html += '</div>';
+            var resultsDiv = document.getElementById('bsms-results');
+            resultsDiv.innerHTML += html;
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+            launchNext();
+            onComplete();
+        }
 
+        function launchNext() {
+            if (nextIdx >= total) return;
+            var idx = nextIdx++;
+            var p = selected[idx];
             $.post(smsUrl, { text: text, phone_number: p.number }, function (data) {
                 var res;
                 if (typeof data === 'string') {
@@ -748,44 +773,17 @@ var BulkSms = (function () {
                 } else {
                     res = data;
                 }
-
-                done++;
-                var pct = Math.round((done / total) * 100);
-                document.getElementById('bsms-progress-fill').style.width = pct + '%';
-
                 var ok = res.success || res.message === '' || res.message === undefined;
-                if (ok) successCount++; else failCount++;
-
-                var icon = ok ? 'fa-check-circle' : 'fa-times-circle';
-                var resultHtml = '<div class="bsms-result-item">';
-                resultHtml += '<i class="fa ' + icon + '"></i>';
-                resultHtml += '<span class="bsms-r-num">' + esc(p.local) + '</span>';
-                resultHtml += '<span>' + esc(p.name) + '</span>';
-                if (!ok && res.message) resultHtml += ' <span style="color:#EF4444;font-size:11px">(' + esc(res.message) + ')</span>';
-                resultHtml += '</div>';
-                document.getElementById('bsms-results').innerHTML += resultHtml;
-
-                var resultsDiv = document.getElementById('bsms-results');
-                resultsDiv.scrollTop = resultsDiv.scrollHeight;
-
-                setTimeout(function () { sendNext(idx + 1); }, 300);
+                appendResult(p, ok, ok ? '' : res.message);
             }).fail(function () {
-                done++;
-                failCount++;
-                var pct = Math.round((done / total) * 100);
-                document.getElementById('bsms-progress-fill').style.width = pct + '%';
-
-                document.getElementById('bsms-results').innerHTML +=
-                    '<div class="bsms-result-item"><i class="fa fa-times-circle"></i>' +
-                    '<span class="bsms-r-num">' + esc(p.local) + '</span>' +
-                    '<span>' + esc(p.name) + '</span>' +
-                    ' <span style="color:#EF4444;font-size:11px">(خطأ في الاتصال)</span></div>';
-
-                setTimeout(function () { sendNext(idx + 1); }, 300);
+                appendResult(p, false, 'خطأ في الاتصال');
             });
         }
 
-        sendNext(0);
+        var initial = Math.min(CONCURRENCY, total);
+        for (var i = 0; i < initial; i++) {
+            launchNext();
+        }
     }
 
     $(document).on('input', '#bsms-text', function () {

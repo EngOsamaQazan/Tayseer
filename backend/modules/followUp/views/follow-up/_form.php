@@ -145,4 +145,29 @@ $this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), yii\
 $this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), yii\web\View::POS_HEAD);
 $this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), yii\web\View::POS_HEAD);
 $this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
+
+$_fCust = \backend\modules\customers\models\ContractsCustomers::find()
+    ->where(['contract_id' => $contract_id, 'customer_type' => 'client'])->one();
+$_fCustName = ($_fCust && $_fCust->customer) ? $_fCust->customer->name : 'غير محدد';
+$_statusLabelsMap = ['active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء', 'legal_department' => 'قانوني', 'finished' => 'منتهي', 'canceled' => 'ملغي', 'settlement' => 'تسوية'];
+$this->registerJs("window.SMS_VARS=" . \yii\helpers\Json::encode([
+    'اسم_العميل'      => $_fCustName,
+    'رقم_العقد'        => (string)$contract_id,
+    'حالة_العقد'       => $_statusLabelsMap[$calc->contract_model->status] ?? $calc->contract_model->status,
+    'المبلغ_الإجمالي'  => number_format($calc->totalDebt(), 2),
+    'المدفوع'          => number_format($calc->paidAmount(), 2),
+    'المتبقي'          => number_format($calc->remainingAmount(), 2),
+    'المستحق'          => number_format($calc->amountShouldBePaid(), 2),
+    'المتأخر'          => number_format($calc->deservedAmount(), 2),
+    'القسط_الشهري'     => number_format($calc->effectiveInstallment(), 2),
+    'أقساط_متأخرة'     => (string)$calc->overdueInstallments(),
+    'أقساط_متبقية'     => (string)$calc->remainingInstallments(),
+    'أتعاب_المحاماة'   => number_format($calc->allLawyerCosts(), 2),
+]) . ";", yii\web\View::POS_HEAD);
+
+$this->registerJs("if(typeof OCP_CONFIG==='undefined'){window.OCP_CONFIG={urls:{" .
+    "smsDraftList:"  . \yii\helpers\Json::encode(Url::to(['/followUp/follow-up/sms-draft-list'])) . "," .
+    "smsDraftSave:"  . \yii\helpers\Json::encode(Url::to(['/followUp/follow-up/sms-draft-save'])) . "," .
+    "smsDraftDelete:" . \yii\helpers\Json::encode(Url::to(['/followUp/follow-up/sms-draft-delete'])) .
+    "}};}", yii\web\View::POS_HEAD);
 ?>

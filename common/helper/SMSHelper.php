@@ -20,13 +20,14 @@ class SMSHelper
      */
     public static function send(string $to, string $message): array
     {
-        $provider  = SystemSettings::get('sms_api', 'provider', '');
-        $senderId  = SystemSettings::get('sms_api', 'sender_id', '');
-        $apiUrl    = SystemSettings::get('sms_api', 'api_url', '');
-        $apiKey    = SystemSettings::get('sms_api', 'api_key', '');
-        $apiSecret = SystemSettings::get('sms_api', 'api_secret', '');
-        $username  = SystemSettings::get('sms_api', 'username', '');
-        $password  = SystemSettings::get('sms_api', 'password', '');
+        $cfg = SystemSettings::getGroup('sms_api');
+        $provider  = $cfg['provider'] ?? '';
+        $senderId  = $cfg['sender_id'] ?? '';
+        $apiUrl    = $cfg['api_url'] ?? '';
+        $apiKey    = $cfg['api_key'] ?? '';
+        $apiSecret = $cfg['api_secret'] ?? '';
+        $username  = $cfg['username'] ?? '';
+        $password  = $cfg['password'] ?? '';
 
         if (empty($provider)) {
             $provider = 'smsapril';
@@ -80,7 +81,7 @@ class SMSHelper
         $url = "https://api.twilio.com/2010-04-01/Accounts/{$sid}/Messages.json";
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 10, CURLOPT_POST => true,
             CURLOPT_USERPWD => "{$sid}:{$token}",
             CURLOPT_POSTFIELDS => http_build_query(['To' => $to, 'From' => $from, 'Body' => $msg]),
         ]);
@@ -147,7 +148,7 @@ class SMSHelper
         $body = json_encode(['recipients' => [$to], 'body' => $msg, 'sender' => $sender]);
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 10, CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $body,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json', "Authorization: Bearer {$bearer}"],
         ]);
@@ -189,7 +190,7 @@ class SMSHelper
         $body = json_encode(['apiKey' => $apiKey, 'userName' => $user, 'numbers' => $to, 'userSender' => $sender, 'msg' => $msg]);
         $ch = curl_init($url);
         curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15, CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 10, CURLOPT_POST => true,
             CURLOPT_POSTFIELDS => $body,
             CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
         ]);
@@ -244,7 +245,8 @@ class SMSHelper
         $ch = curl_init($url);
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 15,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT        => 10,
             CURLOPT_POST           => true,
             CURLOPT_POSTFIELDS     => http_build_query($fields),
         ]);

@@ -340,17 +340,27 @@ class FollowUpController extends Controller
 
     public function actionSendSms()
     {
-        $phone_number = Yii::$app->request->post('phone_number');
-        $phone_number = strip_tags($phone_number, '+');
-        $phone_number = \backend\helpers\PhoneHelper::toWhatsApp($phone_number);
-        $text = Yii::$app->request->post('text');
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        try {
+            $phone_number = Yii::$app->request->post('phone_number', '');
+            $phone_number = strip_tags((string)$phone_number, '+');
+            $phone_number = \backend\helpers\PhoneHelper::toWhatsApp($phone_number);
+            $text = (string)Yii::$app->request->post('text', '');
 
-        $result = \common\helper\SMSHelper::send($phone_number, $text);
+            if (empty($phone_number) || empty($text)) {
+                return ['status' => '', 'message' => 'رقم الهاتف أو نص الرسالة فارغ'];
+            }
 
-        if ($result['success']) {
-            return Json::encode(['status' => $result['raw'], 'message' => '']);
+            $result = \common\helper\SMSHelper::send($phone_number, $text);
+
+            return [
+                'status' => $result['raw'] ?? '',
+                'message' => $result['success'] ? '' : ($result['error'] ?? 'خطأ في الإرسال'),
+            ];
+        } catch (\Throwable $e) {
+            Yii::error('SMS send error: ' . $e->getMessage(), __METHOD__);
+            return ['status' => '', 'message' => 'خطأ في النظام: ' . $e->getMessage()];
         }
-        return Json::encode(['status' => $result['raw'], 'message' => $result['error'] ?? 'خطأ في الإرسال']);
     }
 
     public function actionBulkSendSms()
@@ -365,39 +375,11 @@ class FollowUpController extends Controller
             return ['success' => false, 'message' => 'بيانات ناقصة'];
         }
 
-        $url = 'http://www.smsapril.com/api.php?comm=sendsms';
-        $params = [
-            'to' => $phone,
-            'sender' => Yii::$app->params['sender'],
-            'user' => Yii::$app->params['user'],
-            'pass' => Yii::$app->params['pass'],
-            'message' => $text,
-        ];
-
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-        $output = curl_exec($ch);
-        curl_close($ch);
-
-        $errors = [
-            '-100' => 'المعلومات ناقصه',
-            '-110' => 'اسم المستخدم أو كلمة المرور خاطئة',
-            '-111' => 'الحساب غير مفعل',
-            '-112' => 'حساب مجمد',
-            '-113' => 'لا يوجد رصيد كافٍ',
-            '-114' => 'الخدمة غير متوفرة في الوقت الحالي',
-            '-115' => 'المرسل غير متوفر',
-            '-116' => 'اسم المرسل غير صالح',
-        ];
-
-        $ok = !isset($errors[$output]);
+        $result = \common\helper\SMSHelper::send($phone, $text);
         return [
-            'success' => $ok,
+            'success' => $result['success'],
             'phone' => $phone,
-            'message' => $ok ? '' : ($errors[$output] ?? 'خطأ غير معروف: ' . $output),
+            'message' => $result['success'] ? '' : ($result['error'] ?? 'خطأ في الإرسال'),
         ];
     }
 
