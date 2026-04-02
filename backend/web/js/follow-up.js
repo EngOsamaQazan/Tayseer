@@ -51,6 +51,7 @@ var CiEdit = (function() {
         var el = $('.' + cls);
         if (el.is('select')) {
             el.val(val != null ? String(val) : '');
+            if (el.data('select2')) el.trigger('change.select2');
         } else {
             el.val(val || '');
         }
@@ -63,7 +64,9 @@ var CiEdit = (function() {
         $('#ci-customer-id').val(customerId);
 
         $('#customerInfoModal .ci-input').each(function() {
-            $(this).prop('disabled', true).closest('.ci-field').removeClass('ci-editing');
+            var $i = $(this);
+            $i.prop('disabled', true).closest('.ci-field').removeClass('ci-editing');
+            if ($i.data('select2')) $i.trigger('change.select2');
         });
 
         var a = document.getElementById('cus-link');
@@ -97,6 +100,7 @@ var CiEdit = (function() {
         if ($el.prop('disabled')) return;
         markDirty(fieldEl);
         $el.prop('disabled', true);
+        if ($el.data('select2')) $el.trigger('change.select2');
         $el.closest('.ci-field').removeClass('ci-editing');
     }
 
@@ -112,8 +116,14 @@ var CiEdit = (function() {
             closeField(fieldEl);
         } else {
             closeAllFields();
-            $el.prop('disabled', false).focus();
+            $el.prop('disabled', false);
             $el.closest('.ci-field').addClass('ci-editing');
+            if ($el.data('select2')) {
+                $el.trigger('change.select2');
+                $el.select2('open');
+            } else {
+                $el.focus();
+            }
         }
     }
 
@@ -129,6 +139,7 @@ var CiEdit = (function() {
             setTimeout(function() { $el.closest('.ci-field').css('animation', ''); }, 400);
             if ($el.is('select')) {
                 $el.val(orig != null ? String(orig) : '');
+                if ($el.data('select2')) $el.trigger('change.select2');
             } else {
                 $el.val(orig || '');
             }
@@ -158,6 +169,7 @@ var CiEdit = (function() {
             if (fieldName && originalData[fieldName] !== undefined) {
                 if ($el.is('select')) {
                     $el.val(originalData[fieldName] != null ? String(originalData[fieldName]) : '');
+                    if ($el.data('select2')) $el.trigger('change.select2');
                 } else {
                     $el.val(originalData[fieldName] || '');
                 }
@@ -213,6 +225,9 @@ $(document).on('dblclick', '#customerInfoModal .ci-field', function(e) {
 });
 
 $(document).on('change', '#customerInfoModal .ci-input', function() {
+    CiEdit.markDirty(this);
+});
+$(document).on('select2:select select2:unselect select2:clear', '#customerInfoModal select.ci-input', function() {
     CiEdit.markDirty(this);
 });
 /////
@@ -446,6 +461,7 @@ var SmsDrafts = (function () {
     function deleteDraft(id) {
         $.post(_urls().del, { id: id }, function (res) {
             if (res && res.drafts) _refreshAllDraftPanels(res.drafts);
+            if (typeof WaDraftPicker !== 'undefined') WaDraftPicker.invalidateCache();
         });
     }
 
@@ -461,6 +477,7 @@ var SmsDrafts = (function () {
         $.post(_urls().save, { name: name, text: ta.value }, function (res) {
             if (res && res.success) {
                 _refreshAllDraftPanels(res.drafts);
+                if (typeof WaDraftPicker !== 'undefined') WaDraftPicker.invalidateCache();
             } else {
                 alert(res && res.message ? res.message : 'خطأ في الحفظ');
             }
@@ -626,6 +643,7 @@ var BulkSms = (function () {
             html += '<span class="bsms-num">' + esc(p.local) + '</span>';
             html += '<span class="bsms-name">' + esc(p.name) + '</span>';
             html += '<span class="bsms-tag ' + tagCls + '">' + esc(tagText) + '</span>';
+            html += '<button type="button" class="bsms-wa-btn" data-idx="' + i + '"><i class="fa fa-whatsapp"></i></button>';
             html += '</label>';
         }
         document.getElementById('bsms-list').innerHTML = html;
@@ -638,6 +656,19 @@ var BulkSms = (function () {
                 this.closest('.bsms-item').classList.toggle('excluded', !this.checked);
                 updateCount();
                 refreshStats();
+            });
+        });
+
+        document.querySelectorAll('#bsms-list .bsms-wa-btn').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var idx = parseInt(this.getAttribute('data-idx'));
+                var p = phones[idx];
+                var text = SmsDrafts.resolveVars(document.getElementById('bsms-text').value.trim());
+                var url = 'whatsapp://send?phone=' + encodeURIComponent(p.number);
+                if (text) url += '&text=' + encodeURIComponent(text);
+                window.location.href = url;
             });
         });
 
@@ -786,6 +817,85 @@ var BulkSms = (function () {
         }
     }
 
+    function sendWhatsApp() {
+        var text = SmsDrafts.resolveVars(document.getElementById('bsms-text').value.trim());
+
+        var selected = [];
+        document.querySelectorAll('#bsms-list input[type=checkbox]:checked').forEach(function (cb) {
+            selected.push(phones[parseInt(cb.getAttribute('data-idx'))]);
+        });
+        if (!selected.length) return;
+
+        var waBtn = document.getElementById('bsms-wa-send-btn');
+        var total = selected.length;
+        var sentCount = 0;
+
+        $('#bulkSmsModal').modal('hide');
+
+        function _done(icon, title, count) {
+            Swal.fire({
+                icon: icon,
+                title: title,
+                html: '<b>' + count + '</b> من <b>' + total + '</b> تم فتح واتساب لهم',
+                confirmButtonText: 'حسناً',
+                confirmButtonColor: '#25D366',
+                customClass: { popup: 'tayseer-swal-popup' }
+            }).then(function () {
+                waBtn.disabled = false;
+                waBtn.innerHTML = '<i class="fa fa-whatsapp"></i> إرسال واتساب للمحددين';
+                $('#bulkSmsModal').modal('show');
+            });
+        }
+
+        function openFor(idx) {
+            if (idx >= total) {
+                _done('success', 'تم الانتهاء', sentCount);
+                return;
+            }
+
+            var p = selected[idx];
+            var url = 'whatsapp://send?phone=' + encodeURIComponent(p.number);
+            if (text) url += '&text=' + encodeURIComponent(text);
+            window.location.href = url;
+            sentCount++;
+
+            if (idx + 1 < total) {
+                var nextP = selected[idx + 1];
+                Swal.fire({
+                    icon: 'question',
+                    title: 'التالي: ' + nextP.name,
+                    html: '<div style="direction:ltr;font-family:monospace;font-size:15px;margin:6px 0">' + esc(nextP.local) + '</div>' +
+                          '<div style="color:#64748B;font-size:12px">' + sentCount + ' من ' + total + ' تم</div>',
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '<i class="fa fa-arrow-left"></i> التالي',
+                    denyButtonText: '<i class="fa fa-forward"></i> تخطي',
+                    cancelButtonText: '<i class="fa fa-stop"></i> إيقاف',
+                    confirmButtonColor: '#25D366',
+                    denyButtonColor: '#F59E0B',
+                    cancelButtonColor: '#6B7280',
+                    reverseButtons: true,
+                    allowOutsideClick: false,
+                    customClass: { popup: 'tayseer-swal-popup' }
+                }).then(function (result) {
+                    if (result.isConfirmed) {
+                        openFor(idx + 1);
+                    } else if (result.isDenied) {
+                        openFor(idx + 2);
+                    } else {
+                        _done('info', 'تم الإيقاف', sentCount);
+                    }
+                });
+            } else {
+                openFor(idx + 1);
+            }
+        }
+
+        waBtn.disabled = true;
+        waBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الإرسال...';
+        openFor(0);
+    }
+
     $(document).on('input', '#bsms-text', function () {
         refreshStats();
     });
@@ -797,6 +907,7 @@ var BulkSms = (function () {
         insertEmoji: insertEmoji,
         clearText: clearText,
         send: send,
+        sendWhatsApp: sendWhatsApp,
         refreshStats: refreshStats
     };
 })();

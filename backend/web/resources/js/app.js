@@ -140,7 +140,7 @@ document.querySelectorAll('.kv-grid-table .kv-action-column a, .grid-view td a[t
     if (tooltip) tippy(link, { content: tooltip });
 });
 document.querySelectorAll('.btn[title], a[title]:not(.kv-grid-table a)').forEach(el => {
-    if (el._tippy) return;
+    if (el._tippy || el.classList.contains('pn-wa-btn')) return;
     const t = el.getAttribute('title');
     if (t && t.length > 0) { el.removeAttribute('title'); tippy(el, { content: t }); }
 });

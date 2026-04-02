@@ -159,7 +159,7 @@ foreach ($allParties as $_cc) {
                     </div>
                     <div class="pn-primary-social">
                         <a class="pn-contact-btn call" href="javascript:void(0)" onclick="makeCall('<?= Html::encode($ppTel) ?>', this)" title="اتصال"><i class="fa fa-phone"></i></a>
-                        <a class="pn-contact-btn whatsapp" href="javascript:void(0)" onclick="openWhatsApp('<?= Html::encode($ppWa) ?>')" title="واتساب"><i class="fa fa-whatsapp"></i></a>
+                        <a class="pn-contact-btn whatsapp pn-wa-btn" href="javascript:void(0)" data-wa-phone="<?= Html::encode($ppWa) ?>"><i class="fa fa-whatsapp"></i></a>
                         <?php if (!empty($cust->facebook_account)): ?>
                         <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($cust->facebook_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
                         <?php else: ?>
@@ -190,7 +190,7 @@ foreach ($allParties as $_cc) {
                         <?php endif; ?>
                         <div class="pn-extra-actions">
                             <a class="pn-contact-btn call" href="javascript:void(0)" onclick="makeCall('<?= Html::encode($pnTel) ?>', this)" title="اتصال"><i class="fa fa-phone"></i></a>
-                            <a class="pn-contact-btn whatsapp" href="javascript:void(0)" onclick="openWhatsApp('<?= Html::encode($pnWa) ?>')" title="واتساب"><i class="fa fa-whatsapp"></i></a>
+                            <a class="pn-contact-btn whatsapp pn-wa-btn" href="javascript:void(0)" data-wa-phone="<?= Html::encode($pnWa) ?>"><i class="fa fa-whatsapp"></i></a>
                             <?php if (!empty($pn->fb_account)): ?>
                             <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($pn->fb_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
                             <?php else: ?>
@@ -217,12 +217,185 @@ foreach ($allParties as $_cc) {
     <span id="pnCallToastMsg"></span>
 </div>
 
+<style>
+.wdp-popover{width:280px;direction:rtl;font-family:inherit}
+.wdp-hdr{background:linear-gradient(135deg,#128C7E,#25D366);padding:10px 14px;border-radius:10px 10px 0 0;display:flex;align-items:center;gap:8px}
+.wdp-hdr-icon{width:30px;height:30px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;flex-shrink:0}
+.wdp-hdr-text{flex:1;min-width:0}
+.wdp-hdr-title{font-size:12px;font-weight:700;color:#fff}
+.wdp-hdr-phone{font-size:10px;color:rgba(255,255,255,.75);direction:ltr;font-family:'Courier New',monospace}
+.wdp-body{padding:6px}
+.wdp-direct{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;border:none;background:#F0FDF4;cursor:pointer;width:100%;text-align:right;transition:all .12s;font-family:inherit;margin-bottom:4px}
+.wdp-direct:hover{background:#DCFCE7;transform:translateX(-2px)}
+.wdp-direct i{color:#16A34A;font-size:14px;flex-shrink:0}
+.wdp-direct span{font-size:12px;font-weight:600;color:#166534;flex:1}
+.wdp-direct .wdp-arrow{color:#86EFAC;font-size:11px;flex-shrink:0}
+.wdp-divider{font-size:9px;font-weight:700;color:#94A3B8;padding:6px 10px 4px;display:flex;align-items:center;gap:6px;letter-spacing:.3px}
+.wdp-divider::after{content:'';flex:1;height:1px;background:#E2E8F0}
+.wdp-drafts{max-height:200px;overflow-y:auto;padding:0 2px}
+.wdp-draft{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid transparent;background:#fff;cursor:pointer;width:100%;text-align:right;transition:all .12s;font-family:inherit;margin-bottom:2px}
+.wdp-draft:hover{border-color:#25D366;background:#F0FDF4;transform:translateX(-2px)}
+.wdp-draft-icon{width:26px;height:26px;background:#F0FDF4;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#128C7E;flex-shrink:0;margin-top:1px}
+.wdp-draft-info{flex:1;min-width:0}
+.wdp-draft-name{font-size:11px;font-weight:700;color:#1E293B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wdp-draft-preview{font-size:9px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;direction:rtl}
+.wdp-empty{text-align:center;padding:16px 10px;color:#94A3B8;font-size:11px;font-weight:600}
+.wdp-empty i{font-size:18px;display:block;margin-bottom:4px;color:#CBD5E1}
+.wdp-loading{text-align:center;padding:20px;color:#64748B;font-size:12px}
+.wdp-loading i{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.tippy-box[data-theme~='wdp']{background:#fff;color:#1E293B;border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.15);padding:0;border:1px solid #E2E8F0;overflow:hidden}
+.tippy-box[data-theme~='wdp'] .tippy-content{padding:0}
+.tippy-box[data-theme~='wdp'] .tippy-arrow{color:#fff}
+</style>
+
 <script>
 window._bulkSmsPhones = <?= json_encode($allPhonesList, JSON_UNESCAPED_UNICODE) ?>;
 
-function openWhatsApp(phone) {
-    window.location.href = 'whatsapp://send?phone=' + encodeURIComponent(phone);
-}
+var WaDraftPicker = (function() {
+    var _cache = null;
+
+    function _esc(s) {
+        var d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function _resolvePreview(text) {
+        if (typeof SmsDrafts !== 'undefined' && SmsDrafts.resolveVars) {
+            return SmsDrafts.resolveVars(text);
+        }
+        return text;
+    }
+
+    function _openWa(phone, text) {
+        var url = 'whatsapp://send?phone=' + encodeURIComponent(phone);
+        if (text) url += '&text=' + encodeURIComponent(text);
+        window.location.href = url;
+    }
+
+    function _buildContent(phone, drafts) {
+        var html = '<div class="wdp-popover">';
+        html += '<div class="wdp-hdr"><div class="wdp-hdr-icon"><i class="fa fa-whatsapp"></i></div>';
+        html += '<div class="wdp-hdr-text"><div class="wdp-hdr-title">\u0648\u0627\u062A\u0633\u0627\u0628 \u2014 \u0627\u062E\u062A\u0631 \u0631\u0633\u0627\u0644\u0629</div>';
+        html += '<div class="wdp-hdr-phone">' + _esc(phone) + '</div></div></div>';
+        html += '<div class="wdp-body">';
+
+        html += '<button type="button" class="wdp-direct" data-wdp-action="direct" data-wdp-phone="' + _esc(phone) + '">';
+        html += '<i class="fa fa-paper-plane"></i><span>\u0641\u062A\u062D \u0628\u062F\u0648\u0646 \u0631\u0633\u0627\u0644\u0629</span><span class="wdp-arrow"><i class="fa fa-arrow-left"></i></span></button>';
+
+        if (!drafts || !drafts.length) {
+            html += '<div class="wdp-divider">\u0627\u0644\u0645\u0633\u0648\u062F\u0627\u062A</div>';
+            html += '<div class="wdp-empty"><i class="fa fa-inbox"></i>\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u0633\u0648\u062F\u0627\u062A<br>\u0623\u0646\u0634\u0626 \u0645\u0633\u0648\u062F\u0629 \u0645\u0646 \u0646\u0627\u0641\u0630\u0629 SMS</div>';
+        } else {
+            html += '<div class="wdp-divider">\u0627\u0644\u0645\u0633\u0648\u062F\u0627\u062A (' + drafts.length + ')</div>';
+            html += '<div class="wdp-drafts">';
+            for (var i = 0; i < drafts.length; i++) {
+                var d = drafts[i];
+                var resolved = _resolvePreview(d.text);
+                var preview = resolved.length > 45 ? resolved.substring(0, 45) + '...' : resolved;
+                html += '<button type="button" class="wdp-draft" data-wdp-action="draft" data-wdp-phone="' + _esc(phone) + '" data-wdp-text="' + _esc(d.text) + '">';
+                html += '<div class="wdp-draft-icon"><i class="fa fa-file-text-o"></i></div>';
+                html += '<div class="wdp-draft-info"><div class="wdp-draft-name">' + _esc(d.name) + '</div>';
+                html += '<div class="wdp-draft-preview">' + _esc(preview) + '</div></div></button>';
+            }
+            html += '</div>';
+        }
+
+        html += '</div></div>';
+        return html;
+    }
+
+    function _buildLoading(phone) {
+        var html = '<div class="wdp-popover">';
+        html += '<div class="wdp-hdr"><div class="wdp-hdr-icon"><i class="fa fa-whatsapp"></i></div>';
+        html += '<div class="wdp-hdr-text"><div class="wdp-hdr-title">\u0648\u0627\u062A\u0633\u0627\u0628</div>';
+        html += '<div class="wdp-hdr-phone">' + _esc(phone) + '</div></div></div>';
+        html += '<div class="wdp-body"><div class="wdp-loading"><i class="fa fa-spinner"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...</div></div></div>';
+        return html;
+    }
+
+    function _handleClick(e) {
+        var btn = e.target.closest('[data-wdp-action]');
+        if (!btn) return;
+        var phone = btn.getAttribute('data-wdp-phone');
+        var action = btn.getAttribute('data-wdp-action');
+
+        if (action === 'direct') {
+            _openWa(phone, '');
+        } else if (action === 'draft') {
+            var rawText = btn.getAttribute('data-wdp-text');
+            var resolved = _resolvePreview(rawText);
+            _openWa(phone, resolved);
+        }
+
+        document.querySelectorAll('.pn-wa-btn').forEach(function(b) {
+            if (b._tippy) b._tippy.hide();
+        });
+    }
+
+    function _fetchAndRender(instance, phone) {
+        var urls = (typeof OCP_CONFIG !== 'undefined' && OCP_CONFIG.urls) ? OCP_CONFIG.urls : {};
+        var listUrl = urls.smsDraftList || '';
+        if (!listUrl) {
+            instance.setContent(_buildContent(phone, []));
+            return;
+        }
+
+        if (_cache !== null) {
+            instance.setContent(_buildContent(phone, _cache));
+            return;
+        }
+
+        $.get(listUrl, function(res) {
+            _cache = (res && res.drafts) ? res.drafts : [];
+            instance.setContent(_buildContent(phone, _cache));
+        }).fail(function() {
+            instance.setContent(_buildContent(phone, []));
+        });
+    }
+
+    function init() {
+        document.querySelectorAll('.pn-wa-btn').forEach(function(btn) {
+            if (btn._tippy) btn._tippy.destroy();
+            var phone = btn.getAttribute('data-wa-phone');
+
+            tippy(btn, {
+                content: _buildLoading(phone),
+                allowHTML: true,
+                interactive: true,
+                trigger: 'click',
+                placement: 'bottom',
+                appendTo: document.body,
+                maxWidth: 300,
+                animation: 'shift-away',
+                theme: 'wdp',
+                onShow: function(instance) {
+                    _fetchAndRender(instance, phone);
+                },
+                onClickOutside: function(instance) {
+                    instance.hide();
+                },
+                onMount: function(instance) {
+                    instance.popper.addEventListener('click', _handleClick);
+                },
+                onHide: function(instance) {
+                    instance.popper.removeEventListener('click', _handleClick);
+                }
+            });
+        });
+    }
+
+    function invalidateCache() { _cache = null; }
+
+    if (typeof $ !== 'undefined') {
+        $(function() { init(); });
+    } else {
+        document.addEventListener('DOMContentLoaded', init);
+    }
+
+    return { init: init, invalidateCache: invalidateCache };
+})();
 
 var _callToastTimer = null;
 function _showToast(msg, phone, state) {

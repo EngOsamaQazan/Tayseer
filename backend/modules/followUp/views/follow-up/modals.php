@@ -198,6 +198,9 @@ $contractModel = $contractCalculations->contract_model;
 .bsms-item .bsms-tag{font-size:8px;padding:2px 7px;border-radius:20px;font-weight:700;white-space:nowrap;letter-spacing:.2px}
 .bsms-item .bsms-tag.primary{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0}
 .bsms-item .bsms-tag.extra{background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE}
+.bsms-item .bsms-wa-btn{width:24px;height:24px;border:none;border-radius:6px;background:#F0FDF4;color:#16A34A;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:12px;transition:all .15s;flex-shrink:0;padding:0}
+.bsms-item .bsms-wa-btn:hover{background:#DCFCE7;color:#15803D;transform:scale(1.1)}
+.bsms-item.excluded .bsms-wa-btn{opacity:.3;pointer-events:none}
 
 .bsms-textarea-wrap{position:relative}
 .bsms-textarea-wrap textarea{width:100%;border:1.5px solid #E2E8F0;border-radius:10px;padding:12px 14px 32px;font-size:13px;line-height:1.6;resize:vertical;min-height:120px;outline:none;transition:all .2s;background:#FAFBFC;color:#1E293B}
@@ -243,6 +246,9 @@ $contractModel = $contractCalculations->contract_model;
 .bsms-footer .bsms-btn-send{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;border:none;border-radius:10px;padding:10px 28px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 2px 12px rgba(124,58,237,.3)}
 .bsms-footer .bsms-btn-send:hover:not(:disabled){box-shadow:0 4px 20px rgba(124,58,237,.4);transform:translateY(-1px)}
 .bsms-footer .bsms-btn-send:disabled{opacity:.5;cursor:not-allowed}
+.bsms-footer .bsms-btn-wa{background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .2s;box-shadow:0 2px 12px rgba(37,211,102,.3)}
+.bsms-footer .bsms-btn-wa:hover:not(:disabled){box-shadow:0 4px 20px rgba(37,211,102,.4);transform:translateY(-1px)}
+.bsms-footer .bsms-btn-wa:disabled{opacity:.5;cursor:not-allowed}
 .bsms-footer .bsms-btn-close{background:#F1F5F9;color:#475569;border:1.5px solid #E2E8F0;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
 .bsms-footer .bsms-btn-close:hover{background:#E2E8F0;border-color:#CBD5E1}
 
@@ -353,7 +359,10 @@ $contractModel = $contractCalculations->contract_model;
             <!-- Footer -->
             <div class="bsms-footer">
                 <button type="button" class="bsms-btn-send" id="bsms-send-btn" onclick="BulkSms.send()">
-                    <i class="fa fa-paper-plane"></i> إرسال للمحددين
+                    <i class="fa fa-paper-plane"></i> إرسال SMS للمحددين
+                </button>
+                <button type="button" class="bsms-btn-wa" id="bsms-wa-send-btn" onclick="BulkSms.sendWhatsApp()">
+                    <i class="fa fa-whatsapp"></i> إرسال واتساب للمحددين
                 </button>
                 <button type="button" class="bsms-btn-close" data-bs-dismiss="modal"><i class="fa fa-times"></i> إغلاق</button>
             </div>
@@ -417,6 +426,13 @@ $contractModel = $contractCalculations->contract_model;
 .ci-input[disabled]::-webkit-calendar-picker-indicator{display:none}
 select.ci-input:disabled{-webkit-appearance:none;-moz-appearance:none;background-image:none}
 select.ci-input:not(:disabled){-webkit-appearance:auto;-moz-appearance:auto}
+.ci-field .select2-container{width:100%!important}
+.ci-field .select2-container--bootstrap4 .select2-selection--single{border:1.5px solid #E2E8F0;border-radius:6px;height:29px;padding:2px 8px;font-size:13px;font-weight:600;color:#1E293B;background:#fff}
+.ci-field .select2-container--bootstrap4 .select2-selection--single .select2-selection__rendered{color:#1E293B;padding:0;line-height:23px;font-weight:600;font-size:13px}
+.ci-field .select2-container--bootstrap4 .select2-selection--single .select2-selection__arrow{height:27px}
+.ci-field.ci-editing .select2-container--bootstrap4 .select2-selection--single{border-color:var(--ocp-primary,#6B1D3D);box-shadow:0 0 0 3px rgba(107,29,61,.1)}
+.ci-field .select2-container--disabled .select2-selection--single{background:#FAFBFC;border-color:transparent;cursor:pointer}
+.ci-field .select2-container--disabled .select2-selection--single .select2-selection__arrow{display:none}
 textarea.ci-input{resize:vertical;min-height:50px}
 textarea.ci-input:disabled{resize:none}
 .ci-field.ci-editing{border-color:var(--ocp-primary,#6B1D3D);background:#fff;box-shadow:0 0 0 3px rgba(107,29,61,.08)}
@@ -507,6 +523,32 @@ $selectOpts = function($items, $cls, $field) {
         </div>
     </div>
 </div>
+<?php
+$this->registerJs(<<<'CISELECT2'
+(function(){
+    var $modal = $('#customerInfoModal');
+    var ciSelects = $modal.find('select.ci-input').filter(function(){
+        return this.options.length >= 6;
+    });
+    ciSelects.each(function(){
+        var $sel = $(this);
+        $sel.select2({
+            theme: 'bootstrap4',
+            dir: 'rtl',
+            width: '100%',
+            allowClear: true,
+            placeholder: '—',
+            dropdownParent: $modal
+        });
+        $sel.next('.select2-container').on('dblclick', function(e){
+            e.stopPropagation();
+            CiEdit.toggleField($sel[0]);
+        });
+    });
+})();
+CISELECT2
+);
+?>
 
 <!-- ═══ نافذة صور العملاء ═══ -->
 <div class="modal fade" id="customerImagesModal" tabindex="-1" role="dialog">

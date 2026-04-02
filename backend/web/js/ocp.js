@@ -112,8 +112,24 @@
         },
 
         // ═══════════════════════════════════════
-        // ACTION CENTER
+        // COMMAND BAR DROPDOWNS
         // ═══════════════════════════════════════
+        toggleDropdown: function (id) {
+            var menu = document.getElementById(id);
+            if (!menu) return;
+            var wasOpen = menu.classList.contains('open');
+            this._closeAllDropdowns();
+            if (!wasOpen) {
+                menu.classList.add('open');
+            }
+        },
+
+        _closeAllDropdowns: function () {
+            document.querySelectorAll('.ocp-cmd-dropdown__menu.open').forEach(function (m) {
+                m.classList.remove('open');
+            });
+        },
+
         toggleMoreActions: function () {
             var el = document.getElementById('ocp-more-actions');
             if (el) {
@@ -694,8 +710,23 @@
         init: function () {
             this._initKeyboardShortcuts();
             this._initMobileAccordion();
+            this._initDropdownClickOutside();
             this.scrollTimelineToBottom();
             this.checkTimelineOverflow();
+        },
+
+        _initDropdownClickOutside: function () {
+            var self = this;
+            document.addEventListener('click', function (e) {
+                if (!e.target.closest('.ocp-cmd-dropdown')) {
+                    self._closeAllDropdowns();
+                }
+            });
+            document.querySelectorAll('.ocp-cmd-dropdown__item').forEach(function (item) {
+                item.addEventListener('click', function () {
+                    self._closeAllDropdowns();
+                });
+            });
         }
     };
 
