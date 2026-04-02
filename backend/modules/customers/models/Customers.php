@@ -177,6 +177,9 @@ class Customers extends \yii\db\ActiveRecord
                 'when' => function ($models) {
                     return ($models->is_social_security == 1) ? true : false;
                 },
+                'whenClient' => "function(attribute, value) {
+                    return $('#customers-is_social_security').val() == '1';
+                }",
                 'on' => 'create'
             ],
         ];

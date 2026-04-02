@@ -58,3 +58,54 @@ DynamicFormWidget::begin([
 <button type="button" class="phone-numbers-add-item btn btn-success btn-xs"><i class="fa fa-plus"></i> إضافة معرّف</button>
 
 <?php DynamicFormWidget::end() ?>
+
+<?php
+$utilsUrl = \backend\helpers\PhoneInputAsset::register($this)->baseUrl . '/js/utils.js';
+$absUtilsUrl = \yii\helpers\Url::to($utilsUrl, true);
+$phoneAfterInsertJs = <<<JS
+$('.dynamicform_wrapper2').on('afterInsert', function(e, item) {
+    var \$item = $(item);
+    var telInput = \$item.find('input[type="tel"]')[0];
+    if (!telInput) return;
+
+    // Clean cloned intl-tel-input wrapper if present
+    var \$iti = \$item.find('.iti');
+    if (\$iti.length) {
+        \$iti.find('.iti__country-container').remove();
+        $(telInput).unwrap();
+    }
+    $(telInput).removeClass('iti__tel-input');
+    telInput.removeAttribute('data-intl-tel-input-id');
+    telInput.style.paddingLeft = '';
+    telInput.placeholder = '';
+    delete telInput._iti;
+    $(telInput).val('');
+
+    var iti = window.intlTelInput(telInput, {
+        initialCountry: 'jo',
+        countryOrder: ['jo','ps','sa','iq','eg','sy','lb','ae'],
+        separateDialCode: true,
+        countrySearch: true,
+        formatAsYouType: true,
+        strictMode: true,
+        countryNameLocale: 'ar',
+        i18n: {
+            searchPlaceholder: 'بحث عن دولة...',
+            noCountrySelected: 'اختر الدولة',
+            countryListAriaLabel: 'قائمة الدول',
+            searchEmptyState: 'لا توجد نتائج'
+        },
+        loadUtils: function(){ return import('$absUtilsUrl'); }
+    });
+    telInput._iti = iti;
+
+    var form = telInput.closest('form');
+    if (form) {
+        form.addEventListener('submit', function(){
+            if (telInput._iti) telInput.value = telInput._iti.getNumber();
+        });
+    }
+});
+JS;
+$this->registerJs($phoneAfterInsertJs);
+?>

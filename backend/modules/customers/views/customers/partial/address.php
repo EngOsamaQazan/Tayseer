@@ -716,18 +716,57 @@ $js = <<<JS
         }
     });
 
-    // Init map for newly added address item
+    // Init map for newly added address items
+    function initNewAddrPanel(panel) {
+        if (!panel.data('_addr_inited')) {
+            panel.data('_addr_inited', true);
+            var uid = 'new-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+            panel.attr('data-addr-idx', uid);
+            panel.removeData('addr-idx');
+
+            var oldC = panel.find('.addr-map-container');
+            if (oldC.length) {
+                var freshC = jQuery('<div class="addr-map-container" style="height:350px;border-radius:8px;margin-top:8px"></div>');
+                oldC.replaceWith(freshC);
+            }
+
+            panel.find('gmp-place-autocomplete, [id^="gmp-place-input-"]').remove();
+            panel.find('.addr-map-search').show().val('');
+            panel.find('.addr-map-search-btn').show();
+            if (!panel.find('.addr-map-search-results').length) {
+                panel.find('.addr-map-search-wrap').append('<div class="addr-map-search-results"></div>');
+            }
+
+            panel.find('.addr-lat, .addr-lng, .addr-plus-code').val('');
+            panel.find('.addr-smart-paste').val('');
+            panel.find('.addr-smart-result').removeClass('show');
+
+            setTimeout(function() {
+                var entry = initMap(panel);
+                if (entry) {
+                    setTimeout(function(){ entry.map.invalidateSize(); }, 200);
+                    setTimeout(function(){ entry.map.invalidateSize(); }, 600);
+                }
+            }, 300);
+        }
+    }
+
+    // Primary: afterInsert event from DynamicFormWidget
     $('.dynamicform_wrapper').on('afterInsert', function(e, item) {
-        var newIdx = 'new-' + Date.now();
-        $(item).attr('data-addr-idx', newIdx);
-        $(item).find('.addr-map-container').empty();
-        $(item).find('.addr-lat, .addr-lng, .addr-plus-code').val('');
-        $(item).find('.addr-smart-paste').val('');
-        $(item).find('.addr-smart-result').removeClass('show');
+        initNewAddrPanel($(item));
+    });
+
+    // Fallback: click handler on add button for cases where afterInsert doesn't fire
+    $(document).on('click', '.addrres-add-item', function() {
         setTimeout(function() {
-            var entry = initMap($(item));
-            if (entry) setTimeout(function(){ entry.map.invalidateSize(); }, 200);
-        }, 300);
+            $('.addrres-item').each(function() {
+                var p = $(this);
+                var container = p.find('.addr-map-container')[0];
+                if (container && !$(container).data('leafletMap') && !p.data('_addr_inited')) {
+                    initNewAddrPanel(p);
+                }
+            });
+        }, 400);
     });
 
     /* Fix Leaflet map rendering */
