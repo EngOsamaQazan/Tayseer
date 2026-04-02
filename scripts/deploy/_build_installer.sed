@@ -15,13 +15,13 @@ DisplayLicense=
 FinishMessage=
 TargetName=C:\Users\Administrator\Desktop\Tayseer\scripts\deploy\TayseerCallSetup.exe
 FriendlyName=Tayseer ERP - ADB Call Service
-AppLaunched=_install_adb.bat
+AppLaunched=cmd /c setup.bat
 PostInstallCmd=<None>
 AdminQuietInstCmd=
 UserQuietInstCmd=
 SourceFiles=SourceFiles
 [Strings]
-FILE0="_install_adb.bat"
+FILE0="setup.bat"
 FILE1="_adb_call_server.ps1"
 [SourceFiles]
 SourceFiles0=C:\Users\Administrator\Desktop\Tayseer\scripts\deploy\
