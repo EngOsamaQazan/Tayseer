@@ -34,8 +34,20 @@ $allParties = $contractModel ? $contractModel->contractsCustomers : [];
 .pn-primary-number{font-size:15px;font-weight:700;color:#1E293B;direction:ltr;font-family:'Courier New',monospace}
 .pn-primary-social{display:flex;gap:4px;margin-right:auto}
 .pn-contact-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;text-decoration:none;transition:all .15s;border:none;cursor:pointer;font-size:14px}
-.pn-contact-btn.call{background:#EFF6FF;color:#2563EB}
+.pn-contact-btn.call{background:#EFF6FF;color:#2563EB;position:relative}
 .pn-contact-btn.call:hover{background:#DBEAFE}
+@keyframes pn-ring{0%,100%{transform:rotate(0)}10%{transform:rotate(14deg)}20%{transform:rotate(-14deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-10deg)}50%{transform:rotate(6deg)}60%{transform:rotate(-6deg)}70%{transform:rotate(2deg)}80%{transform:rotate(0)}}
+@keyframes pn-pulse{0%{box-shadow:0 0 0 0 rgba(37,99,235,.5)}70%{box-shadow:0 0 0 10px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+.pn-contact-btn.call.pn-calling{background:#2563EB;color:#fff;animation:pn-ring .8s ease-in-out infinite,pn-pulse 1.2s ease-out infinite;pointer-events:none}
+.pn-call-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1E293B;color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;z-index:9999;opacity:0;transition:transform .35s cubic-bezier(.4,0,.2,1),opacity .35s;box-shadow:0 8px 24px rgba(0,0,0,.18);direction:rtl;pointer-events:none}
+.pn-call-toast.pn-show{transform:translateX(-50%) translateY(0);opacity:1}
+.pn-call-toast.pn-hide{transform:translateX(-50%) translateY(80px);opacity:0}
+.pn-call-toast i{font-size:16px;color:#60A5FA;animation:pn-ring .8s ease-in-out infinite}
+.pn-call-toast .pn-toast-num{direction:ltr;font-family:'Courier New',monospace;color:#93C5FD;font-weight:700}
+.pn-call-toast.pn-success{background:#065F46}
+.pn-call-toast.pn-success i{color:#34D399;animation:none}
+.pn-call-toast.pn-error{background:#991B1B}
+.pn-call-toast.pn-error i{color:#FCA5A5;animation:none}
 .pn-contact-btn.whatsapp{background:#F0FDF4;color:#16A34A}
 .pn-contact-btn.whatsapp:hover{background:#DCFCE7}
 .pn-contact-btn.facebook{background:#EFF6FF;color:#1D4ED8}
@@ -146,7 +158,7 @@ foreach ($allParties as $_cc) {
                         <div class="pn-primary-number"><?= Html::encode($ppLocal) ?></div>
                     </div>
                     <div class="pn-primary-social">
-                        <a class="pn-contact-btn call" href="tel:<?= Html::encode($ppTel) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
+                        <a class="pn-contact-btn call" href="javascript:void(0)" onclick="makeCall('<?= Html::encode($ppTel) ?>', this)" title="اتصال"><i class="fa fa-phone"></i></a>
                         <a class="pn-contact-btn whatsapp" href="javascript:void(0)" onclick="openWhatsApp('<?= Html::encode($ppWa) ?>')" title="واتساب"><i class="fa fa-whatsapp"></i></a>
                         <?php if (!empty($cust->facebook_account)): ?>
                         <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($cust->facebook_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
@@ -177,7 +189,7 @@ foreach ($allParties as $_cc) {
                         <span class="pn-extra-relation"><?= Html::encode($relation->name) ?></span>
                         <?php endif; ?>
                         <div class="pn-extra-actions">
-                            <a class="pn-contact-btn call" href="tel:<?= Html::encode($pnTel) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
+                            <a class="pn-contact-btn call" href="javascript:void(0)" onclick="makeCall('<?= Html::encode($pnTel) ?>', this)" title="اتصال"><i class="fa fa-phone"></i></a>
                             <a class="pn-contact-btn whatsapp" href="javascript:void(0)" onclick="openWhatsApp('<?= Html::encode($pnWa) ?>')" title="واتساب"><i class="fa fa-whatsapp"></i></a>
                             <?php if (!empty($pn->fb_account)): ?>
                             <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($pn->fb_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
@@ -200,10 +212,74 @@ foreach ($allParties as $_cc) {
     </div>
 </div>
 
+<div class="pn-call-toast" id="pnCallToast">
+    <i class="fa fa-phone" id="pnCallToastIcon"></i>
+    <span id="pnCallToastMsg"></span>
+</div>
+
 <script>
 window._bulkSmsPhones = <?= json_encode($allPhonesList, JSON_UNESCAPED_UNICODE) ?>;
 
 function openWhatsApp(phone) {
     window.location.href = 'whatsapp://send?phone=' + encodeURIComponent(phone);
+}
+
+var _callToastTimer = null;
+function _showToast(msg, phone, state) {
+    var toast = document.getElementById('pnCallToast');
+    var icon = document.getElementById('pnCallToastIcon');
+    var msgEl = document.getElementById('pnCallToastMsg');
+
+    toast.className = 'pn-call-toast';
+    if (state === 'success') toast.classList.add('pn-success');
+    else if (state === 'error') toast.classList.add('pn-error');
+
+    icon.className = state === 'success' ? 'fa fa-check-circle'
+                   : state === 'error'   ? 'fa fa-exclamation-circle'
+                   : 'fa fa-phone';
+    msgEl.innerHTML = msg + (phone ? '<span class="pn-toast-num">' + phone + '</span>' : '');
+    toast.classList.add('pn-show');
+
+    if (_callToastTimer) clearTimeout(_callToastTimer);
+    _callToastTimer = setTimeout(function() {
+        toast.classList.remove('pn-show');
+        toast.classList.add('pn-hide');
+    }, state ? 4000 : 8000);
+}
+
+function makeCall(phone, btn) {
+    if (btn.classList.contains('pn-calling')) return;
+    btn.classList.add('pn-calling');
+    _showToast('جاري الاتصال بـ ', phone, null);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '<?= Url::to(['/followUp/follow-up/adb-call']) ?>');
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.setRequestHeader('X-CSRF-Token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+    xhr.timeout = 8000;
+
+    xhr.onload = function() {
+        btn.classList.remove('pn-calling');
+        try {
+            var res = JSON.parse(xhr.responseText);
+            if (res.ok) {
+                _showToast('تم بدء الاتصال بـ ', phone, 'success');
+            } else {
+                _showToast(res.error || 'فشل الاتصال', '', 'error');
+                window.location.href = 'tel:' + encodeURIComponent(phone);
+            }
+        } catch(e) {
+            _showToast('خطأ في الاستجابة', '', 'error');
+            window.location.href = 'tel:' + encodeURIComponent(phone);
+        }
+    };
+
+    xhr.onerror = xhr.ontimeout = function() {
+        btn.classList.remove('pn-calling');
+        _showToast('ADB غير متاح — يتم استخدام Phone Link', '', 'error');
+        window.location.href = 'tel:' + encodeURIComponent(phone);
+    };
+
+    xhr.send('phone=' + encodeURIComponent(phone));
 }
 </script>

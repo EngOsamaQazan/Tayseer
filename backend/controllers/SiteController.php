@@ -43,7 +43,7 @@ class SiteController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'test-whatsapp-message', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete'],
+                        'actions' => ['system-settings', 'test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'test-whatsapp-message', 'server-backup', 'image-manager', 'image-manager-data', 'image-reassign', 'image-manager-stats', 'image-search-customers', 'image-update-doc-type', 'image-delete', 'download-adb-installer'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -1566,5 +1566,17 @@ class SiteController extends Controller
         if (!$deletedFile) $msg .= " (الملف كان مفقوداً أصلاً)";
 
         return ['success' => true, 'message' => $msg];
+    }
+
+    /**
+     * Download the ADB installer batch file for desktop call integration.
+     */
+    public function actionDownloadAdbInstaller()
+    {
+        $file = Yii::getAlias('@backend/../scripts/deploy/_install_adb.bat');
+        if (!file_exists($file)) {
+            throw new \yii\web\NotFoundHttpException('ملف التثبيت غير موجود');
+        }
+        return Yii::$app->response->sendFile($file, 'Tayseer_ADB_Installer.bat');
     }
 }

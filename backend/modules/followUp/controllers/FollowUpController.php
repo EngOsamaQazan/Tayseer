@@ -63,7 +63,8 @@ class FollowUpController extends Controller
                     [
                         'actions' => ['create', 'save-follow-up', 'create-task',
                             'send-sms', 'bulk-send-sms', 'add-new-loan',
-                            'sms-draft-list', 'sms-draft-save', 'sms-draft-delete'],
+                            'sms-draft-list', 'sms-draft-save', 'sms-draft-delete',
+                            'adb-call'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -93,6 +94,7 @@ class FollowUpController extends Controller
                 'class' => VerbFilter::className(),
                 'actions' => [
                     'logout' => ['post'],
+                    'adb-call' => ['post'],
                 ],
             ],
         ];
@@ -1451,5 +1453,42 @@ class FollowUpController extends Controller
         } catch (\Exception $e) {
             Yii::error('SLA Creation Error: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Initiate a phone call via ADB on a USB-connected Android device.
+     * POST /followUp/follow-up/adb-call  { phone: "+962..." }
+     */
+    public function actionAdbCall()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $phone = Yii::$app->request->post('phone', '');
+        $phone = preg_replace('/[^0-9+]/', '', $phone);
+
+        if (!preg_match('/^\+?[0-9]{7,15}$/', $phone)) {
+            return ['ok' => false, 'error' => 'رقم هاتف غير صالح'];
+        }
+
+        $adb = 'C:\\platform-tools\\adb.exe';
+        if (!file_exists($adb)) {
+            return ['ok' => false, 'error' => 'ADB غير مثبت على هذا الجهاز'];
+        }
+
+        $devCheck = shell_exec('"' . $adb . '" devices 2>&1');
+        if (strpos($devCheck, 'unauthorized') !== false) {
+            return ['ok' => false, 'error' => 'الموبايل متصل لكن غير مصرّح — اضغط Allow على الموبايل', 'status' => 'unauthorized'];
+        }
+        if (!preg_match('/\t\s*device\s*$/m', $devCheck)) {
+            return ['ok' => false, 'error' => 'لا يوجد موبايل متصل عبر USB', 'status' => 'no_device'];
+        }
+
+        $escapedPhone = escapeshellarg('tel:' . $phone);
+        $cmd = '"' . $adb . '" shell am start -a android.intent.action.CALL -d ' . $escapedPhone . ' 2>&1';
+        $output = shell_exec($cmd);
+
+        $success = strpos($output, 'Starting') !== false || strpos($output, 'Activity') !== false;
+
+        return ['ok' => $success, 'output' => $output, 'phone' => $phone];
     }
 }

@@ -2563,6 +2563,29 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                     </div>
                 </div>
 
+                <!-- ── 6. أدوات سطح المكتب ── -->
+                <div class="gs-category" data-category="desktop">
+                    <div class="gs-category-header">
+                        <div class="gs-category-icon" style="background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);">
+                            <i class="fa fa-desktop"></i>
+                        </div>
+                        <div>
+                            <h3>أدوات سطح المكتب</h3>
+                            <p>برامج مساعدة لربط الأجهزة وتحسين الأداء</p>
+                        </div>
+                    </div>
+                    <div class="gs-items-grid">
+                        <a href="<?= Url::to(['/site/download-adb-installer']) ?>" class="gs-item" data-search="ADB اتصال هاتف USB تثبيت call phone installer">
+                            <div class="gs-item-icon" style="color:#2563EB"><i class="fa fa-phone"></i></div>
+                            <div class="gs-item-text">
+                                <span class="gs-item-label">أداة الاتصال عبر USB</span>
+                                <span class="gs-item-desc">تحميل وتثبيت ADB للاتصال المباشر من النظام عبر كيبل USB — بدون بلوتوث</span>
+                            </div>
+                            <i class="fa fa-download gs-item-arrow" style="color:#2563EB"></i>
+                        </a>
+                    </div>
+                </div>
+
                 <!-- No results message -->
                 <div class="gs-no-results" id="gs-no-results" style="display:none;">
                     <i class="fa fa-search fa-3x"></i>
