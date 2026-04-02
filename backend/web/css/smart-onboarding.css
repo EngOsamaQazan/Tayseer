@@ -244,7 +244,7 @@
 .rp-factor-bar-fill.positive { background: var(--clr-success); }
 .rp-factor-bar-fill.neutral  { background: #f0ad4e; }
 .rp-factor-bar-fill.negative { background: var(--clr-danger); }
-.rp-factor-val { font-size: 11px; font-weight: 600; color: var(--clr-text-muted); min-width: 32px; text-align: left; }
+.rp-factor-val { font-size: 11px; font-weight: 600; color: var(--clr-text-muted); min-width: 32px; text-align: start; }
 
 /* ── Financing Recommendation ── */
 .rp-financing {
@@ -707,4 +707,157 @@
     }
     .rp-summary-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
     .rp-summary-val { font-size: 16px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   RTL — Full Right-to-Left Support
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Page & Form Direction ── */
+.so-page,
+.so-page *,
+.so-page .form-control,
+.so-page select,
+.so-page textarea {
+    direction: rtl;
+    text-align: right;
+}
+.so-page input[type="number"],
+.so-page input[type="tel"],
+.so-page input[type="email"],
+.so-page input[dir="ltr"] {
+    direction: ltr;
+    text-align: left;
+}
+
+/* ── Form Labels ── */
+.so-page .form-group label,
+.so-page .control-label,
+.so-fieldset .form-group label {
+    text-align: right;
+    display: block;
+}
+
+/* ── Fieldset Titles ── */
+.so-fieldset-title {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+}
+.so-fieldset-title i {
+    margin-left: 8px;
+    margin-right: 0;
+}
+
+/* ── Risk Panel ── */
+.so-risk-panel {
+    border-right: none;
+    border-left: 1px solid var(--clr-border);
+}
+
+/* ── Wizard Step Connector ── */
+.so-step:not(:last-child)::after {
+    left: auto;
+    right: -4px;
+    transform: translateX(50%);
+}
+
+/* ── Inline Alerts (RTL: border on right) ── */
+.so-inline-alert-danger  { border-left: none; border-right: 3px solid #c62828; }
+.so-inline-alert-warning { border-left: none; border-right: 3px solid #f0ad4e; }
+.so-inline-alert-info    { border-left: none; border-right: 3px solid #1565c0; }
+.so-inline-alert-close   { margin-right: 0; margin-left: auto; }
+
+/* ── Address Panel ── */
+.addr-panel-hdr { flex-direction: row-reverse; }
+.addr-panel-actions { flex-direction: row-reverse; }
+
+/* Map search: icon on right in RTL */
+.addr-map-search {
+    padding-left: 12px;
+    padding-right: 40px;
+}
+.addr-map-search-btn {
+    left: auto;
+    right: 4px;
+}
+.addr-map-search-results { text-align: right; }
+.addr-map-search-results .result-item { flex-direction: row-reverse; }
+
+/* Smart paste section */
+.addr-smart-loc label { text-align: right; }
+.addr-smart-hint { text-align: right; }
+
+/* ── Phone / Address Dynamic Form Cards ── */
+.so-fieldset .card .card-body .row { direction: rtl; }
+.so-fieldset .phone-numbers-remove-item,
+.so-fieldset .addrres-remove-item,
+.so-fieldset .customer-documents-remove-item {
+    float: left;
+}
+
+/* ── Job Title: Add-Job Button RTL ── */
+.btn-add-job {
+    left: auto;
+    right: 0;
+}
+.job-title-wrapper .select2-container {
+    margin-right: 0;
+    margin-left: auto;
+}
+
+/* ── Quick Links RTL ── */
+.rp-quick-link:hover {
+    transform: translateX(4px);
+}
+.rp-quick-link { flex-direction: row-reverse; }
+
+/* ── Warning Hints ── */
+.so-warn-hint i { margin-left: 0; margin-right: 3px; }
+
+/* ── Duplicate Warning ── */
+.so-duplicate-warn { flex-direction: row-reverse; }
+
+/* ── Details Panel ── */
+.rp-details-row { flex-direction: row-reverse; }
+.rp-details-row i { margin-left: 0; margin-right: 4px; }
+
+/* ── Factors RTL ── */
+.rp-factor { flex-direction: row-reverse; }
+.rp-factor-val { text-align: right; }
+
+/* ── Error Messages ── */
+.so-page .help-block { text-align: right; }
+.so-page .has-error .help-block { text-align: right; }
+
+/* ── Select2 RTL ── */
+.so-page .select2-container { text-align: right; }
+.so-page .select2-container .select2-selection { direction: rtl; }
+
+/* ── Flatpickr RTL ── */
+.so-page .flatpickr-input { text-align: right; }
+
+/* ── Navigation Buttons ── */
+.so-nav { flex-direction: row-reverse; }
+
+/* ── intl-tel-input RTL ── */
+.so-page .iti { direction: ltr; }
+.so-page .iti__selected-dial-code { direction: ltr; }
+
+/* ── Leaflet Controls RTL ── */
+.addr-map-container .leaflet-control-layers { direction: ltr; }
+.addr-map-container .leaflet-control-zoom { direction: ltr; }
+
+/* ── Social Security Conditional Fields ── */
+.so-ss-fieldset .so-ss-row { text-align: right; }
+.so-ss-conditional { text-align: right; }
+
+/* ── Responsive RTL Fix ── */
+@media (max-width: 767px) {
+    .so-risk-panel {
+        border-left: none;
+        border-top: 2px solid var(--clr-primary);
+    }
+    .so-inline-alerts {
+        left: 10px; right: 10px;
+    }
 }
