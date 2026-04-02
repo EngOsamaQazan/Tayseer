@@ -11,6 +11,8 @@ use backend\modules\judiciary\models\Judiciary;
  * @property int $customer_id
  * @property string $current_stage
  * @property string|null $stage_updated_at
+ * @property string|null $notification_date
+ * @property string|null $comprehensive_request_date
  * @property string|null $notes
  */
 class JudiciaryDefendantStage extends \yii\db\ActiveRecord
@@ -27,7 +29,7 @@ class JudiciaryDefendantStage extends \yii\db\ActiveRecord
             [['judiciary_id', 'customer_id'], 'integer'],
             [['current_stage'], 'string', 'max' => 30],
             [['current_stage'], 'default', 'value' => Judiciary::STAGE_CASE_PREPARATION],
-            [['stage_updated_at'], 'safe'],
+            [['stage_updated_at', 'notification_date', 'comprehensive_request_date'], 'safe'],
             [['notes'], 'string'],
             [['judiciary_id', 'customer_id'], 'unique', 'targetAttribute' => ['judiciary_id', 'customer_id']],
         ];
@@ -41,6 +43,8 @@ class JudiciaryDefendantStage extends \yii\db\ActiveRecord
             'customer_id' => 'المحكوم عليه',
             'current_stage' => 'المرحلة الحالية',
             'stage_updated_at' => 'تاريخ تحديث المرحلة',
+            'notification_date' => 'تاريخ التبليغ',
+            'comprehensive_request_date' => 'تاريخ تقديم الطلب الشامل',
             'notes' => 'ملاحظات',
         ];
     }

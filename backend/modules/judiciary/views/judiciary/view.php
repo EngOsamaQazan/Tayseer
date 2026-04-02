@@ -134,6 +134,36 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
 
 .jv-pager{padding:12px 20px;border-top:1px solid #F1F5F9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:#94A3B8}
 
+/* ═══ Execution Summary Dashboard ═══ */
+.jv-exec-stat{background:#fff;border:1px solid #E2E8F0;border-radius:10px;padding:14px 16px;text-align:center;transition:all .2s}
+.jv-exec-stat:hover{box-shadow:0 4px 12px rgba(0,0,0,.06);transform:translateY(-1px)}
+.jv-exec-stat-icon{width:36px;height:36px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px}
+.jv-exec-stat-value{font-size:22px;font-weight:800;color:#1E293B;line-height:1}
+.jv-exec-stat-label{font-size:11px;color:#94A3B8;margin-top:4px;font-weight:500}
+.jv-exec-progress{height:4px;background:#E2E8F0;border-radius:2px;margin-top:8px;overflow:hidden}
+.jv-exec-progress div{height:100%;border-radius:2px;transition:width .6s ease}
+
+.jv-exec-pipeline{overflow:hidden}
+.jv-exec-row{padding:16px 20px;transition:background .15s}
+.jv-exec-row:last-child{border-bottom:none}
+.jv-exec-row:hover{filter:brightness(.98)}
+.jv-exec-row-main{display:grid;grid-template-columns:200px 1fr 280px;gap:16px;align-items:center}
+.jv-exec-defendant{display:flex;align-items:center;gap:10px}
+.jv-exec-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+
+.jv-exec-steps{display:flex;align-items:center;gap:0;justify-content:center}
+.jv-exec-step{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:56px}
+.jv-exec-step-dot{width:28px;height:28px;border-radius:50%;border:2px solid #CBD5E1;background:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;color:#CBD5E1;transition:all .3s}
+.jv-exec-step.done .jv-exec-step-dot{background:#10B981;border-color:#10B981;color:#fff}
+.jv-exec-step-label{font-size:10px;color:#94A3B8;font-weight:600;white-space:nowrap}
+.jv-exec-step.done .jv-exec-step-label{color:#065F46}
+.jv-exec-step-date{font-size:9px;color:#64748B;direction:ltr}
+.jv-exec-step-line{width:24px;height:2px;background:#CBD5E1;margin:0 2px;margin-bottom:16px;transition:background .3s}
+.jv-exec-step-line.done{background:#10B981}
+
+.jv-exec-action{min-width:0}
+.jv-exec-action-btns{display:flex;gap:6px;flex-wrap:wrap}
+
 @media(max-width:768px){
     .jv-header{flex-direction:column;align-items:flex-start}
     .jv-info-grid{grid-template-columns:1fr}
@@ -142,6 +172,9 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
     .jv-action-tools{justify-content:flex-end;padding:0 16px 12px}
     .jv-party-grid{grid-template-columns:1fr}
     .jv-action-meta{gap:10px}
+    .jv-exec-row-main{grid-template-columns:1fr;gap:12px}
+    .jv-exec-steps{flex-wrap:wrap;justify-content:flex-start;gap:4px}
+    .jv-exec-step-line{display:none}
 }
 </style>
 
@@ -341,36 +374,168 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
     </div>
     <?php endif; ?>
 
-    <!-- ═══ Per-Defendant Stage Cards ═══ -->
-    <?php if (!empty($defendantStages)): ?>
-    <div style="margin-bottom:24px">
-        <div class="jv-section-title"><i class="fa fa-user-circle" style="color:#8B5CF6"></i> مراحل المدعى عليهم</div>
-        <div class="jv-party-grid" style="margin-top:12px">
-            <?php foreach ($defendantStages as $ds):
-                $custName = ($ds->customer) ? $ds->customer->name : ('عميل #' . $ds->customer_id);
-                $stageLabel = Judiciary::getStageLabel($ds->current_stage);
-                $dsRank = Judiciary::getStageRank($ds->current_stage);
-                if ($dsRank >= 8) { $badgeBg = '#D1FAE5'; $badgeColor = '#065F46'; }
-                elseif ($dsRank >= 5) { $badgeBg = '#DBEAFE'; $badgeColor = '#1E40AF'; }
-                else { $badgeBg = '#FEF3C7'; $badgeColor = '#92400E'; }
-            ?>
-            <div class="jv-party-chip" style="flex-direction:column;align-items:flex-start;gap:8px;padding:14px 16px">
-                <div style="display:flex;align-items:center;gap:8px;width:100%">
-                    <div class="jv-party-icon" style="background:#F5F3FF;color:#7C3AED;width:32px;height:32px;font-size:12px">
-                        <?= mb_substr($custName, 0, 1) ?>
+    <!-- ═══ Execution Summary Dashboard ═══ -->
+    <?php if (!empty($executionSummary) && ($executionSummary['total_defendants'] ?? 0) > 0): ?>
+    <?php
+        $exSum = $executionSummary;
+        $notifPct = $exSum['total_defendants'] > 0 ? round(($exSum['notified'] / $exSum['total_defendants']) * 100) : 0;
+        $reqPct = $exSum['total_defendants'] > 0 ? round(($exSum['request_submitted'] / $exSum['total_defendants']) * 100) : 0;
+        $markNotifiedUrl = Url::to(['mark-notified']);
+        $submitCompUrl = Url::to(['submit-comprehensive-request']);
+        $bulkCorrUrl = Url::to(['generate-bulk-correspondence']);
+    ?>
+    <div class="jv-card" style="margin-bottom:24px;border:1px solid #E2E8F0;overflow:hidden">
+        <div style="background:linear-gradient(135deg,#1E293B 0%,#334155 100%);padding:20px 24px;color:#fff">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                    <div style="width:42px;height:42px;border-radius:10px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:18px">
+                        <i class="fa fa-dashboard"></i>
                     </div>
-                    <div style="flex:1;min-width:0">
-                        <div class="jv-party-name" style="font-size:12px"><?= Html::encode($custName) ?></div>
+                    <div>
+                        <div style="font-size:16px;font-weight:700">ملخص التنفيذ</div>
+                        <div style="font-size:12px;opacity:.7">تقدّم إجراءات القضية التنفيذية</div>
                     </div>
                 </div>
-                <div style="display:flex;align-items:center;gap:6px;width:100%">
-                    <span style="padding:3px 10px;border-radius:6px;font-size:11px;font-weight:600;background:<?= $badgeBg ?>;color:<?= $badgeColor ?>"><?= $stageLabel ?></span>
-                    <?php if ($ds->stage_updated_at): ?>
-                        <span style="font-size:10px;color:#94A3B8"><i class="fa fa-clock-o"></i> <?= Yii::$app->formatter->asRelativeTime($ds->stage_updated_at) ?></span>
+                <div style="display:flex;gap:6px">
+                    <?= Html::a('<i class="fa fa-file-text"></i> طلب شامل', ['generate-request', 'id' => $model->id], [
+                        'class' => 'btn btn-sm',
+                        'style' => 'background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;font-size:12px;font-weight:600;padding:6px 14px',
+                    ]) ?>
+                </div>
+            </div>
+        </div>
+
+        <div style="padding:20px 24px">
+            <!-- KPI Stats Row -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:24px">
+                <div class="jv-exec-stat">
+                    <div class="jv-exec-stat-icon" style="background:#DBEAFE;color:#1D4ED8"><i class="fa fa-users"></i></div>
+                    <div class="jv-exec-stat-value"><?= $exSum['total_defendants'] ?></div>
+                    <div class="jv-exec-stat-label">محكوم عليهم</div>
+                </div>
+                <div class="jv-exec-stat">
+                    <div class="jv-exec-stat-icon" style="background:<?= $exSum['pending_notification'] > 0 ? '#FEF3C7' : '#D1FAE5' ?>;color:<?= $exSum['pending_notification'] > 0 ? '#92400E' : '#065F46' ?>"><i class="fa fa-bell"></i></div>
+                    <div class="jv-exec-stat-value"><?= $exSum['notified'] ?><span style="font-size:12px;color:#94A3B8;font-weight:400"> / <?= $exSum['total_defendants'] ?></span></div>
+                    <div class="jv-exec-stat-label">تم تبليغهم</div>
+                    <div class="jv-exec-progress" title="<?= $notifPct ?>%"><div style="width:<?= $notifPct ?>%;background:<?= $notifPct >= 100 ? '#10B981' : '#3B82F6' ?>"></div></div>
+                </div>
+                <div class="jv-exec-stat">
+                    <div class="jv-exec-stat-icon" style="background:#EDE9FE;color:#7C3AED"><i class="fa fa-file-text-o"></i></div>
+                    <div class="jv-exec-stat-value"><?= $exSum['request_submitted'] ?><span style="font-size:12px;color:#94A3B8;font-weight:400"> / <?= $exSum['total_defendants'] ?></span></div>
+                    <div class="jv-exec-stat-label">طلب شامل مُقدّم</div>
+                    <div class="jv-exec-progress" title="<?= $reqPct ?>%"><div style="width:<?= $reqPct ?>%;background:<?= $reqPct >= 100 ? '#10B981' : '#8B5CF6' ?>"></div></div>
+                </div>
+                <div class="jv-exec-stat">
+                    <div class="jv-exec-stat-icon" style="background:#F0FDFA;color:#0D9488"><i class="fa fa-envelope"></i></div>
+                    <div class="jv-exec-stat-value"><?= $exSum['total_letters'] ?></div>
+                    <div class="jv-exec-stat-label">كتب صادرة</div>
+                    <?php if ($exSum['total_letters'] > 0): ?>
+                    <div class="jv-exec-progress" title="<?= $exSum['responded_letters'] ?> رد"><div style="width:<?= round(($exSum['responded_letters'] / max(1, $exSum['total_letters'])) * 100) ?>%;background:#0D9488"></div></div>
                     <?php endif; ?>
                 </div>
             </div>
-            <?php endforeach; ?>
+
+            <!-- Per-Defendant Pipeline -->
+            <div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">
+                <div style="background:#F8FAFC;padding:12px 16px;border-bottom:1px solid #E2E8F0;display:flex;align-items:center;justify-content:space-between">
+                    <div style="font-size:13px;font-weight:700;color:#1E293B;display:flex;align-items:center;gap:8px">
+                        <i class="fa fa-list-ol" style="color:#8B5CF6"></i> مسار التنفيذ لكل محكوم عليه
+                    </div>
+                    <div style="font-size:11px;color:#94A3B8">
+                        <i class="fa fa-info-circle"></i> كل محكوم عليه يُعامل بشكل مستقل
+                    </div>
+                </div>
+
+                <div class="jv-exec-pipeline">
+                    <?php foreach ($exSum['defendants'] as $idx => $def):
+                        $statusColors = [
+                            'success' => ['bg' => '#F0FDF4', 'border' => '#BBF7D0', 'color' => '#166534', 'icon' => 'fa-check-circle'],
+                            'info'    => ['bg' => '#EFF6FF', 'border' => '#BFDBFE', 'color' => '#1E40AF', 'icon' => 'fa-hourglass-half'],
+                            'warning' => ['bg' => '#FFFBEB', 'border' => '#FDE68A', 'color' => '#92400E', 'icon' => 'fa-clock-o'],
+                            'danger'  => ['bg' => '#FEF2F2', 'border' => '#FECACA', 'color' => '#991B1B', 'icon' => 'fa-exclamation-circle'],
+                            'pending' => ['bg' => '#F8FAFC', 'border' => '#E2E8F0', 'color' => '#64748B', 'icon' => 'fa-circle-o'],
+                        ];
+                        $sc = $statusColors[$def['status_class']] ?? $statusColors['pending'];
+                    ?>
+                    <div class="jv-exec-row" style="background:<?= $sc['bg'] ?>;border-bottom:1px solid #E2E8F0">
+                        <div class="jv-exec-row-main">
+                            <!-- Defendant Info -->
+                            <div class="jv-exec-defendant">
+                                <div class="jv-exec-avatar" style="background:<?= $sc['border'] ?>;color:<?= $sc['color'] ?>">
+                                    <?= mb_substr($def['name'], 0, 1) ?>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700;font-size:13px;color:#1E293B"><?= Html::encode($def['name']) ?></div>
+                                    <div style="font-size:11px;color:#64748B"><?= Html::encode($def['stage_label']) ?></div>
+                                </div>
+                            </div>
+
+                            <!-- Pipeline Steps -->
+                            <div class="jv-exec-steps">
+                                <?php
+                                $hasNotif = !empty($def['notification_date']);
+                                $hasReq = !empty($def['comprehensive_request_date']);
+                                $steps = [
+                                    ['done' => true, 'label' => 'تسجيل', 'icon' => 'fa-check'],
+                                    ['done' => $hasNotif, 'label' => 'تبليغ', 'icon' => $hasNotif ? 'fa-check' : 'fa-bell', 'date' => $def['notification_date']],
+                                    ['done' => $hasReq, 'label' => 'طلب شامل', 'icon' => $hasReq ? 'fa-check' : 'fa-file-text-o', 'date' => $def['comprehensive_request_date']],
+                                    ['done' => $def['next_action_type'] === 'follow_up', 'label' => 'كتب', 'icon' => ($def['next_action_type'] === 'follow_up') ? 'fa-check' : 'fa-envelope'],
+                                ];
+                                foreach ($steps as $si => $step): ?>
+                                <div class="jv-exec-step <?= $step['done'] ? 'done' : '' ?>">
+                                    <div class="jv-exec-step-dot"><i class="fa <?= $step['icon'] ?>"></i></div>
+                                    <div class="jv-exec-step-label"><?= $step['label'] ?></div>
+                                    <?php if (!empty($step['date'])): ?>
+                                        <div class="jv-exec-step-date"><?= $step['date'] ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php if ($si < count($steps) - 1): ?>
+                                    <div class="jv-exec-step-line <?= $step['done'] ? 'done' : '' ?>"></div>
+                                <?php endif; ?>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <!-- Next Action -->
+                            <div class="jv-exec-action">
+                                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                                    <i class="fa <?= $sc['icon'] ?>" style="color:<?= $sc['color'] ?>;font-size:13px"></i>
+                                    <span style="font-size:12px;font-weight:600;color:<?= $sc['color'] ?>"><?= Html::encode($def['next_action']) ?></span>
+                                </div>
+                                <?php if ($def['next_action_date']): ?>
+                                    <div style="font-size:11px;color:#94A3B8"><i class="fa fa-calendar"></i> <?= $def['next_action_date'] ?></div>
+                                <?php endif; ?>
+
+                                <div class="jv-exec-action-btns" style="margin-top:8px">
+                                    <?php if ($def['next_action_type'] === 'notification'): ?>
+                                        <button type="button" class="btn btn-sm jv-mark-notified-btn"
+                                            data-judiciary="<?= $model->id ?>" data-customer="<?= $def['id'] ?>"
+                                            style="background:#DBEAFE;color:#1D4ED8;border:1px solid #93C5FD;border-radius:6px;font-size:11px;font-weight:600;padding:4px 12px">
+                                            <i class="fa fa-bell"></i> تسجيل التبليغ
+                                        </button>
+                                    <?php elseif ($def['next_action_type'] === 'comprehensive_request' && ($def['days_remaining'] ?? 99) <= 0): ?>
+                                        <button type="button" class="btn btn-sm jv-submit-comp-btn"
+                                            data-judiciary="<?= $model->id ?>" data-customer="<?= $def['id'] ?>"
+                                            style="background:#EDE9FE;color:#7C3AED;border:1px solid #C4B5FD;border-radius:6px;font-size:11px;font-weight:600;padding:4px 12px">
+                                            <i class="fa fa-file-text"></i> تقديم الطلب الشامل
+                                        </button>
+                                        <?= Html::a('<i class="fa fa-print"></i> توليد', ['generate-request', 'id' => $model->id], [
+                                            'style' => 'background:#F1F5F9;color:#475569;border:1px solid #E2E8F0;border-radius:6px;font-size:11px;font-weight:600;padding:4px 12px;text-decoration:none;display:inline-flex;align-items:center;gap:4px',
+                                        ]) ?>
+                                    <?php elseif ($def['next_action_type'] === 'letters'): ?>
+                                        <button type="button" class="btn btn-sm jv-bulk-corr-btn"
+                                            data-judiciary="<?= $model->id ?>" data-customer="<?= $def['id'] ?>"
+                                            data-name="<?= Html::encode($def['name']) ?>"
+                                            style="background:#F0FDFA;color:#0D9488;border:1px solid #99F6E4;border-radius:6px;font-size:11px;font-weight:600;padding:4px 12px">
+                                            <i class="fa fa-paper-plane"></i> إنشاء جميع الكتب
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
         </div>
     </div>
     <?php endif; ?>
@@ -1067,7 +1232,184 @@ JS;
     $sendDocUrl = json_encode(Url::to(['/judiciary/judiciary/send-document']));
     $cancelDocUrl = json_encode(Url::to(['/judiciary/judiciary/cancel-document']));
     $updateReqUrl = json_encode(Url::to(['/judiciary/judiciary/update-request-status']));
-    $this->registerJs("var SEND_DOC_URL = {$sendDocUrl}; var CANCEL_DOC_URL = {$cancelDocUrl}; var UPDATE_REQ_URL = {$updateReqUrl};", \yii\web\View::POS_HEAD);
+    $markNotifiedUrl = json_encode(Url::to(['/judiciary/judiciary/mark-notified']));
+    $submitCompUrl = json_encode(Url::to(['/judiciary/judiciary/submit-comprehensive-request']));
+    $bulkCorrUrl = json_encode(Url::to(['/judiciary/judiciary/generate-bulk-correspondence']));
+    $this->registerJs("var SEND_DOC_URL = {$sendDocUrl}; var CANCEL_DOC_URL = {$cancelDocUrl}; var UPDATE_REQ_URL = {$updateReqUrl}; var MARK_NOTIFIED_URL = {$markNotifiedUrl}; var SUBMIT_COMP_URL = {$submitCompUrl}; var BULK_CORR_URL = {$bulkCorrUrl};", \yii\web\View::POS_HEAD);
+
+    $execJs = <<<'JS'
+    // === Mark Defendant Notified ===
+    $(document).on('click', '.jv-mark-notified-btn', function() {
+        var $btn = $(this);
+        var judiciaryId = $btn.data('judiciary');
+        var customerId = $btn.data('customer');
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تسجيل تبليغ المحكوم عليه',
+                html: '<div style="text-align:right;direction:rtl">' +
+                    '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">تاريخ التبليغ</label>' +
+                    '<input type="date" id="swal-notif-date" class="swal2-input" value="' + new Date().toISOString().split('T')[0] + '" style="text-align:center">' +
+                    '<p style="font-size:12px;color:#64748B;margin-top:10px"><i class="fa fa-info-circle"></i> سيتم حساب موعد الطلب الشامل تلقائياً (16 يوم من التبليغ)</p>' +
+                    '</div>',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa fa-bell"></i> تسجيل التبليغ',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#1D4ED8',
+                preConfirm: function() {
+                    return document.getElementById('swal-notif-date').value;
+                }
+            }).then(function(result) {
+                if (result.isConfirmed && result.value) {
+                    doMarkNotified(judiciaryId, customerId, result.value, $btn);
+                }
+            });
+        } else {
+            var d = prompt('تاريخ التبليغ (YYYY-MM-DD):', new Date().toISOString().split('T')[0]);
+            if (d) doMarkNotified(judiciaryId, customerId, d, $btn);
+        }
+    });
+
+    function doMarkNotified(jid, cid, date, $btn) {
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+        $.post(MARK_NOTIFIED_URL, {judiciary_id: jid, customer_id: cid, notification_date: date, _csrf: yii.getCsrfToken()}, function(res) {
+            if (res.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'success', title:'تم التسجيل', html:'<div style="direction:rtl;text-align:right"><p>' + res.message + '</p></div>', timer:2500, showConfirmButton:false});
+                }
+                setTimeout(function(){ location.reload(); }, 2000);
+            } else {
+                $btn.prop('disabled', false).html('<i class="fa fa-bell"></i> تسجيل التبليغ');
+                alert(res.message);
+            }
+        }, 'json').fail(function() { $btn.prop('disabled', false).html('<i class="fa fa-bell"></i> تسجيل التبليغ'); alert('خطأ'); });
+    }
+
+    // === Submit Comprehensive Request ===
+    $(document).on('click', '.jv-submit-comp-btn', function() {
+        var $btn = $(this);
+        var judiciaryId = $btn.data('judiciary');
+        var customerId = $btn.data('customer');
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'تقديم الطلب الشامل',
+                html: '<div style="text-align:right;direction:rtl">' +
+                    '<label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">تاريخ التقديم</label>' +
+                    '<input type="date" id="swal-req-date" class="swal2-input" value="' + new Date().toISOString().split('T')[0] + '" style="text-align:center">' +
+                    '<div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;padding:12px;margin-top:12px;font-size:12px;color:#1E40AF">' +
+                    '<i class="fa fa-list-ul" style="margin-left:6px"></i> <b>بنود الطلب:</b><br>' +
+                    '• حجز ثلث الراتب<br>• حجز الأموال المنقولة وغير المنقولة<br>• حجز الحسابات البنكية<br>' +
+                    '• حجز حصص الشركات والمؤسسات<br>• حجز المحافظ الإلكترونية<br>• حجز أموال المدين لدى الغير' +
+                    '</div>' +
+                    '<p style="font-size:12px;color:#64748B;margin-top:10px"><i class="fa fa-clock-o"></i> سيتم إنشاء موعد لإصدار الكتب خلال 3 أيام عمل</p>' +
+                    '</div>',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa fa-file-text"></i> تسجيل الطلب الشامل',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#7C3AED',
+                preConfirm: function() {
+                    return document.getElementById('swal-req-date').value;
+                }
+            }).then(function(result) {
+                if (result.isConfirmed && result.value) {
+                    doSubmitComp(judiciaryId, customerId, result.value, $btn);
+                }
+            });
+        } else {
+            if (confirm('هل تريد تسجيل تقديم الطلب الشامل؟')) {
+                doSubmitComp(judiciaryId, customerId, new Date().toISOString().split('T')[0], $btn);
+            }
+        }
+    });
+
+    function doSubmitComp(jid, cid, date, $btn) {
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i>');
+        $.post(SUBMIT_COMP_URL, {judiciary_id: jid, customer_id: cid, request_date: date, _csrf: yii.getCsrfToken()}, function(res) {
+            if (res.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'success', title:'تم التسجيل', html:'<div style="direction:rtl">' + res.message + '</div>', timer:2500, showConfirmButton:false});
+                }
+                setTimeout(function(){ location.reload(); }, 2000);
+            } else {
+                $btn.prop('disabled', false).html('<i class="fa fa-file-text"></i> تقديم الطلب الشامل');
+                alert(res.message);
+            }
+        }, 'json').fail(function() { $btn.prop('disabled', false); alert('خطأ'); });
+    }
+
+    // === Generate Bulk Correspondence ===
+    $(document).on('click', '.jv-bulk-corr-btn', function() {
+        var $btn = $(this);
+        var judiciaryId = $btn.data('judiciary');
+        var customerId = $btn.data('customer');
+        var name = $btn.data('name');
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                title: 'إنشاء جميع الكتب',
+                html: '<div style="text-align:right;direction:rtl">' +
+                    '<p style="font-size:13px;color:#1E293B;margin-bottom:12px">سيتم إنشاء كتب لجميع الجهات المعنية للمحكوم عليه <b>' + name + '</b>:</p>' +
+                    '<div style="background:#F0FDFA;border:1px solid #99F6E4;border-radius:8px;padding:12px;font-size:12px;color:#0D9488">' +
+                    '<i class="fa fa-paper-plane" style="margin-left:6px"></i> <b>الكتب التي ستصدر:</b><br>' +
+                    '• كتاب لجهة العمل (حسم ثلث الراتب)<br>' +
+                    '• كتب لجميع البنوك العاملة (حجز حسابات)<br>' +
+                    '• كتاب لدائرة مراقبة الشركات<br>' +
+                    '• كتاب لوزارة الصناعة والتجارة<br>' +
+                    '• كتب للمحافظ الإلكترونية<br>' +
+                    '• كتاب حجز أموال لدى الغير' +
+                    '</div>' +
+                    '<label style="font-size:13px;font-weight:600;display:block;margin:12px 0 6px">تاريخ الإرسال</label>' +
+                    '<input type="date" id="swal-send-date" class="swal2-input" value="' + new Date().toISOString().split('T')[0] + '" style="text-align:center">' +
+                    '</div>',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa fa-paper-plane"></i> إنشاء الكتب',
+                cancelButtonText: 'إلغاء',
+                confirmButtonColor: '#0D9488',
+                preConfirm: function() {
+                    return document.getElementById('swal-send-date').value;
+                }
+            }).then(function(result) {
+                if (result.isConfirmed && result.value) {
+                    doBulkCorr(judiciaryId, customerId, result.value, $btn);
+                }
+            });
+        } else {
+            if (confirm('هل تريد إنشاء جميع الكتب لهذا المحكوم عليه؟')) {
+                doBulkCorr(judiciaryId, customerId, new Date().toISOString().split('T')[0], $btn);
+            }
+        }
+    });
+
+    function doBulkCorr(jid, cid, sendDate, $btn) {
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الإنشاء...');
+        $.post(BULK_CORR_URL, {judiciary_id: jid, customer_id: cid, send_date: sendDate, _csrf: yii.getCsrfToken()}, function(res) {
+            if (res.success) {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon:'success',
+                        title:'تم إنشاء الكتب',
+                        html:'<div style="direction:rtl;text-align:right"><p style="font-size:14px;font-weight:600;color:#0D9488">' + res.message + '</p></div>',
+                        timer:3000,
+                        showConfirmButton:false
+                    });
+                }
+                setTimeout(function(){ location.reload(); }, 2500);
+            } else {
+                $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إنشاء جميع الكتب');
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon:'error', title:'خطأ', text:res.message});
+                } else {
+                    alert(res.message);
+                }
+            }
+        }, 'json').fail(function() { $btn.prop('disabled', false).html('<i class="fa fa-paper-plane"></i> إنشاء جميع الكتب'); alert('خطأ'); });
+    }
+JS;
+    $this->registerJs($execJs);
     ?>
     <?php endif ?>
 

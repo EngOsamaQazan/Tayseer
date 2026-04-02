@@ -315,6 +315,8 @@ class JudiciaryDeadlineService
     private static $milestoneTypes = [
         JudiciaryDeadline::TYPE_REGISTRATION_3WD,
         'registration',
+        JudiciaryDeadline::TYPE_COMPREHENSIVE_16CD,
+        JudiciaryDeadline::TYPE_LETTERS_ISSUANCE_3WD,
     ];
 
     /**

@@ -28,6 +28,7 @@ use backend\services\JudiciaryRequestGenerator;
 use backend\services\EntityResolverService;
 use backend\services\DiwanCorrespondenceService;
 use backend\services\HolidayService;
+use backend\services\JudiciaryExecutionService;
 use backend\models\JudiciaryDeadline;
 use backend\models\JudiciaryRequestTemplate;
 use backend\modules\diwan\models\DiwanCorrespondence;
@@ -69,7 +70,7 @@ class JudiciaryController extends Controller
                             'case-timeline',
                             'correspondence-list', 'deadline-dashboard',
                             'deadline-dashboard-view', 'deadline-dashboard-ajax',
-                            'entity-search', 'generate-request',
+                            'entity-search', 'generate-request', 'execution-summary',
                             'save-generated-request',
                             'refresh-deadlines', 'sync-holidays',
                         ],
@@ -93,7 +94,11 @@ class JudiciaryController extends Controller
                         },
                     ],
                     [
-                        'actions' => ['update', 'update-request-status', 'send-document', 'cancel-document'],
+                        'actions' => [
+                            'update', 'update-request-status', 'send-document', 'cancel-document',
+                            'mark-notified', 'submit-comprehensive-request',
+                            'generate-bulk-correspondence',
+                        ],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -801,6 +806,20 @@ class JudiciaryController extends Controller
         }
 
         if ($record->save(false)) {
+            if ($status === 'approved') {
+                JudiciaryDeadlineService::completeDeadlineForRequest($record->id);
+
+                $def = $record->judiciaryActions;
+                if ($def && $def->action_nature === 'request') {
+                    $execService = new JudiciaryExecutionService();
+                    $execService->recordComprehensiveRequest(
+                        $record->judiciary_id,
+                        $record->customers_id,
+                        $record->action_date ?: date('Y-m-d')
+                    );
+                }
+            }
+
             $statusLabels = ['approved' => 'تمت الموافقة', 'rejected' => 'تم الرفض'];
             return [
                 'success' => true,
@@ -1289,6 +1308,7 @@ class JudiciaryController extends Controller
             ->orderBy(['deadline_date' => SORT_ASC])->all();
         $seizedAssets = $model->getSeizedAssets()->with('authority')->all();
         $correspondences = $model->getCorrespondences()->orderBy(['correspondence_date' => SORT_DESC])->limit(10)->all();
+        $executionSummary = JudiciaryExecutionService::getExecutionSummary($model->id);
 
         return $this->render('view', [
             'model' => $model,
@@ -1298,6 +1318,7 @@ class JudiciaryController extends Controller
             'activeDeadlines' => $activeDeadlines,
             'seizedAssets' => $seizedAssets,
             'correspondences' => $correspondences,
+            'executionSummary' => $executionSummary,
         ]);
     }
 
@@ -2010,6 +2031,107 @@ class JudiciaryController extends Controller
         }
 
         return ['success' => false, 'message' => 'خطأ في الحفظ: ' . implode(', ', $jca->getFirstErrors())];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تبليغ المحكوم عليه — Mark Defendant Notified
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionMarkNotified()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        $judiciaryId = (int) $request->post('judiciary_id');
+        $customerId = (int) $request->post('customer_id');
+        $notificationDate = $request->post('notification_date', date('Y-m-d'));
+
+        if (!$judiciaryId || !$customerId || !$notificationDate) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $service = new JudiciaryExecutionService();
+        $result = $service->markDefendantNotified($judiciaryId, $customerId, $notificationDate);
+
+        if ($result['success']) {
+            $result['message'] = 'تم تسجيل التبليغ — موعد الطلب الشامل: ' . $result['comprehensive_date'];
+        }
+
+        return $result;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  تقديم الطلب الشامل — Submit Comprehensive Request
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionSubmitComprehensiveRequest()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        $judiciaryId = (int) $request->post('judiciary_id');
+        $customerId = (int) $request->post('customer_id');
+        $requestDate = $request->post('request_date', date('Y-m-d'));
+
+        if (!$judiciaryId || !$customerId) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $service = new JudiciaryExecutionService();
+        $result = $service->recordComprehensiveRequest($judiciaryId, $customerId, $requestDate);
+
+        if ($result['success']) {
+            $result['message'] = 'تم تسجيل الطلب الشامل — موعد إصدار الكتب: ' . $result['letters_deadline'];
+        }
+
+        return $result;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  إنشاء كتب جملة — Generate Bulk Correspondence
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionGenerateBulkCorrespondence()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        if (!$request->isPost) {
+            return ['success' => false, 'message' => 'طلب غير صالح'];
+        }
+
+        $judiciaryId = (int) $request->post('judiciary_id');
+        $customerId = (int) $request->post('customer_id');
+        $sendDate = $request->post('send_date', date('Y-m-d'));
+        $deliveryMethod = $request->post('delivery_method', 'hand');
+
+        if (!$judiciaryId || !$customerId) {
+            return ['success' => false, 'message' => 'بيانات ناقصة'];
+        }
+
+        $service = new JudiciaryExecutionService();
+        return $service->generateBulkCorrespondence($judiciaryId, $customerId, [
+            'send_date' => $sendDate,
+            'delivery_method' => $deliveryMethod,
+        ]);
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  ملخص التنفيذ — Execution Summary
+     * ═══════════════════════════════════════════════════════════ */
+
+    public function actionExecutionSummary($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        return JudiciaryExecutionService::getExecutionSummary((int) $id);
     }
 
     /* ═══════════════════════════════════════════════════════════

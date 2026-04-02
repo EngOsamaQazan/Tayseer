@@ -36,6 +36,8 @@ class JudiciaryDeadline extends \yii\db\ActiveRecord
     const TYPE_CORRESPONDENCE_10WD  = 'correspondence_10wd';
     const TYPE_PROPERTY_7CD         = 'property_7cd';
     const TYPE_SALARY_3M            = 'salary_3m';
+    const TYPE_LETTERS_ISSUANCE_3WD = 'letters_issuance_3wd';
+    const TYPE_COMPREHENSIVE_16CD   = 'comprehensive_request_16cd';
     const TYPE_CUSTOM               = 'custom';
 
     const DAY_WORKING  = 'working';
@@ -112,6 +114,8 @@ class JudiciaryDeadline extends \yii\db\ActiveRecord
             self::TYPE_CORRESPONDENCE_10WD => 'رد جهة (10 أيام عمل)',
             self::TYPE_PROPERTY_7CD        => 'إخطار عقار (7 أيام)',
             self::TYPE_SALARY_3M           => 'إعادة كتاب راتب (3 أشهر)',
+            self::TYPE_LETTERS_ISSUANCE_3WD => 'إصدار الكتب بعد الطلب (3 أيام عمل)',
+            self::TYPE_COMPREHENSIVE_16CD   => 'موعد تقديم الطلب الشامل (16 يوم)',
             self::TYPE_CUSTOM              => 'مخصص',
             // Legacy keys without suffix (data inserted by judiciary-v3 or older code)
             'registration'         => 'فحص بعد التسجيل',
