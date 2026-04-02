@@ -78,58 +78,19 @@ echo  [3/4] Installing Tayseer Call Service...
 
 if not exist "%SERVICE_DIR%" mkdir "%SERVICE_DIR%"
 
-:: Write the PowerShell server script
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/EngOsamaQazan/Tayseer/main/scripts/deploy/_adb_call_server.ps1' -OutFile '%SERVICE_SCRIPT%' -UseBasicParsing 2>$null; if (-not (Test-Path '%SERVICE_SCRIPT%')) { exit 1 }"
-
-if %errorlevel% neq 0 (
-    echo  [!] Could not download service script. Creating local copy...
-    
-    :: Fallback: create the script directly
-    > "%SERVICE_SCRIPT%" (
-        echo $ADB = "C:\platform-tools\adb.exe"
-        echo $PORT = 9876
-        echo $prefix = "http://localhost:$PORT/"
-        echo if (-not ^(Test-Path $ADB^)^) { exit 1 }
-        echo $listener = New-Object System.Net.HttpListener
-        echo $listener.Prefixes.Add^($prefix^)
-        echo try { $listener.Start^(^) } catch { exit 1 }
-        echo while ^($listener.IsListening^) {
-        echo   try {
-        echo     $context = $listener.GetContext^(^)
-        echo     $req = $context.Request; $res = $context.Response
-        echo     $res.Headers.Add^("Access-Control-Allow-Origin", "*"^)
-        echo     $res.Headers.Add^("Access-Control-Allow-Methods", "GET, POST, OPTIONS"^)
-        echo     $res.Headers.Add^("Access-Control-Allow-Headers", "Content-Type"^)
-        echo     $res.ContentType = "application/json; charset=utf-8"
-        echo     if ^($req.HttpMethod -eq "OPTIONS"^) { $res.StatusCode = 200; $res.Close^(^); continue }
-        echo     $phone = $req.QueryString["phone"]
-        echo     if ^(-not $phone -and $req.HasEntityBody^) {
-        echo       $rd = New-Object System.IO.StreamReader^($req.InputStream^)
-        echo       $bd = $rd.ReadToEnd^(^); $rd.Close^(^)
-        echo       if ^($bd -match "phone=^([^^&]+^)"^) { $phone = [System.Uri]::UnescapeDataString^($matches[1]^) }
-        echo     }
-        echo     $phone = $phone -replace '[^^0-9+]', ''
-        echo     if ^($req.Url.AbsolutePath -eq "/status"^) {
-        echo       $dv = ^& $ADB devices 2^>^&1 ^| Out-String
-        echo       $json = @{ ok = $true; device = ^($dv -match "(?m)\t\s*device\s*$"^) } ^| ConvertTo-Json -Compress
-        echo       $b = [System.Text.Encoding]::UTF8.GetBytes^($json^); $res.OutputStream.Write^($b, 0, $b.Length^); $res.Close^(^); continue
-        echo     }
-        echo     if ^(-not $phone -or $phone.Length -lt 7^) {
-        echo       $b = [System.Text.Encoding]::UTF8.GetBytes^('{"ok":false,"error":"Invalid phone"}'^); $res.OutputStream.Write^($b, 0, $b.Length^); $res.Close^(^); continue
-        echo     }
-        echo     $dv = ^& $ADB devices 2^>^&1 ^| Out-String
-        echo     if ^(-not ^($dv -match "(?m)\t\s*device\s*$"^)^) {
-        echo       $b = [System.Text.Encoding]::UTF8.GetBytes^('{"ok":false,"error":"No device connected"}'^); $res.OutputStream.Write^($b, 0, $b.Length^); $res.Close^(^); continue
-        echo     }
-        echo     $co = ^& $ADB shell am start -a android.intent.action.CALL -d "tel:$phone" 2^>^&1 ^| Out-String
-        echo     $ok = $co -match "Starting" -or $co -match "Activity"
-        echo     $json = @{ ok = $ok; phone = $phone } ^| ConvertTo-Json -Compress
-        echo     $b = [System.Text.Encoding]::UTF8.GetBytes^($json^); $res.OutputStream.Write^($b, 0, $b.Length^); $res.Close^(^)
-        echo   } catch [System.Net.HttpListenerException] { break }
-        echo   catch { }
-        echo }
-        echo $listener.Stop^(^)
+:: Copy the PS1 from the same extracted folder (IExpress extracts both files together)
+set "LOCAL_PS1=%~dp0_adb_call_server.ps1"
+if exist "%LOCAL_PS1%" (
+    copy /Y "%LOCAL_PS1%" "%SERVICE_SCRIPT%" >nul
+    echo  [OK] Call service script copied from installer package.
+) else (
+    echo  [!] Service script not found in package. Downloading...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+      "try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/EngOsamaQazan/Tayseer/main/scripts/deploy/_adb_call_server.ps1' -OutFile '%SERVICE_SCRIPT%' -UseBasicParsing; Write-Host '  [OK] Downloaded.' } catch { Write-Host '  [FAIL]' $_.Exception.Message; exit 1 }"
+    if %errorlevel% neq 0 (
+        echo  [!] Could not install call service. Setup incomplete.
+        pause
+        exit /b 1
     )
 )
 
@@ -140,7 +101,6 @@ echo.
 
 echo  [4/4] Setting up auto-start...
 
-:: Create startup shortcut using PowerShell
 set "STARTUP_FOLDER=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
 set "SHORTCUT=%STARTUP_FOLDER%\TayseerCallService.lnk"
 
@@ -153,7 +113,7 @@ powershell -NoProfile -Command "Get-Process powershell -ErrorAction SilentlyCont
 :: Start the service now (hidden window)
 start /min powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%SERVICE_SCRIPT%"
 
-echo  [OK] Call service is now running.
+echo  [OK] Call service is now running on localhost:9876
 echo.
 
 :: ══════════════ VERIFY ══════════════

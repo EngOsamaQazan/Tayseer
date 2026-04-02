@@ -1569,14 +1569,18 @@ class SiteController extends Controller
     }
 
     /**
-     * Download the ADB installer batch file for desktop call integration.
+     * Download the ADB installer EXE for desktop call integration.
      */
     public function actionDownloadAdbInstaller()
     {
-        $file = Yii::getAlias('@backend/../scripts/deploy/_install_adb.bat');
-        if (!file_exists($file)) {
-            throw new \yii\web\NotFoundHttpException('ملف التثبيت غير موجود');
+        $exe = Yii::getAlias('@backend/../scripts/deploy/TayseerCallSetup.exe');
+        if (file_exists($exe)) {
+            return Yii::$app->response->sendFile($exe, 'TayseerCallSetup.exe');
         }
-        return Yii::$app->response->sendFile($file, 'Tayseer_ADB_Installer.bat');
+        $bat = Yii::getAlias('@backend/../scripts/deploy/_install_adb.bat');
+        if (file_exists($bat)) {
+            return Yii::$app->response->sendFile($bat, 'Tayseer_ADB_Installer.bat');
+        }
+        throw new \yii\web\NotFoundHttpException('ملف التثبيت غير موجود');
     }
 }

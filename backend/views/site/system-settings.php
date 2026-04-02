@@ -2575,11 +2575,11 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                         </div>
                     </div>
                     <div class="gs-items-grid">
-                        <a href="<?= Url::to(['/site/download-adb-installer']) ?>" class="gs-item" data-search="ADB اتصال هاتف USB تثبيت call phone installer">
+                        <a href="<?= Url::to(['/site/download-adb-installer']) ?>" class="gs-item" data-search="ADB اتصال هاتف USB تثبيت call phone installer setup exe">
                             <div class="gs-item-icon" style="color:#2563EB"><i class="fa fa-phone"></i></div>
                             <div class="gs-item-text">
-                                <span class="gs-item-label">أداة الاتصال عبر USB</span>
-                                <span class="gs-item-desc">تحميل وتثبيت ADB للاتصال المباشر من النظام عبر كيبل USB — بدون بلوتوث</span>
+                                <span class="gs-item-label">أداة الاتصال عبر USB <span style="font-size:10px;background:#2563EB;color:#fff;padding:1px 6px;border-radius:4px;margin-right:4px;">EXE</span></span>
+                                <span class="gs-item-desc">تحميل وتثبيت خدمة الاتصال المباشر من النظام عبر كيبل USB — ملف تنفيذي واحد يثبت كل شي تلقائيًا</span>
                             </div>
                             <i class="fa fa-download gs-item-arrow" style="color:#2563EB"></i>
                         </a>
