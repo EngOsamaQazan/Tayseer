@@ -198,8 +198,12 @@ class CompaniesController extends Controller
             $model->created_by = Yii::$app->user->id;
             $model->logo = UploadedFile::getInstance($model, 'logo');
             if (!empty($model->logo)) {
+                $imagesDir = Yii::getAlias('@webroot/images');
+                if (!is_dir($imagesDir)) {
+                    mkdir($imagesDir, 0755, true);
+                }
                 $logoPath = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
-                if ($model->logo->saveAs($logoPath)) {
+                if ($model->logo->saveAs(Yii::getAlias('@webroot/' . $logoPath))) {
                     $model->logo = $logoPath;
                 }
             }
@@ -268,8 +272,12 @@ class CompaniesController extends Controller
         if ($model->load($request->post())) {
             $model->logo = UploadedFile::getInstance($model, 'logo');
             if (!empty($model->logo)) {
+                $imagesDir = Yii::getAlias('@webroot/images');
+                if (!is_dir($imagesDir)) {
+                    mkdir($imagesDir, 0755, true);
+                }
                 $logoPath = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
-                if ($model->logo->saveAs($logoPath)) {
+                if ($model->logo->saveAs(Yii::getAlias('@webroot/' . $logoPath))) {
                     $model->logo = $logoPath;
                 }
             } else {
