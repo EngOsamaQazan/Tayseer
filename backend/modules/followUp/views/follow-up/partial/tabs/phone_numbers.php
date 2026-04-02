@@ -253,10 +253,9 @@ function makeCall(phone, btn) {
     _showToast('جاري الاتصال بـ ', phone, null);
 
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', '<?= Url::to(['/followUp/follow-up/adb-call']) ?>');
+    xhr.open('POST', 'http://localhost:9876/call');
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-    xhr.setRequestHeader('X-CSRF-Token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
-    xhr.timeout = 8000;
+    xhr.timeout = 5000;
 
     xhr.onload = function() {
         btn.classList.remove('pn-calling');
@@ -265,18 +264,16 @@ function makeCall(phone, btn) {
             if (res.ok) {
                 _showToast('تم بدء الاتصال بـ ', phone, 'success');
             } else {
-                _showToast(res.error || 'فشل الاتصال', '', 'error');
-                window.location.href = 'tel:' + encodeURIComponent(phone);
+                _showToast(res.error || 'فشل الاتصال عبر USB', '', 'error');
             }
         } catch(e) {
             _showToast('خطأ في الاستجابة', '', 'error');
-            window.location.href = 'tel:' + encodeURIComponent(phone);
         }
     };
 
     xhr.onerror = xhr.ontimeout = function() {
         btn.classList.remove('pn-calling');
-        _showToast('ADB غير متاح — يتم استخدام Phone Link', '', 'error');
+        _showToast('خدمة ADB غير متاحة — يتم استخدام Phone Link...', '', 'error');
         window.location.href = 'tel:' + encodeURIComponent(phone);
     };
 
