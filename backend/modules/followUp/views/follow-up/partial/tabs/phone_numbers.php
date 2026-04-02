@@ -147,7 +147,7 @@ foreach ($allParties as $_cc) {
                     </div>
                     <div class="pn-primary-social">
                         <a class="pn-contact-btn call" href="tel:<?= Html::encode($ppTel) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
-                        <a class="pn-contact-btn whatsapp" href="https://wa.me/<?= Html::encode($ppWa) ?>" target="_blank" title="واتساب"><i class="fa fa-whatsapp"></i></a>
+                        <a class="pn-contact-btn whatsapp" href="javascript:void(0)" onclick="openWhatsApp('<?= Html::encode($ppWa) ?>')" title="واتساب"><i class="fa fa-whatsapp"></i></a>
                         <?php if (!empty($cust->facebook_account)): ?>
                         <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($cust->facebook_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
                         <?php else: ?>
@@ -178,7 +178,7 @@ foreach ($allParties as $_cc) {
                         <?php endif; ?>
                         <div class="pn-extra-actions">
                             <a class="pn-contact-btn call" href="tel:<?= Html::encode($pnTel) ?>" title="اتصال"><i class="fa fa-phone"></i></a>
-                            <a class="pn-contact-btn whatsapp" href="https://wa.me/<?= Html::encode($pnWa) ?>" target="_blank" title="واتساب"><i class="fa fa-whatsapp"></i></a>
+                            <a class="pn-contact-btn whatsapp" href="javascript:void(0)" onclick="openWhatsApp('<?= Html::encode($pnWa) ?>')" title="واتساب"><i class="fa fa-whatsapp"></i></a>
                             <?php if (!empty($pn->fb_account)): ?>
                             <a class="pn-contact-btn facebook" href="https://m.me/<?= Html::encode($pn->fb_account) ?>" target="_blank" title="فيسبوك"><i class="fa fa-facebook"></i></a>
                             <?php else: ?>
@@ -202,4 +202,8 @@ foreach ($allParties as $_cc) {
 
 <script>
 window._bulkSmsPhones = <?= json_encode($allPhonesList, JSON_UNESCAPED_UNICODE) ?>;
+
+function openWhatsApp(phone) {
+    window.location.href = 'whatsapp://send?phone=' + encodeURIComponent(phone);
+}
 </script>
