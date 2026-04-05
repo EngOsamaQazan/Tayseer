@@ -136,17 +136,28 @@ class ContractsSearch extends Contracts
                 'query' => $query,
             ]);
         }
+        $query->leftJoin('{{%vw_contract_balance}} vcb', 'vcb.contract_id = os_contracts.id');
+        $query->leftJoin('{{%follow_up_report}} fur', 'fur.id = os_contracts.id');
+        $query->addSelect(['os_contracts.*',
+            new \yii\db\Expression('MAX(fur.due_amount) AS _due_amount'),
+            new \yii\db\Expression('MAX(vcb.remaining_balance) AS _remaining'),
+        ]);
+
         $dataProvider->sort->attributes['seller_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
             'asc' => ['s.name' => SORT_ASC],
             'desc' => ['s.name' => SORT_DESC],
         ];
         $dataProvider->sort->attributes['customer_name'] = [
-            // The tables are the ones our relation are configured to
-            // in my case they are prefixed with "tbl_"
             'asc' => ['c.name' => SORT_ASC],
             'desc' => ['c.name' => SORT_DESC],
+        ];
+        $dataProvider->sort->attributes['due_amount'] = [
+            'asc'  => ['_due_amount' => SORT_ASC],
+            'desc' => ['_due_amount' => SORT_DESC],
+        ];
+        $dataProvider->sort->attributes['remaining'] = [
+            'asc'  => ['_remaining' => SORT_ASC],
+            'desc' => ['_remaining' => SORT_DESC],
         ];
 
         $this->load($params);
@@ -195,8 +206,8 @@ class ContractsSearch extends Contracts
 
         $query->andFilterWhere(['like', 'c.primary_phone_number', $this->phone_number]);
         $query->andFilterWhere(['like', 'c.id_number', $this->id_number]);
-        $query->distinct();
-        $query->orderBy(['os_contracts.id' => SORT_DESC]);
+        $query->groupBy('os_contracts.id');
+        $dataProvider->sort->defaultOrder = ['id' => SORT_DESC];
         return $dataProvider;
     }
 

@@ -195,12 +195,12 @@ $end   = $begin + count($models) - 1;
                         <th class="ct-th-id"><?= $sortLink('id', '#') ?></th>
                         <th><?= $sortLink('seller_id', 'البائع') ?></th>
                         <th>العميل</th>
-                        <th>المبلغ المستحق</th>
+                        <th><?= $sortLink('due_amount', 'المبلغ المستحق') ?></th>
                         <th><?= $sortLink('Date_of_sale', 'التاريخ') ?></th>
                         <th>الدفعة الأولى</th>
                         <th><?= $sortLink('total_value', 'الإجمالي') ?></th>
                         <th><?= $sortLink('status', 'الحالة') ?></th>
-                        <th>المتبقي</th>
+                        <th><?= $sortLink('remaining', 'المتبقي') ?></th>
                         <th>المتابع</th>
                         <th style="text-align:center">إجراءات</th>
                     </tr>
