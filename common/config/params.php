@@ -16,6 +16,6 @@ return [
      */
     'customerImagesBaseUrl' => null,
 
-    /** Asset version — auto-bumped on CSS/JS changes */
+    /** Asset version — bump to force browser cache refresh */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];

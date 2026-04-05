@@ -195,7 +195,7 @@ $end   = $begin + count($models) - 1;
                         <th class="ct-th-id"><?= $sortLink('id', '#') ?></th>
                         <th><?= $sortLink('seller_id', 'البائع') ?></th>
                         <th>العميل</th>
-                        <th>المستحق</th>
+                        <th>المبلغ المستحق</th>
                         <th><?= $sortLink('Date_of_sale', 'التاريخ') ?></th>
                         <th>الدفعة الأولى</th>
                         <th><?= $sortLink('total_value', 'الإجمالي') ?></th>
@@ -213,7 +213,7 @@ $end   = $begin + count($models) - 1;
                         $total = (float)($bd['totalDebt'] ?? $m->total_value);
                         $isJudPaid = $bd['isJudiciaryPaid'] ?? false;
 
-                        $deserved = $deservedMap[$cid] ?? 0;
+                        $dueAmt = (float)($dueAmountMap[$cid] ?? 0);
 
                         $nm = ($namesMap ?? [])[$cid] ?? null;
                         $customerFullNames = $nm ? ($nm['client_names'] ?: '—') : '—';
@@ -235,8 +235,8 @@ $end   = $begin + count($models) - 1;
                                 <span class="ct-id-nums"><?= Html::encode(implode(' | ', $customerIdNumbers)) ?></span>
                             <?php endif ?>
                         </td>
-                        <td class="ct-td-money ct-td-due" data-label="المستحق">
-                            <?= number_format($deserved, 0) ?>
+                        <td class="ct-td-money ct-td-due" data-label="المبلغ المستحق">
+                            <span class="<?= $dueAmt > 0 ? 'fur-amount-red' : 'fur-amount-green' ?>"><?= number_format($dueAmt, 0) ?></span>
                         </td>
                         <td class="ct-td-date" data-label="التاريخ">
                             <?= $m->Date_of_sale ?>
@@ -274,44 +274,41 @@ $end   = $begin + count($models) - 1;
                         </td>
                         <td class="ct-td-actions" data-label="">
                             <div class="ct-act-wrap">
-                                <button class="ct-act-trigger" aria-label="إجراءات العقد <?= $m->id ?>"
-                                        aria-haspopup="true" tabindex="0">
+                                <button class="ct-act-trigger" aria-label="إجراءات العقد <?= $m->id ?>" aria-haspopup="true" tabindex="0">
                                     <i class="fa fa-ellipsis-v"></i>
                                 </button>
                                 <div class="ct-act-menu" role="menu">
                                     <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
                                     <a href="<?= Url::to(['update', 'id' => $m->id]) ?>" role="menuitem">
-                                        <i class="fa fa-pencil text-primary"></i> تعديل
+                                        <i class="fa fa-pencil" style="color:#3B82F6"></i> تعديل
                                     </a>
                                     <?php endif ?>
                                     <a href="<?= Url::to(['print-preview', 'id' => $m->id]) ?>" target="_blank" role="menuitem">
-                                        <i class="fa fa-print text-info"></i> طباعة
+                                        <i class="fa fa-print" style="color:#0EA5E9"></i> طباعة
                                     </a>
                                     <div class="ct-act-divider"></div>
                                     <a href="<?= Url::to(['/contractInstallment/contract-installment/index', 'contract_id' => $m->id]) ?>" role="menuitem">
-                                        <i class="fa fa-money text-success"></i> الدفعات
+                                        <i class="fa fa-money" style="color:#16A34A"></i> الدفعات
                                     </a>
                                     <a href="<?= Url::to(['/followUp/follow-up/index', 'contract_id' => $m->id]) ?>" role="menuitem">
-                                        <i class="fa fa-comments text-primary"></i> المتابعة
+                                        <i class="fa fa-comments" style="color:#8B5CF6"></i> المتابعة
                                     </a>
                                     <a href="<?= Url::to(['/loanScheduling/loan-scheduling/create', 'contract_id' => $m->id]) ?>" role="menuitem">
-                                        <i class="fa fa-calendar text-info"></i> جدولة
+                                        <i class="fa fa-calendar" style="color:#F59E0B"></i> جدولة
                                     </a>
                                     <a href="<?= Url::to(['view', 'id' => $m->id]) . '#contractAdjustmentsPanel' ?>" role="menuitem">
-                                        <i class="fa fa-tags text-warning"></i> الخصومات
+                                        <i class="fa fa-tags" style="color:#EC4899"></i> الخصومات
                                     </a>
                                     <?php if ($m->status === 'judiciary'): ?>
-                                        <a href="<?= Url::to(['/collection/collection/create', 'contract_id' => $m->id]) ?>" role="menuitem">
-                                            <i class="fa fa-gavel text-danger"></i> تحصيل
-                                        </a>
+                                    <a href="<?= Url::to(['/collection/collection/create', 'contract_id' => $m->id]) ?>" role="menuitem">
+                                        <i class="fa fa-gavel" style="color:#D97706"></i> تحصيل
+                                    </a>
                                     <?php endif ?>
-                                    <?php if ($isManager): ?>
-                                        <div class="ct-act-divider"></div>
-                                        <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
-                                        <a href="#" class="yeas-cancel" data-url="<?= Url::to(['cancel-contract', 'contract_id' => $m->id]) ?>" role="menuitem">
-                                            <i class="fa fa-ban text-danger"></i> إلغاء العقد
-                                        </a>
-                                        <?php endif ?>
+                                    <?php if ($isManager && Permissions::can(Permissions::CONT_UPDATE)): ?>
+                                    <div class="ct-act-divider"></div>
+                                    <a href="#" class="yeas-cancel ct-act-danger" data-url="<?= Url::to(['cancel-contract', 'contract_id' => $m->id]) ?>" role="menuitem">
+                                        <i class="fa fa-ban" style="color:#EF4444"></i> إلغاء العقد
+                                    </a>
                                     <?php endif ?>
                                 </div>
                             </div>

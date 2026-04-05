@@ -131,71 +131,12 @@
     }, 200);
   });
 
-  /* ========== ACTIONS MENU (portal approach) ========== */
-  var $activePortal = null;
-  var $activeWrap   = null;
-  var _menuScrollY  = null;
-  var _menuTableScroll = null;
-  var _menuOpenTime = 0;
-
+  /* ========== ACTIONS MENU (inline dropdown with flip-up) ========== */
   function closeActMenu() {
-    if ($activePortal) {
-      $activePortal.remove();
-      $activePortal = null;
-    }
-    if ($activeWrap) {
-      $activeWrap.removeClass('open');
-      $activeWrap.find('.ct-act-menu').css('display', '');
-      $activeWrap = null;
-    }
-    _menuScrollY = null;
-    _menuTableScroll = null;
-    _menuOpenTime = 0;
-  }
-
-  function openActMenu($wrap) {
-    var $trigger = $wrap.find('.ct-act-trigger');
-    var $menu    = $wrap.find('.ct-act-menu');
-
-    var $portal = $menu.clone(true, true);
-    $portal.removeClass('ct-act-menu').addClass('ct-act-menu-portal');
-    $portal.css('display', '');
-    $('body').append($portal);
-
-    $menu.css('display', 'none');
-
-    var triggerRect = $trigger[0].getBoundingClientRect();
-    var menuHeight  = $portal.outerHeight();
-    var menuWidth   = $portal.outerWidth();
-    var viewH = window.innerHeight;
-    var viewW = window.innerWidth;
-    var gap = 4;
-
-    var spaceBelow = viewH - triggerRect.bottom - gap;
-    var spaceAbove = triggerRect.top - gap;
-    var top;
-    if (spaceBelow >= menuHeight) {
-      top = triggerRect.bottom + gap;
-    } else if (spaceAbove >= menuHeight) {
-      top = triggerRect.top - menuHeight - gap;
-    } else {
-      top = spaceBelow >= spaceAbove
-        ? triggerRect.bottom + gap
-        : Math.max(gap, triggerRect.top - menuHeight - gap);
-    }
-
-    var left = triggerRect.right - menuWidth;
-    if (left < gap) left = gap;
-    if (left + menuWidth > viewW - gap) left = viewW - menuWidth - gap;
-
-    $portal.css({ top: top + 'px', left: left + 'px' });
-
-    $wrap.addClass('open');
-    $activePortal = $portal;
-    $activeWrap   = $wrap;
-    _menuScrollY = window.scrollY;
-    _menuTableScroll = null;
-    _menuOpenTime = Date.now();
+    $('.ct-act-wrap.open').each(function () {
+      $(this).removeClass('open');
+      $(this).find('.ct-act-menu').removeClass('flip-up');
+    });
   }
 
   $(document).on('click', '.ct-act-trigger', function (e) {
@@ -204,38 +145,27 @@
     var wasOpen = $wrap.hasClass('open');
 
     closeActMenu();
+    if (wasOpen) return;
 
-    if (!wasOpen) {
-      openActMenu($wrap);
+    var $menu = $wrap.find('.ct-act-menu');
+    $wrap.addClass('open');
+
+    var triggerRect = this.getBoundingClientRect();
+    var menuH = $menu.outerHeight();
+    var spaceBelow = window.innerHeight - triggerRect.bottom - 8;
+    if (spaceBelow < menuH && triggerRect.top > menuH) {
+      $menu.addClass('flip-up');
     }
   });
 
-  // Close on outside click (exclude trigger and portal)
   $(document).on('click', function (e) {
-    if (!$activePortal) return;
-    if (Date.now() - _menuOpenTime < 300) return;
-    if ($(e.target).closest('.ct-act-menu-portal, .ct-act-wrap').length) return;
+    if ($(e.target).closest('.ct-act-wrap').length) return;
     closeActMenu();
   });
 
-  // Prevent portal menu background clicks from closing, but allow link clicks through
-  $(document).on('click', '.ct-act-menu-portal', function (e) {
-    e.stopPropagation();
-  });
-  $(document).on('click', '.ct-act-menu-portal a', function () {
+  $(document).on('click', '.ct-act-menu a', function () {
+    if ($(this).hasClass('yeas-cancel') || $(this).hasClass('yeas-finish')) return;
     closeActMenu();
-  });
-
-  // Close on scroll / resize — only after meaningful movement
-  $(window).on('scroll', function () {
-    if (!$activePortal) return;
-    if (_menuScrollY === null) { _menuScrollY = window.scrollY; return; }
-    if (Math.abs(window.scrollY - _menuScrollY) > 60) {
-      closeActMenu();
-    }
-  });
-  $(window).on('resize', function () {
-    if ($activePortal) closeActMenu();
   });
 
   /* ========== CONTRACT ID — now a direct link, no copy ========== */

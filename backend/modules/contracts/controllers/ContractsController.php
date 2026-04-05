@@ -284,7 +284,7 @@ class ContractsController extends Controller
         $db = Yii::$app->db;
 
         $namesMap = [];
-        $deservedMap = [];
+        $dueAmountMap = [];
         if (!empty($contractIds)) {
             $idList = implode(',', array_map('intval', $contractIds));
             $namesMap = ArrayHelper::index(
@@ -292,67 +292,10 @@ class ContractsController extends Controller
                 'contract_id'
             );
 
-            $judCounts = ArrayHelper::map(
-                $db->createCommand("SELECT contract_id, COUNT(*) AS cnt FROM {{%judiciary}} WHERE contract_id IN ($idList) AND is_deleted = 0 GROUP BY contract_id")->queryAll(),
-                'contract_id', 'cnt'
+            $dueAmountMap = ArrayHelper::map(
+                $db->createCommand("SELECT id, due_amount FROM {{%follow_up_report}} WHERE id IN ($idList)")->queryAll(),
+                'id', 'due_amount'
             );
-
-            $settlements = ArrayHelper::index(
-                $db->createCommand(
-                    "SELECT ls.contract_id, ls.first_installment_date, ls.monthly_installment
-                     FROM {{%loan_scheduling}} ls
-                     INNER JOIN (SELECT contract_id, MAX(id) AS max_id FROM {{%loan_scheduling}} WHERE contract_id IN ($idList) GROUP BY contract_id) latest
-                     ON ls.id = latest.max_id"
-                )->queryAll(),
-                'contract_id'
-            );
-
-            $adjustments = ArrayHelper::map(
-                $db->createCommand("SELECT contract_id, COALESCE(SUM(amount), 0) AS total FROM {{%contract_adjustments}} WHERE contract_id IN ($idList) AND is_deleted = 0 GROUP BY contract_id")->queryAll(),
-                'contract_id', 'total'
-            );
-
-            $today = date('Y-m-d');
-            foreach ($models as $m) {
-                $cid = $m->id;
-                $bd = $batchData[$cid] ?? [];
-                $totalValue = (float)($m->total_value ?? 0);
-                $expenses = (float)($bd['expenses'] ?? 0);
-                $lawyerCost = (float)($bd['lawyerCost'] ?? 0);
-                $paid = (float)($bd['paid'] ?? 0);
-                $adj = (float)($adjustments[$cid] ?? 0);
-                $totalDebt = $totalValue + $expenses + $lawyerCost;
-                $hasJudiciary = !empty($judCounts[$cid]);
-                $settlement = $settlements[$cid] ?? null;
-
-                if ($hasJudiciary && !$settlement) {
-                    $deservedMap[$cid] = max(0, round($totalDebt - $adj - $paid, 2));
-                    continue;
-                }
-
-                $firstDate = $settlement
-                    ? ($settlement['first_installment_date'] ?? null)
-                    : ($m->first_installment_date ?? null);
-
-                if (empty($firstDate) || $today < $firstDate) {
-                    $deservedMap[$cid] = 0;
-                    continue;
-                }
-
-                $d1 = new \DateTime($firstDate);
-                $d2 = new \DateTime($today);
-                $interval = $d2->diff($d1);
-                $months = $interval->y * 12 + $interval->m + 1;
-
-                $netTotal = $totalDebt - $adj;
-                if ($settlement) {
-                    $monthly = (float)($settlement['monthly_installment'] ?? 0);
-                } else {
-                    $monthly = (float)($m->monthly_installment_value ?? 0);
-                }
-                $shouldBePaid = min($months * $monthly, $netTotal);
-                $deservedMap[$cid] = max(0, round($shouldBePaid - $paid, 2));
-            }
         }
 
         $statusCounts = ArrayHelper::map(
@@ -374,8 +317,8 @@ class ContractsController extends Controller
             'dataCount'    => $dataCount,
             'batchData'    => $batchData,
             'statusCounts' => $statusCounts,
-            'namesMap'     => $namesMap,
-            'deservedMap'  => $deservedMap,
+            'namesMap'      => $namesMap,
+            'dueAmountMap'  => $dueAmountMap,
         ]);
     }
 
