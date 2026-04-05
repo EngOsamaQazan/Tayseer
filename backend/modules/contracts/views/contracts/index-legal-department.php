@@ -346,7 +346,7 @@ $countNoJob = $totalContracts - $countWithJob;
                             <span class="ld-case-check" title="تم إنشاء القضية"><i class="fa fa-check-circle"></i></span>
                             <?php endif ?>
                         </td>
-                        <td class="ct-td-id" data-label="#"><?= $m->id ?></td>
+                        <td class="ct-td-id" data-label="#"><a href="<?= Url::to(['/followUp/follow-up/panel', 'contract_id' => $m->id]) ?>" class="ct-id-link"><?= $m->id ?></a></td>
                         <td class="ct-td-customer" data-label="الأطراف" title="<?= Html::encode($partiesTitle) ?>" style="white-space:normal;min-width:180px">
                             <?= $partiesDisplay ?>
                         </td>

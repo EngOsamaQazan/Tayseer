@@ -251,7 +251,7 @@ $end   = $begin + count($models) - 1;
                         $remaining = $vb ? $vb['remaining'] : 0;
                     ?>
                     <tr data-id="<?= $m->id ?>">
-                        <td class="ct-td-id" data-label="#"><?= $m->id ?></td>
+                        <td class="ct-td-id" data-label="#"><a href="<?= Url::to(['/followUp/follow-up/panel', 'contract_id' => $m->id]) ?>" class="ct-id-link"><?= $m->id ?></a></td>
                         <td class="ct-td-customer" data-label="العميل" title="<?= Html::encode($customerNamesFull) ?>">
                             <?= Html::encode($customerNamesShort) ?>
                         </td>

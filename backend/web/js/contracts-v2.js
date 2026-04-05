@@ -238,16 +238,7 @@
     if ($activePortal) closeActMenu();
   });
 
-  /* ========== COPY CONTRACT ID ========== */
-  $(document).on('click', '.ct-td-id', function () {
-    var id = $(this).text().trim();
-    if (!id || id === '#') return;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(id).then(function () {
-        showCopyTip('تم نسخ رقم العقد: ' + id);
-      });
-    }
-  });
+  /* ========== CONTRACT ID — now a direct link, no copy ========== */
 
   function showCopyTip(text) {
     var $tip = $('<div class="ct-copied-tip">' + text + '</div>');

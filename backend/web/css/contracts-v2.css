@@ -556,12 +556,17 @@ body:has(.ct-page) .page-header {
 }
 .ct-table tbody td.ct-td-id {
   font-weight: 700;
-  color: var(--clr-primary, #800020);
   font-size: 14px;
-  cursor: pointer;
   white-space: nowrap;
 }
-.ct-table tbody td.ct-td-id:hover {
+.ct-id-link,
+a.fur-id-link {
+  color: var(--clr-primary, #800020);
+  font-weight: 700;
+  text-decoration: none;
+}
+.ct-id-link:hover,
+a.fur-id-link:hover {
   text-decoration: underline;
 }
 .ct-table tbody td.ct-td-customer {

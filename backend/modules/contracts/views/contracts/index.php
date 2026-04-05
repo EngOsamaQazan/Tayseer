@@ -224,7 +224,7 @@ $end   = $begin + count($models) - 1;
                     ?>
                     <tr data-id="<?= $m->id ?>">
                         <td class="ct-td-id" data-label="#">
-                            <?= $m->id ?>
+                            <a href="<?= Url::to(['/followUp/follow-up/panel', 'contract_id' => $m->id]) ?>" class="ct-id-link"><?= $m->id ?></a>
                         </td>
                         <td class="ct-td-seller" data-label="البائع">
                             <?= Html::encode($sellerName) ?>
