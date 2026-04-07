@@ -180,7 +180,7 @@
     if (left < gap) left = gap;
     if (left + menuWidth > viewW - gap) left = viewW - menuWidth - gap;
 
-    $portal.css({ top: top + 'px', left: left + 'px' });
+    $portal.css({ position: 'fixed', top: top + 'px', left: left + 'px', zIndex: 1075 });
 
     $wrap.addClass('open');
     $activePortal = $portal;

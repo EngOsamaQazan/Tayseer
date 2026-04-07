@@ -741,6 +741,55 @@ a.fur-id-link:hover {
   margin: 4px 0;
 }
 
+/* Appended to body (e.g. customers-v2.js portal) — clone drops .ct-act-menu, so needs its own layer */
+.ct-act-menu-portal {
+  position: fixed;
+  z-index: 1075;
+  min-width: 150px;
+  margin: 0;
+  top: 0;
+  left: 0;
+  background: var(--clr-surface, #fff);
+  border: 1px solid var(--clr-border, #e2e8f0);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 4px 0;
+  direction: rtl;
+  font-size: 12px;
+  animation: ctMenuIn 0.12s ease;
+}
+.ct-act-menu-portal a,
+.ct-act-menu-portal button.ct-act-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  color: #334155;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.12s;
+  border: none;
+  background: none;
+  width: 100%;
+  cursor: pointer;
+}
+.ct-act-menu-portal a:hover,
+.ct-act-menu-portal button.ct-act-link:hover {
+  background: var(--clr-border-light, #f1f5f9);
+  color: var(--clr-primary, #800020);
+}
+.ct-act-menu-portal a i,
+.ct-act-menu-portal button.ct-act-link i {
+  width: 16px;
+  text-align: center;
+  font-size: 13px;
+}
+.ct-act-menu-portal .ct-act-danger:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 /* ---- 11. PAGINATION ---- */
 .ct-pagination-wrap {
   display: flex;

@@ -1036,10 +1036,12 @@ a:hover { color: var(--t-primary-hover); }
   border-color: var(--clr-border);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
-[data-bs-theme="dark"] .ct-act-menu a {
+[data-bs-theme="dark"] .ct-act-menu a,
+[data-bs-theme="dark"] .ct-act-menu-portal a {
   color: var(--clr-text) !important;
 }
-[data-bs-theme="dark"] .ct-act-menu a:hover {
+[data-bs-theme="dark"] .ct-act-menu a:hover,
+[data-bs-theme="dark"] .ct-act-menu-portal a:hover {
   background: rgba(var(--t-primary-rgb), 0.1);
   color: var(--t-primary) !important;
 }
