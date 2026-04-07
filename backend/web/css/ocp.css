@@ -204,12 +204,14 @@
     min-width: 0;
 }
 
+/* في صفحة RTL: التسمية عربية والقيمة الرقمية معزولة اتجاهياً */
 .ocp-status-bar__meta {
     display: flex;
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
     min-width: 0;
+    direction: rtl;
 }
 
 .ocp-status-bar__meta-icon {
@@ -229,7 +231,9 @@
     color: var(--ocp-text);
     white-space: nowrap;
     direction: ltr;
+    unicode-bidi: isolate;
     display: inline-block;
+    font-variant-numeric: tabular-nums;
 }
 
 .ocp-status-bar__contract-id {
