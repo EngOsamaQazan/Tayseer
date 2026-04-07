@@ -204,6 +204,34 @@
     min-width: 0;
 }
 
+.ocp-status-bar__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.ocp-status-bar__meta-icon {
+    font-size: 11px;
+    color: var(--ocp-text-muted);
+}
+
+.ocp-status-bar__meta-label {
+    font-size: 10px;
+    color: var(--ocp-text-secondary);
+    white-space: nowrap;
+}
+
+.ocp-status-bar__meta-value {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ocp-text);
+    white-space: nowrap;
+    direction: ltr;
+    display: inline-block;
+}
+
 .ocp-status-bar__contract-id {
     font-family: var(--ocp-font-mono);
     font-size: var(--ocp-font-size-lg);
