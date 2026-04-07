@@ -169,19 +169,19 @@ class ContractsSearch extends Contracts
         $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
-            'Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'first_installment_value' => $this->first_installment_value,
-            'first_installment_date' => $this->first_installment_date,
-            'monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
+            'os_contracts.Date_of_sale' => $this->Date_of_sale,
+            'os_contracts.total_value' => $this->total_value,
+            'os_contracts.first_installment_value' => $this->first_installment_value,
+            'os_contracts.first_installment_date' => $this->first_installment_date,
+            'os_contracts.monthly_installment_value' => $this->monthly_installment_value,
+            'os_contracts.updated_at' => $this->updated_at,
+            'os_contracts.is_deleted' => $this->is_deleted,
         ]);
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
         $this->applyNormalizedNameFilter($query);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
-        $query->andFilterWhere(['like', 'notes', $this->notes]);
+        $query->andFilterWhere(['like', 'os_contracts.notes', $this->notes]);
         $query->andFilterWhere(['os_contracts.followed_by' => $this->followed_by]);
         if (!empty($params['ContractsSearch']['status'])) {
             $statusVal = $params['ContractsSearch']['status'];
@@ -198,10 +198,10 @@ class ContractsSearch extends Contracts
             $query->andWhere(['<>', 'os_contracts.status', 'canceled']);
         }
         if ((!empty($this->from_date))) {
-            $query->andFilterWhere(['>=', 'Date_of_sale', $this->from_date]);
+            $query->andFilterWhere(['>=', 'os_contracts.Date_of_sale', $this->from_date]);
         }
         if ((!empty($this->to_date))) {
-            $query->andFilterWhere(['<=', 'Date_of_sale', $this->to_date]);
+            $query->andFilterWhere(['<=', 'os_contracts.Date_of_sale', $this->to_date]);
         }
 
         $query->andFilterWhere(['like', 'c.primary_phone_number', $this->phone_number]);
@@ -312,21 +312,21 @@ class ContractsSearch extends Contracts
         $this->applyUnifiedSearch($query);
 
         $query->andFilterWhere([
-            'Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'first_installment_value' => $this->first_installment_value,
-            'first_installment_date' => $this->first_installment_date,
-            'monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
+            'os_contracts.Date_of_sale' => $this->Date_of_sale,
+            'os_contracts.total_value' => $this->total_value,
+            'os_contracts.first_installment_value' => $this->first_installment_value,
+            'os_contracts.first_installment_date' => $this->first_installment_date,
+            'os_contracts.monthly_installment_value' => $this->monthly_installment_value,
+            'os_contracts.updated_at' => $this->updated_at,
+            'os_contracts.is_deleted' => $this->is_deleted,
         ]);
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
         $this->applyNormalizedNameFilter($query);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
-        $query->andFilterWhere(['like', 'notes', $this->notes]);
+        $query->andFilterWhere(['like', 'os_contracts.notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
-            $query->andFilterWhere(['followed_by' => $params['ContractsSearch']['followed_by']]);
+            $query->andFilterWhere(['os_contracts.followed_by' => $params['ContractsSearch']['followed_by']]);
         }
         if (!empty($params['ContractsSearch']['status'])) {
             $statusVal = $params['ContractsSearch']['status'];
@@ -343,10 +343,10 @@ class ContractsSearch extends Contracts
             $query->andWhere(['<>', 'os_contracts.status', 'canceled']);
         }
         if ((!empty($this->from_date))) {
-            $query->andFilterWhere(['>=', 'Date_of_sale', $this->from_date]);
+            $query->andFilterWhere(['>=', 'os_contracts.Date_of_sale', $this->from_date]);
         }
         if ((!empty($this->to_date))) {
-            $query->andFilterWhere(['<=', 'Date_of_sale', $this->to_date]);
+            $query->andFilterWhere(['<=', 'os_contracts.Date_of_sale', $this->to_date]);
         }
 
         if (!empty($params['ContractsSearch']['phone_number'])) {
@@ -422,21 +422,21 @@ class ContractsSearch extends Contracts
             $query->andFilterWhere(['c.primary_phone_number' => $params['ContractsSearch']['phone_number']]);
         }
         $query->andFilterWhere([
-            'Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'first_installment_value' => $this->first_installment_value,
-            'first_installment_date' => $this->first_installment_date,
-            'monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
+            'os_contracts.Date_of_sale' => $this->Date_of_sale,
+            'os_contracts.total_value' => $this->total_value,
+            'os_contracts.first_installment_value' => $this->first_installment_value,
+            'os_contracts.first_installment_date' => $this->first_installment_date,
+            'os_contracts.monthly_installment_value' => $this->monthly_installment_value,
+            'os_contracts.updated_at' => $this->updated_at,
+            'os_contracts.is_deleted' => $this->is_deleted,
         ]);
 
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
-        $query->andFilterWhere(['like', 'notes', $this->notes]);
+        $query->andFilterWhere(['like', 'os_contracts.notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
-            $query->andFilterWhere(['followed_by' => $params['ContractsSearch']['followed_by']]);
+            $query->andFilterWhere(['os_contracts.followed_by' => $params['ContractsSearch']['followed_by']]);
         }
         if (!empty($params['ContractsSearch']['from_date'])) {
             $query->andFilterWhere(['>=', 'os_contracts.Date_of_sale', $params['ContractsSearch']['from_date']]);
@@ -486,13 +486,13 @@ class ContractsSearch extends Contracts
         }
 
         $query->andFilterWhere([
-            'Date_of_sale' => $this->Date_of_sale,
-            'total_value' => $this->total_value,
-            'first_installment_value' => $this->first_installment_value,
-            'first_installment_date' => $this->first_installment_date,
-            'monthly_installment_value' => $this->monthly_installment_value,
-            'updated_at' => $this->updated_at,
-            'is_deleted' => $this->is_deleted,
+            'os_contracts.Date_of_sale' => $this->Date_of_sale,
+            'os_contracts.total_value' => $this->total_value,
+            'os_contracts.first_installment_value' => $this->first_installment_value,
+            'os_contracts.first_installment_date' => $this->first_installment_date,
+            'os_contracts.monthly_installment_value' => $this->monthly_installment_value,
+            'os_contracts.updated_at' => $this->updated_at,
+            'os_contracts.is_deleted' => $this->is_deleted,
         ]);
         if (!empty($params['ContractsSearch']['phone_number'])) {
             $query->andFilterWhere(['c.primary_phone_number' => $params['ContractsSearch']['phone_number']]);
@@ -501,9 +501,9 @@ class ContractsSearch extends Contracts
         $query->andFilterWhere(['os_contracts.id' => $this->id]);
         $query->andFilterWhere(['like', 'c.name', $this->customer_name]);
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
-        $query->andFilterWhere(['like', 'notes', $this->notes]);
+        $query->andFilterWhere(['like', 'os_contracts.notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
-            $query->andFilterWhere(['followed_by' => $params['ContractsSearch']['followed_by']]);
+            $query->andFilterWhere(['os_contracts.followed_by' => $params['ContractsSearch']['followed_by']]);
         }
         if (!empty($params['ContractsSearch']['from_date'])) {
             $query->andFilterWhere(['>=', 'os_contracts.Date_of_sale', $params['ContractsSearch']['from_date']]);
