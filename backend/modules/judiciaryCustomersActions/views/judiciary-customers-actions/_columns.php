@@ -26,7 +26,7 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحكوم عليه',
         'value' => 'customers.name',
-        'headerOptions' => ['style' => 'width:140px'],
+        'headerOptions' => ['style' => 'min-width:120px;width:12%'],
         'contentOptions' => ['class' => 'jca-name-cell', 'data-label' => 'المحكوم عليه'],
     ],
 
@@ -36,8 +36,8 @@ return [
         'attribute' => 'judiciary_actions_id',
         'label' => 'الإجراء',
         'value' => 'judiciaryActions.name',
-        'headerOptions' => ['style' => 'width:110px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'الإجراء'],
+        'headerOptions' => ['style' => 'min-width:120px;width:14%'],
+        'contentOptions' => ['class' => 'jca-text-cell', 'style' => 'font-size:12px', 'data-label' => 'الإجراء'],
     ],
 
     /* الملاحظات */
@@ -46,7 +46,7 @@ return [
         'attribute' => 'note',
         'label' => 'ملاحظات',
         'format' => 'text',
-        'headerOptions' => ['style' => 'width:200px'],
+        'headerOptions' => ['style' => 'min-width:180px;width:18%'],
         'contentOptions' => ['class' => 'jca-notes-cell', 'data-label' => 'ملاحظات'],
     ],
 
@@ -57,7 +57,7 @@ return [
         'label' => 'المنشئ',
         'value' => 'createdBy.username',
         'headerOptions' => ['style' => 'width:90px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'المنشئ'],
+        'contentOptions' => ['class' => 'jca-text-cell', 'style' => 'font-size:12px', 'data-label' => 'المنشئ'],
     ],
 
     /* المحامي */
@@ -65,8 +65,8 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحامي',
         'value' => fn($m) => $m->judiciary->lawyer->name ?? '—',
-        'headerOptions' => ['style' => 'width:100px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'المحامي'],
+        'headerOptions' => ['style' => 'min-width:110px;width:11%'],
+        'contentOptions' => ['class' => 'jca-text-cell', 'style' => 'font-size:12px', 'data-label' => 'المحامي'],
     ],
 
     /* المحكمة */
@@ -74,8 +74,8 @@ return [
         'class' => '\kartik\grid\DataColumn',
         'label' => 'المحكمة',
         'value' => fn($m) => $m->judiciary->court->name ?? '—',
-        'headerOptions' => ['style' => 'width:100px'],
-        'contentOptions' => ['style' => 'white-space:nowrap;font-size:12px', 'data-label' => 'المحكمة'],
+        'headerOptions' => ['style' => 'min-width:100px;width:10%'],
+        'contentOptions' => ['class' => 'jca-text-cell', 'style' => 'font-size:12px', 'data-label' => 'المحكمة'],
     ],
 
     /* العقد */
