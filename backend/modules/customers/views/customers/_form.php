@@ -18,6 +18,10 @@ $d = $p['time_duration'];
 $db = Yii::$app->db;
 
 $jobs = $cache->getOrSet($p['key_jobs'], fn() => $db->createCommand($p['jobs_query'])->queryAll(), $d);
+$selectedJobName = '';
+if (!$model->isNewRecord && $model->job_title) {
+    $selectedJobName = ArrayHelper::getValue(ArrayHelper::map($jobs, 'id', 'name'), $model->job_title, '');
+}
 $city = $cache->getOrSet($p['key_city'], fn() => $db->createCommand($p['city_query'])->queryAll(), $d);
 $citizen = $cache->getOrSet($p['key_citizen'], fn() => $db->createCommand($p['citizen_query'])->queryAll(), $d);
 $hearAboutUs = $cache->getOrSet($p['key_hear_about_us'], fn() => $db->createCommand($p['hear_about_us_query'])->queryAll(), $d);
@@ -95,9 +99,10 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
         <div class="row">
             <div class="col-md-3">
                 <div class="job-title-wrapper">
-                    <?= $form->field($model, 'job_title')->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
-                        'prompt' => '-- جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title',
-                    ])->label('المسمى الوظيفي') ?>
+                    <?= $form->field($model, 'job_title')->dropDownList(
+                        $model->job_title && $selectedJobName ? [$model->job_title => $selectedJobName] : [],
+                        ['prompt' => '-- جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title']
+                    )->label('المسمى الوظيفي') ?>
                     <button type="button" class="btn-add-job" id="btn-add-job-classic" title="إضافة جهة عمل جديدة"><i class="fa fa-plus"></i></button>
                 </div>
             </div>
@@ -252,6 +257,37 @@ if (empty($model->image_manager_id)) $model->image_manager_id = $imgRandId;
     <?php endif ?>
 
     <?php ActiveForm::end() ?>
+
+    <!-- Quick-Create Job Modal -->
+    <div class="modal fade" id="quick-create-job-modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content" style="border-radius:12px;overflow:hidden">
+                <div class="modal-header" style="background:linear-gradient(135deg,#800020,#a0002a);color:#fff;border:none;padding:16px 20px">
+                    <h4 class="modal-title" style="font-weight:700;font-size:16px;margin:0"><i class="fa fa-plus-circle"></i> إضافة جهة عمل جديدة</h4>
+                    <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.8;text-shadow:none;font-size:22px">&times;</button>
+                </div>
+                <div class="modal-body" style="padding:20px">
+                    <div class="form-group">
+                        <label style="font-weight:600">اسم جهة العمل <span class="text-danger">*</span></label>
+                        <input type="text" id="qc-job-name" class="form-control" placeholder="مثال: الجامعة الأردنية" autocomplete="off">
+                        <div id="qc-similar-results" style="display:none;margin-top:8px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:12px"></div>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight:600">نوع الجهة</label>
+                        <select id="qc-job-type" class="form-control"><option value="">-- اختر النوع --</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label style="font-weight:600">رقم الهاتف <span style="color:#999;font-weight:400">(اختياري)</span></label>
+                        <input type="text" id="qc-job-phone" class="form-control" placeholder="07XXXXXXXX" dir="ltr">
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top:1px solid #eee;padding:12px 20px;display:flex;gap:8px;justify-content:flex-start">
+                    <button type="button" class="btn btn-success" id="qc-job-save" style="border-radius:6px;padding:8px 24px;font-weight:600"><i class="fa fa-check"></i> حفظ</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius:6px;padding:8px 18px">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <?php
@@ -272,10 +308,99 @@ $this->registerCss(<<<CSS
 CSS
 );
 
-$this->registerJs(<<<'JSJOB'
-$(document).on('click', '.btn-add-job', function() {
-    window.open('/jobs/jobs/create', '_blank');
-});
+$searchListUrl = Url::to(['/jobs/jobs/search-list']);
+$quickCreateUrl = Url::to(['/jobs/jobs/quick-create']);
+$jobTypesUrl = Url::to(['/jobs/jobs/job-types-list']);
+$this->registerJs(<<<JSJOB
+(function(){
+    // Initialize job Select2 with AJAX for real-time data
+    setTimeout(function() {
+        var \$sel = $('#customers-job_title');
+        if (!\$sel.length) return;
+        try { \$sel.select2('destroy'); } catch(e) {}
+        \$sel.select2({
+            theme: 'bootstrap4',
+            placeholder: '-- ابحث عن جهة العمل --',
+            allowClear: true,
+            dir: 'rtl',
+            minimumInputLength: 0,
+            ajax: {
+                url: '$searchListUrl',
+                dataType: 'json',
+                delay: 250,
+                data: function(params) { return {q: params.term}; },
+                processResults: function(data) { return data; }
+            }
+        });
+    }, 150);
+
+    var jobTypesLoaded = false;
+    $(document).on('click', '.btn-add-job', function() {
+        var \$m = $('#quick-create-job-modal');
+        if (!\$m.length) { window.open('/jobs/jobs/create', '_blank'); return; }
+        \$m.find('#qc-job-name').val('');
+        \$m.find('#qc-job-type').val('');
+        \$m.find('#qc-job-phone').val('');
+        \$m.find('#qc-similar-results').hide().empty();
+        \$m.find('#qc-job-save').prop('disabled', false);
+        \$m.modal('show');
+        if (!jobTypesLoaded) {
+            $.getJSON('$jobTypesUrl').done(function(r) {
+                if (r.results && r.results.length) {
+                    var \$s = $('#qc-job-type');
+                    \$s.find('option:not(:first)').remove();
+                    $.each(r.results, function(i,t){ \$s.append('<option value="'+t.id+'">'+t.name+'</option>'); });
+                    jobTypesLoaded = true;
+                }
+            });
+        }
+        setTimeout(function(){ \$m.find('#qc-job-name').focus(); }, 400);
+    });
+    var simTimer = null;
+    $(document).on('input', '#qc-job-name', function() {
+        clearTimeout(simTimer);
+        var q = $.trim($(this).val());
+        if (q.length < 2) { $('#qc-similar-results').hide(); return; }
+        simTimer = setTimeout(function() {
+            $.getJSON('/jobs/jobs/search-similar', {q:q}).done(function(r) {
+                var \$b = $('#qc-similar-results');
+                if (r.results && r.results.length) {
+                    var h = '<i class="fa fa-exclamation-triangle" style="color:#d97706"></i> <strong>جهات مشابهة:</strong><br>';
+                    $.each(r.results, function(i,x){
+                        h += '<span style="cursor:pointer;text-decoration:underline;color:#800020" data-id="'+x.id+'" data-name="'+x.name+'" class="qc-pick-existing">'+x.name+'</span>';
+                        if (x.city) h += ' <small style="color:#888">('+x.city+')</small>';
+                        if (i < r.results.length-1) h += '، ';
+                    });
+                    \$b.html(h).show();
+                } else { \$b.hide(); }
+            });
+        }, 400);
+    });
+    $(document).on('click', '.qc-pick-existing', function() {
+        var id = $(this).data('id'), name = $(this).data('name');
+        var opt = new Option(name, id, true, true);
+        $('#customers-job_title').append(opt).trigger('change');
+        $('#quick-create-job-modal').modal('hide');
+    });
+    $(document).on('click', '#qc-job-save', function() {
+        var \$btn = $(this), name = $.trim($('#qc-job-name').val());
+        if (!name) { $('#qc-job-name').focus(); return; }
+        \$btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
+        $.ajax({
+            url: '$quickCreateUrl', method: 'POST', dataType: 'json',
+            data: { name:name, job_type:$('#qc-job-type').val()||'', phone:$('#qc-job-phone').val()||'', '_csrf-backend':$('input[name="_csrf-backend"]').val() },
+            success: function(resp) {
+                \$btn.prop('disabled', false).html('<i class="fa fa-check"></i> حفظ');
+                if (resp.success) {
+                    var opt = new Option(resp.text, resp.id, true, true);
+                    $('#customers-job_title').append(opt).trigger('change');
+                    $('#quick-create-job-modal').modal('hide');
+                } else { alert(resp.message || 'حدث خطأ'); }
+            },
+            error: function() { \$btn.prop('disabled', false).html('<i class="fa fa-check"></i> حفظ'); alert('خطأ في الاتصال'); }
+        });
+    });
+})();
 JSJOB
 );
 

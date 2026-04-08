@@ -44,6 +44,9 @@ $this->registerJs("window.soConfig = " . json_encode([
     'duplicateCheckUrl' => Url::to(['check-duplicate']),
     'customerViewUrl'   => Url::to(['view', 'id' => '__ID__']),
     'jobInfoUrl'        => Url::to(['/jobs/jobs/job-info', 'id' => '__JOB_ID__']),
+    'quickCreateUrl'    => Url::to(['/jobs/jobs/quick-create']),
+    'jobTypesUrl'       => Url::to(['/jobs/jobs/job-types-list']),
+    'searchListUrl'     => Url::to(['/jobs/jobs/search-list']),
     'isEditMode'        => !$isNew,
 ]) . ";", \yii\web\View::POS_HEAD);
 
@@ -54,6 +57,10 @@ $d = $p['time_duration'];
 $db = Yii::$app->db;
 
 $jobs = $cache->getOrSet($p['key_jobs'], fn() => $db->createCommand($p['jobs_query'])->queryAll(), $d);
+$selectedJobName = '';
+if (!$isNew && $model->job_title) {
+    $selectedJobName = ArrayHelper::getValue(ArrayHelper::map($jobs, 'id', 'name'), $model->job_title, '');
+}
 $city = $cache->getOrSet($p['key_city'], fn() => $db->createCommand($p['city_query'])->queryAll(), $d);
 $citizen = $cache->getOrSet($p['key_citizen'], fn() => $db->createCommand($p['citizen_query'])->queryAll(), $d);
 $hearAboutUs = $cache->getOrSet($p['key_hear_about_us'], fn() => $db->createCommand($p['hear_about_us_query'])->queryAll(), $d);
@@ -195,9 +202,10 @@ if (!$isNew) {
                     <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية</h3>
                     <div class="so-grid so-grid-2">
                         <div class="job-title-wrapper">
-                            <?= $form->field($model, 'job_title')->dropDownList(ArrayHelper::map($jobs, 'id', 'name'), [
-                                'prompt' => '-- جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title',
-                            ])->label('جهة العمل') ?>
+                            <?= $form->field($model, 'job_title')->dropDownList(
+                                $model->job_title && $selectedJobName ? [$model->job_title => $selectedJobName] : [],
+                                ['prompt' => '-- ابحث عن جهة العمل --', 'class' => 'form-control', 'id' => 'customers-job_title']
+                            )->label('جهة العمل') ?>
                             <button type="button" class="btn-add-job" id="btn-add-job-smart" title="إضافة جهة عمل جديدة"><i class="fa fa-plus"></i></button>
                         </div>
                         <div>
@@ -611,6 +619,39 @@ if (!$isNew) {
             </div>
 
             <?php ActiveForm::end() ?>
+        </div>
+
+        <!-- Quick-Create Job Modal -->
+        <div class="modal fade" id="quick-create-job-modal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content" style="border-radius:12px;overflow:hidden">
+                    <div class="modal-header" style="background:linear-gradient(135deg,#800020,#a0002a);color:#fff;border:none;padding:16px 20px">
+                        <h4 class="modal-title" style="font-weight:700;font-size:16px;margin:0"><i class="fa fa-plus-circle"></i> إضافة جهة عمل جديدة</h4>
+                        <button type="button" class="close" data-dismiss="modal" style="color:#fff;opacity:.8;text-shadow:none;font-size:22px">&times;</button>
+                    </div>
+                    <div class="modal-body" style="padding:20px">
+                        <div class="form-group">
+                            <label style="font-weight:600">اسم جهة العمل <span class="text-danger">*</span></label>
+                            <input type="text" id="qc-job-name" class="form-control" placeholder="مثال: الجامعة الأردنية" autocomplete="off">
+                            <div id="qc-similar-results" style="display:none;margin-top:8px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:12px"></div>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight:600">نوع الجهة</label>
+                            <select id="qc-job-type" class="form-control">
+                                <option value="">-- اختر النوع --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label style="font-weight:600">رقم الهاتف <span style="color:#999;font-weight:400">(اختياري)</span></label>
+                            <input type="text" id="qc-job-phone" class="form-control" placeholder="07XXXXXXXX" dir="ltr">
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="border-top:1px solid #eee;padding:12px 20px;display:flex;gap:8px;justify-content:flex-start">
+                        <button type="button" class="btn btn-success" id="qc-job-save" style="border-radius:6px;padding:8px 24px;font-weight:600"><i class="fa fa-check"></i> حفظ</button>
+                        <button type="button" class="btn btn-default" data-dismiss="modal" style="border-radius:6px;padding:8px 18px">إلغاء</button>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ═══════════════════════════════════════════

@@ -30,6 +30,7 @@
         initFormPersistence();
         triggerRiskCalc();
         if (window.soConfig && window.soConfig.isEditMode) initEditWarnings();
+        initJobAjaxSelect2();
     });
 
     /* ══════════════════════════════════════════
@@ -803,11 +804,149 @@
     }
 
     /* ══════════════════════════════════════════
-       JOB TITLE: Open create page in new tab
+       JOB TITLE: AJAX Select2 initialization
        ══════════════════════════════════════════ */
+    function initJobAjaxSelect2() {
+        var $sel = $('#customers-job_title');
+        if (!$sel.length) return;
+
+        var searchUrl = (window.soConfig && window.soConfig.searchListUrl) || '/jobs/jobs/search-list';
+
+        setTimeout(function() {
+            try { $sel.select2('destroy'); } catch(e) {}
+            $sel.select2({
+                theme: 'bootstrap4',
+                placeholder: '-- ابحث عن جهة العمل --',
+                allowClear: true,
+                dir: 'rtl',
+                minimumInputLength: 0,
+                ajax: {
+                    url: searchUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: function(params) { return {q: params.term}; },
+                    processResults: function(data) { return data; }
+                }
+            });
+        }, 150);
+    }
+
+    /* ══════════════════════════════════════════
+       JOB TITLE: Quick-create modal
+       ══════════════════════════════════════════ */
+    var jobTypesLoaded = false;
+
     $(document).on('click', '.btn-add-job', function() {
-        window.open('/jobs/jobs/create', '_blank');
+        var $modal = $('#quick-create-job-modal');
+        if (!$modal.length) {
+            window.open('/jobs/jobs/create', '_blank');
+            return;
+        }
+        $modal.find('#qc-job-name').val('');
+        $modal.find('#qc-job-type').val('');
+        $modal.find('#qc-job-phone').val('');
+        $modal.find('#qc-similar-results').hide().empty();
+        $modal.find('#qc-job-save').prop('disabled', false);
+        $modal.modal('show');
+        if (!jobTypesLoaded) loadJobTypes();
+        setTimeout(function() { $modal.find('#qc-job-name').focus(); }, 400);
     });
+
+    function loadJobTypes() {
+        var url = (window.soConfig && window.soConfig.jobTypesUrl) || '/jobs/jobs/job-types-list';
+        $.getJSON(url).done(function(resp) {
+            if (resp.results && resp.results.length) {
+                var $sel = $('#qc-job-type');
+                $sel.find('option:not(:first)').remove();
+                $.each(resp.results, function(i, t) {
+                    $sel.append('<option value="' + t.id + '">' + escapeHtml(t.name) + '</option>');
+                });
+                jobTypesLoaded = true;
+            }
+        });
+    }
+
+    var similarTimer = null;
+    $(document).on('input', '#qc-job-name', function() {
+        clearTimeout(similarTimer);
+        var q = $.trim($(this).val());
+        if (q.length < 2) { $('#qc-similar-results').hide(); return; }
+        similarTimer = setTimeout(function() {
+            $.getJSON('/jobs/jobs/search-similar', { q: q }).done(function(resp) {
+                var $box = $('#qc-similar-results');
+                if (resp.results && resp.results.length) {
+                    var html = '<i class="fa fa-exclamation-triangle" style="color:#d97706"></i> <strong>جهات مشابهة:</strong><br>';
+                    $.each(resp.results, function(i, r) {
+                        html += '<span style="cursor:pointer;text-decoration:underline;color:#800020" data-id="' + r.id + '" data-name="' + escapeHtml(r.name) + '" class="qc-pick-existing">' + escapeHtml(r.name) + '</span>';
+                        if (r.city) html += ' <small style="color:#888">(' + escapeHtml(r.city) + ')</small>';
+                        if (i < resp.results.length - 1) html += '، ';
+                    });
+                    $box.html(html).show();
+                } else {
+                    $box.hide();
+                }
+            });
+        }, 400);
+    });
+
+    $(document).on('click', '.qc-pick-existing', function() {
+        var id = $(this).data('id');
+        var name = $(this).data('name');
+        selectJobInDropdown(id, name);
+        $('#quick-create-job-modal').modal('hide');
+        showToast('تم اختيار "' + name + '"', 'info');
+    });
+
+    $(document).on('click', '#qc-job-save', function() {
+        var $btn = $(this);
+        var name = $.trim($('#qc-job-name').val());
+        if (!name) {
+            showToast('يرجى إدخال اسم جهة العمل', 'warning');
+            $('#qc-job-name').focus();
+            return;
+        }
+        $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...');
+        var url = (window.soConfig && window.soConfig.quickCreateUrl) || '/jobs/jobs/quick-create';
+        $.ajax({
+            url: url,
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                name: name,
+                job_type: $('#qc-job-type').val() || '',
+                phone: $('#qc-job-phone').val() || '',
+                '_csrf-backend': $('input[name="_csrf-backend"]').val()
+            },
+            success: function(resp) {
+                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> حفظ');
+                if (resp.success) {
+                    selectJobInDropdown(resp.id, resp.text);
+                    $('#quick-create-job-modal').modal('hide');
+                    var msg = resp.existing
+                        ? 'جهة العمل "' + resp.text + '" موجودة مسبقاً — تم اختيارها'
+                        : 'تم إنشاء "' + resp.text + '" بنجاح';
+                    showToast(msg, resp.existing ? 'info' : 'success');
+                    fetchJobInfo(resp.id);
+                } else {
+                    showToast(resp.message || 'حدث خطأ', 'danger');
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false).html('<i class="fa fa-check"></i> حفظ');
+                showToast('خطأ في الاتصال بالخادم', 'danger');
+            }
+        });
+    });
+
+    function selectJobInDropdown(id, text) {
+        var $sel = $('#customers-job_title');
+        if ($sel.data('select2')) {
+            var newOption = new Option(text, id, true, true);
+            $sel.append(newOption).trigger('change');
+        } else {
+            $sel.val(id).trigger('change');
+        }
+    }
 
     /* ══════════════════════════════════════════
        JOB INFO: fetch updated_at / created_at + staleness warning
