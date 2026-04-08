@@ -645,14 +645,14 @@ class JobsController extends Controller
             $url = 'https://places.googleapis.com/v1/places:searchText';
             $body = json_encode([
                 'textQuery' => $q,
-                'locationBias' => [
-                    'circle' => [
-                        'center' => ['latitude' => $lat, 'longitude' => $lng],
-                        'radius' => 50000.0,
+                'locationRestriction' => [
+                    'rectangle' => [
+                        'low' => ['latitude' => 29.1, 'longitude' => 34.8],
+                        'high' => ['latitude' => 33.4, 'longitude' => 39.3],
                     ],
                 ],
                 'languageCode' => 'ar',
-                'maxResultCount' => 10,
+                'maxResultCount' => 15,
             ]);
 
             $ch = curl_init($url);

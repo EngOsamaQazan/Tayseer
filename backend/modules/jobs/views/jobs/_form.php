@@ -66,7 +66,14 @@ $modelId = $model->isNewRecord ? 0 : $model->id;
 .map-search-results .result-item .result-text { flex:1; min-width:0; }
 .map-search-results .result-item .result-name { font-weight:600; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .map-search-results .result-item .result-addr { font-size:11px; color:#94a3b8; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.map-search-loading { padding:14px; text-align:center; color:#94a3b8; font-size:13px; }
+.map-search-loading { padding:14px; text-align:center; color:#94a3b8; font-size:13px; direction:rtl; }
+.map-search-loading .search-progress { display:flex; justify-content:center; gap:6px; margin-top:10px; }
+.map-search-loading .search-progress .sp-dot { width:8px; height:8px; border-radius:50%; background:#e2e8f0; transition:background .3s; }
+.map-search-loading .search-progress .sp-dot.done { background:#22c55e; }
+.map-search-loading .search-progress .sp-dot.active { background:#3b82f6; animation:spPulse .8s ease-in-out infinite; }
+@keyframes spPulse { 0%,100%{ transform:scale(1); opacity:.7; } 50%{ transform:scale(1.4); opacity:1; } }
+.map-search-loading .search-timer { font-size:11px; color:#cbd5e1; margin-top:6px; }
+.map-search-loading .search-hint { font-size:11px; color:#94a3b8; margin-top:4px; background:#f8fafc; border-radius:6px; padding:6px 10px; display:inline-block; }
 .map-search-results .result-item .result-addr { display:block; }
 .pac-container { display:none !important; }
 /* Google Places Autocomplete dropdown styling */
@@ -491,7 +498,7 @@ L.control.layers({
     'خريطة Google': googleStreets,
     'قمر صناعي': googleHybrid,
     'OpenStreetMap': osmLayer
-}, null, {position: 'topright'}).addTo(map);
+}, null, {position: 'bottomleft'}).addTo(map);
 
 var marker = null;
 function setMapMarker(lat, lng, flyTo) {
@@ -658,16 +665,17 @@ function _googleSearch(q) {
         language: 'ar',
         sessionToken: _gSessionToken
     };
-    if (google.maps.places.AutocompleteSessionToken && google.maps.LatLngBounds) {
-        var sw = new google.maps.LatLng(bLat - 0.5, bLng - 0.5);
-        var ne = new google.maps.LatLng(bLat + 0.5, bLng + 0.5);
-        request.locationBias = new google.maps.LatLngBounds(sw, ne);
+    var joSw = new google.maps.LatLng(29.1, 34.8);
+    var joNe = new google.maps.LatLng(33.4, 39.3);
+    if (google.maps.LatLngBounds) {
+        request.locationBias = new google.maps.LatLngBounds(joSw, joNe);
     } else {
         request.location = origin;
-        request.radius = 50000;
+        request.radius = 250000;
     }
 
     _gAutoService.getPlacePredictions(request, function(predictions, status) {
+        _stopSearchTimer();
         if (status === 'OK' && predictions && predictions.length > 0) {
             var html = '';
             predictions.forEach(function(p) {
@@ -689,6 +697,7 @@ function _googleSearch(q) {
             });
             $('#map-search-results').html(html).addClass('show');
         } else {
+            _showSearchLoading();
             _combinedOsmSearch(q);
         }
     });
@@ -711,10 +720,14 @@ function _serverGoogleSearch(q, callback) {
 
 /* ─── Combined Search: Google Places (server-side) + Nominatim + Photon in parallel ─── */
 var _lastSearchQuery = '';
-function _combinedOsmSearch(q, isRetry) {
+var _jordanBBox = '34.8,33.4,39.3,29.1';
+function _isInJordan(lat, lng) {
+    return lat >= 29.1 && lat <= 33.4 && lng >= 34.8 && lng <= 39.3;
+}
+function _combinedOsmSearch(q) {
     _lastSearchQuery = q;
     var bLat = _biasLat(), bLng = _biasLng();
-    var pending = 3, allItems = [];
+    var pending = 3, allItems = [], _earlyRendered = false;
 
     function _dedup(items) {
         var seen = {};
@@ -726,21 +739,30 @@ function _combinedOsmSearch(q, isRetry) {
         });
     }
 
+    function _renderCurrent() {
+        var unique = _dedup(allItems);
+        var inJordan = unique.filter(function(it) { return _isInJordan(it.lat, it.lng); });
+        var toShow = inJordan.length > 0 ? inJordan : unique;
+        toShow = _sortByProximity(toShow).slice(0, 12);
+        if (toShow.length > 0) {
+            _renderOsmItems(toShow, bLat, bLng, _lastSearchQuery);
+            _earlyRendered = true;
+        }
+    }
+
     function onBatchDone() {
         pending--;
-        if (pending > 0) return;
+        if (pending > 0) {
+            if (allItems.length > 0 && !_earlyRendered) _renderCurrent();
+            return;
+        }
+        _stopSearchTimer();
         var unique = _dedup(allItems);
-        unique = _sortByProximity(unique).slice(0, 10);
-        var local = unique.filter(function(it) { return _distKm(bLat, bLng, it.lat, it.lng) < 25; });
-        if (local.length > 0) {
-            _renderOsmItems(local, bLat, bLng);
-        } else if (!isRetry) {
-            var words = q.split(/\s+/);
-            if (words.length > 1) {
-                _combinedOsmSearch(words[0], true);
-                return;
-            }
-            _showNoResults(_lastSearchQuery);
+        var inJordan = unique.filter(function(it) { return _isInJordan(it.lat, it.lng); });
+        var toShow = inJordan.length > 0 ? inJordan : unique;
+        toShow = _sortByProximity(toShow).slice(0, 12);
+        if (toShow.length > 0) {
+            _renderOsmItems(toShow, bLat, bLng, _lastSearchQuery);
         } else {
             _showNoResults(_lastSearchQuery);
         }
@@ -749,6 +771,7 @@ function _combinedOsmSearch(q, isRetry) {
     $.getJSON('$searchPlacesUrl', {
         q: q, lat: bLat, lng: bLng
     }, function(data) {
+        _markSourceDone('sp-google');
         if (data && data.results) {
             data.results.forEach(function(r) {
                 allItems.push({
@@ -759,36 +782,25 @@ function _combinedOsmSearch(q, isRetry) {
             });
         }
         onBatchDone();
-    }).fail(function(){ onBatchDone(); });
+    }).fail(function(){ _markSourceDone('sp-google'); onBatchDone(); });
 
-    var localVb = _buildViewbox(0.6);
     $.getJSON('https://nominatim.openstreetmap.org/search', {
-        q: q, format: 'json', limit: 10, addressdetails: 1, 'accept-language': 'ar',
-        viewbox: localVb, bounded: 1
+        q: q, format: 'json', limit: 15, addressdetails: 1, 'accept-language': 'ar',
+        viewbox: _jordanBBox, bounded: 0, countrycodes: 'jo'
     }, function(nd) {
+        _markSourceDone('sp-osm');
         if (nd && nd.length > 0) {
             nd.forEach(function(r) {
                 allItems.push({ lat: parseFloat(r.lat), lng: parseFloat(r.lon), name: _shortName(r), addr: _extractAddr(r), src: 'nom' });
             });
         }
-        if (nd && nd.length < 3) {
-            $.getJSON('https://nominatim.openstreetmap.org/search', {
-                q: q, format: 'json', limit: 6, addressdetails: 1, 'accept-language': 'ar',
-                viewbox: _buildViewbox(2), bounded: 0, countrycodes: 'jo'
-            }, function(nd2) {
-                if (nd2) nd2.forEach(function(r) {
-                    allItems.push({ lat: parseFloat(r.lat), lng: parseFloat(r.lon), name: _shortName(r), addr: _extractAddr(r), src: 'nom' });
-                });
-                onBatchDone();
-            }).fail(function(){ onBatchDone(); });
-        } else {
-            onBatchDone();
-        }
-    }).fail(function(){ onBatchDone(); });
+        onBatchDone();
+    }).fail(function(){ _markSourceDone('sp-osm'); onBatchDone(); });
 
     $.getJSON('https://photon.komoot.io/api/', {
-        q: q, lat: bLat, lon: bLng, limit: 10, lang: 'default'
+        q: q + ' الأردن', lat: bLat, lon: bLng, limit: 15, lang: 'default'
     }, function(data) {
+        _markSourceDone('sp-photon');
         (data && data.features || []).forEach(function(f) {
             var p = f.properties, g = f.geometry;
             allItems.push({
@@ -799,7 +811,7 @@ function _combinedOsmSearch(q, isRetry) {
             });
         });
         onBatchDone();
-    }).fail(function(){ onBatchDone(); });
+    }).fail(function(){ _markSourceDone('sp-photon'); onBatchDone(); });
 }
 
 function _showNoResults(q) {
@@ -837,31 +849,65 @@ function _renderOsmItems(items, bLat, bLng, originalQuery) {
         return;
     }
     var html = '';
-    var allFar = items.every(function(r) { return _distKm(bLat, bLng, r.lat, r.lng) > 80; });
-    if (allFar && originalQuery) {
-        var gUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(originalQuery + ' الأردن');
-        html += '<div style="padding:10px 14px;background:#fffbeb;border-bottom:1px solid #fde68a;direction:rtl;font-size:12px;color:#92400e">';
-        html += '<i class="fa fa-info-circle"></i> لم يتم العثور على نتائج قريبة. ';
-        html += '<a href="' + gUrl + '" target="_blank" style="color:#4285f4;font-weight:700;text-decoration:underline">جرب البحث في خرائط جوجل</a>';
-        html += ' ثم الصق الرابط في حقل "لصق موقع" أعلاه</div>';
-    }
+    html += '<div style="padding:6px 14px;background:#f0f9ff;border-bottom:1px solid #e0e7ff;direction:rtl;font-size:11px;color:#3b82f6;display:flex;align-items:center;gap:6px">';
+    html += '<i class="fa fa-map-marker"></i> ';
+    html += '<span>' + items.length + ' نتيجة — مرتبة حسب الأقرب إليك</span>';
+    html += '</div>';
     items.forEach(function(r) {
         var dist = _distKm(bLat, bLng, r.lat, r.lng);
         var icon = (r.types && r.types.length) ? _placeTypeIcon(r.types) : 'fa-map-marker';
         var srcBadge = r.src === 'google' ? ' <span style="font-size:9px;color:#4285f4;font-weight:700">G</span>' : '';
+        var distColor = dist < 5 ? '#22c55e' : (dist < 20 ? '#3b82f6' : '#94a3b8');
         html += '<div class="result-item" data-lat="' + r.lat + '" data-lng="' + r.lng + '">';
         html += '<span class="result-icon"><i class="fa ' + icon + '"></i>' + srcBadge + '</span>';
         html += '<span class="result-text"><span class="result-name">' + r.name + '</span>';
-        html += '<span class="result-addr">' + (r.addr || '') + ' · <i class="fa fa-location-arrow"></i> ' + _distLabel(dist) + '</span>';
+        html += '<span class="result-addr">' + (r.addr || '') + ' · <span style="color:' + distColor + ';font-weight:600"><i class="fa fa-location-arrow"></i> ' + _distLabel(dist) + '</span></span>';
         html += '</span></div>';
     });
+    if (originalQuery) {
+        var gUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(originalQuery + ' الأردن');
+        html += '<div style="padding:8px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;direction:rtl;font-size:11px;text-align:center">';
+        html += '<a href="' + gUrl + '" target="_blank" style="color:#4285f4;font-weight:600;text-decoration:none">';
+        html += '<i class="fa fa-external-link"></i> لم تجد ما تبحث عنه؟ ابحث في خرائط جوجل</a></div>';
+    }
     $('#map-search-results').html(html).addClass('show');
 }
 
 /* ─── Main search dispatcher ─── */
+var _searchTimerInterval = null;
+function _showSearchLoading() {
+    clearInterval(_searchTimerInterval);
+    var html = '<div class="map-search-loading" id="search-loading-box">';
+    html += '<div><i class="fa fa-spinner fa-spin" style="color:#3b82f6;font-size:16px"></i></div>';
+    html += '<div style="font-weight:700;color:#334155;margin-top:6px">جاري البحث في كل الأردن...</div>';
+    html += '<div class="search-progress">';
+    html += '<span class="sp-dot active" id="sp-google" title="Google"></span>';
+    html += '<span class="sp-dot active" id="sp-osm" title="OpenStreetMap"></span>';
+    html += '<span class="sp-dot active" id="sp-photon" title="Photon"></span>';
+    html += '</div>';
+    html += '<div class="search-timer" id="search-timer-txt">يتم جمع النتائج من 3 مصادر مختلفة...</div>';
+    html += '<div class="search-hint"><i class="fa fa-info-circle"></i> انتظر 3-5 ثوانٍ للحصول على أفضل النتائج مرتبة حسب القرب</div>';
+    html += '</div>';
+    $('#map-search-results').html(html).addClass('show');
+    var _elapsed = 0;
+    _searchTimerInterval = setInterval(function() {
+        _elapsed++;
+        var el = $('#search-timer-txt');
+        if (!el.length) { clearInterval(_searchTimerInterval); return; }
+        if (_elapsed <= 2) el.text('يتم جمع النتائج من 3 مصادر مختلفة... (' + _elapsed + ' ثانية)');
+        else if (_elapsed <= 5) el.text('جاري ترتيب النتائج حسب الأقرب إليك... (' + _elapsed + ' ثوانٍ)');
+        else el.text('البحث يستغرق وقتاً أطول من المعتاد... (' + _elapsed + ' ثوانٍ)');
+    }, 1000);
+}
+function _markSourceDone(srcId) {
+    $('#' + srcId).removeClass('active').addClass('done');
+}
+function _stopSearchTimer() {
+    clearInterval(_searchTimerInterval);
+}
 function doMapSearch(q) {
     if (!q || q.length < 2) { $('#map-search-results').removeClass('show').empty(); return; }
-    $('#map-search-results').html('<div class="map-search-loading"><i class="fa fa-spinner fa-spin"></i> جاري البحث...</div>').addClass('show');
+    _showSearchLoading();
     if (_googlePlacesActive && _gAutoService) {
         _googleSearch(q);
     } else {
@@ -873,7 +919,7 @@ $('#map-search-input').on('input', function(){
     clearTimeout(searchTimer);
     var q = $(this).val().trim();
     if (q.length < 2) { $('#map-search-results').removeClass('show').empty(); return; }
-    searchTimer = setTimeout(function(){ doMapSearch(q); }, 300);
+    searchTimer = setTimeout(function(){ doMapSearch(q); }, 200);
 });
 $('#map-search-input').on('keydown', function(e){
     if (e.keyCode === 13) { e.preventDefault(); clearTimeout(searchTimer); doMapSearch($(this).val().trim()); }

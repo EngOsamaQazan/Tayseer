@@ -514,7 +514,14 @@
 .addr-map-search-results .result-icon { color: #e11d48; font-size: 16px; flex-shrink: 0; }
 .addr-map-search-results .result-name { font-weight: 600; font-size: 13px; display: block; }
 .addr-map-search-results .result-addr { font-size: 11px; color: #94a3b8; display: block; }
-.addr-map-search-results .map-search-loading { padding: 14px; text-align: center; color: #64748b; font-size: 13px; }
+.addr-map-search-results .map-search-loading { padding: 14px; text-align: center; color: #64748b; font-size: 13px; direction: rtl; }
+.addr-map-search-results .search-progress { display: flex; justify-content: center; gap: 6px; margin-top: 10px; }
+.addr-map-search-results .search-progress .sp-dot { width: 8px; height: 8px; border-radius: 50%; background: #e2e8f0; transition: background .3s; }
+.addr-map-search-results .search-progress .sp-dot.done { background: #22c55e; }
+.addr-map-search-results .search-progress .sp-dot.active { background: #3b82f6; animation: addrSpPulse .8s ease-in-out infinite; }
+@keyframes addrSpPulse { 0%,100%{ transform: scale(1); opacity: .7; } 50%{ transform: scale(1.4); opacity: 1; } }
+.addr-map-search-results .search-timer { font-size: 11px; color: #cbd5e1; margin-top: 6px; }
+.addr-map-search-results .search-hint { font-size: 11px; color: #94a3b8; margin-top: 4px; background: #f8fafc; border-radius: 6px; padding: 6px 10px; display: inline-block; }
 
 /* Map container */
 .addr-map-container { border: 1.5px solid #e2e8f0; border-radius: 8px; }
