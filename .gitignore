@@ -68,9 +68,9 @@ phpunit.phar
 # ─── Docker volumes ───────────────────────────
 mysql_data/
 
-# ─── Database dumps ───────────────────────────
+# ─── Database (dumps, migrations, seeds) ─────
+/database/
 *.sql
-!database/sql/*.sql
 
 # ─── Scripts (contain server credentials) ──────
 /scripts/temp/
