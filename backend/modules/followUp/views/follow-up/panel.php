@@ -75,7 +75,7 @@ $this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), \yii
 $this->registerJsVar('bulk_send_sms', Url::to(['/followUp/follow-up/bulk-send-sms']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), \yii\web\View::POS_HEAD);
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depends' => [\yii\web\JqueryAsset::class]]);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js?v=20260408c', ['depends' => [\yii\web\JqueryAsset::class]]);
 
 $_lastPay = $riskData['last_payment'] ?? ['date' => '-', 'amount' => 0];
 $_custShort = $customer ? NameHelper::short($customer->name) : 'غير محدد';

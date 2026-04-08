@@ -45,13 +45,27 @@ $(document).on('change', '.cant_contact', function () {
 var CiEdit = (function() {
     var originalData = {};
     var dirtyFields = {};
+    var _isLoading = false;
     var requiredFields = ['name', 'id_number', 'sex', 'birth_date', 'city', 'job_title', 'primary_phone_number'];
+
+    function _s2text(el) {
+        var opt = el.find('option:selected');
+        return (opt.length && opt.val() !== '') ? opt.text() : '—';
+    }
+
+    function _syncS2(el) {
+        var $c = el.next('.select2-container');
+        if ($c.length) {
+            var t = _s2text(el);
+            $c.find('.select2-selection__rendered').text(t).attr('title', t);
+        }
+    }
 
     function setVal(cls, val) {
         var el = $('.' + cls);
         if (el.is('select')) {
             el.val(val != null ? String(val) : '');
-            if (el.data('select2')) el.trigger('change.select2');
+            _syncS2(el);
         } else {
             el.val(val || '');
         }
@@ -59,14 +73,19 @@ var CiEdit = (function() {
 
     function loadCustomer(customerId) {
         dirtyFields = {};
+        _isLoading = true;
         $('#ciSaveBar').removeClass('visible');
         $('#ciFooterSaveBtn').hide();
         $('#ci-customer-id').val(customerId);
 
         $('#customerInfoModal .ci-input').each(function() {
             var $i = $(this);
-            $i.prop('disabled', true).closest('.ci-field').removeClass('ci-editing');
-            if ($i.data('select2')) $i.trigger('change.select2');
+            $i.closest('.ci-field').removeClass('ci-editing');
+            if ($i.is('select')) {
+                $i.val('');
+                _syncS2($i);
+            }
+            $i.prop('disabled', true);
         });
 
         var a = document.getElementById('cus-link');
@@ -92,6 +111,7 @@ var CiEdit = (function() {
             setVal('cu-social-security-number', info.social_security_number);
             setVal('cu-is-social-security', info.is_social_security);
             setVal('cu-do-have-any-property', info.do_have_any_property);
+            _isLoading = false;
         });
     }
 
@@ -100,7 +120,7 @@ var CiEdit = (function() {
         if ($el.prop('disabled')) return;
         markDirty(fieldEl);
         $el.prop('disabled', true);
-        if ($el.data('select2')) $el.trigger('change.select2');
+        if ($el.is('select')) _syncS2($el);
         $el.closest('.ci-field').removeClass('ci-editing');
     }
 
@@ -119,7 +139,6 @@ var CiEdit = (function() {
             $el.prop('disabled', false);
             $el.closest('.ci-field').addClass('ci-editing');
             if ($el.data('select2')) {
-                $el.trigger('change.select2');
                 $el.select2('open');
             } else {
                 $el.focus();
@@ -128,6 +147,7 @@ var CiEdit = (function() {
     }
 
     function markDirty(fieldEl) {
+        if (_isLoading) return;
         var $el = $(fieldEl);
         var fieldName = $el.data('field');
         if (!fieldName) return;
@@ -137,12 +157,14 @@ var CiEdit = (function() {
         if (requiredFields.indexOf(fieldName) !== -1 && orig && String(orig).trim() !== '' && (!current || String(current).trim() === '')) {
             $el.closest('.ci-field').css('animation', 'ciShake .4s');
             setTimeout(function() { $el.closest('.ci-field').css('animation', ''); }, 400);
+            _isLoading = true;
             if ($el.is('select')) {
                 $el.val(orig != null ? String(orig) : '');
-                if ($el.data('select2')) $el.trigger('change.select2');
+                _syncS2($el);
             } else {
                 $el.val(orig || '');
             }
+            _isLoading = false;
             delete dirtyFields[fieldName];
             return;
         }
@@ -159,22 +181,24 @@ var CiEdit = (function() {
 
     function cancelAll() {
         dirtyFields = {};
+        _isLoading = true;
         $('#ciSaveBar').removeClass('visible');
         $('#ciFooterSaveBtn').hide();
         $('#customerInfoModal .ci-input').each(function() {
             var $el = $(this);
-            $el.prop('disabled', true);
             $el.closest('.ci-field').removeClass('ci-editing');
             var fieldName = $el.data('field');
             if (fieldName && originalData[fieldName] !== undefined) {
                 if ($el.is('select')) {
                     $el.val(originalData[fieldName] != null ? String(originalData[fieldName]) : '');
-                    if ($el.data('select2')) $el.trigger('change.select2');
+                    _syncS2($el);
                 } else {
                     $el.val(originalData[fieldName] || '');
                 }
             }
+            $el.prop('disabled', true);
         });
+        _isLoading = false;
     }
 
     function save() {
