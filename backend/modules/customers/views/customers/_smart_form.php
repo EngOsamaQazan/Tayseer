@@ -96,7 +96,9 @@ if (!$isNew) {
             <h1><i class="fa fa-pencil"></i> تعديل بيانات: <?= Html::encode($model->name) ?></h1>
         <?php endif ?>
         <div class="so-header-actions">
-            <?php if (!$isNew): ?>
+            <?php if ($isNew): ?>
+                <button type="button" class="so-back-btn so-reset-btn" style="background:#ef4444;color:#fff;border-color:#ef4444"><i class="fa fa-refresh"></i> إعادة التعيين</button>
+            <?php else: ?>
                 <a href="<?= Url::to(['/contracts/contracts/create', 'customer_id' => $model->id]) ?>" class="so-back-btn" style="background:#059669;color:#fff;border-color:#059669"><i class="fa fa-file-text-o"></i> إنشاء عقد</a>
             <?php endif ?>
             <a href="<?= Url::to(['index']) ?>" class="so-back-btn"><i class="fa fa-arrow-right"></i> العودة للقائمة</a>

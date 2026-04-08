@@ -35,17 +35,21 @@
   style.textContent = '.ty-filter-body-lock { overflow: hidden !important; }';
   document.head.appendChild(style);
 
-  /* ── Reinitialize Select2 after PJAX/AJAX ── */
+  /* ── Reinitialize Select2 after PJAX (not general AJAX) ── */
   if (typeof jQuery !== 'undefined') {
-    jQuery(document).on('pjax:complete ajaxComplete', function () {
+    jQuery(document).on('pjax:complete', function () {
       setTimeout(function () {
+        if (jQuery('.select2-container--open').length) return;
         jQuery('.select2-hidden-accessible').each(function () {
           var $el = jQuery(this);
           if ($el.data('select2')) {
             try { $el.select2('destroy'); } catch (ex) { /* ignore */ }
           }
         });
-      }, 100);
+        if (typeof window.initSearchableSelects === 'function') {
+          window.initSearchableSelects();
+        }
+      }, 150);
     });
   }
   /* ── Layout Debug Mode ── */

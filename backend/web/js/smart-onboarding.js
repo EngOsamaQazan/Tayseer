@@ -9,9 +9,12 @@
         currentStep: 0,
         totalSteps: 5,
         debounceTimer: null,
+        saveTimer: null,
         riskData: null,
         panelExpanded: false,
     };
+
+    var STORAGE_KEY = 'so_form_draft';
 
     /* ══════════════════════════════════════════
        INITIALIZATION
@@ -24,6 +27,7 @@
         initDuplicateCheck();
         initConditionalFields();
         initDocumentUploads();
+        initFormPersistence();
         triggerRiskCalc();
         if (window.soConfig && window.soConfig.isEditMode) initEditWarnings();
     });
@@ -619,6 +623,174 @@
     }
 
     /* ══════════════════════════════════════════
+       FORM PERSISTENCE — localStorage auto-draft
+       ══════════════════════════════════════════ */
+    function initFormPersistence() {
+        if (window.soConfig && window.soConfig.isEditMode) return;
+
+        var $form = $('#smart-onboarding-form');
+
+        restoreFormData();
+
+        $form.on('change input', 'input, select, textarea', function() {
+            if (this.type === 'file') return;
+            clearTimeout(SO.saveTimer);
+            SO.saveTimer = setTimeout(saveFormData, 400);
+        });
+
+        $form.on('submit', function() {
+            clearFormData();
+        });
+
+        $(document).on('click', '.so-reset-btn', function() {
+            if (!confirm('هل أنت متأكد من إعادة تعيين جميع الحقول؟ سيتم حذف جميع البيانات المدخلة.')) return;
+
+            clearFormData();
+            $form[0].reset();
+
+            $form.find('select').each(function() {
+                $(this).val('');
+                if ($(this).data('select2')) {
+                    $(this).trigger('change.select2');
+                }
+            });
+
+            $form.find('.form-group').removeClass('has-error has-success so-warn');
+            $form.find('.so-warn-hint, .so-duplicate-warn').remove();
+
+            $('#customers-is_social_security').trigger('change');
+            $('#customers-has_social_security_salary').trigger('change');
+            $('#customers-do_have_any_property').trigger('change');
+
+            goToStep(0);
+            triggerRiskCalc();
+            showToast('تم إعادة تعيين النموذج بالكامل', 'warning');
+        });
+    }
+
+    function saveFormData() {
+        if (window.soConfig && window.soConfig.isEditMode) return;
+        try {
+            var $form = $('#smart-onboarding-form');
+            var data = {};
+            var SKIP = {'_csrf-backend':1, save_decision:1, risk_assessment:1, decision_notes:1, customer_id_for_media:1};
+
+            $form.find('input, select, textarea').each(function() {
+                var name = this.name;
+                if (!name || SKIP[name]) return;
+                if (this.type === 'file' || this.type === 'hidden' && name.indexOf('[') === -1 && !this.id) return;
+
+                if (this.type === 'checkbox') {
+                    data[name] = this.checked ? this.value : '';
+                } else if (this.type === 'radio') {
+                    if (this.checked) data[name] = this.value;
+                } else {
+                    data[name] = $(this).val();
+                }
+            });
+
+            data['__so_step'] = SO.currentStep;
+            data['__so_ts'] = Date.now();
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            updateDraftBadge(true);
+        } catch(e) {
+            console.warn('Form save error:', e);
+        }
+    }
+
+    function restoreFormData() {
+        try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+
+            var data = JSON.parse(raw);
+            if (!data || typeof data !== 'object') return;
+
+            var age = Date.now() - (data['__so_ts'] || 0);
+            if (age > 7 * 24 * 60 * 60 * 1000) {
+                clearFormData();
+                return;
+            }
+
+            var $form = $('#smart-onboarding-form');
+            var restored = 0;
+
+            var elMap = {};
+            $form.find('input, select, textarea').each(function() {
+                if (this.name && this.type !== 'file') {
+                    if (!elMap[this.name]) elMap[this.name] = [];
+                    elMap[this.name].push(this);
+                }
+            });
+
+            Object.keys(data).forEach(function(name) {
+                if (name.charAt(0) === '_' && name.charAt(1) === '_') return;
+                var val = data[name];
+                if (val === null || val === undefined) return;
+
+                var els = elMap[name];
+                if (!els || !els.length) return;
+
+                var el = els[0];
+                if (el.type === 'checkbox') {
+                    el.checked = !!val && val !== '';
+                } else if (el.type === 'radio') {
+                    els.forEach(function(r) { r.checked = (r.value === val); });
+                } else {
+                    $(el).val(val);
+                }
+                restored++;
+            });
+
+            if (restored > 0) {
+                setTimeout(function() {
+                    $form.find('select').each(function() {
+                        if ($(this).data('select2')) {
+                            $(this).trigger('change.select2');
+                        }
+                    });
+
+                    $('#customers-is_social_security').trigger('change');
+                    $('#customers-has_social_security_salary').trigger('change');
+                    $('#customers-do_have_any_property').trigger('change');
+                }, 300);
+
+                var savedStep = parseInt(data['__so_step']) || 0;
+                if (savedStep > 0 && savedStep < SO.totalSteps) {
+                    goToStep(savedStep);
+                }
+
+                updateDraftBadge(true);
+                showToast('تم استعادة البيانات المحفوظة تلقائياً — يمكنك المتابعة من حيث توقفت', 'info');
+            }
+        } catch(e) {
+            console.warn('Form restore error:', e);
+        }
+    }
+
+    function clearFormData() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem('so_step');
+            updateDraftBadge(false);
+        } catch(e) {}
+    }
+
+    function updateDraftBadge(hasDraft) {
+        var $badge = $('.so-draft-badge');
+        if (hasDraft) {
+            if (!$badge.length) {
+                $badge = $('<span class="so-draft-badge"><i class="fa fa-floppy-o"></i> مسودة محفوظة</span>');
+                $('.so-header h1').after($badge);
+            }
+            $badge.show();
+        } else {
+            $badge.hide();
+        }
+    }
+
+    /* ══════════════════════════════════════════
        HELPERS
        ══════════════════════════════════════════ */
     function formatMoney(n) {
@@ -653,6 +825,10 @@
             ? window.soConfig.jobInfoUrl.replace('__JOB_ID__', jobId)
             : '/jobs/jobs/job-info?id=' + jobId;
 
+        var editUrl = '/jobs/jobs/update?id=' + jobId;
+        var editBtn = '<a href="' + editUrl + '" target="_blank" class="job-update-btn">' +
+            '<i class="fa fa-pencil"></i> تحديث بيانات الجهة</a>';
+
         $.getJSON(url).done(function(res) {
             if (!res.success) { $info.hide(); return; }
 
@@ -663,11 +839,7 @@
             if (!dateVal) {
                 $badge.html('<i class="fa fa-question-circle"></i> لا تتوفر بيانات تاريخية لهذه الجهة');
                 $badge.attr('class', 'job-update-badge job-update-stale');
-                $info.show();
-                return;
-            }
-
-            if (months >= 3) {
+            } else if (months >= 3) {
                 $badge.html(
                     '<i class="fa fa-exclamation-triangle"></i> ' +
                     dateLabel + ': <strong>' + escHtml(dateVal) + '</strong>' +
@@ -681,6 +853,9 @@
                 );
                 $badge.attr('class', 'job-update-badge job-update-fresh');
             }
+
+            $info.find('.job-update-btn').remove();
+            $info.append(editBtn);
             $info.show();
         });
     }

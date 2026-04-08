@@ -23,6 +23,18 @@
     cursor: pointer; transition: all .2s;
 }
 .so-back-btn:hover { border-color: var(--clr-primary); color: var(--clr-primary); }
+.so-reset-btn:hover { opacity: .85; color: #fff !important; }
+
+/* ── Draft Badge ── */
+.so-draft-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 12px; border-radius: 20px;
+    background: #dbeafe; color: #1d4ed8;
+    font-size: 11px; font-weight: 600;
+    margin-right: 12px; animation: so-badge-in .3s ease;
+}
+.so-draft-badge i { font-size: 12px; }
+@keyframes so-badge-in { from { opacity: 0; transform: scale(.8); } to { opacity: 1; transform: scale(1); } }
 
 /* ── Main Grid: Form + Risk Panel ── */
 .so-body { display: flex; gap: 0; min-height: calc(100vh - 130px); }
@@ -699,6 +711,31 @@
     color: #dc2626;
     font-weight: 700;
 }
+.job-update-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 14px;
+    margin-right: 8px;
+    margin-top: 6px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    background: var(--clr-primary, #800020);
+    color: #fff;
+    border: 1px solid var(--clr-primary, #800020);
+    transition: all .2s;
+    cursor: pointer;
+}
+.job-update-btn:hover {
+    background: var(--clr-primary-800, #70001c);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(128,0,32,.2);
+    text-decoration: none;
+}
+.job-update-btn i { font-size: 11px; }
 
 /* ═══ Edit Mode Responsive ═══ */
 @media (max-width: 767px) {

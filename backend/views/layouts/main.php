@@ -446,7 +446,7 @@ if (Yii::$app->controller->action->id === 'login') {
             }
         }
         $(document).ready(function(){ initSearchableSelects(); });
-        $(document).on('pjax:end ajaxComplete', function(){ setTimeout(function(){ initSearchableSelects(); }, 100); });
+        $(document).on('pjax:end', function(){ setTimeout(function(){ initSearchableSelects(); }, 150); });
         window.initSearchableSelects = initSearchableSelects;
     })();
 JS
