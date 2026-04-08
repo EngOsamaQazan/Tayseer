@@ -104,7 +104,7 @@ body { background: #e0e0e0; font-family: 'Cairo', 'Segoe UI', 'Tahoma', sans-ser
 .a4-page:last-of-type { page-break-after: auto; }
 
 /* ═══ ترويسة الصفحة ═══ */
-.pc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; border-bottom: 2px solid #333; padding-bottom: 12px; }
+.pc-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; border-bottom: 2px solid #333; padding-bottom: 10px; }
 .pc-header-right { text-align: right; }
 .pc-header-right h3 { font-size: 16px; font-weight: 800; margin: 0; }
 .pc-header-right h4 { font-size: 14px; font-weight: 600; margin: 2px 0 0; color: #333; }
@@ -116,26 +116,26 @@ body { background: #e0e0e0; font-family: 'Cairo', 'Segoe UI', 'Tahoma', sans-ser
 /* ═══ عنوان القسم ═══ */
 .pc-section-title {
     text-align: center; font-size: 16px; font-weight: 800;
-    margin: 16px 0 12px; padding: 6px 0;
+    margin: 10px 0 8px; padding: 4px 0;
     border-top: 1px solid #ccc; border-bottom: 1px solid #ccc;
 }
 
 /* ═══ الجداول ═══ */
-.pc-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 13px; }
-.pc-table th, .pc-table td { border: 1px solid #555; padding: 8px 10px; text-align: right; vertical-align: top; }
+.pc-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 13px; }
+.pc-table th, .pc-table td { border: 1px solid #555; padding: 5px 8px; text-align: right; vertical-align: top; }
 .pc-table th { background: #f0f0f0; font-weight: 700; font-size: 12.5px; }
 .pc-table td { font-size: 13px; }
 
 /* ═══ نصوص ═══ */
-.pc-text { font-size: 14px; line-height: 2; margin-bottom: 10px; }
+.pc-text { font-size: 14px; line-height: 1.8; margin-bottom: 8px; }
 .pc-text b { font-weight: 800; }
-.pc-signature-row { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 10px; border-top: 1px dashed #999; }
+.pc-signature-row { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 8px; border-top: 1px dashed #999; }
 .pc-signature-box { text-align: center; width: 40%; }
-.pc-signature-box h5 { font-size: 13px; font-weight: 700; margin-bottom: 40px; }
+.pc-signature-box h5 { font-size: 13px; font-weight: 700; margin-bottom: 30px; }
 
 /* ═══ صور المحامي ═══ */
-.pc-lawyer-images { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin: 15px 0; }
-.pc-lawyer-images img { max-width: 400px; max-height: 250px; object-fit: contain; }
+.pc-lawyer-images { display: flex; justify-content: center; flex-wrap: nowrap; gap: 8px; margin: 10px 0; }
+.pc-lawyer-images img { max-width: 48%; max-height: 140px; object-fit: contain; }
 
 /* ═══ الصفحة 2: المحضر ═══ */
 .pc-record-layout { display: flex; gap: 0; min-height: 230mm; }
@@ -330,7 +330,7 @@ body { background: #e0e0e0; font-family: 'Cairo', 'Segoe UI', 'Tahoma', sans-ser
 <!-- ═══════════════════════════════════════════════════════════
      الصفحة 1: تعهد بصحة المعلومات
      ═══════════════════════════════════════════════════════════ -->
-<div class="a4-page" id="page-pledge">
+<div class="a4-page" id="page-pledge" style="padding:15mm 18mm">
 
     <!-- ترويسة -->
     <div class="pc-header">
@@ -395,7 +395,7 @@ body { background: #e0e0e0; font-family: 'Cairo', 'Segoe UI', 'Tahoma', sans-ser
     </table>
 
     <!-- IBAN -->
-    <p class="pc-text" style="margin-top:20px">
+    <p class="pc-text" style="margin-top:10px">
         <b>لا مانع من رد المبالغ على IBAN رقم:</b><br>
         <span dir="ltr" style="font-family:monospace;font-size:15px;letter-spacing:1px"><?= $companyInfo->primeryBankAccount->iban_number ?></span>
         (<?= $companyInfo->name ?>) مرفق الـ IBAN مصدق من <?= $companyInfo->primeryBankAccount->bank->name ?>
@@ -405,24 +405,24 @@ body { background: #e0e0e0; font-family: 'Cairo', 'Segoe UI', 'Tahoma', sans-ser
     <?php if (!empty($lawyer_images)): ?>
     <div class="pc-lawyer-images">
         <?php foreach ($lawyer_images as $image): ?>
-            <?= Html::img(Url::to(['/' . $image->image]), ['style' => 'max-width:400px;max-height:250px;object-fit:contain']) ?>
+            <?= Html::img(Url::to(['/' . $image->image]), ['style' => 'max-width:48%;max-height:140px;object-fit:contain']) ?>
         <?php endforeach ?>
     </div>
     <?php endif ?>
 
     <!-- التعهد والتوقيع -->
-    <p class="pc-text" style="text-align:center;margin-top:20px">
+    <p class="pc-text" style="text-align:center;margin-top:10px">
         أنا الموقع أدناه <b><?= $model->lawyer->name ?></b> أتعهد بأن جميع البيانات الواردة أعلاه صحيحة وبحسب ما أفاد المدين.
     </p>
 
     <div class="pc-signature-row">
         <div class="pc-signature-box">
             <h5>التوقيع</h5>
-            <div style="border-bottom:1px solid #333;margin-top:50px"></div>
+            <div style="border-bottom:1px solid #333;margin-top:30px"></div>
         </div>
         <div class="pc-signature-box">
             <h5>التاريخ</h5>
-            <div style="border-bottom:1px solid #333;margin-top:50px"></div>
+            <div style="border-bottom:1px solid #333;margin-top:30px"></div>
         </div>
     </div>
 
