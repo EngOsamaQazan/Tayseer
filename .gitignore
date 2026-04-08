@@ -94,6 +94,11 @@ tayseerai-*.json
 __pycache__/
 *.pyc
 
+# ─── Inno Setup build output ─────────────────
+scripts/deploy/Output/
+scripts/deploy/platform-tools.zip
+scripts/deploy/*.exe
+
 # ─── Temp utility scripts ─────────────────────
 check_cols.php
 check_companies.php

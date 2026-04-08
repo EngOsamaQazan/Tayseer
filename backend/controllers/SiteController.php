@@ -1573,14 +1573,21 @@ class SiteController extends Controller
      */
     public function actionDownloadAdbInstaller()
     {
-        $exe = Yii::getAlias('@backend/../scripts/deploy/TayseerCallSetup.exe');
-        if (file_exists($exe)) {
-            return Yii::$app->response->sendFile($exe, 'TayseerCallSetup.exe');
+        $base = Yii::getAlias('@backend/../scripts/deploy');
+
+        $candidates = [
+            ['path' => $base . '/Output/TayseerCallServiceSetup.exe', 'name' => 'TayseerCallServiceSetup.exe'],
+            ['path' => $base . '/TayseerCallServiceSetup.exe',        'name' => 'TayseerCallServiceSetup.exe'],
+            ['path' => $base . '/TayseerCallSetup.exe',               'name' => 'TayseerCallSetup.exe'],
+            ['path' => $base . '/_install_adb.bat',                   'name' => 'Tayseer_ADB_Installer.bat'],
+        ];
+
+        foreach ($candidates as $c) {
+            if (file_exists($c['path'])) {
+                return Yii::$app->response->sendFile($c['path'], $c['name']);
+            }
         }
-        $bat = Yii::getAlias('@backend/../scripts/deploy/_install_adb.bat');
-        if (file_exists($bat)) {
-            return Yii::$app->response->sendFile($bat, 'Tayseer_ADB_Installer.bat');
-        }
-        throw new \yii\web\NotFoundHttpException('ملف التثبيت غير موجود');
+
+        throw new \yii\web\NotFoundHttpException('ملف التثبيت غير موجود — يرجى بناء المثبّت أولاً من TayseerCallService.iss');
     }
 }
