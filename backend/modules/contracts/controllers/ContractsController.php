@@ -4,6 +4,7 @@ namespace backend\modules\contracts\controllers;
 
 use Yii;
 use yii\helpers\Html;
+use yii\helpers\Url;
 use yii\web\Response;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
@@ -724,16 +725,30 @@ class ContractsController extends Controller
             return $this->render('create', $params);
         }
 
+        $isAjax = Yii::$app->request->isAjax;
+
         if (!$model->load(Yii::$app->request->post())) {
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'فشل تحميل بيانات النموذج'];
+            }
             Yii::$app->session->setFlash('error', 'فشل تحميل بيانات النموذج');
             return $this->render('create', $this->buildFormParams($model));
         }
 
         if ($model->type !== 'solidarity' && empty($model->customer_id)) {
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'يجب اختيار العميل'];
+            }
             Yii::$app->session->setFlash('error', 'يجب اختيار العميل');
             return $this->render('create', $this->buildFormParams($model));
         }
         if ($model->type === 'solidarity' && empty($model->customers_ids)) {
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'يجب اختيار العملاء للعقد التضامني'];
+            }
             Yii::$app->session->setFlash('error', 'يجب اختيار العملاء للعقد التضامني');
             return $this->render('create', $this->buildFormParams($model));
         }
@@ -749,43 +764,51 @@ class ContractsController extends Controller
                 throw new \Exception('فشل حفظ العقد');
             }
 
-            // ── حفظ الأجهزة (سيريال) ──
             $this->saveSerialItems($model);
-
-            // ── حفظ الأجهزة (يدوي — بدون سيريال) ──
             $this->saveManualItems($model);
-
-            // ── حفظ العملاء والكفلاء ──
             $this->saveContractCustomers($model);
 
-            // ── إنشاء ملف مستندات ──
             $docFile = new ContractDocumentFile();
             $docFile->document_type = 'contract file';
             $docFile->contract_id = $model->id;
             $docFile->save(false);
 
-            // ── إشعار ──
-            Yii::$app->notifications->sendByRule(
-                ['Manager'],
-                'contracts/update?id=' . $model->id,
-                Notification::GENERAL,
-                Yii::t('app', 'إنشاء عقد رقم'),
-                Yii::t('app', 'إنشاء عقد رقم') . $model->id,
-                Yii::$app->user->id
-            );
-
-            // ── تحديث الكاش ──
-            $this->refreshContractCaches();
-
             $transaction->commit();
 
-            if (Yii::$app->request->post('print') !== null) {
-                return $this->redirect(['print-preview', 'id' => $model->id]);
+            // ── عمليات ما بعد الحفظ (خارج الـ transaction) ──
+            try {
+                Yii::$app->notifications->sendByRule(
+                    ['Manager'],
+                    'contracts/update?id=' . $model->id,
+                    Notification::GENERAL,
+                    Yii::t('app', 'إنشاء عقد رقم'),
+                    Yii::t('app', 'إنشاء عقد رقم') . $model->id,
+                    Yii::$app->user->id
+                );
+            } catch (\Exception $e) {
+                Yii::warning('فشل إرسال إشعار إنشاء عقد #' . $model->id . ': ' . $e->getMessage());
             }
-            return $this->redirect(['index']);
+
+            $this->refreshContractCaches();
+
+            $redirectUrl = Yii::$app->request->post('print') !== null
+                ? Url::to(['print-preview', 'id' => $model->id])
+                : Url::to(['index']);
+
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => true, 'message' => 'تم إنشاء العقد بنجاح', 'redirect' => $redirectUrl];
+            }
+            return $this->redirect($redirectUrl);
 
         } catch (\Exception $e) {
             $transaction->rollBack();
+
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()];
+            }
+
             Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
             return $this->render('create', $this->buildFormParams($model));
         }
@@ -807,16 +830,30 @@ class ContractsController extends Controller
             return $this->render('update', $this->buildFormParams($model));
         }
 
+        $isAjax = Yii::$app->request->isAjax;
+
         if (!$model->load(Yii::$app->request->post())) {
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'فشل تحميل بيانات النموذج'];
+            }
             Yii::$app->session->setFlash('error', 'فشل تحميل بيانات النموذج');
             return $this->render('update', $this->buildFormParams($model));
         }
 
         if ($model->type !== 'solidarity' && empty($model->customer_id)) {
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'يجب اختيار العميل'];
+            }
             Yii::$app->session->setFlash('error', 'يجب اختيار العميل');
             return $this->render('update', $this->buildFormParams($model));
         }
         if ($model->type === 'solidarity' && empty($model->customers_ids)) {
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'يجب اختيار العملاء للعقد التضامني'];
+            }
             Yii::$app->session->setFlash('error', 'يجب اختيار العملاء للعقد التضامني');
             return $this->render('update', $this->buildFormParams($model));
         }
@@ -827,36 +864,48 @@ class ContractsController extends Controller
                 throw new \Exception('فشل حفظ العقد');
             }
 
-            // ── تحديث الأجهزة (إزالة القديمة + إضافة الجديدة) ──
             $this->updateSerialItems($model);
-
-            // ── تحديث الأجهزة اليدوية ──
             $this->updateManualItems($model);
 
-            // ── تحديث العملاء والكفلاء ──
             ContractsCustomers::deleteAll(['contract_id' => $id]);
             $this->saveContractCustomers($model);
 
-            // ── إشعار ──
-            Yii::$app->notifications->sendByRule(
-                ['Manager'],
-                'contracts/update?id=' . $model->id,
-                Notification::GENERAL,
-                Yii::t('app', 'تم تعديل عقد رقم') . $model->id,
-                Yii::t('app', 'تعديل عقد رقم') . $model->id . ' من قبل ' . Yii::$app->user->identity['username'],
-                Yii::$app->user->id
-            );
-
-            $this->refreshContractCaches();
             $transaction->commit();
 
-            if (Yii::$app->request->post('print') !== null) {
-                return $this->redirect(['print-preview', 'id' => $model->id]);
+            // ── عمليات ما بعد الحفظ (خارج الـ transaction) ──
+            try {
+                Yii::$app->notifications->sendByRule(
+                    ['Manager'],
+                    'contracts/update?id=' . $model->id,
+                    Notification::GENERAL,
+                    Yii::t('app', 'تم تعديل عقد رقم') . $model->id,
+                    Yii::t('app', 'تعديل عقد رقم') . $model->id . ' من قبل ' . Yii::$app->user->identity['username'],
+                    Yii::$app->user->id
+                );
+            } catch (\Exception $e) {
+                Yii::warning('فشل إرسال إشعار تعديل عقد #' . $model->id . ': ' . $e->getMessage());
             }
-            return $this->redirect(['update', 'id' => $model->id]);
+
+            $this->refreshContractCaches();
+
+            $redirectUrl = Yii::$app->request->post('print') !== null
+                ? Url::to(['print-preview', 'id' => $model->id])
+                : Url::to(['update', 'id' => $model->id]);
+
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => true, 'message' => 'تم حفظ التعديلات بنجاح', 'redirect' => $redirectUrl];
+            }
+            return $this->redirect($redirectUrl);
 
         } catch (\Exception $e) {
             $transaction->rollBack();
+
+            if ($isAjax) {
+                Yii::$app->response->format = Response::FORMAT_JSON;
+                return ['success' => false, 'message' => 'حدث خطأ: ' . $e->getMessage()];
+            }
+
             Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
             return $this->render('update', $this->buildFormParams($model));
         }
@@ -1451,20 +1500,13 @@ class ContractsController extends Controller
     }
 
     /**
-     * تحديث كاش العقود
+     * تحديث كاش العقود — invalidate فقط بدل إعادة بناء كامل
+     * الكاش يعاد بناؤه lazily عند أول طلب يحتاجه
      */
     private function refreshContractCaches()
     {
-        Yii::$app->cache->set(
-            Yii::$app->params['key_contract_id'],
-            Yii::$app->db->createCommand(Yii::$app->params['contract_id_query'])->queryAll(),
-            Yii::$app->params['time_duration']
-        );
-        Yii::$app->cache->set(
-            Yii::$app->params['key_contract_status'],
-            Yii::$app->db->createCommand(Yii::$app->params['contract_status_query'])->queryAll(),
-            Yii::$app->params['time_duration']
-        );
+        Yii::$app->cache->delete(Yii::$app->params['key_contract_id']);
+        Yii::$app->cache->delete(Yii::$app->params['key_contract_status']);
     }
 
     /**

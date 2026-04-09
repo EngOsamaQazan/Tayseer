@@ -575,8 +575,25 @@ var ContractForm = (function () {
     }
 
     /* ══════════════════════════════════════════════════
-       Form submission handlers
+       Form submission handlers — AJAX with timeout
        ══════════════════════════════════════════════════ */
+    var SUBMIT_TIMEOUT_MS = 30000;
+    var _submitting = false;
+
+    function setButtonsLoading($form, loading) {
+        $form.find('button[type=submit]').each(function () {
+            var $btn = $(this);
+            if (loading) {
+                $btn.prop('disabled', true);
+                $btn.data('orig', $btn.html());
+                $btn.html('<i class="fa fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');
+            } else {
+                $btn.prop('disabled', false);
+                if ($btn.data('orig')) $btn.html($btn.data('orig'));
+            }
+        });
+    }
+
     function initFormHandlers() {
         var $form = $('#contract-form');
         if (!$form.length) return;
@@ -599,7 +616,10 @@ var ContractForm = (function () {
             }
         });
 
-        $form.on('beforeSubmit', function () {
+        $form.on('beforeSubmit', function (e) {
+            e.preventDefault();
+            if (_submitting) return false;
+
             var typeEl = document.getElementById('cf-type');
             var type = typeEl ? typeEl.value : 'normal';
             var hasCustomer = false;
@@ -631,14 +651,54 @@ var ContractForm = (function () {
                 return false;
             }
 
-            $form.find('button[type=submit]').each(function () {
-                var $btn = $(this);
-                $btn.prop('disabled', true);
-                $btn.data('orig', $btn.html());
-                $btn.html('<i class="fa fa-spinner fa-spin"></i> \u062C\u0627\u0631\u064A \u0627\u0644\u062D\u0641\u0638...');
-            });
+            _submitting = true;
+            setButtonsLoading($form, true);
 
-            return true;
+            var formData = new FormData($form[0]);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', $form.attr('action') || window.location.href, true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+            xhr.timeout = SUBMIT_TIMEOUT_MS;
+
+            xhr.onload = function () {
+                _submitting = false;
+                if (xhr.status === 200) {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        if (res.success) {
+                            showToast(res.message || '\u062A\u0645 \u0627\u0644\u062D\u0641\u0638 \u0628\u0646\u062C\u0627\u062D', 'ok');
+                            setTimeout(function () {
+                                window.location.href = res.redirect;
+                            }, 300);
+                            return;
+                        }
+                        setButtonsLoading($form, false);
+                        showToast(res.message || '\u062D\u062F\u062B \u062E\u0637\u0623 \u0623\u062B\u0646\u0627\u0621 \u0627\u0644\u062D\u0641\u0638', 'err');
+                    } catch (e) {
+                        setButtonsLoading($form, false);
+                        showToast('\u062D\u062F\u062B \u062E\u0637\u0623 \u063A\u064A\u0631 \u0645\u062A\u0648\u0642\u0639', 'err');
+                    }
+                } else {
+                    setButtonsLoading($form, false);
+                    showToast('\u062E\u0637\u0623 \u0641\u064A \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0633\u064A\u0631\u0641\u0631 (' + xhr.status + ')', 'err');
+                }
+            };
+
+            xhr.onerror = function () {
+                _submitting = false;
+                setButtonsLoading($form, false);
+                showToast('\u0641\u0634\u0644 \u0627\u0644\u0627\u062A\u0635\u0627\u0644 \u0628\u0627\u0644\u0633\u064A\u0631\u0641\u0631', 'err');
+            };
+
+            xhr.ontimeout = function () {
+                _submitting = false;
+                setButtonsLoading($form, false);
+                showToast('\u0627\u0646\u062A\u0647\u062A \u0645\u0647\u0644\u0629 \u0627\u0644\u0627\u0646\u062A\u0638\u0627\u0631\u060C \u062D\u0627\u0648\u0644 \u0645\u0631\u0629 \u0623\u062E\u0631\u0649', 'err');
+            };
+
+            xhr.send(formData);
+            return false;
         });
     }
 
