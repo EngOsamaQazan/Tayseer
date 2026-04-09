@@ -51,4 +51,15 @@ systemctl reload "php${PHP_VER}-fpm" 2>/dev/null || true
 LANDING_SRC="/var/www/jadal.aqssat.co/landing/index.html"
 [ -f "$LANDING_SRC" ] && cp -f "$LANDING_SRC" /var/www/html/index.html 2>/dev/null || true
 
+# Admin panel
+ADMIN_SRC="/var/www/jadal.aqssat.co/admin"
+ADMIN_DST="/var/www/admin.aqssat.co"
+if [ -d "$ADMIN_SRC" ]; then
+  mkdir -p "$ADMIN_DST"
+  for f in index.php api.php .htaccess config.sample.php; do
+    [ -f "$ADMIN_SRC/$f" ] && cp -f "$ADMIN_SRC/$f" "$ADMIN_DST/$f"
+  done
+  chown -R www-data:www-data "$ADMIN_DST" 2>/dev/null || true
+fi
+
 echo "--- pull complete ($(date '+%H:%M:%S')) ---"

@@ -16,27 +16,11 @@ $db_host = 'localhost';
 $db_user = 'osama';
 $db_pass = 'OsamaDB123';
 
-// الفهرس يرسل db=jadal أو db=namaa للمرفقات
-$dbMap = [
-  'jadal' => 'namaa_jadal',
-  'namaa' => 'namaa_erp',
-  'erp'   => 'namaa_erp',
-  'watar' => 'tayseer_watar',
-  'majd'  => 'tayseer_majd',
-];
-
-// عنوان URL الأساسي لكل شركة
-$baseUrlMap = [
-  'jadal' => 'https://jadal.aqssat.co/images/imagemanager/',
-  'namaa' => 'https://namaa.aqssat.co/images/imagemanager/',
-  'erp'   => 'https://namaa.aqssat.co/images/imagemanager/',
-  'watar' => 'https://watar.aqssat.co/images/imagemanager/',
-  'majd'  => 'https://majd.aqssat.co/images/imagemanager/',
-];
+require_once __DIR__ . '/_companies.php';
 
 $requestDb = $_GET['db'] ?? '';
 $db_name = $dbMap[$requestDb] ?? null;
-$baseUrl = $baseUrlMap[$requestDb] ?? '';
+$baseUrl = isset($baseUrlMap[$requestDb]) ? $baseUrlMap[$requestDb] . '/images/imagemanager/' : '';
 
 if (!$db_name) {
   echo '<div class="alert alert-danger">معرّف قاعدة البيانات غير صحيح</div>';

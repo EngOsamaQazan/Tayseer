@@ -169,6 +169,18 @@ jobs:
               echo "  Warning: landing/index.html not found in repo"
             fi
             
+            # Deploy admin panel to admin.aqssat.co
+            echo "=== Deploying admin panel to admin.aqssat.co ==="
+            ADMIN_SRC="/var/www/jadal.aqssat.co/admin"
+            ADMIN_DST="/var/www/admin.aqssat.co"
+            mkdir -p "$ADMIN_DST"
+            for f in index.php api.php .htaccess config.sample.php; do
+              [ -f "$ADMIN_SRC/$f" ] && cp -f "$ADMIN_SRC/$f" "$ADMIN_DST/$f"
+            done
+            # Preserve config.php if it exists (has credentials)
+            chown -R www-data:www-data "$ADMIN_DST" 2>/dev/null || true
+            echo "  Admin panel deployed to $ADMIN_DST"
+            
             # Enable Apache performance modules (idempotent)
             echo "=== Enabling Apache modules ==="
             a2enmod deflate 2>/dev/null || true

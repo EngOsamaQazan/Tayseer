@@ -16,14 +16,7 @@ $db_host = 'localhost';
 $db_user = 'osama';
 $db_pass = 'OsamaDB123';
 
-// تحويل اسم الشركة لاسم قاعدة البيانات الصحيح
-$dbMap = [
-  'jadal' => 'namaa_jadal',
-  'namaa' => 'namaa_erp',
-  'erp'   => 'namaa_erp',
-  'watar' => 'tayseer_watar',
-  'majd'  => 'tayseer_majd',
-];
+require_once __DIR__ . '/_companies.php';
 
 $requestDb = $_REQUEST['db'] ?? '';
 $db_name = $dbMap[$requestDb] ?? null;
@@ -45,12 +38,6 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
   exit();
 }
 
-$baseUrlMap = [
-  'jadal' => 'https://jadal.aqssat.co',
-  'namaa' => 'https://namaa.aqssat.co',
-  'erp'   => 'https://namaa.aqssat.co',
-  'watar' => 'https://watar.aqssat.co',
-];
 $baseUrl = $baseUrlMap[$requestDb] ?? '';
 
 $docTypes = [

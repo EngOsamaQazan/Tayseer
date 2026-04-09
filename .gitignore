@@ -79,6 +79,9 @@ mysql_data/
 deploy.config
 sshpass.exe
 
+# ─── Admin panel config (contains credentials) ─
+/admin/config.php
+
 # ─── Google Cloud credentials ─────────────────
 backend/config/credentials/
 *.gserviceaccount.json

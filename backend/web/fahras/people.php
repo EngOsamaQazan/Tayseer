@@ -13,14 +13,7 @@ $db_host = 'localhost';
 $db_user = 'osama';
 $db_pass = 'OsamaDB123';
 
-// تحويل اسم الشركة لاسم قاعدة البيانات الصحيح
-$dbMap = [
-  'jadal' => 'namaa_jadal',
-  'namaa' => 'namaa_erp',
-  'erp'   => 'namaa_erp',
-  'watar' => 'tayseer_watar',
-  'majd'  => 'tayseer_majd',
-];
+require_once __DIR__ . '/_companies.php';
 
 $requestDb = $_REQUEST['db'] ?? '';
 $db_name = $dbMap[$requestDb] ?? null;

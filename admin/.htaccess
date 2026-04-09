@@ -1,0 +1,13 @@
+RewriteEngine On
+
+# Force HTTPS
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Block access to config files
+<FilesMatch "^config\.(php|sample\.php)$">
+    Require all denied
+</FilesMatch>
+
+# Default handler
+DirectoryIndex index.php

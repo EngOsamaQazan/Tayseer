@@ -252,6 +252,9 @@ return [
         'hr' => [
             'class' => 'backend\modules\hr\Module',
         ],
+        'companyManagement' => [
+            'class' => 'backend\modules\companyManagement\CompanyManagement',
+        ],
         'gridview' => [
             'class' => '\kartik\grid\Module',
             'bsVersion' => '5',

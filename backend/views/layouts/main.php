@@ -77,27 +77,7 @@ if (Yii::$app->controller->action->id === 'login') {
         <link rel="shortcut icon" href="<?= $baseUrl ?>/images/favicon.png" type="image/png">
         <link rel="icon" href="<?= $baseUrl ?>/images/favicon.png" type="image/png" sizes="192x192">
         <title><?= Html::encode($this->title) ?></title>
-        <?php
-            $_ogHost = Yii::$app->request->hostInfo;
-            $_ogServer = Yii::$app->request->serverName ?? '';
-            if (strpos($_ogServer, 'jadal') !== false) {
-                $_ogTitle = 'نظام تيسير — جدل';
-                $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل — شركة جدل للتقسيط';
-                $_ogImg   = $_ogHost . $baseUrl . '/img/og-jadal.png';
-            } elseif (strpos($_ogServer, 'namaa') !== false) {
-                $_ogTitle = 'نظام تيسير — نماء';
-                $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل — شركة نماء للتقسيط';
-                $_ogImg   = $_ogHost . $baseUrl . '/img/og-namaa.png';
-            } elseif (strpos($_ogServer, 'majd') !== false) {
-                $_ogTitle = 'نظام تيسير — عالم المجد';
-                $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل — عالم المجد للتقسيط';
-                $_ogImg   = $_ogHost . $baseUrl . '/img/og-majd.png';
-            } else {
-                $_ogTitle = 'نظام تيسير';
-                $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل';
-                $_ogImg   = $_ogHost . $baseUrl . '/img/og-jadal.png';
-            }
-        ?>
+        <?php $_og = \common\helper\CompanyOg::get(); $_ogTitle = $_og['title']; $_ogDesc = $_og['desc']; $_ogImg = $_og['image']; $_ogHost = Yii::$app->request->hostInfo; ?>
         <meta property="og:type" content="website">
         <meta property="og:url" content="<?= Html::encode($_ogHost) ?>">
         <meta property="og:title" content="<?= Html::encode($_ogTitle) ?>">
