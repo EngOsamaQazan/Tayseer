@@ -310,7 +310,7 @@ a.fur-id-link:hover{text-decoration:underline}
                     </div>
                     <div class="ct-filter-actions">
                         <?= Html::submitButton('<i class="fa fa-search"></i> بحث', ['class'=>'ct-btn ct-btn-primary']) ?>
-                        <a href="<?= Url::to($isNoContact ? ['index','FollowUpReportSearch[is_can_not_contact]'=>1] : ['index']) ?>" class="ct-btn ct-btn-outline"><i class="fa fa-refresh"></i> مسح</a>
+                        <a href="<?= Url::to($isNoContact ? ['index','FollowUpReportSearch[is_can_not_contact]'=>1,'_reset'=>1] : ['index','_reset'=>1]) ?>" class="ct-btn ct-btn-outline"><i class="fa fa-refresh"></i> مسح</a>
                     </div>
                 </div>
                 <?php ActiveForm::end(); ?>
@@ -439,6 +439,9 @@ if (typeof UnifiedSearch !== 'undefined') {
     UnifiedSearch.init({inputId:'fur-idn',   url:'{$suggestUrl}?field=id_number',     minChars:2, delay:300, formSelector:'#fur-search'});
     UnifiedSearch.init({inputId:'fur-phone', url:'{$suggestUrl}?field=phone_number',  minChars:2, delay:300, formSelector:'#fur-search'});
 }
+$('#fur-search').on('submit', function() {
+    $(this).find(':input[name]').filter(function(){ return !$.trim(this.value).length; }).prop('disabled', true);
+});
 JS
 , View::POS_READY);
 ?>

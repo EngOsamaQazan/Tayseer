@@ -231,8 +231,28 @@ class FollowUpReportController extends Controller
      */
     public function actionIndex()
     {
-        $searchModel = new FollowUpReportSearch();
         $params = Yii::$app->request->queryParams;
+
+        // Clear saved filters on explicit reset
+        if (isset($params['_reset'])) {
+            Yii::$app->session->remove('followup_report_filters');
+            Yii::$app->session->remove('followup_report_ids');
+            $redirect = ['index'];
+            if (!empty($params['FollowUpReportSearch']['is_can_not_contact'])) {
+                $redirect['FollowUpReportSearch[is_can_not_contact]'] = $params['FollowUpReportSearch']['is_can_not_contact'];
+            }
+            return $this->redirect($redirect);
+        }
+
+        // Restore saved filters when user visits without explicit filter params
+        if (!isset($params['FollowUpReportSearch']) && !isset($params['sort'])) {
+            $savedFilters = Yii::$app->session->get('followup_report_filters');
+            if (!empty($savedFilters['FollowUpReportSearch'])) {
+                return $this->redirect(array_merge(['index'], $savedFilters));
+            }
+        }
+
+        $searchModel = new FollowUpReportSearch();
         if (!isset($params['FollowUpReportSearch']['is_can_not_contact'])) {
             $params['FollowUpReportSearch']['is_can_not_contact'] = '0';
         }
@@ -241,6 +261,27 @@ class FollowUpReportController extends Controller
         }
         $dataProvider = $searchModel->search($params);
         $dataCount = $dataProvider->getTotalCount();
+
+        // Persist current filters (excluding pagination) for next visit
+        $filterParams = $params;
+        unset($filterParams['page'], $filterParams['per-page'], $filterParams['_pjax']);
+        Yii::$app->session->set('followup_report_filters', $filterParams);
+
+        // Collect all filtered contract IDs in sort order for panel navigation
+        $idsQuery = clone $dataProvider->query;
+        $idsQuery->with = [];
+        $sort = $dataProvider->getSort();
+        $orders = $sort->getOrders();
+        if (empty($orders)) {
+            $orders = ['never_followed' => SORT_DESC, 'last_follow_up' => SORT_ASC];
+        }
+        // Include ORDER BY columns in SELECT to satisfy MySQL DISTINCT requirement
+        $selectCols = ['os_follow_up_report.id'];
+        foreach (array_keys($orders) as $col) {
+            $selectCols[] = $col;
+        }
+        $allIds = $idsQuery->select($selectCols)->orderBy($orders)->column();
+        Yii::$app->session->set('followup_report_ids', $allIds);
 
         $db = Yii::$app->db;
 
