@@ -260,10 +260,12 @@ $pdo = new PDO("mysql:host=localhost;dbname={$dstDb}", $dbUser, $dbPass);
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $hash=password_hash($adminPass, PASSWORD_BCRYPT, ['cost'=>12]);
 $now=time(); $key=bin2hex(random_bytes(16));
+$pdo->exec("DELETE FROM os_auth_assignment WHERE user_id IN (SELECT id FROM os_user WHERE username='{$adminUser}')");
 $pdo->exec("DELETE FROM os_user WHERE username='{$adminUser}'");
-$pdo->exec("INSERT INTO os_user (username,email,password_hash,auth_key,confirmed_at,created_at,updated_at) VALUES ('{$adminUser}','{$adminEmail}','{$hash}','{$key}',{$now},{$now},{$now})");
+$s=$pdo->prepare("INSERT INTO os_user (username,email,password_hash,auth_key,confirmed_at,created_at,updated_at,flags,employee_type,employee_status,gender,marital_status,created_by,name) VALUES (?,?,?,?,?,?,?,0,'employee','active','male','single',0,?)");
+$s->execute([$adminUser,$adminEmail,$hash,$key,$now,$now,$now,$adminUser]);
 $uid=$pdo->lastInsertId();
-$pdo->exec("INSERT INTO os_profile (user_id,name) VALUES ({$uid},'{$adminUser}')");
+try{$pdo->exec("INSERT INTO os_profile (user_id,name) VALUES ({$uid},'{$adminUser}')"); }catch(Exception $e){}
 echo "User ID={$uid}\n";
 $src=new PDO("mysql:host=localhost;dbname={$srcDb}",$dbUser,$dbPass);
 $src->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
