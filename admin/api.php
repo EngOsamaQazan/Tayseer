@@ -172,10 +172,11 @@ if [ -d "{$siteDir}/.git" ]; then
     git fetch origin main --depth 1 && git reset --hard origin/main
 else
     git clone --depth 1 --branch main "\$REPO_URL" tayseer_provision
-    rsync -a --exclude='.env' --exclude='runtime/' --exclude='web/images/' --exclude='web/uploads/' tayseer_provision/ {$siteDir}/
+    rsync -a --exclude='.git' --exclude='.env' --exclude='runtime/' --exclude='web/images/' --exclude='web/uploads/' tayseer_provision/ {$siteDir}/
     rm -rf /tmp/tayseer_provision
     cd {$siteDir}
-    git init && git remote add origin "\$REPO_URL"
+    git init
+    git remote add origin "\$REPO_URL"
     git fetch origin main --depth 1 && git reset --hard origin/main
 fi
 cd {$siteDir}
