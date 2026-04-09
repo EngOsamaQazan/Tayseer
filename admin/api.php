@@ -165,8 +165,12 @@ try {
 set -e
 mkdir -p {$siteDir}
 REPO_URL=\$(cd /var/www/jadal.aqssat.co && git remote get-url origin 2>/dev/null || echo "https://{$cfg['github_token']}@github.com/{$cfg['github_repo']}.git")
-if [ ! -d "{$siteDir}/.git" ]; then
-    cd /tmp && rm -rf tayseer_provision
+cd /tmp && rm -rf tayseer_provision
+if [ -d "{$siteDir}/.git" ]; then
+    cd {$siteDir}
+    git remote set-url origin "\$REPO_URL" 2>/dev/null || git remote add origin "\$REPO_URL"
+    git fetch origin main --depth 1 && git reset --hard origin/main
+else
     git clone --depth 1 --branch main "\$REPO_URL" tayseer_provision
     rsync -a --exclude='.env' --exclude='runtime/' --exclude='web/images/' --exclude='web/uploads/' tayseer_provision/ {$siteDir}/
     rm -rf /tmp/tayseer_provision
