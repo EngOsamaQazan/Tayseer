@@ -50,7 +50,7 @@ function sshExec(string $cmd, int $timeout = 60): string {
     $cfg = $GLOBALS['cfg'];
     $escapedPass = escapeshellarg($cfg['ssh_pass']);
     $escapedCmd  = escapeshellarg($cmd);
-    $full = "sshpass -p {$escapedPass} ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 "
+    $full = "timeout {$timeout} sshpass -p {$escapedPass} ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ServerAliveInterval=15 "
         . "{$cfg['ssh_user']}@{$cfg['ssh_host']} {$escapedCmd} 2>&1";
     $output = [];
     exec($full, $output, $code);
@@ -149,12 +149,12 @@ try {
     case 'database':
         appendLog($companyId, "DB: إنشاء قاعدة البيانات {$dbName}");
         $appDbUser = $cfg['app_db_user'];
+        $appDbPass = $cfg['app_db_pass'];
 
-        $out1 = sshExec("mysql -u root -e \"CREATE DATABASE IF NOT EXISTS \`{$dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci\"");
-        $out2 = sshExec("mysql -u root -e \"GRANT ALL PRIVILEGES ON \`{$dbName}\`.* TO '{$appDbUser}'@'localhost'; FLUSH PRIVILEGES;\"");
+        $out1 = sshExec("mysql -u {$appDbUser} -p{$appDbPass} -e \"CREATE DATABASE IF NOT EXISTS \`{$dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci\" 2>&1");
 
-        appendLog($companyId, "DB: تم إنشاء القاعدة وتعيين الصلاحيات");
-        echo json_encode(['success' => true, 'message' => "تم إنشاء {$dbName} بنجاح\n{$out1}\n{$out2}"]);
+        appendLog($companyId, "DB: تم إنشاء القاعدة");
+        echo json_encode(['success' => true, 'message' => "تم إنشاء {$dbName} بنجاح\n{$out1}"]);
         break;
 
     // ═══ Step 3: Server Setup ════════════════════════════════
@@ -180,6 +180,18 @@ else
     git fetch origin main --depth 1 && git reset --hard origin/main
 fi
 cd {$siteDir}
+# Create environment from template if it doesn't exist
+if [ ! -d "environments/{$envDir}" ]; then
+    TEMPLATE=\$(ls -d environments/prod_watar 2>/dev/null || ls -d environments/prod_majd 2>/dev/null || ls -d environments/prod_jadal 2>/dev/null || echo "")
+    if [ -n "\$TEMPLATE" ]; then
+        cp -r "\$TEMPLATE" "environments/{$envDir}"
+        find "environments/{$envDir}" -name "*.php" -exec sed -i "s/\$(basename \$TEMPLATE | sed 's/prod_//')/{$slug}/g" {} \;
+        TEMPLATE_DB=\$(grep -oP "dbname=\\K[^;']+" "environments/{$envDir}/common/config/main-local.php" 2>/dev/null || echo "")
+        if [ -n "\$TEMPLATE_DB" ]; then
+            find "environments/{$envDir}" -name "*.php" -exec sed -i "s/\$TEMPLATE_DB/{$dbName}/g" {} \;
+        fi
+    fi
+fi
 for cfg_file in common/config/main-local.php common/config/params-local.php \
            backend/web/index.php frontend/web/index.php \
            console/config/main-local.php console/config/params-local.php yii; do
@@ -194,6 +206,10 @@ for cfg_file in backend/config/main-local.php backend/config/params-local.php \
         mkdir -p "\$(dirname "\$cfg_file")" && cp "environments/{$envDir}/\$cfg_file" "\$cfg_file"
         KEY=\$(openssl rand -hex 32) && sed -i "s/=> ''/=> '\$KEY'/" "\$cfg_file"
     fi
+done
+# Ensure correct DB name in all config files
+find {$siteDir}/common/config {$siteDir}/console/config -name "*.php" -exec grep -l 'dbname=' {} \; 2>/dev/null | while read f; do
+    sed -i "s/dbname=[a-zA-Z0-9_]*/dbname={$dbName}/" "\$f"
 done
 composer install --no-dev --no-interaction --optimize-autoloader 2>&1 || true
 cp /var/www/jadal.aqssat.co/vendor/yiisoft/extensions.php {$siteDir}/vendor/yiisoft/extensions.php 2>/dev/null || true
@@ -233,7 +249,7 @@ certbot --apache -d {$domain} --non-interactive --agree-tos --redirect --registe
 systemctl reload apache2
 echo "SSL_DONE"
 BASH;
-        $out = sshExec($script, 120);
+        $out = sshExec($script, 180);
         if (strpos($out, 'SSL_DONE') !== false) {
             appendLog($companyId, "SSL: تم إعداد VHost و SSL بنجاح");
             echo json_encode(['success' => true, 'message' => "تم تأمين {$domain} بـ HTTPS"]);
