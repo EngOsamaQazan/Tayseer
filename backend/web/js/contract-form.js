@@ -579,6 +579,7 @@ var ContractForm = (function () {
        ══════════════════════════════════════════════════ */
     var SUBMIT_TIMEOUT_MS = 30000;
     var _submitting = false;
+    var _clickedBtn = null;
 
     function setButtonsLoading($form, loading) {
         $form.find('button[type=submit]').each(function () {
@@ -597,6 +598,10 @@ var ContractForm = (function () {
     function initFormHandlers() {
         var $form = $('#contract-form');
         if (!$form.length) return;
+
+        $form.find('button[type=submit]').on('click', function () {
+            _clickedBtn = this;
+        });
 
         $form.on('afterValidate', function (e, messages, errorAttributes) {
             if (errorAttributes.length > 0) {
@@ -655,6 +660,9 @@ var ContractForm = (function () {
             setButtonsLoading($form, true);
 
             var formData = new FormData($form[0]);
+            if (_clickedBtn && _clickedBtn.name) {
+                formData.append(_clickedBtn.name, _clickedBtn.value || '');
+            }
 
             var xhr = new XMLHttpRequest();
             xhr.open('POST', $form.attr('action') || window.location.href, true);
