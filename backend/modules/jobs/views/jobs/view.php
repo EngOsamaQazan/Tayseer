@@ -612,6 +612,20 @@ $deletePhoneUrl = Url::to(['delete-phone']);
 $addRatingUrl = Url::to(['add-rating', 'jobId' => $model->id]);
 $deleteRatingUrl = Url::to(['delete-rating']);
 
+/* Broadcast to other tabs (customer form) that a job was created/updated */
+$jobBroadcast = Yii::$app->session->getFlash('job_broadcast');
+if ($jobBroadcast) {
+    $this->registerJs("
+        try {
+            var ch = new BroadcastChannel('tayseer_jobs');
+            ch.postMessage({$jobBroadcast});
+            ch.close();
+        } catch(e) {
+            try { localStorage.setItem('tayseer_job_saved', JSON.stringify(Object.assign({$jobBroadcast}, {ts:Date.now()}))); } catch(e2){}
+        }
+    ");
+}
+
 $js = <<<JS
 // ========================
 // Phone Number Management

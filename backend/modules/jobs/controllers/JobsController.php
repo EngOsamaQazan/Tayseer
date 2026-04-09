@@ -90,6 +90,7 @@ class JobsController extends Controller
             $this->updateJobsCache();
 
             Yii::$app->session->setFlash('success', 'تم إنشاء جهة العمل بنجاح');
+            Yii::$app->session->setFlash('job_broadcast', json_encode(['id' => $model->id, 'name' => $model->name]));
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
@@ -113,6 +114,7 @@ class JobsController extends Controller
             $this->updateJobsCache();
 
             Yii::$app->session->setFlash('success', 'تم تحديث بيانات جهة العمل بنجاح');
+            Yii::$app->session->setFlash('job_broadcast', json_encode(['id' => $model->id, 'name' => $model->name]));
             return $this->redirect(['view', 'id' => $model->id]);
         }
 
