@@ -262,7 +262,7 @@ $hash=password_hash($adminPass, PASSWORD_BCRYPT, ['cost'=>12]);
 $now=time(); $key=bin2hex(random_bytes(16));
 $pdo->exec("DELETE FROM os_auth_assignment WHERE user_id IN (SELECT id FROM os_user WHERE username='{$adminUser}')");
 $pdo->exec("DELETE FROM os_user WHERE username='{$adminUser}'");
-$s=$pdo->prepare("INSERT INTO os_user (username,email,password_hash,auth_key,confirmed_at,created_at,updated_at,flags,employee_type,employee_status,gender,marital_status,created_by,name) VALUES (?,?,?,?,?,?,?,0,'employee','active','male','single',0,?)");
+$s=$pdo->prepare("INSERT INTO os_user (username,email,password_hash,auth_key,confirmed_at,created_at,updated_at,flags,employee_type,employee_status,gender,marital_status,created_by,name) VALUES (?,?,?,?,?,?,?,0,'Active','Full_time','Male','single',0,?)");
 $s->execute([$adminUser,$adminEmail,$hash,$key,$now,$now,$now,$adminUser]);
 $uid=$pdo->lastInsertId();
 try{$pdo->exec("INSERT INTO os_profile (user_id,name) VALUES ({$uid},'{$adminUser}')"); }catch(Exception $e){}
@@ -296,7 +296,11 @@ PHPSETUP;
         $script = <<<BASH
 set -e
 cd {$siteDir}
-php yii migrate/up --interactive=0 2>&1 || true
+echo "=== Importing DB structure from master ==="
+mysqldump -u {$appDbUser} -p{$cfg['app_db_pass']} --no-data --routines --triggers {$srcDb} 2>/dev/null | mysql -u {$appDbUser} -p{$cfg['app_db_pass']} {$dbName} 2>&1 || true
+echo "=== Copying migration records ==="
+mysqldump -u {$appDbUser} -p{$cfg['app_db_pass']} {$srcDb} os_migration 2>/dev/null | mysql -u {$appDbUser} -p{$cfg['app_db_pass']} {$dbName} 2>&1 || true
+echo "=== Running setup script ==="
 php /tmp/_tayseer_setup.php '{$adminData['username']}' '{$adminData['email']}' '{$adminData['password']}' '{$srcDb}' '{$dbName}' '{$appDbUser}' '{$appDbPass}' 2>&1
 rm -f /tmp/_tayseer_setup.php
 rm -rf {$siteDir}/backend/runtime/cache/* {$siteDir}/frontend/runtime/cache/*
