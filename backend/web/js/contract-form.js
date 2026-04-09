@@ -385,12 +385,25 @@ var ContractForm = (function () {
     /* ══════════════════════════════════════════════════
        Calculator — installments + summary
        ══════════════════════════════════════════════════ */
+    var MAX_VISIBLE_ROWS = 120;
+
     function initCalculator() {
         var tvEl = document.getElementById('cf-tv');
         var fvEl = document.getElementById('cf-fv');
         var mvEl = document.getElementById('cf-mv');
         var fdEl = document.getElementById('cf-fd');
         if (!tvEl || !fvEl || !mvEl || !fdEl) return;
+
+        var _cachedEls = {
+            total:     document.getElementById('cf-ns-total'),
+            first:     document.getElementById('cf-ns-first'),
+            remaining: document.getElementById('cf-ns-remaining'),
+            monthly:   document.getElementById('cf-ns-monthly'),
+            count:     document.getElementById('cf-ns-count'),
+            date:      document.getElementById('cf-ns-date'),
+            sec:       document.getElementById('cf-sec-schedule'),
+            tbody:     document.getElementById('cf-inst-body'),
+        };
 
         function calc() {
             var tv = parseFloat(tvEl.value) || 0;
@@ -400,38 +413,55 @@ var ContractForm = (function () {
             var remaining = tv > fv ? tv - fv : tv;
             var count = mv > 0 ? Math.ceil(remaining / mv) : 0;
 
-            setText('cf-ns-total', tv ? tv + ' \u062F.\u0623' : '0 \u062F.\u0623');
-            setText('cf-ns-first', fv ? fv + ' \u062F.\u0623' : '0 \u062F.\u0623');
-            setText('cf-ns-remaining', remaining ? remaining + ' \u062F.\u0623' : '0 \u062F.\u0623');
-            setText('cf-ns-monthly', mv ? mv + ' \u062F.\u0623' : '0 \u062F.\u0623');
-            setText('cf-ns-count', count || '\u2014');
-            setText('cf-ns-date', fd || '\u2014');
+            setEl(_cachedEls.total, tv ? tv + ' \u062F.\u0623' : '0 \u062F.\u0623');
+            setEl(_cachedEls.first, fv ? fv + ' \u062F.\u0623' : '0 \u062F.\u0623');
+            setEl(_cachedEls.remaining, remaining ? remaining + ' \u062F.\u0623' : '0 \u062F.\u0623');
+            setEl(_cachedEls.monthly, mv ? mv + ' \u062F.\u0623' : '0 \u062F.\u0623');
+            setEl(_cachedEls.count, count || '\u2014');
+            setEl(_cachedEls.date, fd || '\u2014');
 
-            var sec = document.getElementById('cf-sec-schedule');
-            var tbody = document.getElementById('cf-inst-body');
+            var sec = _cachedEls.sec;
+            var tbody = _cachedEls.tbody;
             if (!sec || !tbody) return;
-            tbody.innerHTML = '';
+
             if (tv > 0 && mv > 0 && fd && count > 0) {
                 var sd = new Date(fd);
-                for (var i = 0; i < count; i++) {
-                    var d = new Date(sd); d.setMonth(d.getMonth() + i);
+                var visible = Math.min(count, MAX_VISIBLE_ROWS);
+                var frag = document.createDocumentFragment();
+
+                for (var i = 0; i < visible; i++) {
+                    var d = new Date(sd.getFullYear(), sd.getMonth() + i, sd.getDate());
                     var amt = (i === count - 1) ? (remaining - mv * (count - 1)) : mv;
                     if (amt <= 0) amt = mv;
-                    tbody.innerHTML += '<tr><td>' + (i + 1) + '</td><td><b>' + amt + '</b> \u062F.\u0623</td><td>' + (d.getMonth() + 1) + '</td><td>' + d.getFullYear() + '</td></tr>';
+                    var tr = document.createElement('tr');
+                    tr.innerHTML = '<td>' + (i + 1) + '</td><td><b>' + amt + '</b> \u062F.\u0623</td><td>' + (d.getMonth() + 1) + '</td><td>' + d.getFullYear() + '</td>';
+                    frag.appendChild(tr);
                 }
+
+                if (count > MAX_VISIBLE_ROWS) {
+                    var infoTr = document.createElement('tr');
+                    infoTr.className = 'cf-inst-more';
+                    infoTr.innerHTML = '<td colspan="4">\u2026 \u0648' + (count - MAX_VISIBLE_ROWS) + ' \u0642\u0633\u0637 \u0622\u062E\u0631 (\u0625\u062C\u0645\u0627\u0644\u064A ' + count + ' \u0642\u0633\u0637)</td>';
+                    frag.appendChild(infoTr);
+                }
+
+                tbody.textContent = '';
+                tbody.appendChild(frag);
                 sec.style.display = '';
             } else {
+                tbody.textContent = '';
                 sec.style.display = 'none';
             }
         }
 
-        function setText(id, val) {
-            var el = document.getElementById(id);
+        function setEl(el, val) {
             if (el) el.textContent = val;
         }
 
+        var debouncedCalc = debounce(calc, 250);
+
         [tvEl, fvEl, mvEl, fdEl].forEach(function (el) {
-            el.addEventListener('input', calc);
+            el.addEventListener('input', debouncedCalc);
             el.addEventListener('change', calc);
         });
 

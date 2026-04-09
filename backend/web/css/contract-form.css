@@ -344,6 +344,11 @@
     padding: 7px 10px; text-align: center; border-bottom: 1px solid #f7fafc; color: var(--cf-text);
 }
 .cf-inst-table tr:nth-child(even) td { background: #fafcfe; }
+.cf-inst-more td {
+    background: var(--cf-bg) !important; color: var(--cf-text2);
+    font-weight: 700; font-size: 12px; text-align: center; padding: 10px;
+    border-top: 2px dashed var(--cf-border);
+}
 
 /* ═══ Validation Toast ═══ */
 .cf-toast {
