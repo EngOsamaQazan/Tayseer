@@ -107,6 +107,13 @@ try {
         $apiSecret = $cfg['godaddy_secret'];
         $gdDomain  = $cfg['godaddy_domain'];
 
+        if (empty($apiKey) || empty($apiSecret)) {
+            appendLog($companyId, "DNS: تخطي — مفاتيح GoDaddy API غير مهيأة. يرجى إضافة السجل يدوياً: {$slug}.{$gdDomain} -> {$serverIp}");
+            updateStatus($companyId, 'dns_ready');
+            echo json_encode(['success' => true, 'message' => "⚠ مفاتيح GoDaddy غير مهيأة. يرجى إضافة سجل A يدوياً:\n{$slug}.{$gdDomain} -> {$serverIp}\nتم تخطي الخطوة."]);
+            break;
+        }
+
         $payload = json_encode([[
             'type' => 'A', 'name' => $slug, 'data' => $serverIp, 'ttl' => 600,
         ]]);
@@ -157,13 +164,14 @@ try {
         $script = <<<BASH
 set -e
 mkdir -p {$siteDir}
+REPO_URL=\$(cd /var/www/jadal.aqssat.co && git remote get-url origin 2>/dev/null || echo "https://{$cfg['github_token']}@github.com/{$cfg['github_repo']}.git")
 if [ ! -d "{$siteDir}/.git" ]; then
     cd /tmp && rm -rf tayseer_provision
-    git clone --depth 1 --branch main https://github.com/{$cfg['github_repo']}.git tayseer_provision
+    git clone --depth 1 --branch main "\$REPO_URL" tayseer_provision
     rsync -a --exclude='.env' --exclude='runtime/' --exclude='web/images/' --exclude='web/uploads/' tayseer_provision/ {$siteDir}/
     rm -rf /tmp/tayseer_provision
     cd {$siteDir}
-    git init && git remote add origin https://github.com/{$cfg['github_repo']}.git
+    git init && git remote add origin "\$REPO_URL"
     git fetch origin main --depth 1 && git reset --hard origin/main
 fi
 cd {$siteDir}
