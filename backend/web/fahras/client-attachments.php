@@ -22,6 +22,7 @@ $dbMap = [
   'namaa' => 'namaa_erp',
   'erp'   => 'namaa_erp',
   'watar' => 'tayseer_watar',
+  'majd'  => 'tayseer_majd',
 ];
 
 // عنوان URL الأساسي لكل شركة
@@ -30,6 +31,7 @@ $baseUrlMap = [
   'namaa' => 'https://namaa.aqssat.co/images/imagemanager/',
   'erp'   => 'https://namaa.aqssat.co/images/imagemanager/',
   'watar' => 'https://watar.aqssat.co/images/imagemanager/',
+  'majd'  => 'https://majd.aqssat.co/images/imagemanager/',
 ];
 
 $requestDb = $_GET['db'] ?? '';

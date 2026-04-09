@@ -26,6 +26,7 @@ $dbMap = [
   'namaa' => 'namaa_erp',
   'erp'   => 'namaa_erp',
   'watar' => 'tayseer_watar',
+  'majd'  => 'tayseer_majd',
 ];
 
 $accountMap = [
@@ -33,6 +34,7 @@ $accountMap = [
   'namaa' => 'نماء',
   'erp'   => 'نماء',
   'watar' => 'وتر',
+  'majd'  => 'المجد',
 ];
 
 $baseUrlMap = [
@@ -40,6 +42,7 @@ $baseUrlMap = [
   'namaa' => 'https://namaa.aqssat.co',
   'erp'   => 'https://namaa.aqssat.co',
   'watar' => 'https://watar.aqssat.co',
+  'majd'  => 'https://majd.aqssat.co',
 ];
 
 $requestDb = $_REQUEST['db'] ?? '';

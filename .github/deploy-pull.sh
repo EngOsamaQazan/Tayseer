@@ -40,6 +40,7 @@ pull_site() {
 pull_site "/var/www/jadal.aqssat.co" "prod_jadal" &
 pull_site "/var/www/namaa.aqssat.co" "prod_namaa" &
 pull_site "/var/www/watar.aqssat.co" "prod_watar" &
+pull_site "/var/www/majd.aqssat.co" "prod_majd" &
 wait
 
 # Clear OPcache via PHP-FPM restart (opcache_reset in CLI doesn't affect FPM)

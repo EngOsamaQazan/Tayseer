@@ -88,6 +88,10 @@ if (Yii::$app->controller->action->id === 'login') {
                 $_ogTitle = 'نظام تيسير — نماء';
                 $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل — شركة نماء للتقسيط';
                 $_ogImg   = $_ogHost . $baseUrl . '/img/og-namaa.png';
+            } elseif (strpos($_ogServer, 'majd') !== false) {
+                $_ogTitle = 'نظام تيسير — عالم المجد';
+                $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل — عالم المجد للتقسيط';
+                $_ogImg   = $_ogHost . $baseUrl . '/img/og-majd.png';
             } else {
                 $_ogTitle = 'نظام تيسير';
                 $_ogDesc  = 'نظام إدارة التقسيط والأعمال المتكامل';

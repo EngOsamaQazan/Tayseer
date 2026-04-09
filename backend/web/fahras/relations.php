@@ -22,6 +22,7 @@ $dbMap = [
   'namaa' => 'namaa_erp',
   'erp'   => 'namaa_erp',
   'watar' => 'tayseer_watar',
+  'majd'  => 'tayseer_majd',
 ];
 
 $requestDb = $_REQUEST['db'] ?? '';

@@ -128,14 +128,16 @@ jobs:
               echo "  Done!"
             }
             
-            # Deploy all 3 sites in parallel
+            # Deploy all 4 sites in parallel
             deploy_site "/var/www/jadal.aqssat.co" "prod_jadal" &
             PID1=$!
             deploy_site "/var/www/namaa.aqssat.co" "prod_namaa" &
             PID2=$!
             deploy_site "/var/www/watar.aqssat.co" "prod_watar" &
             PID3=$!
-            wait $PID1 $PID2 $PID3
+            deploy_site "/var/www/majd.aqssat.co" "prod_majd" &
+            PID4=$!
+            wait $PID1 $PID2 $PID3 $PID4
             
             # Install webhook deploy script on server
             echo "=== Installing webhook deploy script ==="
@@ -182,7 +184,7 @@ jobs:
             systemctl reload apache2 2>/dev/null || systemctl restart apache2 2>/dev/null || true
             
             # Flush Yii2 caches
-            for site_dir in /var/www/jadal.aqssat.co /var/www/namaa.aqssat.co /var/www/watar.aqssat.co; do
+            for site_dir in /var/www/jadal.aqssat.co /var/www/namaa.aqssat.co /var/www/watar.aqssat.co /var/www/majd.aqssat.co; do
               cd "$site_dir" && php yii cache/flush-all 2>/dev/null || true
             done
             
