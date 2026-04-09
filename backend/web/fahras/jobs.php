@@ -22,12 +22,14 @@ $dbMap = [
   'jadal' => 'namaa_jadal',
   'namaa' => 'namaa_erp',
   'erp'   => 'namaa_erp',
+  'watar' => 'tayseer_watar',
 ];
 
 $accountMap = [
   'jadal' => 'جدل',
   'namaa' => 'نماء',
   'erp'   => 'نماء',
+  'watar' => 'وتر',
 ];
 
 $requestDb = $_REQUEST['db'] ?? '';
