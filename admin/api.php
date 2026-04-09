@@ -28,7 +28,7 @@ function db(): PDO {
 }
 
 function getCompany(int $id): ?array {
-    $stmt = db()->prepare("SELECT * FROM os_companies WHERE id = ?");
+    $stmt = db()->prepare("SELECT * FROM os_company_registry WHERE id = ?");
     $stmt->execute([$id]);
     return $stmt->fetch() ?: null;
 }
@@ -36,14 +36,14 @@ function getCompany(int $id): ?array {
 function appendLog(int $id, string $msg): void {
     $ts = date('Y-m-d H:i:s');
     $entry = "[{$ts}] {$msg}";
-    $stmt = db()->prepare("UPDATE os_companies SET provision_log = CONCAT(COALESCE(provision_log,''), ?, '\n'), updated_at = ? WHERE id = ?");
+    $stmt = db()->prepare("UPDATE os_company_registry SET provision_log = CONCAT(COALESCE(provision_log,''), ?, '\n'), updated_at = ? WHERE id = ?");
     $stmt->execute([$entry, time(), $id]);
 }
 
 function updateStatus(int $id, string $status): void {
     $extra = '';
     if ($status === 'provisioned') $extra = ', provisioned_at = ' . time();
-    db()->exec("UPDATE os_companies SET status = '{$status}'{$extra}, updated_at = " . time() . " WHERE id = {$id}");
+    db()->exec("UPDATE os_company_registry SET status = '{$status}'{$extra}, updated_at = " . time() . " WHERE id = {$id}");
 }
 
 function sshExec(string $cmd, int $timeout = 60): string {

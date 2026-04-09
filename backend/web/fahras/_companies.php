@@ -1,9 +1,9 @@
 <?php
 /**
- * Fahras Company Registry — loads company maps from os_companies table.
+ * Fahras Company Registry — loads company maps from os_company_registry table.
  *
  * Returns $dbMap, $accountMap, $baseUrlMap arrays populated from
- * the master database's os_companies table.
+ * the master database's os_company_registry table.
  *
  * Requires: $db_host, $db_user, $db_pass to be set before including.
  */
@@ -24,7 +24,7 @@ try {
 
     $_stmt = $_regPdo->query(
         "SELECT slug, db_name, name_ar, domain, og_image
-         FROM os_companies
+         FROM os_company_registry
          WHERE status = 'active'
          ORDER BY id ASC"
     );

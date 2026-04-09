@@ -80,18 +80,18 @@ class m260410_000002_seed_companies extends Migration
 
         foreach ($companies as $company) {
             $exists = (new \yii\db\Query())
-                ->from('{{%companies}}')
+                ->from('{{%company_registry}}')
                 ->where(['slug' => $company['slug']])
                 ->exists();
 
             if (!$exists) {
-                $this->insert('{{%companies}}', $company);
+                $this->insert('{{%company_registry}}', $company);
             }
         }
     }
 
     public function safeDown()
     {
-        $this->delete('{{%companies}}', ['slug' => ['jadal', 'namaa', 'watar', 'majd']]);
+        $this->delete('{{%company_registry}}', ['slug' => ['jadal', 'namaa', 'watar', 'majd']]);
     }
 }

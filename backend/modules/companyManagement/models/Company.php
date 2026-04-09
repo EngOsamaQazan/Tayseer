@@ -9,7 +9,7 @@ class Company extends ActiveRecord
 {
     public static function tableName()
     {
-        return '{{%companies}}';
+        return '{{%company_registry}}';
     }
 
     public function behaviors()

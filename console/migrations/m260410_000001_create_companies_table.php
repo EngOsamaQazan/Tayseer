@@ -6,7 +6,7 @@ class m260410_000001_create_companies_table extends Migration
 {
     public function safeUp()
     {
-        $this->createTable('{{%companies}}', [
+        $this->createTable('{{%company_registry}}', [
             'id'             => $this->primaryKey(),
             'slug'           => $this->string(50)->notNull()->unique(),
             'name_ar'        => $this->string(255)->notNull(),
@@ -27,12 +27,12 @@ class m260410_000001_create_companies_table extends Migration
             'updated_at'     => $this->integer()->notNull(),
         ]);
 
-        $this->createIndex('idx-companies-status', '{{%companies}}', 'status');
-        $this->createIndex('idx-companies-domain', '{{%companies}}', 'domain');
+        $this->createIndex('idx-company_registry-status', '{{%company_registry}}', 'status');
+        $this->createIndex('idx-company_registry-domain', '{{%company_registry}}', 'domain');
     }
 
     public function safeDown()
     {
-        $this->dropTable('{{%companies}}');
+        $this->dropTable('{{%company_registry}}');
     }
 }

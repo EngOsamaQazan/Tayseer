@@ -50,7 +50,7 @@ $companies = [];
 $company   = null;
 if ($authed) {
     try {
-        $companies = db()->query("SELECT * FROM os_companies ORDER BY id ASC")->fetchAll();
+        $companies = db()->query("SELECT * FROM os_company_registry ORDER BY id ASC")->fetchAll();
     } catch (Exception $e) {
         $companies = [];
     }
@@ -83,14 +83,14 @@ if ($authed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '')
 
     // Check unique slug
     if (empty($createErrors)) {
-        $stmt = db()->prepare("SELECT COUNT(*) FROM os_companies WHERE slug = ?");
+        $stmt = db()->prepare("SELECT COUNT(*) FROM os_company_registry WHERE slug = ?");
         $stmt->execute([$slug]);
         if ($stmt->fetchColumn() > 0) $createErrors[] = 'المعرف مستخدم بالفعل';
     }
 
     if (empty($createErrors)) {
         $now = time();
-        $stmt = db()->prepare("INSERT INTO os_companies
+        $stmt = db()->prepare("INSERT INTO os_company_registry
             (slug, name_ar, name_en, domain, db_name, server_ip, sms_sender, sms_user, sms_pass,
              og_title, og_description, og_image, status, provision_log, created_at, updated_at)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");

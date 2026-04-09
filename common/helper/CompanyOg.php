@@ -32,7 +32,7 @@ class CompanyOg
         try {
             $row = (new \yii\db\Query())
                 ->select(['og_title', 'og_description', 'og_image'])
-                ->from('{{%companies}}')
+                ->from('{{%company_registry}}')
                 ->where(['status' => 'active'])
                 ->andWhere(['like', 'domain', $serverName])
                 ->one();
