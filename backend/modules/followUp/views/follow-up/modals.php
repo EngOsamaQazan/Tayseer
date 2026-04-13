@@ -561,16 +561,12 @@ CISELECT2
             <div class="modal-body">
                 <?php
                 /**
-                 * === نظام عرض صور العملاء (مُصحَّح) ===
+                 * === نظام عرض صور العملاء ===
                  *
-                 * الحقائق المكتشفة من تحليل قاعدة البيانات:
-                 * 1. جدول os_customers_document: كل السجلات document_image=NULL و images=0 (لا يوجد ربط)
-                 * 2. كل الصور الفعلية محفوظة في os_ImageManager بنوع groupName='coustmers'
-                 * 3. للعملاء القدامى: contractId = customer_id الحقيقي (11,200 صورة)
-                 * 4. للعملاء الجدد (بسبب باغ عدم execute): contractId = رقم عشوائي (1,068 صورة يتيمة)
-                 * 5. العمود الوحيد الذي يربط الصور اليتيمة: selected_image في os_customers
-                 *    → يحتوي ID سجل ImageManager → منه نعرف contractId العشوائي → نجلب كل الصور
-                 * 6. عمود image_manager_id غير موجود في قاعدة البيانات (خاصية PHP وهمية فقط)
+                 * ثلاثة مصادر للصور في os_ImageManager:
+                 * 1. صور قديمة: groupName='coustmers' + contractId = customer_id
+                 * 2. صور يتيمة: groupName='coustmers' + contractId عشوائي (يُكتشف عبر selected_image)
+                 * 3. صور SmartMedia الجديدة: customer_id مباشرة + groupName رقمي ('0','8','9'...) + contractId=NULL
                  */
 
                 $contractCustomerIds = \backend\modules\customers\models\ContractsCustomers::find()
@@ -587,20 +583,19 @@ CISELECT2
                 $allImages = [];
                 if (!empty($contractCustomerIds)) {
 
-                    // === الاستعلام 1: الصور المربوطة مباشرة (contractId = customer_id) ===
+                    // === الاستعلام 1: الصور المربوطة مباشرة (contractId = customer_id, groupName='coustmers') ===
                     try {
                         $directImages = \backend\models\Media::find()
                             ->where(['groupName' => 'coustmers'])
                             ->andWhere(['contractId' => $contractCustomerIds])
                             ->all();
                         foreach ($directImages as $img) {
-                            $allImages[$img->id] = $img; // مفتاح = id لمنع التكرار
+                            $allImages[$img->id] = $img;
                         }
                     } catch (\Exception $e) {}
 
                     // === الاستعلام 2: الصور اليتيمة عبر selected_image → contractId ===
                     try {
-                        // جلب selected_image لكل عميل (هذا هو ID سجل ImageManager للصورة الأساسية)
                         $selectedImageIds = \backend\modules\customers\models\Customers::find()
                             ->select('selected_image')
                             ->where(['id' => $contractCustomerIds])
@@ -610,14 +605,12 @@ CISELECT2
                             ->column();
 
                         if (!empty($selectedImageIds)) {
-                            // من كل selected_image، نجلب contractId (الرقم العشوائي أو customer_id)
                             $orphanContractIds = \backend\models\Media::find()
                                 ->select('contractId')
                                 ->where(['id' => $selectedImageIds])
                                 ->andWhere(['groupName' => 'coustmers'])
                                 ->column();
 
-                            // إزالة الأرقام التي هي فعلاً customer_id (تم جلبها بالاستعلام 1) — تطبيع أنواع للمقارنة
                             $customerIdsNormalized = array_map('strval', $contractCustomerIds);
                             $orphanContractIds = array_values(array_filter($orphanContractIds, function ($cid) use ($customerIdsNormalized) {
                                 return !in_array((string) $cid, $customerIdsNormalized, true);
@@ -632,6 +625,18 @@ CISELECT2
                                     $allImages[$img->id] = $img;
                                 }
                             }
+                        }
+                    } catch (\Exception $e) {}
+
+                    // === الاستعلام 3: صور SmartMedia المرفوعة بعمود customer_id (بدون contractId) ===
+                    try {
+                        $smartMediaImages = \backend\models\Media::find()
+                            ->where(['customer_id' => $contractCustomerIds])
+                            ->andWhere(['not', ['fileHash' => null]])
+                            ->andWhere(['!=', 'fileHash', ''])
+                            ->all();
+                        foreach ($smartMediaImages as $img) {
+                            $allImages[$img->id] = $img;
                         }
                     } catch (\Exception $e) {}
                 }
