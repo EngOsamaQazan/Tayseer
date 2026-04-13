@@ -453,14 +453,14 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
 
                 <div class="jv-exec-pipeline">
                     <?php foreach ($exSum['defendants'] as $idx => $def):
-                        $statusColors = [
+                        $execStatusStyles = [
                             'success' => ['bg' => '#F0FDF4', 'border' => '#BBF7D0', 'color' => '#166534', 'icon' => 'fa-check-circle'],
                             'info'    => ['bg' => '#EFF6FF', 'border' => '#BFDBFE', 'color' => '#1E40AF', 'icon' => 'fa-hourglass-half'],
                             'warning' => ['bg' => '#FFFBEB', 'border' => '#FDE68A', 'color' => '#92400E', 'icon' => 'fa-clock-o'],
                             'danger'  => ['bg' => '#FEF2F2', 'border' => '#FECACA', 'color' => '#991B1B', 'icon' => 'fa-exclamation-circle'],
                             'pending' => ['bg' => '#F8FAFC', 'border' => '#E2E8F0', 'color' => '#64748B', 'icon' => 'fa-circle-o'],
                         ];
-                        $sc = $statusColors[$def['status_class']] ?? $statusColors['pending'];
+                        $sc = $execStatusStyles[$def['status_class']] ?? $execStatusStyles['pending'];
                     ?>
                     <div class="jv-exec-row" style="background:<?= $sc['bg'] ?>;border-bottom:1px solid #E2E8F0">
                         <div class="jv-exec-row-main">
