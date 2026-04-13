@@ -149,9 +149,20 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js', ['depend
 $_fCust = \backend\modules\customers\models\ContractsCustomers::find()
     ->where(['contract_id' => $contract_id, 'customer_type' => 'client'])->one();
 $_fCustName = ($_fCust && $_fCust->customer) ? $_fCust->customer->name : 'غير محدد';
+$_fAllParties = \backend\modules\customers\models\ContractsCustomers::find()
+    ->where(['contract_id' => $contract_id])->all();
+$_fPartyNames = [];
+foreach ($_fAllParties as $_fcc) {
+    if ($_fcc->customer) $_fPartyNames[] = $_fcc->customer->name;
+}
+$_fJudiciary = \backend\modules\judiciary\models\Judiciary::find()
+    ->where(['contract_id' => $contract_id, 'is_deleted' => 0])->one();
+$_fCourtName = ($_fJudiciary && $_fJudiciary->court) ? $_fJudiciary->court->name : '';
+$_fCaseNum = $_fJudiciary ? (($_fJudiciary->judiciary_number ?: '') . ($_fJudiciary->year ? '/' . $_fJudiciary->year : '')) : '';
 $_statusLabelsMap = ['active' => 'نشط', 'pending' => 'معلّق', 'judiciary' => 'قضاء', 'legal_department' => 'قانوني', 'finished' => 'منتهي', 'canceled' => 'ملغي', 'settlement' => 'تسوية'];
-$this->registerJs("window.SMS_VARS=" . \yii\helpers\Json::encode([
+$_fSmsVars = [
     'اسم_العميل'      => $_fCustName,
+    'أطراف_العقد'      => implode(' و ', $_fPartyNames) ?: 'غير محدد',
     'رقم_العقد'        => (string)$contract_id,
     'حالة_العقد'       => $_statusLabelsMap[$calc->contract_model->status] ?? $calc->contract_model->status,
     'المبلغ_الإجمالي'  => number_format($calc->totalDebt(), 2),
@@ -163,7 +174,12 @@ $this->registerJs("window.SMS_VARS=" . \yii\helpers\Json::encode([
     'أقساط_متأخرة'     => (string)$calc->overdueInstallments(),
     'أقساط_متبقية'     => (string)$calc->remainingInstallments(),
     'أتعاب_المحاماة'   => number_format($calc->allLawyerCosts(), 2),
-]) . ";", yii\web\View::POS_HEAD);
+];
+if ($_fJudiciary) {
+    $_fSmsVars['اسم_المحكمة'] = $_fCourtName;
+    $_fSmsVars['رقم_القضية'] = $_fCaseNum;
+}
+$this->registerJs("window.SMS_VARS=" . \yii\helpers\Json::encode($_fSmsVars) . ";", yii\web\View::POS_HEAD);
 
 $this->registerJs("if(typeof OCP_CONFIG==='undefined'){window.OCP_CONFIG={urls:{" .
     "smsDraftList:"  . \yii\helpers\Json::encode(Url::to(['/followUp/follow-up/sms-draft-list'])) . "," .
