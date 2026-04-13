@@ -316,6 +316,9 @@ echo "=== Importing DB structure from master ==="
 mysqldump -u {$appDbUser} -p{$cfg['app_db_pass']} --no-data --routines --triggers {$srcDb} 2>/dev/null | mysql -u {$appDbUser} -p{$cfg['app_db_pass']} {$dbName} 2>&1 || true
 echo "=== Copying migration records ==="
 mysqldump -u {$appDbUser} -p{$cfg['app_db_pass']} {$srcDb} os_migration 2>/dev/null | mysql -u {$appDbUser} -p{$cfg['app_db_pass']} {$dbName} 2>&1 || true
+echo "=== Seeding lookup tables ==="
+SEED_TABLES="os_bancks os_city os_contact_type os_countries os_court os_department os_designation os_document_status os_document_type os_expense_categories os_feelings os_fiscal_years os_fiscal_periods os_hear_about_us os_hr_grade os_hr_salary_component os_income_category os_jobs_type os_judiciary_authorities os_judiciary_type os_official_holidays os_payment_type os_risk_engine_config os_status os_system_settings os_work_shift os_workdays os_accounts os_user_categories"
+mysqldump -u {$appDbUser} -p{$cfg['app_db_pass']} --no-create-info --insert-ignore --skip-triggers {$srcDb} \$SEED_TABLES 2>/dev/null | mysql -u {$appDbUser} -p{$cfg['app_db_pass']} {$dbName} 2>&1 || true
 echo "=== Running setup script ==="
 php /tmp/_tayseer_setup.php '{$adminData['username']}' '{$adminData['email']}' '{$adminData['password']}' '{$srcDb}' '{$dbName}' '{$appDbUser}' '{$appDbPass}' 2>&1
 rm -f /tmp/_tayseer_setup.php
