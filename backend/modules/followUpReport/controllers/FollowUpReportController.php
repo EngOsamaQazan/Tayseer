@@ -278,9 +278,16 @@ class FollowUpReportController extends Controller
         // Include ORDER BY columns in SELECT to satisfy MySQL DISTINCT requirement
         $selectCols = ['os_follow_up_report.id'];
         foreach (array_keys($orders) as $col) {
-            $selectCols[] = $col;
+            if ($col !== 'os_follow_up_report.id') {
+                $selectCols[] = $col;
+            }
         }
-        $allIds = $idsQuery->select($selectCols)->orderBy($orders)->column();
+        try {
+            $allIds = $idsQuery->select($selectCols)->orderBy($orders)->column();
+        } catch (\Throwable $e) {
+            Yii::warning('followup ids query failed: ' . $e->getMessage(), __METHOD__);
+            $allIds = [];
+        }
         Yii::$app->session->set('followup_report_ids', $allIds);
 
         $db = Yii::$app->db;

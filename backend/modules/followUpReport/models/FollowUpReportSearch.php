@@ -131,7 +131,10 @@ class FollowUpReportSearch extends FollowUpReport
             'sort' => [
                 'defaultOrder' => ['never_followed' => SORT_DESC, 'last_follow_up' => SORT_ASC],
                 'attributes' => [
-                    'id',
+                    'id' => [
+                        'asc' => ['os_follow_up_report.id' => SORT_ASC],
+                        'desc' => ['os_follow_up_report.id' => SORT_DESC],
+                    ],
                     'Date_of_sale',
                     'total_value',
                     'monthly_installment_value',
