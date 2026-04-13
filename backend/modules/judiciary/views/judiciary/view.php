@@ -781,9 +781,12 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
             <?php else: ?>
                 <?php foreach ($actions as $i => $m):
                     $def = $m->judiciaryActions;
-                    $nature = $def ? ($def->action_nature ?: 'process') : 'process';
+                    $nature = 'process';
+                    if ($def && $def->hasAttribute('action_nature')) {
+                        $nature = $def->action_nature ?: 'process';
+                    }
                     $ns = $natureStyles[$nature] ?? $natureStyles['process'];
-                    $reqStatus = $m->request_status;
+                    $reqStatus = $m->hasAttribute('request_status') ? $m->request_status : null;
                     $editUrl = Url::to(['/judiciaryCustomersActions/judiciary-customers-actions/update-followup-judicary-custamer-action', 'contractID' => $model->contract_id, 'id' => $m->id]);
                     $delUrl = Url::to(['/judiciary/judiciary/delete-customer-action', 'id' => $m->id, 'judiciary' => $m->judiciary_id]);
                 ?>
@@ -817,7 +820,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                         <?php if (!empty($m->note)): ?>
                             <div class="jv-action-note"><?= Html::encode($m->note) ?></div>
                         <?php endif; ?>
-                        <?php if ($nature === 'request' && ($reqStatus === 'pending' || $reqStatus === null || $reqStatus === '')): ?>
+                        <?php if ($nature === 'request' && $m->hasAttribute('request_status') && ($reqStatus === 'pending' || $reqStatus === null || $reqStatus === '')): ?>
                         <div class="jv-req-decision" style="display:flex;gap:8px;align-items:center;margin-top:8px">
                             <button type="button" class="btn btn-sm jv-approve-req-btn" data-id="<?= $m->id ?>"
                                 style="background:#ECFDF5;color:#059669;border:1px solid #A7F3D0;border-radius:8px;font-size:12px;font-weight:600;padding:5px 14px">
@@ -829,7 +832,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                             </button>
                         </div>
                         <?php endif; ?>
-                        <?php if ($nature === 'document' && ($reqStatus === 'not_sent' || $reqStatus === null)): ?>
+                        <?php if ($nature === 'document' && ($reqStatus === 'not_sent' || $reqStatus === null) && $m->hasAttribute('request_status')): ?>
                         <?php
                             $cust = $m->customers;
                             $custJobId = $cust ? $cust->job_title : null;
@@ -862,7 +865,7 @@ $corrStatusLabels = DiwanCorrespondence::getStatusLabels();
                             </button>
                         </div>
                         <?php endif; ?>
-                        <?php if ($nature === 'document' && $reqStatus === 'sent' && $m->correspondence_id): ?>
+                        <?php if ($nature === 'document' && $reqStatus === 'sent' && $m->hasAttribute('correspondence_id') && $m->correspondence_id): ?>
                         <div class="jv-doc-delivery" style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:12px;color:#64748B">
                             <?php
                             $corr = $m->correspondence;

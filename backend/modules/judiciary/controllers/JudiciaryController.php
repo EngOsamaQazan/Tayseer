@@ -1291,16 +1291,21 @@ class JudiciaryController extends Controller
             'pagination' => ['pageSize' => 20],
         ]);
 
-        $lastRequestDate = (new \yii\db\Query())
-            ->select(['jca.action_date'])
-            ->from('os_judiciary_customers_actions jca')
-            ->leftJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
-            ->where(['jca.judiciary_id' => $model->id])
-            ->andWhere(['ja.action_nature' => 'request'])
-            ->andWhere(['or', ['jca.is_deleted' => 0], ['jca.is_deleted' => null]])
-            ->orderBy(['jca.action_date' => SORT_DESC])
-            ->limit(1)
-            ->scalar();
+        try {
+            $lastRequestDate = (new \yii\db\Query())
+                ->select(['jca.action_date'])
+                ->from('os_judiciary_customers_actions jca')
+                ->leftJoin('os_judiciary_actions ja', 'ja.id = jca.judiciary_actions_id')
+                ->where(['jca.judiciary_id' => $model->id])
+                ->andWhere(['ja.action_nature' => 'request'])
+                ->andWhere(['or', ['jca.is_deleted' => 0], ['jca.is_deleted' => null]])
+                ->orderBy(['jca.action_date' => SORT_DESC])
+                ->limit(1)
+                ->scalar();
+        } catch (\Throwable $e) {
+            Yii::warning('lastRequestDate query failed: ' . $e->getMessage(), __METHOD__);
+            $lastRequestDate = null;
+        }
 
         try {
             $defendantStages = $model->getDefendantStages()->with('customer')->all();
