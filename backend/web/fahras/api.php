@@ -70,14 +70,49 @@ $statusMap = [
 
 $action = $_REQUEST['action'] ?? 'search';
 
+/**
+ * تطبيع مقطع من الاسم — نفس منطق CustomersSearch::applyNormalizedNameFilter
+ */
+function fahras_normalize_name_fragment($w) {
+  $wNorm = str_replace(['أ', 'إ', 'آ'], 'ا', $w);
+  $wNorm = str_replace('ة', 'ه', $wNorm);
+  $wNorm = str_replace('ى', 'ي', $wNorm);
+  return $wNorm;
+}
+
 if ($action === 'search') {
   if (!isset($_REQUEST['search']) || trim($_REQUEST['search']) === '') {
     echo json_encode(['error' => 'no client name value']);
     exit();
   }
-  $search = addslashes($_REQUEST['search']);
 
-  $db->bind = [];
+  $searchRaw = trim($_REQUEST['search']);
+  $words = preg_split('/\s+/u', $searchRaw, -1, PREG_SPLIT_NO_EMPTY);
+
+  if (empty($words)) {
+    echo json_encode(['error' => 'no client name value']);
+    exit();
+  }
+
+  /* اسم مُطبَّع للمقارنة — مطابق لـ os_customers في شاشة العملاء */
+  $nameNorm = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(cu.name, 'ة', 'ه'), 'أ', 'ا'), 'إ', 'ا'), 'آ', 'ا'), 'ى', 'ي')";
+
+  $nameConds = [];
+  $bind = [];
+  foreach ($words as $w) {
+    $wNorm = fahras_normalize_name_fragment($w);
+    $nameConds[] = "($nameNorm LIKE ?)";
+    $bind[] = '%' . $wNorm . '%';
+  }
+  $nameClause = implode(' AND ', $nameConds);
+
+  /* البحث بالهوية أو الجوال: الجملة كاملة (مقطع واحد أو رقم كامل) */
+  $fullLike = '%' . $searchRaw . '%';
+  $bind[] = $fullLike;
+  $bind[] = $fullLike;
+
+  $whereSearch = "($nameClause OR cu.id_number LIKE ? OR cu.primary_phone_number LIKE ?)";
+
   $stmt = $db->run("
     SELECT
       cu.id AS customer_id,
@@ -101,12 +136,10 @@ if ($action === 'search') {
     INNER JOIN os_contracts co ON co.id = cc.contract_id
     LEFT JOIN os_vw_contract_balance vb ON vb.contract_id = co.id
     WHERE co.status != 'canceled'
-      AND (cu.name LIKE '%{$search}%'
-       OR cu.id_number LIKE '%{$search}%'
-       OR cu.primary_phone_number LIKE '%{$search}%')
+      AND $whereSearch
     ORDER BY co.created_at ASC
     LIMIT 200
-  ");
+  ", $bind);
   $rows = ($stmt && is_object($stmt)) ? $stmt->fetchAll() : [];
 
 } elseif ($action === 'bulk_export') {
