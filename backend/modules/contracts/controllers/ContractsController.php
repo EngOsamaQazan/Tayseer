@@ -776,6 +776,23 @@ class ContractsController extends Controller
 
             $transaction->commit();
 
+            // ── تسجيل الدفعة الأولى كإيراد (إن وجدت) ──
+            $firstPaymentAmount = (float)($model->first_installment_value ?? 0);
+            if ($firstPaymentAmount > 0) {
+                try {
+                    $income = new \backend\modules\income\models\Income();
+                    $income->contract_id = $model->id;
+                    $income->amount = $firstPaymentAmount;
+                    $income->date = $model->Date_of_sale ?: date('Y-m-d');
+                    $income->payment_purpose = 'دفعة أولى - عقد #' . $model->id;
+                    $income->payment_type = Yii::$app->request->post('first_payment_type') ?: null;
+                    $income->cash_account_id = Yii::$app->request->post('first_payment_cash_account_id') ?: null;
+                    $income->save(false);
+                } catch (\Exception $e) {
+                    Yii::error('فشل تسجيل الدفعة الأولى كإيراد: ' . $e->getMessage(), 'contracts');
+                }
+            }
+
             // ── عمليات ما بعد الحفظ (خارج الـ transaction) ──
             try {
                 Yii::$app->notifications->sendByRule(

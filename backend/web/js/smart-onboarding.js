@@ -208,6 +208,52 @@
             setTimeout(function() { $input.removeAttr('capture'); }, 500);
         });
 
+        // Clipboard paste — Ctrl+V anywhere on page, or via button
+        $(document).on('paste', function(e) {
+            if (SO.currentStep !== 0) return;
+            var items = (e.originalEvent.clipboardData || e.clipboardData || {}).items;
+            if (!items) return;
+            var files = [];
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file') {
+                    var f = items[i].getAsFile();
+                    if (f) files.push(f);
+                }
+            }
+            if (files.length) {
+                e.preventDefault();
+                scanFiles(files);
+                showToast('تم لصق ' + files.length + ' ملف من الحافظة', 'info');
+            }
+        });
+
+        $('#scanPasteBtn').on('click', function() {
+            if (navigator.clipboard && navigator.clipboard.read) {
+                navigator.clipboard.read().then(function(clipItems) {
+                    var processed = 0;
+                    clipItems.forEach(function(item) {
+                        var imgType = item.types.find(function(t) { return t.startsWith('image/'); });
+                        if (imgType) {
+                            item.getType(imgType).then(function(blob) {
+                                var ext = imgType.split('/')[1] || 'png';
+                                var file = new File([blob], 'clipboard_' + Date.now() + '.' + ext, { type: imgType });
+                                scanFiles([file]);
+                                processed++;
+                                if (processed === 1) showToast('تم لصق الصورة من الحافظة', 'info');
+                            });
+                        }
+                    });
+                    if (!clipItems.length) {
+                        showToast('لا توجد صور في الحافظة', 'warning');
+                    }
+                }).catch(function() {
+                    showToast('اضغط Ctrl+V للصق — أو امنح صلاحية الحافظة', 'warning');
+                });
+            } else {
+                showToast('اضغط Ctrl+V للصق الصورة من الحافظة', 'info');
+            }
+        });
+
         // Apply extracted data
         $('#scanApplyBtn').on('click', function() {
             applyExtractedFields();
@@ -227,6 +273,8 @@
             }
         }
 
+        var scanSeq = 0; // unique ID per card (avoids Date.now collisions)
+
         function processScanFile(file) {
             var allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
             if (allowed.indexOf(file.type) === -1) {
@@ -234,8 +282,7 @@
                 return;
             }
 
-            // Create card in gallery
-            var cardId = 'scan_' + Date.now();
+            var cardId = 'scan_' + (++scanSeq) + '_' + Date.now();
             var isPdf = file.type === 'application/pdf';
             var thumbSrc = isPdf ? '/css/images/pdf-icon.png' : URL.createObjectURL(file);
 
@@ -248,10 +295,6 @@
                 '</div></div>');
             $gallery.append($card);
 
-            // Show processing steps
-            updateProcessingStep('upload');
-
-            // Upload & extract
             var formData = new FormData();
             formData.append('file', file);
             formData.append('auto_classify', '1');
@@ -273,44 +316,24 @@
                     return xhr;
                 },
                 success: function(resp) {
+                    var $c = $('#' + cardId);
                     if (resp.success) {
-                        updateProcessingStep('done');
                         var src = (resp.extraction && resp.extraction.meta) ? resp.extraction.meta.source : '?';
-                        var isGeminiVision = src === 'gemini-vision';
-                        console.group(
-                            '%c[Document Scan] ' + file.name + ' [' + src + ']',
-                            'color:' + (isGeminiVision ? '#198754' : '#0d6efd') + ';font-weight:bold'
-                        );
-                        console.log(
-                            '%cSource:', 'color:#dc3545;font-weight:bold',
-                            src + (isGeminiVision ? ' ✓ Gemini قرأ الصورة مباشرة' : '')
-                        );
-                        if (resp.extraction && resp.extraction.meta && resp.extraction.meta.confidence_notes) {
-                            console.log('%cNotes:', 'color:#0dcaf0', resp.extraction.meta.confidence_notes.join(' | '));
-                        }
-                        console.log('%cExtraction:', 'color:#6f42c1', resp.extraction);
-                        if (resp.ocr_text) {
-                            console.log('%cOCR Fallback Text:', 'color:#adb5bd', resp.ocr_text);
-                        }
-                        console.groupEnd();
+                        console.log('[Scan] ' + file.name + ' → ' + src);
                         var ext = resp.extraction || {};
                         var docLabel = DOC_LABELS[ext.document && ext.document.type] || 'مستند';
 
-                        // Update card
-                        var $c = $('#' + cardId);
                         $c.removeClass('processing').addClass('success');
                         $c.find('.scan-card-spinner').remove();
                         $c.find('.scan-card-type').text(docLabel);
                         $c.find('.scan-card-status').text(ext.meta ? ext.meta.fields_extracted + ' حقل' : '');
                         $c.prepend('<button type="button" class="scan-card-remove" title="حذف"><i class="fa fa-times"></i></button>');
 
-                        // Store file ID
                         if (resp.file && resp.file.id) {
                             SO.scanFileIds.push(resp.file.id);
                             $c.attr('data-image-id', resp.file.id);
                         }
 
-                        // Merge extraction data
                         mergeExtractionData(ext);
                         renderScanResults();
 
@@ -318,31 +341,38 @@
                         if (resp.file && resp.file.thumb) {
                             $c.find('.scan-card-img').attr('src', resp.file.thumb);
                         }
+
+                        showToast('تم تحليل: ' + file.name, 'success');
                     } else {
-                        $('#' + cardId).removeClass('processing').addClass('error');
-                        $('#' + cardId + ' .scan-card-type').text('فشل');
-                        $('#' + cardId + ' .scan-card-status').text(resp.error || 'خطأ');
-                        $('#' + cardId + ' .scan-card-spinner').remove();
+                        $c.removeClass('processing').addClass('error');
+                        $c.find('.scan-card-spinner').remove();
+                        $c.find('.scan-card-type').text('فشل');
+                        $c.find('.scan-card-status').text(resp.error || 'خطأ');
                         showToast(resp.error || 'فشل في تحليل الوثيقة', 'error');
                     }
+
+                    updateGlobalProcessingState();
                 },
                 error: function() {
-                    $('#' + cardId).removeClass('processing').addClass('error');
-                    $('#' + cardId + ' .scan-card-type').text('خطأ في الاتصال');
-                    $('#' + cardId + ' .scan-card-spinner').remove();
+                    var $c = $('#' + cardId);
+                    $c.removeClass('processing').addClass('error');
+                    $c.find('.scan-card-spinner').remove();
+                    $c.find('.scan-card-type').text('خطأ في الاتصال');
+                    updateGlobalProcessingState();
                 }
             });
         }
 
-        function updateProcessingStep(phase) {
-            var steps = ['upload', 'ocr', 'parse', 'match'];
-            var idx = (phase === 'done') ? steps.length : steps.indexOf(phase);
-            $('.scan-p-step').each(function(i) {
-                $(this).removeClass('done active-step');
-                if (i < idx) $(this).addClass('done');
-                else if (i === idx) $(this).addClass('active-step');
-            });
+        function updateGlobalProcessingState() {
+            var processing = $gallery.find('.scan-card.processing').length;
+            if (processing > 0) {
+                $processing.show().find('.scan-processing-text').text('جاري تحليل ' + processing + ' وثيقة...');
+            } else {
+                $processing.hide();
+            }
         }
+
+        // Processing step indicator removed — replaced by per-card spinner + updateGlobalProcessingState
 
         function mergeExtractionData(ext) {
             SO.scanData.push(ext);
@@ -373,7 +403,7 @@
                 }
 
                 // Documents: accumulate each as separate record
-                if (d.document && d.document.type) {
+                if (d.document && (d.document.type !== undefined && d.document.type !== '')) {
                     merged.document.push({
                         type: d.document.type,
                         type_label: d.document.type_label || '',
@@ -391,11 +421,13 @@
             var fieldCount = 0;
 
             // Customer fields
+            var sexVal = merged.customer.sex;
+            var sexDisplay = (sexVal !== undefined && sexVal !== null && sexVal !== '') ? (sexVal == 1 ? 'أنثى' : 'ذكر') : '';
             var custFields = [
                 ['name', merged.customer.name],
                 ['id_number', merged.customer.id_number],
                 ['birth_date', merged.customer.birth_date],
-                ['sex', merged.customer.sex !== undefined ? (merged.customer.sex == 1 ? 'أنثى' : 'ذكر') : ''],
+                ['sex', sexDisplay],
                 ['birth_place', merged.customer.birth_place],
                 ['nationality_text', merged.customer.nationality_text],
                 ['mother_name', merged.customer.mother_name],
@@ -403,7 +435,7 @@
             ];
             for (var i = 0; i < custFields.length; i++) {
                 var key = custFields[i][0], val = custFields[i][1];
-                if (val && val !== '') {
+                if (val !== undefined && val !== null && val !== '') {
                     var isArabic = /[\u0600-\u06FF]/.test(val);
                     html += '<div class="scan-field">' +
                         '<span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
@@ -547,6 +579,35 @@
                 $form.append('<input type="hidden" name="SmartMedia[]" value="' + imageId + '">');
             }
         }
+
+        // Lightbox — click card image to preview full size
+        $(document).on('click', '.scan-card-img', function(e) {
+            e.stopPropagation();
+            var src = $(this).attr('src');
+            if (!src || src.indexOf('pdf-icon') !== -1) return;
+
+            var $overlay = $('#scanLightbox');
+            if (!$overlay.length) {
+                $overlay = $(
+                    '<div id="scanLightbox" class="scan-lightbox">' +
+                        '<div class="scan-lightbox-backdrop"></div>' +
+                        '<div class="scan-lightbox-content">' +
+                            '<img src="" alt="">' +
+                            '<button type="button" class="scan-lightbox-close"><i class="fa fa-times"></i></button>' +
+                        '</div>' +
+                    '</div>'
+                );
+                $('body').append($overlay);
+                $overlay.on('click', '.scan-lightbox-backdrop, .scan-lightbox-close', function() {
+                    $overlay.removeClass('open');
+                });
+                $(document).on('keydown.scanLightbox', function(ev) {
+                    if (ev.key === 'Escape') $overlay.removeClass('open');
+                });
+            }
+            $overlay.find('img').attr('src', src);
+            $overlay.addClass('open');
+        });
 
         // Remove scanned card
         $(document).on('click', '.scan-card-remove', function(e) {

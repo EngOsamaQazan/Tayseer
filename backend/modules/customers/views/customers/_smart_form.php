@@ -174,7 +174,7 @@ if (!$isNew) {
                         <input type="file" id="scanFileInput" accept="image/*,application/pdf" multiple style="display:none">
                         <div class="scan-drop-icon"><i class="fa fa-cloud-upload"></i></div>
                         <div class="scan-drop-text">اسحب صورة الوثيقة هنا أو اضغط للاختيار</div>
-                        <div class="scan-drop-hint">يدعم: JPG, PNG, WebP, PDF — حد أقصى 10MB</div>
+                        <div class="scan-drop-hint">يدعم: JPG, PNG, WebP, PDF — حد أقصى 10MB — أو Ctrl+V للصق</div>
                     </div>
 
                     <div class="scan-actions">
@@ -183,6 +183,9 @@ if (!$isNew) {
                         </button>
                         <button type="button" class="scan-action-btn" onclick="document.getElementById('scanFileInput').click()">
                             <i class="fa fa-folder-open"></i> اختيار ملفات
+                        </button>
+                        <button type="button" class="scan-action-btn" id="scanPasteBtn">
+                            <i class="fa fa-clipboard"></i> لصق من الحافظة
                         </button>
                     </div>
 

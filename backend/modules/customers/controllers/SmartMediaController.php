@@ -71,11 +71,11 @@ class SmartMediaController extends Controller
             $ext = strtolower($file->extension);
 
             if ($autoClassify === '1' && strpos($file->type, 'image/') === 0) {
-                // Save to temp for AI analysis
                 $tempPath = Yii::getAlias('@runtime') . '/temp_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
-                $file->saveAs($tempPath, false); // false = don't delete the temp file yet
+                $file->saveAs($tempPath, false);
+                Yii::$app->session->close();
                 $aiResult = VisionService::classify($tempPath, $customerId ? (int)$customerId : null);
-                @unlink($tempPath); // clean up temp
+                @unlink($tempPath);
             }
 
             // Determine groupName from AI classification
@@ -365,7 +365,9 @@ class SmartMediaController extends Controller
             $tempPath = Yii::getAlias('@runtime') . '/scan_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
             $file->saveAs($tempPath, false);
 
-            // PRIMARY: Gemini reads the image directly (with OCR fallback inside)
+            // Release session lock so parallel uploads aren't blocked
+            Yii::$app->session->close();
+
             $extraction = VisionService::extractFromDocument($tempPath);
 
             // Save to ImageManager for later use

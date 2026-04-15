@@ -1336,10 +1336,11 @@ PROMPT;
         $result = self::buildEmptyResult();
         $typeLabels = self::getTypeLabels();
 
-        // Read Gemini debug log for last error (if any)
-        $debugLog = Yii::getAlias('@runtime') . '/gemini_debug.log';
+        // ═══ PERF TEST: Gemini disabled — Vision OCR + regex only ═══
+        // To re-enable Gemini, restore the extractFromImage() block below.
+        $geminiFields = null;
 
-        // ═══ PRIMARY: Gemini reads the image directly ═══
+        /*  ── Gemini Vision (disabled for performance testing) ──
         $geminiFields = self::extractFromImage($imagePath);
 
         if ($geminiFields && is_array($geminiFields)) {
@@ -1352,52 +1353,31 @@ PROMPT;
             }
             $result['meta']['confidence_notes'][] = 'Gemini Vision — قراءة مباشرة من الصورة';
         }
+        */
 
-        // ═══ FALLBACK: Vision OCR + Gemini text + regex ═══
-        $needsFallback = !$geminiFields
-            || empty($result['customer']['name'])
-            || empty($result['customer']['id_number']);
+        $result['meta']['confidence_notes'][] = 'Gemini معطّل — وضع اختبار الأداء';
 
-        if ($needsFallback) {
-            $lastError = '';
-            if (file_exists($debugLog)) {
-                $lines = file($debugLog, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
-                $lastError = end($lines) ?: '';
-            }
+        $ocrResult = self::analyze($imagePath, ['DOCUMENT_TEXT_DETECTION', 'LABEL_DETECTION']);
 
-            if (!$geminiFields) {
-                $note = 'Gemini Vision غير متاح — fallback to OCR';
-                if ($lastError) {
-                    $note .= ' | ' . $lastError;
-                }
-                $result['meta']['confidence_notes'][] = $note;
-            }
+        if ($ocrResult['success'] && !empty($ocrResult['text'])) {
+            $result['meta']['ocr_text'] = $ocrResult['text'];
+            $result['meta']['classification'] = $ocrResult['classification'] ?? null;
 
-            $ocrResult = self::analyze($imagePath, ['DOCUMENT_TEXT_DETECTION', 'LABEL_DETECTION']);
+            $ocrExtraction = self::extractDocumentFields(
+                $ocrResult['text'],
+                $ocrResult['labels'] ?? [],
+                $ocrResult['classification'] ?? null
+            );
 
-            if ($ocrResult['success'] && !empty($ocrResult['text'])) {
-                $result['meta']['ocr_text'] = $ocrResult['text'];
-                $result['meta']['classification'] = $ocrResult['classification'] ?? null;
-
-                $ocrExtraction = self::extractDocumentFields(
-                    $ocrResult['text'],
-                    $ocrResult['labels'] ?? [],
-                    $ocrResult['classification'] ?? null
-                );
-
-                // Merge OCR results only for missing fields
-                foreach (['customer', 'document', 'job'] as $section) {
-                    foreach ($ocrExtraction[$section] ?? [] as $key => $val) {
-                        if (!empty($val) && empty($result[$section][$key])) {
-                            $result[$section][$key] = $val;
-                        }
+            foreach (['customer', 'document', 'job'] as $section) {
+                foreach ($ocrExtraction[$section] ?? [] as $key => $val) {
+                    if ($val !== null && $val !== '' && !isset($result[$section][$key])) {
+                        $result[$section][$key] = $val;
                     }
                 }
-
-                if (!$geminiFields) {
-                    $result['meta']['source'] = $ocrExtraction['meta']['source'] ?? 'ocr+regex';
-                }
             }
+
+            $result['meta']['source'] = $ocrExtraction['meta']['source'] ?? 'ocr+regex';
         }
 
         self::finalizeResult($result, null, null);
@@ -1418,7 +1398,10 @@ PROMPT;
         $result = self::buildEmptyResult();
         $typeLabels = self::getTypeLabels();
 
-        // ═══ PRIMARY: Gemini AI text extraction ═══
+        // ═══ PERF TEST: Gemini text extraction disabled ═══
+        $geminiFields = null;
+
+        /*  ── Gemini text extraction (disabled for performance testing) ──
         $geminiFields = self::extractWithGemini($ocrText, $classification);
 
         if ($geminiFields && is_array($geminiFields)) {
@@ -1431,38 +1414,27 @@ PROMPT;
             }
             $result['meta']['confidence_notes'][] = 'Gemini AI text extraction';
         }
+        */
 
-        // ═══ FALLBACK: Regex extraction (if Gemini failed or missed fields) ═══
-        $regexNeeded = !$geminiFields
-            || empty($result['customer']['name'])
-            || empty($result['customer']['id_number']);
+        // ═══ Direct: MRZ + Regex extraction ═══
+        $mrzFields = self::parseMRZ($ocrText);
+        if ($mrzFields) {
+            $result['meta']['mrz_found'] = true;
+            $result['meta']['source'] = 'mrz+regex';
+            self::mergeFields($result, $mrzFields, false);
+        } else {
+            $result['meta']['source'] = 'regex';
+        }
 
-        if ($regexNeeded) {
-            if (!$geminiFields) {
-                $result['meta']['confidence_notes'][] = 'Gemini unavailable — regex fallback';
-            } else {
-                $result['meta']['confidence_notes'][] = 'Regex supplementing Gemini';
-            }
+        $textFields = self::parseStructuredText($ocrText);
+        self::mergeFields($result, $textFields, false);
 
-            $mrzFields = self::parseMRZ($ocrText);
-            if ($mrzFields) {
-                $result['meta']['mrz_found'] = true;
-                if (!$geminiFields) $result['meta']['source'] = 'mrz+regex';
-                self::mergeFields($result, $mrzFields, false);
-            } elseif (!$geminiFields) {
-                $result['meta']['source'] = 'regex';
-            }
-
-            $textFields = self::parseStructuredText($ocrText);
-            self::mergeFields($result, $textFields, false);
-
-            if (empty($result['meta']['issuing_body'])) {
-                $body = self::detectIssuingBody($ocrText);
-                if ($body) {
-                    $result['meta']['issuing_body'] = $body;
-                    if (empty($result['job']['employer_name'])) {
-                        $result['job']['employer_name'] = self::$issuingBodies[$body]['job_name'];
-                    }
+        if (empty($result['meta']['issuing_body'])) {
+            $body = self::detectIssuingBody($ocrText);
+            if ($body) {
+                $result['meta']['issuing_body'] = $body;
+                if (empty($result['job']['employer_name'])) {
+                    $result['job']['employer_name'] = self::$issuingBodies[$body]['job_name'];
                 }
             }
         }
@@ -1520,12 +1492,17 @@ PROMPT;
             } else {
                 $result['document']['type'] = 0;
             }
+        }
+
+        if (isset($result['document']['type']) && !isset($result['document']['type_label'])) {
             $result['document']['type_label'] = $typeLabels[$result['document']['type']] ?? '';
         }
 
         $count = 0;
         foreach (['customer', 'document', 'job'] as $group) {
-            $count += count(array_filter($result[$group]));
+            $count += count(array_filter($result[$group], function ($v) {
+                return $v !== null && $v !== '';
+            }));
         }
         $result['meta']['fields_extracted'] = $count;
     }

@@ -992,7 +992,46 @@
     height: 90px;
     object-fit: cover;
     display: block;
+    cursor: zoom-in;
 }
+
+/* Lightbox */
+.scan-lightbox {
+    position: fixed; inset: 0; z-index: 99999;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transition: opacity .25s, visibility .25s;
+}
+.scan-lightbox.open { opacity: 1; visibility: visible; }
+.scan-lightbox-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.75);
+    backdrop-filter: blur(4px);
+}
+.scan-lightbox-content {
+    position: relative; z-index: 1;
+    max-width: 92vw; max-height: 90vh;
+    transform: scale(.92);
+    transition: transform .25s;
+}
+.scan-lightbox.open .scan-lightbox-content { transform: scale(1); }
+.scan-lightbox-content img {
+    max-width: 92vw; max-height: 88vh;
+    border-radius: 10px;
+    box-shadow: 0 12px 48px rgba(0,0,0,.5);
+    object-fit: contain;
+    display: block;
+}
+.scan-lightbox-close {
+    position: absolute; top: -14px; right: -14px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #fff; border: none; color: #333;
+    font-size: 16px; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+}
+.scan-lightbox-close:hover { background: #f8d7da; color: #800020; }
 .scan-card-body {
     padding: 6px 8px;
     text-align: right;
