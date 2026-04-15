@@ -5,13 +5,17 @@
 (function($) {
     'use strict';
 
+    var isEditMode = window.soConfig && window.soConfig.isEditMode;
+
     var SO = {
         currentStep: 0,
-        totalSteps: 5,
+        totalSteps: isEditMode ? 5 : 6,
         debounceTimer: null,
         saveTimer: null,
         riskData: null,
         panelExpanded: false,
+        scanData: [],        // accumulated extraction results from multiple documents
+        scanFileIds: [],     // ImageManager IDs from scanned docs
     };
 
     var STORAGE_KEY = 'so_form_draft';
@@ -21,6 +25,7 @@
        ══════════════════════════════════════════ */
     $(function() {
         initWizard();
+        if (!isEditMode) initDocumentScan();
         initEditModeNav();
         initRiskPanel();
         initLiveValidation();
@@ -29,7 +34,7 @@
         initDocumentUploads();
         initFormPersistence();
         triggerRiskCalc();
-        if (window.soConfig && window.soConfig.isEditMode) initEditWarnings();
+        if (isEditMode) initEditWarnings();
         initJobAjaxSelect2();
     });
 
@@ -39,15 +44,13 @@
     function initWizard() {
         showStep(0);
 
-        var isEdit = window.soConfig && window.soConfig.isEditMode;
-
         $(document).on('click', '.so-step', function() {
             var idx = $(this).data('step');
-            if (isEdit || idx <= getMaxReachedStep()) goToStep(idx);
+            if (isEditMode || idx <= getMaxReachedStep()) goToStep(idx);
         });
 
         $(document).on('click', '.so-next-btn', function() {
-            if (isEdit || validateCurrentStep()) goToStep(SO.currentStep + 1);
+            if (isEditMode || validateCurrentStep()) goToStep(SO.currentStep + 1);
         });
         $(document).on('click', '.so-prev-btn', function() {
             goToStep(SO.currentStep - 1);
@@ -129,7 +132,9 @@
     }
 
     function validateCurrentStep() {
-        // Basic validation — highlight empty required fields
+        // Step 0 (scan) is always optional — skip validation
+        if (SO.currentStep === 0 && !isEditMode) return true;
+
         var $section = $('.so-section[data-step="' + SO.currentStep + '"]');
         var valid = true;
         $section.find('[required]').each(function() {
@@ -147,6 +152,431 @@
 
     function saveStepState() {
         try { localStorage.setItem('so_step', SO.currentStep); } catch(e){}
+    }
+
+    /* ══════════════════════════════════════════
+       DOCUMENT SCAN — Step 0 (Create mode only)
+       ══════════════════════════════════════════ */
+    function initDocumentScan() {
+        var $zone = $('#scanDropZone');
+        var $input = $('#scanFileInput');
+        var $gallery = $('#scanGallery');
+        var $results = $('#scanResults');
+        var $processing = $('#scanProcessing');
+
+        if (!$zone.length) return;
+
+        var DOC_LABELS = {
+            '0': 'هوية', '1': 'جواز سفر', '2': 'رخصة قيادة',
+            '3': 'شهادة ميلاد', '4': 'شهادة تعيين'
+        };
+
+        var FIELD_LABELS = {
+            name: 'الاسم', id_number: 'الرقم الوطني', birth_date: 'تاريخ الميلاد',
+            sex: 'الجنس', birth_place: 'مكان الولادة', nationality_text: 'الجنسية',
+            mother_name: 'اسم الأم', address: 'العنوان', name_en: 'الاسم (إنجليزي)',
+            job_number: 'الرقم الوظيفي', rank: 'الرتبة', employer_name: 'جهة العمل',
+            doc_type: 'نوع الوثيقة', doc_number: 'رقم الوثيقة'
+        };
+
+        // Drag & drop
+        $zone.on('dragover dragenter', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            $(this).addClass('dragover');
+        }).on('dragleave drop', function(e) {
+            e.preventDefault(); e.stopPropagation();
+            $(this).removeClass('dragover');
+        }).on('drop', function(e) {
+            scanFiles(e.originalEvent.dataTransfer.files);
+        });
+
+        // Click / keyboard — stop propagation from $input to prevent infinite loop
+        $input.on('click', function(e) { e.stopPropagation(); });
+        $zone.on('click', function() { $input.click(); });
+        $zone.on('keydown', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $input.click(); }
+        });
+        $input.on('change', function() {
+            scanFiles(this.files);
+            this.value = '';
+        });
+
+        // Camera button → reuse smart-media webcam
+        $('#scanCameraBtn').on('click', function() {
+            $input.attr('capture', 'environment');
+            $input.click();
+            setTimeout(function() { $input.removeAttr('capture'); }, 500);
+        });
+
+        // Apply extracted data
+        $('#scanApplyBtn').on('click', function() {
+            applyExtractedFields();
+            goToStep(1);
+            $('#scanContinueBtn').show();
+        });
+
+        // Add more docs
+        $('#scanAddMoreBtn').on('click', function() {
+            $zone.show();
+            $('.scan-actions').show();
+        });
+
+        function scanFiles(fileList) {
+            for (var i = 0; i < fileList.length; i++) {
+                processScanFile(fileList[i]);
+            }
+        }
+
+        function processScanFile(file) {
+            var allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+            if (allowed.indexOf(file.type) === -1) {
+                showToast('نوع الملف غير مدعوم', 'error');
+                return;
+            }
+
+            // Create card in gallery
+            var cardId = 'scan_' + Date.now();
+            var isPdf = file.type === 'application/pdf';
+            var thumbSrc = isPdf ? '/css/images/pdf-icon.png' : URL.createObjectURL(file);
+
+            var $card = $('<div class="scan-card processing" id="' + cardId + '">' +
+                '<img class="scan-card-img" src="' + thumbSrc + '" alt="">' +
+                '<div class="scan-card-spinner"><i class="fa fa-spinner fa-spin"></i></div>' +
+                '<div class="scan-card-body">' +
+                '<div class="scan-card-type">جاري التحليل...</div>' +
+                '<div class="scan-card-status">0%</div>' +
+                '</div></div>');
+            $gallery.append($card);
+
+            // Show processing steps
+            updateProcessingStep('upload');
+
+            // Upload & extract
+            var formData = new FormData();
+            formData.append('file', file);
+            formData.append('auto_classify', '1');
+
+            $.ajax({
+                url: window.smConfig.extractFieldsUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function() {
+                    var xhr = new XMLHttpRequest();
+                    xhr.upload.addEventListener('progress', function(e) {
+                        if (e.lengthComputable) {
+                            var pct = Math.round((e.loaded / e.total) * 30);
+                            $('#' + cardId + ' .scan-card-status').text(pct + '%');
+                        }
+                    });
+                    return xhr;
+                },
+                success: function(resp) {
+                    if (resp.success) {
+                        updateProcessingStep('done');
+                        var src = (resp.extraction && resp.extraction.meta) ? resp.extraction.meta.source : '?';
+                        var isGeminiVision = src === 'gemini-vision';
+                        console.group(
+                            '%c[Document Scan] ' + file.name + ' [' + src + ']',
+                            'color:' + (isGeminiVision ? '#198754' : '#0d6efd') + ';font-weight:bold'
+                        );
+                        console.log(
+                            '%cSource:', 'color:#dc3545;font-weight:bold',
+                            src + (isGeminiVision ? ' ✓ Gemini قرأ الصورة مباشرة' : '')
+                        );
+                        if (resp.extraction && resp.extraction.meta && resp.extraction.meta.confidence_notes) {
+                            console.log('%cNotes:', 'color:#0dcaf0', resp.extraction.meta.confidence_notes.join(' | '));
+                        }
+                        console.log('%cExtraction:', 'color:#6f42c1', resp.extraction);
+                        if (resp.ocr_text) {
+                            console.log('%cOCR Fallback Text:', 'color:#adb5bd', resp.ocr_text);
+                        }
+                        console.groupEnd();
+                        var ext = resp.extraction || {};
+                        var docLabel = DOC_LABELS[ext.document && ext.document.type] || 'مستند';
+
+                        // Update card
+                        var $c = $('#' + cardId);
+                        $c.removeClass('processing').addClass('success');
+                        $c.find('.scan-card-spinner').remove();
+                        $c.find('.scan-card-type').text(docLabel);
+                        $c.find('.scan-card-status').text(ext.meta ? ext.meta.fields_extracted + ' حقل' : '');
+                        $c.prepend('<button type="button" class="scan-card-remove" title="حذف"><i class="fa fa-times"></i></button>');
+
+                        // Store file ID
+                        if (resp.file && resp.file.id) {
+                            SO.scanFileIds.push(resp.file.id);
+                            $c.attr('data-image-id', resp.file.id);
+                        }
+
+                        // Merge extraction data
+                        mergeExtractionData(ext);
+                        renderScanResults();
+
+                        if (!isPdf) URL.revokeObjectURL(thumbSrc);
+                        if (resp.file && resp.file.thumb) {
+                            $c.find('.scan-card-img').attr('src', resp.file.thumb);
+                        }
+                    } else {
+                        $('#' + cardId).removeClass('processing').addClass('error');
+                        $('#' + cardId + ' .scan-card-type').text('فشل');
+                        $('#' + cardId + ' .scan-card-status').text(resp.error || 'خطأ');
+                        $('#' + cardId + ' .scan-card-spinner').remove();
+                        showToast(resp.error || 'فشل في تحليل الوثيقة', 'error');
+                    }
+                },
+                error: function() {
+                    $('#' + cardId).removeClass('processing').addClass('error');
+                    $('#' + cardId + ' .scan-card-type').text('خطأ في الاتصال');
+                    $('#' + cardId + ' .scan-card-spinner').remove();
+                }
+            });
+        }
+
+        function updateProcessingStep(phase) {
+            var steps = ['upload', 'ocr', 'parse', 'match'];
+            var idx = (phase === 'done') ? steps.length : steps.indexOf(phase);
+            $('.scan-p-step').each(function(i) {
+                $(this).removeClass('done active-step');
+                if (i < idx) $(this).addClass('done');
+                else if (i === idx) $(this).addClass('active-step');
+            });
+        }
+
+        function mergeExtractionData(ext) {
+            SO.scanData.push(ext);
+        }
+
+        function getMergedFields() {
+            var merged = { customer: {}, document: [], job: {} };
+
+            for (var i = 0; i < SO.scanData.length; i++) {
+                var d = SO.scanData[i];
+
+                // Customer fields: first non-empty wins
+                if (d.customer) {
+                    for (var k in d.customer) {
+                        if (d.customer[k] && (!merged.customer[k] || merged.customer[k] === '')) {
+                            merged.customer[k] = d.customer[k];
+                        }
+                    }
+                }
+
+                // Job fields: first non-empty wins
+                if (d.job) {
+                    for (var j in d.job) {
+                        if (d.job[j] && (!merged.job[j] || merged.job[j] === '')) {
+                            merged.job[j] = d.job[j];
+                        }
+                    }
+                }
+
+                // Documents: accumulate each as separate record
+                if (d.document && d.document.type) {
+                    merged.document.push({
+                        type: d.document.type,
+                        type_label: d.document.type_label || '',
+                        number: d.document.number || d.document.certificate_number || '',
+                    });
+                }
+            }
+
+            return merged;
+        }
+
+        function renderScanResults() {
+            var merged = getMergedFields();
+            var html = '';
+            var fieldCount = 0;
+
+            // Customer fields
+            var custFields = [
+                ['name', merged.customer.name],
+                ['id_number', merged.customer.id_number],
+                ['birth_date', merged.customer.birth_date],
+                ['sex', merged.customer.sex !== undefined ? (merged.customer.sex == 1 ? 'أنثى' : 'ذكر') : ''],
+                ['birth_place', merged.customer.birth_place],
+                ['nationality_text', merged.customer.nationality_text],
+                ['mother_name', merged.customer.mother_name],
+                ['name_en', merged.customer.name_en],
+            ];
+            for (var i = 0; i < custFields.length; i++) {
+                var key = custFields[i][0], val = custFields[i][1];
+                if (val && val !== '') {
+                    var isArabic = /[\u0600-\u06FF]/.test(val);
+                    html += '<div class="scan-field">' +
+                        '<span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
+                        '<span class="scan-field-label">' + (FIELD_LABELS[key] || key) + '</span>' +
+                        '<span class="scan-field-value' + (isArabic ? ' rtl-val' : '') + '">' + escapeHtml(val) + '</span>' +
+                        '</div>';
+                    fieldCount++;
+                }
+            }
+
+            // Job fields
+            if (merged.job.employer_name) {
+                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
+                    '<span class="scan-field-label">' + FIELD_LABELS.employer_name + '</span>' +
+                    '<span class="scan-field-value rtl-val">' + escapeHtml(merged.job.employer_name) + '</span></div>';
+                fieldCount++;
+            }
+            if (merged.job.job_number) {
+                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
+                    '<span class="scan-field-label">' + FIELD_LABELS.job_number + '</span>' +
+                    '<span class="scan-field-value">' + escapeHtml(merged.job.job_number) + '</span></div>';
+                fieldCount++;
+            }
+
+            // Document records
+            for (var d = 0; d < merged.document.length; d++) {
+                var doc = merged.document[d];
+                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-file-o"></i></span>' +
+                    '<span class="scan-field-label">' + (doc.type_label || 'مستند') + '</span>' +
+                    '<span class="scan-field-value">' + escapeHtml(doc.number) + '</span></div>';
+                fieldCount++;
+            }
+
+            $('#scanFieldsList').html(html);
+            $('#scanResultsStatus').text('تم استخراج ' + fieldCount + ' حقل من ' + SO.scanData.length + ' وثيقة');
+            $results.show();
+        }
+
+        function applyExtractedFields() {
+            var merged = getMergedFields();
+            var c = merged.customer;
+
+            // Customer model fields
+            if (c.name) $('#customers-name').val(c.name).trigger('change');
+            if (c.id_number) $('#customers-id_number').val(c.id_number).trigger('change');
+            if (c.birth_date) {
+                var $bd = $('#customers-birth_date');
+                $bd.val(c.birth_date);
+                if ($bd[0] && $bd[0]._flatpickr) $bd[0]._flatpickr.setDate(c.birth_date);
+            }
+            if (c.sex !== undefined) $('#customers-sex').val(c.sex).trigger('change');
+
+            // City matching (birth_place → city dropdown)
+            if (c.birth_place) {
+                matchDropdownByText('#customers-city', c.birth_place);
+            }
+
+            // Nationality matching (nationality_text → citizen dropdown)
+            if (c.nationality_text) {
+                matchDropdownByText('#customers-citizen', c.nationality_text);
+            } else if (c.nationality === 'JOR') {
+                matchDropdownByText('#customers-citizen', 'أردني');
+            }
+
+            // Job fields
+            if (merged.job.job_number) {
+                $('#customers-job_number').val(merged.job.job_number).trigger('change');
+            }
+
+            // Job title (employer) — try to find matching option in Select2
+            if (merged.job.employer_name) {
+                matchJobByName(merged.job.employer_name);
+            }
+
+            // Document records — fill first available CustomersDocument row
+            for (var d = 0; d < merged.document.length; d++) {
+                var doc = merged.document[d];
+                fillDocumentRow(d, doc.type, doc.number);
+            }
+
+            // Also add scanned images to SmartMedia hidden inputs
+            for (var f = 0; f < SO.scanFileIds.length; f++) {
+                addSmartMediaId(SO.scanFileIds[f]);
+            }
+
+            showToast('تم تعبئة ' + Object.keys(c).length + ' حقل تلقائياً — يرجى المراجعة', 'success');
+        }
+
+        function matchDropdownByText(selector, text) {
+            var $sel = $(selector);
+            var textLower = text.trim();
+            $sel.find('option').each(function() {
+                var optText = $(this).text().trim();
+                if (optText === textLower || optText.indexOf(textLower) !== -1 || textLower.indexOf(optText) !== -1) {
+                    $sel.val($(this).val()).trigger('change');
+                    return false;
+                }
+            });
+        }
+
+        function matchJobByName(name) {
+            // Search for job in the AJAX Select2
+            var $jobSel = $('#customers-job_title');
+            if (!$jobSel.length) return;
+
+            $.ajax({
+                url: window.soConfig.searchListUrl,
+                data: { q: name },
+                dataType: 'json',
+                success: function(data) {
+                    if (data && data.results && data.results.length > 0) {
+                        var match = data.results[0];
+                        var newOption = new Option(match.text, match.id, true, true);
+                        $jobSel.append(newOption).trigger('change');
+                    }
+                }
+            });
+        }
+
+        function fillDocumentRow(index, type, number) {
+            var $rows = $('.customer-documents-item');
+            var $row;
+
+            if (index < $rows.length) {
+                $row = $rows.eq(index);
+            } else {
+                // Click "add" button to create new row
+                $('.customer-documents-add-item').click();
+                $row = $('.customer-documents-item').last();
+            }
+
+            if ($row.length) {
+                $row.find('select[name*="document_type"]').val(type).trigger('change');
+                $row.find('input[name*="document_number"]').val(number).trigger('change');
+            }
+        }
+
+        function addSmartMediaId(imageId) {
+            var $form = $('#smart-onboarding-form');
+            if (!$form.find('input[name="SmartMedia[]"][value="' + imageId + '"]').length) {
+                $form.append('<input type="hidden" name="SmartMedia[]" value="' + imageId + '">');
+            }
+        }
+
+        // Remove scanned card
+        $(document).on('click', '.scan-card-remove', function(e) {
+            e.stopPropagation();
+            var $card = $(this).closest('.scan-card');
+            var imgId = $card.attr('data-image-id');
+            var idx = $card.index();
+
+            $card.remove();
+
+            // Remove from data arrays
+            if (idx >= 0 && idx < SO.scanData.length) {
+                SO.scanData.splice(idx, 1);
+            }
+            if (imgId) {
+                var pos = SO.scanFileIds.indexOf(parseInt(imgId));
+                if (pos !== -1) SO.scanFileIds.splice(pos, 1);
+            }
+
+            if (SO.scanData.length > 0) {
+                renderScanResults();
+            } else {
+                $results.hide();
+            }
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
     /* ══════════════════════════════════════════
@@ -813,7 +1243,7 @@
         var searchUrl = (window.soConfig && window.soConfig.searchListUrl) || '/jobs/jobs/search-list';
 
         setTimeout(function() {
-            try { $sel.select2('destroy'); } catch(e) {}
+            if ($sel.hasClass('select2-hidden-accessible')) { try { $sel.select2('destroy'); } catch(e) {} }
             $sel.select2({
                 theme: 'bootstrap4',
                 placeholder: '-- ابحث عن جهة العمل --',

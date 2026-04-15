@@ -309,6 +309,7 @@ class ContractsController extends Controller
         )->queryScalar();
 
         $judTotalCount = (int)($statusCounts['judiciary'] ?? 0);
+        unset($statusCounts['judiciary']);
         $statusCounts['judiciary_active'] = $judTotalCount - $judPaidCount;
         $statusCounts['judiciary_paid'] = $judPaidCount;
 

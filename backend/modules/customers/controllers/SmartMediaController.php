@@ -335,6 +335,103 @@ class SmartMediaController extends Controller
     }
 
     /**
+     * Extract structured fields from a document image using OCR + field parser.
+     * POST: file (multipart image), customer_id (optional)
+     * Returns: JSON with extracted customer/document/job fields + classification
+     */
+    public function actionExtractFields()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $file = UploadedFile::getInstanceByName('file');
+        if (!$file) {
+            return ['success' => false, 'error' => 'لم يتم استلام الملف'];
+        }
+
+        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+        if (!in_array($file->type, $allowed)) {
+            return ['success' => false, 'error' => 'نوع الملف غير مدعوم'];
+        }
+
+        $maxSize = 10 * 1024 * 1024;
+        if ($file->size > $maxSize) {
+            return ['success' => false, 'error' => 'حجم الملف أكبر من 10MB'];
+        }
+
+        $customerId = Yii::$app->request->post('customer_id');
+
+        try {
+            $ext = strtolower($file->extension);
+            $tempPath = Yii::getAlias('@runtime') . '/scan_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
+            $file->saveAs($tempPath, false);
+
+            // PRIMARY: Gemini reads the image directly (with OCR fallback inside)
+            $extraction = VisionService::extractFromDocument($tempPath);
+
+            // Save to ImageManager for later use
+            $groupName = $extraction['document']['type'] ?? '9';
+            $fileHash = Yii::$app->security->generateRandomString(32);
+
+            $db = Yii::$app->db;
+            $db->createCommand()->insert('{{%ImageManager}}', [
+                'fileName'    => $file->name,
+                'fileHash'    => $fileHash,
+                'customer_id' => $customerId ? (int)$customerId : null,
+                'contractId'  => null,
+                'groupName'   => $groupName,
+                'created'     => date('Y-m-d H:i:s'),
+                'modified'    => date('Y-m-d H:i:s'),
+                'createdBy'   => Yii::$app->user->id ?? null,
+                'modifiedBy'  => Yii::$app->user->id ?? null,
+            ])->execute();
+
+            $imageId = $db->getLastInsertID();
+            $destPath = MediaHelper::filePath((int)$imageId, $fileHash, $file->name);
+            $destDir = dirname($destPath);
+            if (!is_dir($destDir)) mkdir($destDir, 0755, true);
+            $webPath = MediaHelper::url((int)$imageId, $fileHash, $file->name);
+
+            if (file_exists($tempPath)) {
+                copy($tempPath, $destPath);
+            }
+            @unlink($tempPath);
+
+            // Generate thumbnail
+            $thumbWebPath = null;
+            if (strpos($file->type, 'image/') === 0) {
+                $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
+                if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
+                $thumbFile = 'thumb_' . basename($destPath);
+                $thumbFullPath = $thumbDir . '/' . $thumbFile;
+                if (VisionService::createThumbnail($destPath, $thumbFullPath)) {
+                    $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
+                }
+            }
+
+            return [
+                'success' => true,
+                'extraction' => $extraction,
+                'file' => [
+                    'id'         => (int)$imageId,
+                    'name'       => $file->name,
+                    'path'       => $webPath,
+                    'thumb'      => $thumbWebPath ?: ($file->type === 'application/pdf' ? '/css/images/pdf-icon.png' : $webPath),
+                    'size'       => $file->size,
+                    'mime'       => $file->type,
+                    'group_name' => $groupName,
+                ],
+                'ocr_text' => $extraction['meta']['ocr_text'] ?? '',
+                'ocr_preview' => mb_substr($extraction['meta']['ocr_text'] ?? '', 0, 300),
+                'classification' => $extraction['meta']['classification'] ?? null,
+            ];
+
+        } catch (\Exception $e) {
+            @unlink($tempPath ?? '');
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Delete an uploaded file
      * POST: file_path, image_id (os_ImageManager ID)
      */

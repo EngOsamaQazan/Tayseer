@@ -22,12 +22,13 @@ $this->registerJsFile('@web/js/smart-media.js', ['depends' => [\yii\web\JqueryAs
 
 /* Smart Media URLs for JS */
 $this->registerJs("window.smConfig = " . json_encode([
-    'uploadUrl'      => Url::to(['/customers/smart-media/upload']),
-    'webcamUrl'      => Url::to(['/customers/smart-media/webcam-capture']),
-    'classifyUrl'    => Url::to(['/customers/smart-media/classify']),
-    'usageUrl'       => Url::to(['/customers/smart-media/usage-stats']),
-    'googleStatsUrl' => Url::to(['/customers/smart-media/google-stats']),
-    'deleteUrl'      => Url::to(['/customers/smart-media/delete']),
+    'uploadUrl'        => Url::to(['/customers/smart-media/upload']),
+    'webcamUrl'        => Url::to(['/customers/smart-media/webcam-capture']),
+    'classifyUrl'      => Url::to(['/customers/smart-media/classify']),
+    'extractFieldsUrl' => Url::to(['/customers/smart-media/extract-fields']),
+    'usageUrl'         => Url::to(['/customers/smart-media/usage-stats']),
+    'googleStatsUrl'   => Url::to(['/customers/smart-media/google-stats']),
+    'deleteUrl'        => Url::to(['/customers/smart-media/delete']),
 ]) . ";", \yii\web\View::POS_HEAD);
 
 /* Determine mode early (needed by CSS/JS registrations below) */
@@ -132,32 +133,103 @@ if (!$isNew) {
 
             <!-- Wizard Steps / Section Navigation -->
             <div class="so-steps">
-                <div class="so-step <?= $isNew ? 'active' : '' ?>" data-step="0">
-                    <span class="so-step-num"><?= $isNew ? '1' : '' ?><i class="fa fa-user so-step-icon"></i></span>
+                <?php if ($isNew): ?>
+                <div class="so-step active" data-step="0">
+                    <span class="so-step-num">1<i class="fa fa-id-card so-step-icon"></i></span>
+                    <span class="so-step-label">مسح الوثيقة</span>
+                </div>
+                <?php endif ?>
+                <div class="so-step <?= !$isNew ? 'active' : '' ?>" data-step="<?= $isNew ? 1 : 0 ?>">
+                    <span class="so-step-num"><?= $isNew ? '2' : '' ?><i class="fa fa-user so-step-icon"></i></span>
                     <span class="so-step-label">البيانات الشخصية</span>
                 </div>
-                <div class="so-step" data-step="1">
-                    <span class="so-step-num"><?= $isNew ? '2' : '' ?><i class="fa fa-briefcase so-step-icon"></i></span>
+                <div class="so-step" data-step="<?= $isNew ? 2 : 1 ?>">
+                    <span class="so-step-num"><?= $isNew ? '3' : '' ?><i class="fa fa-briefcase so-step-icon"></i></span>
                     <span class="so-step-label">الوظيفة والدخل</span>
                 </div>
-                <div class="so-step" data-step="2">
-                    <span class="so-step-num"><?= $isNew ? '3' : '' ?><i class="fa fa-university so-step-icon"></i></span>
+                <div class="so-step" data-step="<?= $isNew ? 3 : 2 ?>">
+                    <span class="so-step-num"><?= $isNew ? '4' : '' ?><i class="fa fa-university so-step-icon"></i></span>
                     <span class="so-step-label">البنك والضمانات</span>
                 </div>
-                <div class="so-step" data-step="3">
-                    <span class="so-step-num"><?= $isNew ? '4' : '' ?><i class="fa fa-address-book so-step-icon"></i></span>
+                <div class="so-step" data-step="<?= $isNew ? 4 : 3 ?>">
+                    <span class="so-step-num"><?= $isNew ? '5' : '' ?><i class="fa fa-address-book so-step-icon"></i></span>
                     <span class="so-step-label">المعرّفون والمستندات</span>
                 </div>
-                <div class="so-step" data-step="4">
-                    <span class="so-step-num"><?= $isNew ? '5' : '' ?><i class="fa fa-image so-step-icon"></i></span>
+                <div class="so-step" data-step="<?= $isNew ? 5 : 4 ?>">
+                    <span class="so-step-num"><?= $isNew ? '6' : '' ?><i class="fa fa-image so-step-icon"></i></span>
                     <span class="so-step-label">الصور والمراجعة</span>
                 </div>
             </div>
 
             <!-- ══════════════════════════════════════
+                 STEP 0: مسح الوثيقة الذكي (إضافة جديدة فقط)
+                 ══════════════════════════════════════ -->
+            <?php if ($isNew): ?>
+            <div class="so-section active" data-step="0">
+                <div class="so-fieldset scan-fieldset">
+                    <h3 class="so-fieldset-title"><i class="fa fa-id-card"></i> مسح الوثيقة — استخراج البيانات تلقائياً</h3>
+                    <p class="scan-hint">ارفق صورة هوية العميل أو شهادة تعيينه وسيقوم النظام باستخراج البيانات تلقائياً</p>
+
+                    <div class="scan-drop-zone" id="scanDropZone" role="button" aria-label="ارفق صورة وثيقة العميل" tabindex="0">
+                        <input type="file" id="scanFileInput" accept="image/*,application/pdf" multiple style="display:none">
+                        <div class="scan-drop-icon"><i class="fa fa-cloud-upload"></i></div>
+                        <div class="scan-drop-text">اسحب صورة الوثيقة هنا أو اضغط للاختيار</div>
+                        <div class="scan-drop-hint">يدعم: JPG, PNG, WebP, PDF — حد أقصى 10MB</div>
+                    </div>
+
+                    <div class="scan-actions">
+                        <button type="button" class="scan-action-btn" id="scanCameraBtn">
+                            <i class="fa fa-camera"></i> التقاط من الكاميرا
+                        </button>
+                        <button type="button" class="scan-action-btn" onclick="document.getElementById('scanFileInput').click()">
+                            <i class="fa fa-folder-open"></i> اختيار ملفات
+                        </button>
+                    </div>
+
+                    <!-- Scanned Documents Gallery -->
+                    <div class="scan-gallery" id="scanGallery"></div>
+
+                    <!-- Extraction Results (hidden until scan completes) -->
+                    <div class="scan-results" id="scanResults" style="display:none">
+                        <h4 class="scan-results-title"><i class="fa fa-check-circle"></i> <span id="scanResultsStatus">تم استخراج البيانات</span></h4>
+                        <div class="scan-fields" id="scanFieldsList"></div>
+                        <div class="scan-results-actions">
+                            <button type="button" class="so-btn so-btn-primary" id="scanApplyBtn">
+                                <i class="fa fa-magic"></i> تعبئة الحقول والمتابعة
+                            </button>
+                            <button type="button" class="so-btn so-btn-outline" id="scanAddMoreBtn">
+                                <i class="fa fa-plus"></i> إضافة وثيقة أخرى
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Processing State -->
+                    <div class="scan-processing" id="scanProcessing" style="display:none">
+                        <div class="scan-processing-icon"><i class="fa fa-spinner fa-spin"></i></div>
+                        <div class="scan-processing-text">جاري تحليل الوثيقة...</div>
+                        <div class="scan-processing-steps">
+                            <div class="scan-p-step" data-pstep="upload"><i class="fa fa-check"></i> رفع الصورة</div>
+                            <div class="scan-p-step" data-pstep="ocr"><i class="fa fa-circle-o"></i> استخراج النص</div>
+                            <div class="scan-p-step" data-pstep="parse"><i class="fa fa-circle-o"></i> تحليل البيانات</div>
+                            <div class="scan-p-step" data-pstep="match"><i class="fa fa-circle-o"></i> مطابقة الحقول</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="so-nav">
+                    <span></span>
+                    <div style="display:flex;gap:8px">
+                        <button type="button" class="so-btn so-btn-outline so-next-btn" id="scanSkipBtn"><i class="fa fa-forward"></i> <span>تخطي — إدخال يدوي</span></button>
+                        <button type="button" class="so-btn so-btn-primary so-next-btn" id="scanContinueBtn" style="display:none"><span>الخطوة التالية</span> <i class="fa fa-arrow-left"></i></button>
+                    </div>
+                </div>
+            </div>
+            <?php endif ?>
+
+            <!-- ══════════════════════════════════════
                  STEP 1: البيانات الشخصية
                  ══════════════════════════════════════ -->
-            <div class="so-section active" data-step="0">
+            <div class="so-section <?= !$isNew ? 'active' : '' ?>" data-step="<?= $isNew ? 1 : 0 ?>">
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-user"></i> البيانات الشخصية</h3>
                     <div class="so-grid so-grid-3">
@@ -195,7 +267,7 @@ if (!$isNew) {
             <!-- ══════════════════════════════════════
                  STEP 2: الوظيفة والدخل
                  ══════════════════════════════════════ -->
-            <div class="so-section" data-step="1">
+            <div class="so-section" data-step="<?= $isNew ? 2 : 1 ?>">
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية</h3>
                     <div class="so-grid so-grid-2">
@@ -265,7 +337,7 @@ if (!$isNew) {
             <!-- ══════════════════════════════════════
                  STEP 3: البنك والضمانات
                  ══════════════════════════════════════ -->
-            <div class="so-section" data-step="2">
+            <div class="so-section" data-step="<?= $isNew ? 3 : 2 ?>">
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-university"></i> الحساب البنكي</h3>
                     <div class="so-grid so-grid-3">
@@ -336,7 +408,7 @@ if (!$isNew) {
             <!-- ══════════════════════════════════════
                  STEP 4: المعرّفون والمستندات
                  ══════════════════════════════════════ -->
-            <div class="so-section" data-step="3">
+            <div class="so-section" data-step="<?= $isNew ? 4 : 3 ?>">
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-map-marker"></i> العناوين</h3>
                     <?= $this->render('partial/address', ['form' => $form, 'modelsAddress' => $modelsAddress]) ?>
@@ -361,7 +433,7 @@ if (!$isNew) {
             <!-- ══════════════════════════════════════
                  STEP 5: الصور والمراجعة النهائية
                  ══════════════════════════════════════ -->
-            <div class="so-section" data-step="4">
+            <div class="so-section" data-step="<?= $isNew ? 5 : 4 ?>">
                 <div class="so-fieldset">
                     <h3 class="so-fieldset-title"><i class="fa fa-image"></i> الصور والمستندات الذكية</h3>
 

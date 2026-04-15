@@ -68,6 +68,12 @@ $commitmentDiscount = $financials['commitment_discount'] ?? 0;
         </div>
 
         <div class="ocp-fin-card">
+            <div class="ocp-fin-card__icon" style="background:#EFF6FF;color:#1D4ED8"><i class="fa fa-file-o"></i></div>
+            <div class="ocp-fin-card__value" style="color:#1D4ED8"><?= number_format($contractValue) ?></div>
+            <div class="ocp-fin-card__label">المبلغ الأصلي</div>
+        </div>
+
+        <div class="ocp-fin-card">
             <div class="ocp-fin-card__icon" style="background:#EDE7F6;color:#5E35B1"><i class="fa fa-credit-card"></i></div>
             <div class="ocp-fin-card__value" style="color:#5E35B1"><?= number_format($monthlyInstallment) ?></div>
             <div class="ocp-fin-card__label">القسط الشهري</div>
@@ -113,14 +119,6 @@ $commitmentDiscount = $financials['commitment_discount'] ?? 0;
             <div class="ocp-fin-card__label">أقساط متبقية</div>
         </div>
 
-        <div class="ocp-fin-card">
-            <div class="ocp-fin-card__icon" style="background:<?= $complianceRate >= 70 ? 'var(--ocp-success-bg)' : ($complianceRate >= 40 ? 'var(--ocp-warning-bg)' : 'var(--ocp-danger-bg)') ?>;color:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>">
-                <i class="fa fa-pie-chart"></i>
-            </div>
-            <div class="ocp-fin-card__value" style="color:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>"><?= $complianceRate ?>%</div>
-            <div class="ocp-fin-card__label">نسبة الالتزام</div>
-            <div class="ocp-fin-card__bar"><div class="ocp-fin-card__bar-fill" style="width:<?= $complianceRate ?>%;background:<?= $complianceRate >= 70 ? 'var(--ocp-success)' : ($complianceRate >= 40 ? 'var(--ocp-warning)' : 'var(--ocp-danger)') ?>"></div></div>
-        </div>
     </div>
 
     <?php $showBreakdown = ($hasJudiciary && ($lawyerCosts > 0 || $caseCosts > 0 || $allExpenses > 0)) || $totalAdjustments > 0 || $commitmentDiscount > 0; ?>

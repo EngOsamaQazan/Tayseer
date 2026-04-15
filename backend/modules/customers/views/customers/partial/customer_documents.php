@@ -7,7 +7,7 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use wbraganca\dynamicform\DynamicFormWidget;
 
-$docTypes = [0 => 'هوية', 1 => 'جواز سفر', 2 => 'رخصة', 3 => 'شهادة ميلاد', 4 => 'شهادة تعيين'];
+$docTypes = [0 => 'هوية', 1 => 'جواز سفر', 2 => 'رخصة قيادة', 3 => 'شهادة ميلاد', 4 => 'شهادة تعيين', 5 => 'هوية سند', 6 => 'جواز سفر سند', 7 => 'رخصة قيادة سند'];
 
 DynamicFormWidget::begin([
     'widgetContainer' => 'dynamicform_wrapper3',

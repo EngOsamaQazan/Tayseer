@@ -49,7 +49,7 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                     <div class="sys-nav-icon"><i class="fa fa-google"></i></div>
                     <div class="sys-nav-text">
                         <span class="sys-nav-label">خدمات Google</span>
-                        <span class="sys-nav-sub">Vision API · Maps API · التكاليف</span>
+                        <span class="sys-nav-sub">Vision API · Gemini AI · Maps API</span>
                     </div>
                     <?php
                     $gcActive = !empty($googleCloud['has_private_key']) && !empty($googleCloud['client_email']);
@@ -321,15 +321,18 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 </div>
                             </div>
 
-                            <!-- ──── Step 2: Enable Vision API ──── -->
+                            <!-- ──── Step 2: Enable APIs (Vision + Gemini) ──── -->
                             <div class="gc-step" id="gc-step-2">
                                 <div class="gc-step-header">
                                     <div class="gc-step-number">2</div>
                                     <div>
-                                        <h3>تفعيل Vision API</h3>
-                                        <p>تفعيل خدمة Cloud Vision API في مشروعك</p>
+                                        <h3>تفعيل الخدمات المطلوبة</h3>
+                                        <p>تفعيل Cloud Vision API و Gemini API في مشروعك</p>
                                     </div>
                                 </div>
+
+                                <!-- ── API 1: Vision ── -->
+                                <h4 style="margin:18px 0 8px;font-size:15px;color:#4285f4"><i class="fa fa-eye"></i> أولاً: Cloud Vision API <span style="font-weight:normal;color:#888;font-size:12px">(قراءة النصوص من الصور)</span></h4>
 
                                 <div class="gc-console-mockup">
                                     <div class="gc-console-topbar">
@@ -361,9 +364,57 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                                     <i class="fa fa-check"></i> ENABLE
                                                 </button>
                                             </div>
-                                            <div class="gc-mock-hint" style="margin-top:10px;">
-                                                <i class="fa fa-arrow-up gc-arrow-blink"></i>
-                                                <span class="gc-highlight-text">اضغط ENABLE لتفعيل الخدمة</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="gc-step-instructions">
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">1</span>
+                                        <span>اذهب إلى <a href="https://console.cloud.google.com/apis/library/vision.googleapis.com" target="_blank" class="gc-link">APIs & Services → Library → Vision API</a></span>
+                                    </div>
+                                    <div class="gc-instruction-item">
+                                        <span class="gc-inst-num">2</span>
+                                        <span>اضغط <strong>ENABLE</strong> لتفعيل الخدمة</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item">
+                                        <i class="fa fa-info-circle"></i>
+                                        <span>أول 1,000 طلب شهرياً <strong>مجاني</strong> — بعدها $1.50 لكل 1,000 طلب</span>
+                                    </div>
+                                </div>
+
+                                <!-- ── API 2: Gemini API (Generative Language) ── -->
+                                <h4 style="margin:24px 0 8px;font-size:15px;color:#ea4335"><i class="fa fa-magic"></i> ثانياً: Gemini API <span style="font-weight:normal;color:#888;font-size:12px">(الاستخراج الذكي للبيانات من الوثائق)</span></h4>
+
+                                <div class="gc-console-mockup">
+                                    <div class="gc-console-topbar">
+                                        <div class="gc-console-logo">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                                            <span>Google Cloud</span>
+                                        </div>
+                                        <div class="gc-console-breadcrumb">APIs & Services → Library</div>
+                                    </div>
+                                    <div class="gc-console-content">
+                                        <div class="gc-console-main" style="max-width:100%">
+                                            <div class="gc-console-title-bar">
+                                                <span class="gc-console-page-title">API Library</span>
+                                            </div>
+                                            <div class="gc-mock-search">
+                                                <i class="fa fa-search"></i>
+                                                <span>Gemini API</span>
+                                            </div>
+                                            <div class="gc-api-card">
+                                                <div class="gc-api-card-icon">
+                                                    <svg width="40" height="40" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="none" stroke="#4285f4" stroke-width="1.5"/><path d="M12 6l2 4 4 2-4 2-2 4-2-4-4-2 4-2z" fill="#4285f4"/></svg>
+                                                </div>
+                                                <div class="gc-api-card-info">
+                                                    <strong>Gemini API</strong>
+                                                    <p>Gemini developer API — build generative AI apps. Access Gemini models for text generation, structured extraction, and more.</p>
+                                                    <div class="gc-api-card-meta">Google</div>
+                                                </div>
+                                                <button class="gc-mock-btn primary gc-enable-btn" type="button">
+                                                    <i class="fa fa-check"></i> ENABLE
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -372,19 +423,19 @@ $this->registerCssFile(Yii::$app->request->baseUrl . '/css/system-settings.css?v
                                 <div class="gc-step-instructions">
                                     <div class="gc-instruction-item">
                                         <span class="gc-inst-num">1</span>
-                                        <span>اذهب إلى <a href="https://console.cloud.google.com/apis/library/vision.googleapis.com" target="_blank" class="gc-link">APIs & Services → Library</a></span>
+                                        <span>اذهب إلى <a href="https://console.developers.google.com/apis/api/generativelanguage.googleapis.com/overview" target="_blank" class="gc-link">APIs & Services → Gemini API</a> واضغط <strong>ENABLE</strong></span>
                                     </div>
                                     <div class="gc-instruction-item">
                                         <span class="gc-inst-num">2</span>
-                                        <span>ابحث عن <code>Cloud Vision API</code></span>
-                                    </div>
-                                    <div class="gc-instruction-item">
-                                        <span class="gc-inst-num">3</span>
-                                        <span>اضغط <strong>ENABLE</strong> لتفعيل الخدمة</span>
+                                        <span>انتظر دقيقة ثم جرّب مسح وثيقة — لا يحتاج إعداد إضافي</span>
                                     </div>
                                     <div class="gc-instruction-item gc-note-item">
-                                        <i class="fa fa-info-circle"></i>
-                                        <span>أول 1,000 طلب شهرياً <strong>مجاني</strong> — بعدها $1.50 لكل 1,000 طلب</span>
+                                        <i class="fa fa-magic"></i>
+                                        <span>يستخدم نموذج <strong>Gemini 2.5 Flash</strong> لقراءة صور الوثائق مباشرة واستخراج البيانات تلقائياً — أدق من OCR وشبه مجاني</span>
+                                    </div>
+                                    <div class="gc-instruction-item gc-note-item">
+                                        <i class="fa fa-shield"></i>
+                                        <span>لو لم تفعّل Gemini API، النظام سيعمل بالـ OCR + Regex فقط (دقة أقل) ولن يؤثر على باقي الخدمات</span>
                                     </div>
                                 </div>
 
