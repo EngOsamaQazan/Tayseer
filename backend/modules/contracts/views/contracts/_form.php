@@ -14,13 +14,9 @@
 use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\helpers\Json;
-use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
-use backend\modules\accounting\models\Account;
 
 $isNew = $model->isNewRecord;
-$cashFundAccounts = Account::getCashFundAccounts();
-$paymentTypes = ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name');
 $existingCustomers  = $existingCustomers ?? [];
 $existingGuarantors = $existingGuarantors ?? [];
 $scannedSerials     = $scannedSerials ?? [];
@@ -195,30 +191,6 @@ foreach ($flashes as $type => $msg): ?>
                 <div class="cf-currency">د.أ</div>
             </div>
         </div>
-
-        <!-- حقول الدفعة الأولى — تظهر فقط عند وجود مبلغ -->
-        <div class="row" id="cf-first-payment-row" style="display:none; margin-top:12px;">
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label class="control-label">طريقة الدفع <span class="text-danger">*</span></label>
-                    <?= Html::dropDownList('first_payment_type', null, $paymentTypes, [
-                        'prompt' => '-- اختر طريقة الدفع --',
-                        'class' => 'form-control',
-                        'id' => 'cf-first-payment-type',
-                    ]) ?>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="form-group">
-                    <label class="control-label">الصندوق / البنك <span class="text-danger">*</span></label>
-                    <?= Html::dropDownList('first_payment_cash_account_id', null, $cashFundAccounts, [
-                        'prompt' => '-- اختر الصندوق / البنك --',
-                        'class' => 'form-control',
-                        'id' => 'cf-first-cash-account',
-                    ]) ?>
-                </div>
-            </div>
-        </div>
         <div class="row">
             <div class="col-md-4">
                 <?= $form->field($model, 'first_installment_date')->input('date', [
@@ -316,19 +288,4 @@ $this->registerJs('ContractForm.init(' . Json::encode([
     'existingGuarantors' => $existingGuarantors,
     'preloadedSerials'   => $scannedSerials,
 ]) . ');', \yii\web\View::POS_READY);
-
-$this->registerJs(<<<'JS'
-(function(){
-    var fvInput = document.getElementById("cf-fv");
-    var row = document.getElementById("cf-first-payment-row");
-    if (!fvInput || !row) return;
-    function toggle() {
-        var val = parseFloat(fvInput.value) || 0;
-        row.style.display = val > 0 ? "" : "none";
-    }
-    fvInput.addEventListener("input", toggle);
-    toggle();
-})();
-JS
-, \yii\web\View::POS_READY);
 ?>
