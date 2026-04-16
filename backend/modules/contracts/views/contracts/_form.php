@@ -19,7 +19,11 @@ use yii\widgets\ActiveForm;
 use backend\modules\accounting\models\Account;
 
 $isNew = $model->isNewRecord;
-$cashFundAccounts = Account::getCashFundAccounts();
+try {
+    $cashFundAccounts = Account::getCashFundAccounts();
+} catch (\Exception $e) {
+    $cashFundAccounts = [];
+}
 $paymentTypes = ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name');
 $existingCustomers  = $existingCustomers ?? [];
 $existingGuarantors = $existingGuarantors ?? [];

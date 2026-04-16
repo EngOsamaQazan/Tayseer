@@ -51,8 +51,14 @@ class DefaultController extends Controller
             ->limit(10)
             ->all();
 
-        $cashFundBalances = Account::getCashFundBalances();
-        $totalCashPosition = array_sum(array_column($cashFundBalances, 'balance'));
+        try {
+            $cashFundBalances = Account::getCashFundBalances();
+            $totalCashPosition = array_sum(array_column($cashFundBalances, 'balance'));
+        } catch (\Exception $e) {
+            $cashFundBalances = [];
+            $totalCashPosition = 0;
+            Yii::warning('Cash fund balances error: ' . $e->getMessage(), 'accounting');
+        }
 
         $migrationNeedsReview = $this->checkCashMigrationReview();
 
@@ -77,14 +83,22 @@ class DefaultController extends Controller
 
     private function checkCashMigrationReview()
     {
-        if (Yii::$app->cache->get('cash_migration_reviewed')) {
+        try {
+            if (Yii::$app->cache->get('cash_migration_reviewed')) {
+                return false;
+            }
+            $schema = Yii::$app->db->getTableSchema('{{%company_banks}}');
+            if (!$schema || !$schema->getColumn('account_id')) {
+                return false;
+            }
+            $linked = (new \yii\db\Query())
+                ->from('{{%company_banks}}')
+                ->where(['is_deleted' => 0])
+                ->andWhere(['not', ['account_id' => null]])
+                ->count();
+            return $linked > 0;
+        } catch (\Exception $e) {
             return false;
         }
-        $linked = (new \yii\db\Query())
-            ->from('{{%company_banks}}')
-            ->where(['is_deleted' => 0])
-            ->andWhere(['not', ['account_id' => null]])
-            ->count();
-        return $linked > 0;
     }
 }

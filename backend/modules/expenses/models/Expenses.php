@@ -160,7 +160,7 @@ class Expenses extends \yii\db\ActiveRecord
                     $categoryName,
                     $this->description ?: ('مصروف #' . $this->id),
                     $this->expenses_date ?: date('Y-m-d'),
-                    $this->cash_account_id
+                    $this->hasAttribute('cash_account_id') ? $this->cash_account_id : null
                 );
             } catch (\Exception $e) {
                 \Yii::error('AutoPosting Expense error: ' . $e->getMessage(), 'accounting');

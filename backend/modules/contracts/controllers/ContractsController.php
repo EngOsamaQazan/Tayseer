@@ -786,7 +786,9 @@ class ContractsController extends Controller
                     $income->date = $model->Date_of_sale ?: date('Y-m-d');
                     $income->payment_purpose = 'دفعة أولى - عقد #' . $model->id;
                     $income->payment_type = Yii::$app->request->post('first_payment_type') ?: null;
-                    $income->cash_account_id = Yii::$app->request->post('first_payment_cash_account_id') ?: null;
+                    if ($income->hasAttribute('cash_account_id')) {
+                        $income->cash_account_id = Yii::$app->request->post('first_payment_cash_account_id') ?: null;
+                    }
                     $income->save(false);
                 } catch (\Exception $e) {
                     Yii::error('فشل تسجيل الدفعة الأولى كإيراد: ' . $e->getMessage(), 'contracts');

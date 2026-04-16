@@ -453,7 +453,7 @@ body{direction:rtl;font-family:'DinNextRegular','Cairo','Segoe UI',sans-serif;co
             <thead><tr><th>البيان</th><th>القيمة</th></tr></thead>
             <tbody>
                 <tr><td>الدفعة الأولى</td><td class="ct-money"><?= number_format($first) ?> د.أ</td></tr>
-                <tr><td>صافي المطالبة بعد الدفعة الأولى</td><td class="ct-money"><b><?= number_format($afterFirst) ?></b> د.أ</td></tr>
+                <tr><td>صافي المطالبة بعد الدفعة الأولى</td><td class="ct-money"><b><?= number_format($total) ?></b> د.أ</td></tr>
                 <?php if ($model->type !== 'direct_deduction'): ?>
                 <tr><td>القسط الشهري</td><td class="ct-money"><?= number_format($monthly) ?> د.أ</td></tr>
                 <tr><td>تاريخ أول قسط</td><td><?= $model->first_installment_date ?></td></tr>

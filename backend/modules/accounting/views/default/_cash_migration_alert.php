@@ -6,24 +6,28 @@
 
 use yii\helpers\Html;
 
-$linkedBanks = (new \yii\db\Query())
-    ->select([
-        'cb.id',
-        'b.name  AS bank_name',
-        'cb.bank_number',
-        'cb.iban_number',
-        'c.name  AS company_name',
-        'a.code  AS gl_code',
-        'a.name_ar AS gl_name',
-    ])
-    ->from('{{%company_banks}} cb')
-    ->leftJoin('{{%bancks}} b', 'b.id = cb.bank_id')
-    ->leftJoin('{{%companies}} c', 'c.id = cb.company_id')
-    ->leftJoin('{{%accounts}} a', 'a.id = cb.account_id')
-    ->where(['cb.is_deleted' => 0])
-    ->andWhere(['not', ['cb.account_id' => null]])
-    ->orderBy(['c.name' => SORT_ASC, 'cb.id' => SORT_ASC])
-    ->all();
+try {
+    $linkedBanks = (new \yii\db\Query())
+        ->select([
+            'cb.id',
+            'b.name  AS bank_name',
+            'cb.bank_number',
+            'cb.iban_number',
+            'c.name  AS company_name',
+            'a.code  AS gl_code',
+            'a.name_ar AS gl_name',
+        ])
+        ->from('{{%company_banks}} cb')
+        ->leftJoin('{{%bancks}} b', 'b.id = cb.bank_id')
+        ->leftJoin('{{%companies}} c', 'c.id = cb.company_id')
+        ->leftJoin('{{%accounts}} a', 'a.id = cb.account_id')
+        ->where(['cb.is_deleted' => 0])
+        ->andWhere(['not', ['cb.account_id' => null]])
+        ->orderBy(['c.name' => SORT_ASC, 'cb.id' => SORT_ASC])
+        ->all();
+} catch (\Exception $e) {
+    return;
+}
 
 if (empty($linkedBanks)) return;
 ?>

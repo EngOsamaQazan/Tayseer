@@ -4,7 +4,8 @@ use wbraganca\dynamicform\DynamicFormWidget;
 use yii\helpers\Html;
 use backend\modules\accounting\models\Account;
 
-$cashFundAccounts = Account::getCashFundAccounts();
+$hasCashField = $modelsCompanieBanks[0]->hasAttribute('account_id');
+$cashFundAccounts = $hasCashField ? Account::getCashFundAccounts() : [];
 ?>
 
 <div class="card">
@@ -45,15 +46,17 @@ $cashFundAccounts = Account::getCashFundAccounts();
                         <div class="col-sm-2">
                             <?= $form->field($modelsCompanieBank, "[{$i}]bank_number")->textInput(['maxlength' => true]) ?>
                         </div>
-                        <div class="col-sm-2">
+                        <div class="<?= $hasCashField ? 'col-sm-2' : 'col-sm-4' ?>">
                             <?= $form->field($modelsCompanieBank, "[{$i}]iban_number")->textInput(['maxlength' => true]) ?>
                         </div>
+                        <?php if ($hasCashField): ?>
                         <div class="col-sm-4">
                             <?= $form->field($modelsCompanieBank, "[{$i}]account_id")->dropDownList(
                                 $cashFundAccounts,
                                 ['prompt' => '-- ربط حساب من شجرة الحسابات --', 'class' => 'form-control']
                             )->label('حساب الدفتر العام') ?>
                         </div>
+                        <?php endif; ?>
                         <div class="col-sm-1">
                             <button type="button" class="c-remove-item btn btn-danger btn-xs" style="margin-top: 30px;">
                                 <i class="fa fa-minus"></i>

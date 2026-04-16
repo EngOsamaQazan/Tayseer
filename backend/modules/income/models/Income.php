@@ -157,7 +157,7 @@ class Income extends \yii\db\ActiveRecord
                     $contractId,
                     $this->payment_purpose ?: ('دفعة #' . $this->id),
                     $this->date ?: date('Y-m-d'),
-                    $this->cash_account_id
+                    $this->hasAttribute('cash_account_id') ? $this->cash_account_id : null
                 );
             } catch (\Exception $e) {
                 Yii::error('AutoPosting Income error: ' . $e->getMessage(), 'accounting');

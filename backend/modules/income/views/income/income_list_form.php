@@ -9,7 +9,8 @@ use backend\modules\accounting\models\Account;
 /* @var $model backend\modules\incomeCategory\models\IncomeCategory */
 /* @var $form yii\widgets\ActiveForm */
 
-$cashFundAccounts = Account::getCashFundAccounts();
+$hasCashField = $model->hasAttribute('cash_account_id');
+$cashFundAccounts = $hasCashField ? Account::getCashFundAccounts() : [];
 ?>
 
 <div class="questions-bank box box-primary">
@@ -25,16 +26,18 @@ $cashFundAccounts = Account::getCashFundAccounts();
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-4">
+        <div class="<?= $hasCashField ? 'col-lg-4' : 'col-lg-6' ?>">
             <?= $form->field($model, 'payment_type')->dropDownList(\yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), ['prompt' => '-- اختر النوع --', 'class' => 'form-control']) ?>
         </div>
+        <?php if ($hasCashField): ?>
         <div class="col-lg-4">
             <?= $form->field($model, 'cash_account_id')->dropDownList(
                 $cashFundAccounts,
                 ['prompt' => '-- اختر الصندوق / البنك --', 'class' => 'form-control']
             )->label('الصندوق / البنك') ?>
         </div>
-        <div class="col-lg-4">
+        <?php endif; ?>
+        <div class="<?= $hasCashField ? 'col-lg-4' : 'col-lg-6' ?>">
             <?= $form->field($model, 'receipt_bank')->textInput() ?>
         </div>
     </div>
