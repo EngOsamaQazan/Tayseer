@@ -200,10 +200,14 @@
     opacity: 0;
     transition: opacity .2s;
 }
-.sm-card:hover .sm-card-actions { opacity: 1; }
+.sm-card:hover .sm-card-actions,
+.sm-card:focus-within .sm-card-actions,
+.sm-card-actions:focus-within { opacity: 1; }
 .sm-card-action {
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    min-height: 28px;
     border-radius: 50%;
     border: none;
     display: flex;

@@ -218,17 +218,30 @@ class CustomersController extends Controller
                         // ═══ Link Smart Media uploads to the new customer ═══
                         $smartMedia = Yii::$app->request->post('SmartMedia', []);
                         if (!empty($smartMedia) && !empty($model->id)) {
-                            $imageIds = [];
                             foreach ($smartMedia as $item) {
                                 if (!empty($item['image_id'])) {
-                                    $imageIds[] = (int)$item['image_id'];
+                                    $updateData = ['customer_id' => (int)$model->id];
+                                    if (isset($item['group_name'])) {
+                                        $updateData['groupName'] = $item['group_name'];
+                                    }
+                                    Yii::$app->db->createCommand()->update(
+                                        '{{%ImageManager}}',
+                                        $updateData,
+                                        ['id' => (int)$item['image_id']]
+                                    )->execute();
                                 }
                             }
-                            if (!empty($imageIds)) {
+                        }
+
+                        // ═══ Link scanned documents (from Step 0) ═══
+                        $scanFileIds = Yii::$app->request->post('scan_file_ids', '');
+                        if (!empty($scanFileIds) && !empty($model->id)) {
+                            $ids = array_filter(array_map('intval', explode(',', $scanFileIds)));
+                            if (!empty($ids)) {
                                 Yii::$app->db->createCommand()->update(
                                     '{{%ImageManager}}',
                                     ['customer_id' => (int)$model->id],
-                                    ['id' => $imageIds]
+                                    ['id' => $ids]
                                 )->execute();
                             }
                         }
@@ -379,18 +392,18 @@ class CustomersController extends Controller
                         // ═══ Link Smart Media uploads to the customer ═══
                         $smartMedia = Yii::$app->request->post('SmartMedia', []);
                         if (!empty($smartMedia) && !empty($model->id)) {
-                            $imageIds = [];
                             foreach ($smartMedia as $item) {
                                 if (!empty($item['image_id'])) {
-                                    $imageIds[] = (int)$item['image_id'];
+                                    $updateData = ['customer_id' => (int)$model->id];
+                                    if (isset($item['group_name'])) {
+                                        $updateData['groupName'] = $item['group_name'];
+                                    }
+                                    Yii::$app->db->createCommand()->update(
+                                        '{{%ImageManager}}',
+                                        $updateData,
+                                        ['id' => (int)$item['image_id']]
+                                    )->execute();
                                 }
-                            }
-                            if (!empty($imageIds)) {
-                                Yii::$app->db->createCommand()->update(
-                                    '{{%ImageManager}}',
-                                    ['customer_id' => (int)$model->id],
-                                    ['id' => $imageIds]
-                                )->execute();
                             }
                         }
 

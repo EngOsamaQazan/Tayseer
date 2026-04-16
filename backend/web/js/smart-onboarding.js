@@ -14,8 +14,9 @@
         saveTimer: null,
         riskData: null,
         panelExpanded: false,
-        scanData: [],        // accumulated extraction results from multiple documents
-        scanFileIds: [],     // ImageManager IDs from scanned docs
+        scanData: [],
+        scanFileIds: [],
+        scanFileTypes: {},
     };
 
     var STORAGE_KEY = 'so_form_draft';
@@ -36,6 +37,8 @@
         triggerRiskCalc();
         if (isEditMode) initEditWarnings();
         initJobAjaxSelect2();
+        initDocChecklist();
+        initHelpTooltips();
     });
 
     /* ══════════════════════════════════════════
@@ -137,6 +140,16 @@
             });
         }, 350);
 
+        // Update progress indicator
+        updateProgressBar(idx);
+
+        // Sync scanned docs to hub when entering Step 5 (or 4 in edit mode)
+        var docHubStep = isEditMode ? 4 : 5;
+        if (idx === docHubStep) {
+            syncScanToHub();
+            updateDocChecklist();
+        }
+
         // Scroll to top
         $('.so-form-area').scrollTop(0);
     }
@@ -151,21 +164,29 @@
     }
 
     function validateCurrentStep() {
-        // Step 0 (scan) is always optional — skip validation
         if (SO.currentStep === 0 && !isEditMode) return true;
 
         var $section = $('.so-section[data-step="' + SO.currentStep + '"]');
         var valid = true;
+        var missingLabels = [];
         $section.find('[required]').each(function() {
             var $f = $(this);
             if (!$f.val() || $f.val() === '') {
                 $f.closest('.form-group').addClass('has-error');
+                var label = $f.closest('.form-group').find('label').first().text().replace(/\s*\*\s*$/, '').trim();
+                if (label) missingLabels.push(label);
                 valid = false;
             } else {
                 $f.closest('.form-group').removeClass('has-error');
             }
         });
-        if (!valid) showToast('يرجى ملء الحقول المطلوبة', 'warning');
+        if (!valid) {
+            var msg = missingLabels.length
+                ? 'الحقول المطلوبة: ' + missingLabels.join('، ')
+                : 'يرجى ملء الحقول المطلوبة';
+            showToast(msg, 'warning');
+            $section.find('.has-error input,.has-error select,.has-error textarea').first().focus();
+        }
         return valid;
     }
 
@@ -351,6 +372,12 @@
                         if (resp.file && resp.file.id) {
                             SO.scanFileIds.push(resp.file.id);
                             $c.attr('data-image-id', resp.file.id);
+                            var detectedType = (ext.document && ext.document.type) || '9';
+                            SO.scanFileTypes[resp.file.id] = {
+                                type: detectedType,
+                                thumb: (resp.file && resp.file.thumb) || thumbSrc,
+                                fileName: file.name
+                            };
                         }
 
                         mergeExtractionData(ext);
@@ -1049,6 +1076,58 @@
     }
 
     /* ══════════════════════════════════════════
+       ACCESSIBLE MODAL
+       ══════════════════════════════════════════ */
+    window.soModal = soModal;
+    function soModal(opts) {
+        var id = 'soModal_' + Date.now();
+        var html = '<div class="so-modal-overlay" id="' + id + '" role="dialog" aria-modal="true" aria-labelledby="' + id + '_title">' +
+            '<div class="so-modal">' +
+                '<div class="so-modal-header">' +
+                    '<h4 class="so-modal-title" id="' + id + '_title">' + (opts.title || '') + '</h4>' +
+                    '<button type="button" class="so-modal-close" aria-label="إغلاق">&times;</button>' +
+                '</div>' +
+                '<div class="so-modal-body">' + (opts.body || '') + '</div>' +
+                '<div class="so-modal-footer">' +
+                    '<button type="button" class="so-btn so-btn-outline so-modal-cancel">' + (opts.cancelText || 'إلغاء') + '</button>' +
+                    '<button type="button" class="so-btn ' + (opts.confirmClass || 'so-btn-primary') + ' so-modal-confirm">' + (opts.confirmText || 'تأكيد') + '</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+        var $overlay = $(html).appendTo('body');
+        var $modal = $overlay.find('.so-modal');
+        var $trigger = $(document.activeElement);
+
+        setTimeout(function() { $overlay.addClass('visible'); }, 10);
+
+        var $focusable = $modal.find('button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        var $first = $focusable.first(), $last = $focusable.last();
+        $modal.find('input,textarea,select').first().focus();
+        if (!$modal.find('input,textarea,select').length) $modal.find('.so-modal-confirm').focus();
+
+        function close() {
+            $overlay.removeClass('visible');
+            setTimeout(function() { $overlay.remove(); }, 200);
+            if ($trigger.length) $trigger.focus();
+        }
+
+        $modal.on('keydown', function(e) {
+            if (e.key === 'Tab') {
+                if (e.shiftKey && document.activeElement === $first[0]) { e.preventDefault(); $last.focus(); }
+                else if (!e.shiftKey && document.activeElement === $last[0]) { e.preventDefault(); $first.focus(); }
+            }
+            if (e.key === 'Escape') close();
+        });
+
+        $overlay.on('click', '.so-modal-close, .so-modal-cancel', close);
+        $overlay.on('click', function(e) { if (e.target === $overlay[0]) close(); });
+        $overlay.on('click', '.so-modal-confirm', function() {
+            if (opts.onConfirm) opts.onConfirm($modal, close);
+            else close();
+        });
+    }
+
+    /* ══════════════════════════════════════════
        DECISION ACTIONS
        ══════════════════════════════════════════ */
     $(document).on('click', '.so-decision-btn', function() {
@@ -1056,7 +1135,6 @@
         var $form = $('#smart-onboarding-form');
 
         if (decision === 'draft') {
-            // Save as draft — remove required validation
             $form.find('[required]').removeAttr('required').attr('data-was-required', '1');
             $form.append('<input type="hidden" name="save_decision" value="draft">');
             $form.submit();
@@ -1064,25 +1142,47 @@
         }
 
         if (decision === 'rejected') {
-            var reason = prompt('أدخل سبب الرفض:');
-            if (!reason) return;
-            $form.append('<input type="hidden" name="decision_notes" value="' + escapeHtml(reason) + '">');
+            soModal({
+                title: 'سبب الرفض',
+                body: '<textarea id="soModalReason" class="form-control" rows="3" placeholder="أدخل سبب الرفض..." dir="rtl"></textarea>',
+                confirmText: 'تأكيد الرفض',
+                confirmClass: 'so-btn-danger',
+                onConfirm: function($m, closeFn) {
+                    var reason = $m.find('#soModalReason').val();
+                    if (!reason) { $m.find('#soModalReason').focus(); return; }
+                    $form.append('<input type="hidden" name="decision_notes" value="' + escapeHtml(reason) + '">');
+                    submitDecision(decision, $form);
+                    closeFn();
+                }
+            });
+            return;
         }
 
         if (decision === 'conditional') {
-            var notes = prompt('أدخل الشروط المطلوبة (كفيل/مستندات/إلخ):');
-            if (notes) $form.append('<input type="hidden" name="decision_notes" value="' + escapeHtml(notes) + '">');
+            soModal({
+                title: 'الشروط المطلوبة',
+                body: '<textarea id="soModalNotes" class="form-control" rows="3" placeholder="أدخل الشروط المطلوبة (كفيل/مستندات/إلخ)..." dir="rtl"></textarea>',
+                confirmText: 'حفظ بشروط',
+                onConfirm: function($m, closeFn) {
+                    var notes = $m.find('#soModalNotes').val();
+                    if (notes) $form.append('<input type="hidden" name="decision_notes" value="' + escapeHtml(notes) + '">');
+                    submitDecision(decision, $form);
+                    closeFn();
+                }
+            });
+            return;
         }
 
-        $form.append('<input type="hidden" name="save_decision" value="' + decision + '">');
+        submitDecision(decision, $form);
+    });
 
-        // Store risk data
+    function submitDecision(decision, $form) {
+        $form.append('<input type="hidden" name="save_decision" value="' + decision + '">');
         if (SO.riskData) {
             $form.append('<input type="hidden" name="risk_assessment" value=\'' + JSON.stringify(SO.riskData) + '\'>');
         }
-
         $form.submit();
-    });
+    }
 
     /* ══════════════════════════════════════════
        EDIT MODE — SOFT WARNINGS (non-blocking)
@@ -1151,31 +1251,35 @@
 
         $form.on('submit', function() {
             clearFormData();
+            if (SO.scanFileIds.length) {
+                $('#scanFileIdsInput').val(SO.scanFileIds.join(','));
+            }
         });
 
         $(document).on('click', '.so-reset-btn', function() {
-            if (!confirm('هل أنت متأكد من إعادة تعيين جميع الحقول؟ سيتم حذف جميع البيانات المدخلة.')) return;
-
-            clearFormData();
-            $form[0].reset();
-
-            $form.find('select').each(function() {
-                $(this).val('');
-                if ($(this).data('select2')) {
-                    $(this).trigger('change.select2');
+            soModal({
+                title: 'إعادة تعيين النموذج',
+                body: '<p style="font-size:14px;color:#991b1b;text-align:right"><i class="fa fa-exclamation-triangle"></i> هل أنت متأكد من إعادة تعيين جميع الحقول؟<br>سيتم حذف جميع البيانات المدخلة.</p>',
+                confirmText: 'نعم، إعادة التعيين',
+                confirmClass: 'so-btn-danger',
+                onConfirm: function($m, closeFn) {
+                    closeFn();
+                    clearFormData();
+                    $form[0].reset();
+                    $form.find('select').each(function() {
+                        $(this).val('');
+                        if ($(this).data('select2')) $(this).trigger('change.select2');
+                    });
+                    $form.find('.form-group').removeClass('has-error has-success so-warn');
+                    $form.find('.so-warn-hint, .so-duplicate-warn').remove();
+                    $('#customers-is_social_security').trigger('change');
+                    $('#customers-has_social_security_salary').trigger('change');
+                    $('#customers-do_have_any_property').trigger('change');
+                    goToStep(0);
+                    triggerRiskCalc();
+                    showToast('تم إعادة تعيين النموذج بالكامل', 'warning');
                 }
             });
-
-            $form.find('.form-group').removeClass('has-error has-success so-warn');
-            $form.find('.so-warn-hint, .so-duplicate-warn').remove();
-
-            $('#customers-is_social_security').trigger('change');
-            $('#customers-has_social_security_salary').trigger('change');
-            $('#customers-do_have_any_property').trigger('change');
-
-            goToStep(0);
-            triggerRiskCalc();
-            showToast('تم إعادة تعيين النموذج بالكامل', 'warning');
         });
     }
 
@@ -1440,20 +1544,182 @@
     });
 
     function showToast(msg, type) {
-        var html = '<div class="so-inline-alert so-inline-alert-' + type + '">' +
+        var html = '<div class="so-inline-alert so-inline-alert-' + type + '" role="alert">' +
             '<i class="fa fa-info-circle"></i>' +
             '<span>' + msg + '</span>' +
-            '<button class="so-inline-alert-close" type="button">&times;</button>' +
+            '<button class="so-inline-alert-close" type="button" aria-label="إغلاق">&times;</button>' +
         '</div>';
         var $alert = $(html);
         
         if (!$('.so-inline-alerts').length) {
-            $('body').append('<div class="so-inline-alerts"></div>');
+            $('body').append('<div class="so-inline-alerts" aria-live="assertive"></div>');
         }
         $('.so-inline-alerts').append($alert);
         
         $alert.find('.so-inline-alert-close').on('click', function() { $alert.fadeOut(200, function(){$(this).remove();}); });
         setTimeout(function() { $alert.fadeOut(300, function(){$(this).remove();}); }, 4000);
     }
+
+    /* ══════════════════════════════════════════
+       SCAN → DOCUMENT HUB AUTO-LINK
+       ══════════════════════════════════════════ */
+    function syncScanToHub() {
+        if (!SO.scanFileIds.length) return;
+        var $gallery = $('.sm-gallery');
+        var existingIds = [];
+        $gallery.find('.sm-card[data-image-id]').each(function() {
+            existingIds.push(String($(this).data('image-id')));
+        });
+
+        var DOC_TYPES_MAP = {
+            '0': 'هوية وطنية', '1': 'جواز سفر', '2': 'رخصة قيادة',
+            '3': 'شهادة ميلاد', '4': 'شهادة تعيين', '5': 'كتاب ضمان اجتماعي',
+            '6': 'كشف راتب', '7': 'شهادة تعيين عسكري', '8': 'صورة شخصية', '9': 'أخرى'
+        };
+
+        SO.scanFileIds.forEach(function(fileId) {
+            if (existingIds.indexOf(String(fileId)) !== -1) return;
+            var info = SO.scanFileTypes[fileId] || {};
+            var typeCode = info.type || '9';
+            var typeLabel = DOC_TYPES_MAP[typeCode] || 'أخرى';
+            var thumb = info.thumb || '';
+            var fileName = info.fileName || '';
+
+            var optionsHtml = '';
+            Object.keys(DOC_TYPES_MAP).forEach(function(k) {
+                optionsHtml += '<option value="' + k + '"' + (k === typeCode ? ' selected' : '') + '>' + DOC_TYPES_MAP[k] + '</option>';
+            });
+
+            var $card = $(
+                '<div class="sm-card" data-image-id="' + fileId + '" data-from-scan="1" tabindex="0">' +
+                    '<span class="sm-scan-badge"><i class="fa fa-magic"></i> مسح ذكي</span>' +
+                    '<div class="sm-card-actions">' +
+                        '<button type="button" class="sm-card-action danger sm-delete-btn" data-image-id="' + fileId + '" title="حذف"><i class="fa fa-trash"></i></button>' +
+                        '<button type="button" class="sm-card-action sm-reclassify-btn" data-image-id="' + fileId + '" title="إعادة تصنيف AI"><i class="fa fa-magic"></i></button>' +
+                    '</div>' +
+                    '<img class="sm-card-img" src="' + escapeHtml(thumb) + '" alt="">' +
+                    '<div class="sm-card-body">' +
+                        '<div class="sm-card-name">' + escapeHtml(fileName) + '</div>' +
+                        '<div class="sm-card-meta"><span>' + typeLabel + '</span></div>' +
+                        '<select class="sm-type-select" data-image-id="' + fileId + '">' + optionsHtml + '</select>' +
+                        '<input type="text" class="sm-doc-number-input" placeholder="رقم المستند (اختياري)" value="">' +
+                    '</div>' +
+                '</div>'
+            );
+            $gallery.prepend($card);
+            existingIds.push(String(fileId));
+        });
+
+        updateDocChecklist();
+    }
+
+    /* ══════════════════════════════════════════
+       DOCUMENT CHECKLIST
+       ══════════════════════════════════════════ */
+    function initDocChecklist() {
+        $(document).on('change', '.sm-type-select', function() {
+            updateDocChecklist();
+        });
+        updateDocChecklistConditions();
+        $(document).on('change', '#customers-is_social_security', function() {
+            updateDocChecklistConditions();
+        });
+    }
+
+    function updateDocChecklistConditions() {
+        var hasSS = $('#customers-is_social_security').val() === '1' ||
+                    $('#customers-is_social_security').is(':checked');
+        var $ssItem = $('.so-doc-check-item[data-condition="social_security"]');
+        if (hasSS) {
+            $ssItem.show();
+        } else {
+            $ssItem.hide();
+        }
+        updateDocChecklist();
+    }
+
+    function updateDocChecklist() {
+        var uploadedTypes = {};
+        $('.sm-gallery .sm-type-select').each(function() {
+            uploadedTypes[$(this).val()] = true;
+        });
+        $('.scan-gallery .scan-card[data-image-id]').each(function() {
+            var imgId = String($(this).data('image-id'));
+            if (SO.scanFileTypes[imgId]) {
+                uploadedTypes[SO.scanFileTypes[imgId].type] = true;
+            }
+        });
+
+        var total = 0, uploaded = 0;
+        $('#docChecklist .so-doc-check-item:visible').each(function() {
+            total++;
+            var docType = $(this).data('doc-type');
+            if (uploadedTypes[String(docType)]) {
+                $(this).removeClass('missing').addClass('uploaded');
+                uploaded++;
+            } else {
+                $(this).removeClass('uploaded').addClass('missing');
+            }
+        });
+        $('#docCheckUploaded').text(uploaded);
+        $('#docCheckTotal').text(total);
+    }
+
+    /* ══════════════════════════════════════════
+       PROGRESS BAR
+       ══════════════════════════════════════════ */
+    var STEP_NAMES = ['رفع المستندات', 'البيانات الشخصية', 'الوظيفة والدخل', 'البنك والضمانات', 'المعرّفون والعناوين', 'مركز المستندات'];
+    var EDIT_STEP_NAMES = ['البيانات الشخصية', 'الوظيفة والدخل', 'البنك والضمانات', 'المعرّفون والعناوين', 'مركز المستندات'];
+
+    function updateProgressBar(idx) {
+        var $bar = $('.so-progress-bar');
+        if (!$bar.length) return;
+        var names = isEditMode ? EDIT_STEP_NAMES : STEP_NAMES;
+        var total = names.length;
+        var pct = Math.round(((idx + 1) / total) * 100);
+        var label = 'خطوة ' + (idx + 1) + ' من ' + total + ' — ' + (names[idx] || '');
+        $bar.attr({'aria-valuenow': idx + 1, 'aria-valuemax': total});
+        $bar.find('.so-progress-text').text(label);
+        $bar.find('.so-progress-fill').css('width', pct + '%');
+    }
+
+    /* ══════════════════════════════════════════
+       CONTEXTUAL HELP TOOLTIPS
+       ══════════════════════════════════════════ */
+    function initHelpTooltips() {
+        $(document).on('click', '.so-help-btn', function(e) {
+            e.stopPropagation();
+            var $btn = $(this);
+            var isOpen = $btn.attr('aria-expanded') === 'true';
+            $('.so-help-btn').attr('aria-expanded', 'false');
+            if (!isOpen) $btn.attr('aria-expanded', 'true');
+        });
+        $(document).on('click', function() {
+            $('.so-help-btn').attr('aria-expanded', 'false');
+        });
+    }
+
+    /* ══════════════════════════════════════════
+       SAVE & EXIT
+       ══════════════════════════════════════════ */
+    $(document).on('click', '.so-save-exit-btn', function() {
+        try {
+            var $form = $('#smart-onboarding-form');
+            var data = {};
+            $form.find('input, select, textarea').each(function() {
+                if (!this.name || this.type === 'file') return;
+                data[this.name] = $(this).val();
+            });
+            data['__so_step'] = SO.currentStep;
+            data['__so_ts'] = Date.now();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch(e) {}
+        showToast('تم حفظ المسودة — يمكنك المتابعة لاحقاً', 'success');
+        setTimeout(function() {
+            var idx = window.location.href.indexOf('/customers/');
+            if (idx !== -1) window.location.href = window.location.href.substring(0, idx) + '/customers/customers/index';
+            else window.history.back();
+        }, 800);
+    });
 
 })(jQuery);

@@ -103,6 +103,7 @@ if (!$isNew) {
         <?php endif ?>
         <div class="so-header-actions">
             <?php if ($isNew): ?>
+                <button type="button" class="so-btn so-btn-ghost so-save-exit-btn"><i class="fa fa-sign-out"></i> حفظ والخروج</button>
                 <button type="button" class="so-back-btn so-reset-btn" style="background:#ef4444;color:#fff;border-color:#ef4444"><i class="fa fa-refresh"></i> إعادة التعيين</button>
             <?php else: ?>
                 <a href="<?= Url::to(['/contracts/contracts/create', 'customer_id' => $model->id]) ?>" class="so-back-btn" style="background:#059669;color:#fff;border-color:#059669"><i class="fa fa-file-text-o"></i> إنشاء عقد</a>
@@ -131,12 +132,18 @@ if (!$isNew) {
             ?>
             <?= $form->errorSummary($model, ['class' => 'alert alert-danger', 'style' => 'border-radius:8px; font-size:13px']) ?>
 
+            <!-- Progress Bar -->
+            <div class="so-progress-bar" role="progressbar" aria-valuenow="1" aria-valuemin="1" aria-valuemax="<?= $isNew ? 6 : 5 ?>" aria-label="تقدم النموذج">
+                <div class="so-progress-text">خطوة 1 من <?= $isNew ? 6 : 5 ?> — <?= $isNew ? 'رفع المستندات' : 'البيانات الشخصية' ?></div>
+                <div class="so-progress-fill" style="width: <?= $isNew ? '17' : '20' ?>%"></div>
+            </div>
+
             <!-- Wizard Steps / Section Navigation -->
-            <div class="so-steps">
+            <nav class="so-steps" aria-label="خطوات النموذج">
                 <?php if ($isNew): ?>
                 <div class="so-step active" data-step="0">
-                    <span class="so-step-num">1<i class="fa fa-id-card so-step-icon"></i></span>
-                    <span class="so-step-label">مسح الوثيقة</span>
+                    <span class="so-step-num">1<i class="fa fa-cloud-upload so-step-icon"></i></span>
+                    <span class="so-step-label">رفع المستندات</span>
                 </div>
                 <?php endif ?>
                 <div class="so-step <?= !$isNew ? 'active' : '' ?>" data-step="<?= $isNew ? 1 : 0 ?>">
@@ -153,13 +160,13 @@ if (!$isNew) {
                 </div>
                 <div class="so-step" data-step="<?= $isNew ? 4 : 3 ?>">
                     <span class="so-step-num"><?= $isNew ? '5' : '' ?><i class="fa fa-address-book so-step-icon"></i></span>
-                    <span class="so-step-label">المعرّفون والمستندات</span>
+                    <span class="so-step-label">المعرّفون والعناوين</span>
                 </div>
                 <div class="so-step" data-step="<?= $isNew ? 5 : 4 ?>">
-                    <span class="so-step-num"><?= $isNew ? '6' : '' ?><i class="fa fa-image so-step-icon"></i></span>
-                    <span class="so-step-label">الصور والمراجعة</span>
+                    <span class="so-step-num"><?= $isNew ? '6' : '' ?><i class="fa fa-folder-open so-step-icon"></i></span>
+                    <span class="so-step-label">مركز المستندات</span>
                 </div>
-            </div>
+            </nav>
 
             <!-- ══════════════════════════════════════
                  STEP 0: مسح الوثيقة الذكي (إضافة جديدة فقط)
@@ -167,14 +174,21 @@ if (!$isNew) {
             <?php if ($isNew): ?>
             <div class="so-section active" data-step="0">
                 <div class="so-fieldset scan-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-id-card"></i> مسح الوثيقة — استخراج البيانات تلقائياً</h3>
-                    <p class="scan-hint">ارفق صورة هوية العميل أو شهادة تعيينه وسيقوم النظام باستخراج البيانات تلقائياً</p>
+                    <h3 class="so-fieldset-title"><i class="fa fa-cloud-upload"></i> رفع المستندات والمسح الذكي</h3>
 
-                    <div class="scan-drop-zone" id="scanDropZone" role="button" aria-label="ارفق صورة وثيقة العميل" tabindex="0">
+                    <div class="scan-guidance-banner">
+                        <i class="fa fa-info-circle"></i>
+                        <div>
+                            <strong>ارفع كل المستندات المتوفرة الآن</strong> — هوية، شهادة تعيين، كشف راتب، صورة شخصية وغيرها.
+                            <span>ستظهر تلقائياً في مركز المستندات بالخطوة الأخيرة للمراجعة. يمكن للنظام استخراج البيانات تلقائياً من صور الهوية وشهادات التعيين.</span>
+                        </div>
+                    </div>
+
+                    <div class="scan-drop-zone" id="scanDropZone" role="button" aria-label="ارفق مستندات العميل" tabindex="0">
                         <input type="file" id="scanFileInput" accept="image/*,application/pdf" multiple style="display:none">
                         <div class="scan-drop-icon"><i class="fa fa-cloud-upload"></i></div>
-                        <div class="scan-drop-text">اسحب صورة الوثيقة هنا أو اضغط للاختيار</div>
-                        <div class="scan-drop-hint">يدعم: JPG, PNG, WebP, PDF — حد أقصى 10MB — أو Ctrl+V للصق</div>
+                        <div class="scan-drop-text">اسحب جميع المستندات هنا أو اضغط للاختيار</div>
+                        <div class="scan-drop-hint">يدعم: JPG, PNG, WebP, PDF — حد أقصى 10MB لكل ملف — أو Ctrl+V للصق</div>
                     </div>
 
                     <div class="scan-actions">
@@ -234,7 +248,7 @@ if (!$isNew) {
                  ══════════════════════════════════════ -->
             <div class="so-section <?= !$isNew ? 'active' : '' ?>" data-step="<?= $isNew ? 1 : 0 ?>">
                 <div class="so-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-user"></i> البيانات الشخصية</h3>
+                    <h3 class="so-fieldset-title"><i class="fa fa-user"></i> البيانات الشخصية <button type="button" class="so-help-btn" aria-label="مساعدة" data-help="أدخل بيانات العميل الأساسية — الاسم والرقم الوطني مطلوبان"><i class="fa fa-question-circle"></i></button></h3>
                     <div class="so-grid so-grid-3">
                         <div><?= $form->field($model, 'name')->textInput(['maxlength' => true, 'placeholder' => 'الاسم الرباعي', 'required' => $isNew])->label('اسم العميل') ?></div>
                         <div><?= $form->field($model, 'id_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني', 'required' => $isNew])->label('الرقم الوطني') ?></div>
@@ -272,7 +286,7 @@ if (!$isNew) {
                  ══════════════════════════════════════ -->
             <div class="so-section" data-step="<?= $isNew ? 2 : 1 ?>">
                 <div class="so-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية</h3>
+                    <h3 class="so-fieldset-title"><i class="fa fa-briefcase"></i> المعلومات المهنية <button type="button" class="so-help-btn" aria-label="مساعدة" data-help="بيانات جهة العمل والراتب — تؤثر مباشرة على تقييم المخاطر"><i class="fa fa-question-circle"></i></button></h3>
                     <div class="so-grid so-grid-2">
                         <div class="job-title-wrapper">
                             <?= $form->field($model, 'job_title')->dropDownList(
@@ -342,7 +356,7 @@ if (!$isNew) {
                  ══════════════════════════════════════ -->
             <div class="so-section" data-step="<?= $isNew ? 3 : 2 ?>">
                 <div class="so-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-university"></i> الحساب البنكي</h3>
+                    <h3 class="so-fieldset-title"><i class="fa fa-university"></i> الحساب البنكي <button type="button" class="so-help-btn" aria-label="مساعدة" data-help="معلومات الحساب البنكي والضمان الاجتماعي"><i class="fa fa-question-circle"></i></button></h3>
                     <div class="so-grid so-grid-3">
                         <div><?= $form->field($model, 'bank_name')->dropDownList(ArrayHelper::map($banks, 'id', 'name'), [
                             'prompt' => '-- اختر البنك --', 'class' => 'form-control',
@@ -409,11 +423,11 @@ if (!$isNew) {
             </div>
 
             <!-- ══════════════════════════════════════
-                 STEP 4: المعرّفون والمستندات
+                 STEP 4: المعرّفون والعناوين
                  ══════════════════════════════════════ -->
             <div class="so-section" data-step="<?= $isNew ? 4 : 3 ?>">
                 <div class="so-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-map-marker"></i> العناوين</h3>
+                    <h3 class="so-fieldset-title"><i class="fa fa-map-marker"></i> العناوين <button type="button" class="so-help-btn" aria-label="مساعدة" data-help="أضف عنوان ومعرفين اثنين على الأقل"><i class="fa fa-question-circle"></i></button></h3>
                     <?= $this->render('partial/address', ['form' => $form, 'modelsAddress' => $modelsAddress]) ?>
                 </div>
 
@@ -422,8 +436,8 @@ if (!$isNew) {
                     <?= $this->render('partial/phone_numbers', ['form' => $form, 'modelsPhoneNumbers' => $modelsPhoneNumbers, 'cousins' => $cousins]) ?>
                 </div>
 
-                <div class="so-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-file-o"></i> المستندات</h3>
+                <!-- Customer documents hidden fields for backward compatibility -->
+                <div style="display:none">
                     <?= $this->render('partial/customer_documents', ['form' => $form, 'customerDocumentsModel' => $customerDocumentsModel]) ?>
                 </div>
 
@@ -434,16 +448,32 @@ if (!$isNew) {
             </div>
 
             <!-- ══════════════════════════════════════
-                 STEP 5: الصور والمراجعة النهائية
+                 STEP 5: مركز المستندات والمراجعة
                  ══════════════════════════════════════ -->
             <div class="so-section" data-step="<?= $isNew ? 5 : 4 ?>">
+                <!-- ═══ Document Checklist Widget ═══ -->
+                <div class="so-fieldset so-doc-checklist-fieldset">
+                    <h3 class="so-fieldset-title"><i class="fa fa-check-square-o"></i> قائمة المستندات المطلوبة</h3>
+                    <div class="so-doc-checklist" id="docChecklist">
+                        <div class="so-doc-check-item" data-doc-type="0"><i class="fa fa-square-o"></i> <span>هوية وطنية</span></div>
+                        <div class="so-doc-check-item" data-doc-type="4"><i class="fa fa-square-o"></i> <span>شهادة تعيين</span></div>
+                        <div class="so-doc-check-item" data-doc-type="8"><i class="fa fa-square-o"></i> <span>صورة شخصية</span></div>
+                        <div class="so-doc-check-item" data-doc-type="6"><i class="fa fa-square-o"></i> <span>كشف راتب</span></div>
+                        <div class="so-doc-check-item so-doc-check-conditional" data-doc-type="5" data-condition="social_security" style="display:none"><i class="fa fa-square-o"></i> <span>كتاب ضمان اجتماعي</span></div>
+                    </div>
+                    <div class="so-doc-checklist-summary" id="docChecklistSummary">
+                        <span class="so-doc-check-count"><span id="docCheckUploaded">0</span> / <span id="docCheckTotal">4</span> مستندات مرفوعة</span>
+                    </div>
+                </div>
+
                 <div class="so-fieldset">
-                    <h3 class="so-fieldset-title"><i class="fa fa-image"></i> الصور والمستندات الذكية</h3>
+                    <h3 class="so-fieldset-title"><i class="fa fa-folder-open"></i> مركز المستندات والمراجعة <button type="button" class="so-help-btn" aria-label="مساعدة" data-help="راجع المستندات المرفوعة وأكمل أي ناقص — القائمة أعلاه توضح المطلوب"><i class="fa fa-question-circle"></i></button></h3>
 
                     <!-- Hidden fields for backward compatibility -->
                     <?= $form->field($model, 'selected_image')->hiddenInput()->label(false) ?>
                     <?= $form->field($model, 'image_manager_id')->hiddenInput()->label(false) ?>
                     <input type="hidden" name="customer_id_for_media" value="<?= $isNew ? '' : $model->id ?>">
+                    <input type="hidden" name="scan_file_ids" id="scanFileIdsInput" value="">
 
                     <?php if (!$isNew && !empty($model->selected_image)): ?>
                         <div style="margin-bottom:15px">
@@ -452,50 +482,12 @@ if (!$isNew) {
                         </div>
                     <?php endif ?>
 
-                    <?php if (!$isNew): ?>
-                    <!-- ═══ معرض الصور الحالية ═══ -->
-                    <?php
-                    $currentImages = $db->createCommand(
-                        "SELECT id, fileName, fileHash, groupName, created FROM os_ImageManager 
-                         WHERE CAST(contractId AS UNSIGNED) = :cid 
-                         AND groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9') 
-                         ORDER BY created DESC LIMIT 20",
-                        [':cid' => $model->id]
-                    )->queryAll();
-                    ?>
-                    <?php if (!empty($currentImages)): ?>
-                    <div style="margin-bottom:16px">
-                        <h4 style="font-size:13px;font-weight:700;color:#334155;margin-bottom:8px"><i class="fa fa-images"></i> الصور المرفوعة (<?= count($currentImages) ?>)</h4>
-                        <div style="display:flex;flex-wrap:wrap;gap:8px">
-                            <?php 
-                            $DOC_TYPES = ['0'=>'هوية وطنية','1'=>'جواز سفر','2'=>'رخصة قيادة','3'=>'شهادة ميلاد','4'=>'شهادة تعيين','5'=>'كتاب ضمان','6'=>'كشف راتب','7'=>'تعيين عسكري','8'=>'صورة شخصية','9'=>'أخرى'];
-                            foreach ($currentImages as $cimg):
-                                $imgPath = MediaHelper::url((int)$cimg['id'], $cimg['fileHash'], $cimg['fileName'] ?? '');
-                                $typeName = $DOC_TYPES[$cimg['groupName']] ?? '';
-                                $isSelected = (!empty($model->selected_image) && $model->selected_image == $cimg['id']);
-                            ?>
-                            <div style="width:110px;text-align:center;position:relative">
-                                <img src="<?= $imgPath ?>" style="width:110px;height:80px;object-fit:cover;border-radius:6px;border:2px solid <?= $isSelected ? '#f59e0b' : '#e2e8f0' ?>;cursor:pointer" 
-                                     onclick="window.open('<?= $imgPath ?>','_blank')" title="<?= $typeName ?>">
-                                <?php if ($typeName): ?>
-                                    <span style="display:block;font-size:10px;color:#64748b;margin-top:2px"><?= $typeName ?></span>
-                                <?php endif ?>
-                                <?php if ($isSelected): ?>
-                                    <span style="position:absolute;top:2px;right:2px;background:#f59e0b;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;display:flex;align-items:center;justify-content:center"><i class="fa fa-star"></i></span>
-                                <?php endif ?>
-                            </div>
-                            <?php endforeach ?>
-                        </div>
-                    </div>
-                    <?php endif ?>
-                    <?php endif ?>
-
-                    <!-- ═══ Smart Media: Drag & Drop Upload ═══ -->
-                    <div class="sm-zone">
+                    <!-- ═══ Gap Upload Zone: for missing documents ═══ -->
+                    <div class="sm-zone sm-zone-gap">
                         <input type="file" multiple accept="image/*,application/pdf">
-                        <div class="sm-zone-icon"><i class="fa fa-cloud-upload"></i></div>
-                        <div class="sm-zone-text">اسحب الملفات هنا أو اضغط للاختيار</div>
-                        <div class="sm-zone-hint">يدعم: JPG, PNG, WebP, PDF — حد أقصى 20MB لكل ملف</div>
+                        <div class="sm-zone-icon"><i class="fa fa-plus-circle"></i></div>
+                        <div class="sm-zone-text">أضف المستندات الناقصة هنا</div>
+                        <div class="sm-zone-hint">اسحب الملفات أو اضغط للاختيار — يدعم: JPG, PNG, WebP, PDF</div>
                     </div>
 
                     <!-- ═══ Action Buttons ═══ -->
@@ -503,7 +495,7 @@ if (!$isNew) {
                         <button type="button" class="sm-action-btn sm-webcam-btn">
                             <i class="fa fa-camera"></i> التقاط من الكاميرا
                         </button>
-                        <button type="button" class="sm-action-btn" onclick="$('.sm-zone input').click()">
+                        <button type="button" class="sm-action-btn" onclick="$('.sm-zone input').first().click()">
                             <i class="fa fa-folder-open"></i> اختيار ملفات
                         </button>
                     </div>
@@ -519,10 +511,9 @@ if (!$isNew) {
                         </div>
                     </div>
 
-                    <!-- ═══ Gallery: Uploaded Files + AI Results ═══ -->
+                    <!-- ═══ Gallery: All Documents (from Step 0 + new uploads + existing) ═══ -->
                     <div class="sm-gallery">
                         <?php
-                        /* Pre-populate gallery with existing images from os_ImageManager */
                         if (!$isNew && $model->id) {
                             $existingImages = (new \yii\db\Query())
                                 ->from('{{%ImageManager}}')
@@ -543,7 +534,7 @@ if (!$isNew) {
                                 $isPdf = strtolower($imgExt) === 'pdf';
                                 $thumbSrc = $isPdf ? '/css/images/pdf-icon.png' : $imgWebPath;
                         ?>
-                        <div class="sm-card" data-image-id="<?= $img['id'] ?>">
+                        <div class="sm-card" data-image-id="<?= $img['id'] ?>" tabindex="0">
                             <div class="sm-card-actions">
                                 <button type="button" class="sm-card-action danger sm-delete-btn" data-path="<?= htmlspecialchars($imgWebPath) ?>" data-image-id="<?= $img['id'] ?>" title="حذف"><i class="fa fa-trash"></i></button>
                                 <button type="button" class="sm-card-action sm-reclassify-btn" data-path="<?= htmlspecialchars($imgWebPath) ?>" data-image-id="<?= $img['id'] ?>" title="إعادة تصنيف AI"><i class="fa fa-magic"></i></button>
@@ -557,79 +548,47 @@ if (!$isNew) {
                                     <option value="<?= $k ?>"<?= ($k == ($img['groupName'] ?? '9')) ? ' selected' : '' ?>><?= $v ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <input type="text" class="sm-doc-number-input" placeholder="رقم المستند (اختياري)" value="">
                             </div>
                         </div>
                         <?php } } ?>
-                        <!-- New cards added dynamically by smart-media.js -->
                     </div>
 
-                    <!-- ═══ AI Usage Stats Widget — Dual Source ═══ -->
-                    <div class="sm-usage" style="margin-top:20px">
-                        <h4 class="sm-usage-title"><i class="fa fa-bar-chart"></i> إحصائيات التصنيف الذكي</h4>
-
-                        <!-- Tab Toggle: Local vs Google -->
-                        <div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:2px solid #eee; padding-bottom:8px">
-                            <button type="button" class="sm-tab-btn active" data-tab="local" style="padding:5px 14px; border:1px solid #ddd; border-radius:6px 6px 0 0; background:#800020; color:#fff; font-size:11px; font-weight:700; cursor:pointer; border-bottom:none">
-                                <i class="fa fa-database"></i> تتبع النظام
-                            </button>
-                            <button type="button" class="sm-tab-btn" data-tab="google" style="padding:5px 14px; border:1px solid #ddd; border-radius:6px 6px 0 0; background:#fff; color:#555; font-size:11px; font-weight:700; cursor:pointer; border-bottom:none">
-                                <i class="fa fa-google"></i> Google Cloud مباشر
-                            </button>
-                        </div>
-
-                        <!-- LOCAL Stats Panel -->
-                        <div class="sm-stats-panel" data-panel="local">
-                            <div class="sm-usage-grid">
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-usage-total">0</div>
-                                    <div class="sm-usage-label">إجمالي الطلبات</div>
-                                </div>
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-usage-success">0</div>
-                                    <div class="sm-usage-label">ناجحة</div>
-                                </div>
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-usage-cost">$0</div>
-                                    <div class="sm-usage-label">التكلفة (تقدير)</div>
-                                </div>
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-usage-remaining">1000</div>
-                                    <div class="sm-usage-label">المتبقي مجاني</div>
-                                </div>
+                    <!-- ═══ AI Usage Stats (collapsed by default) ═══ -->
+                    <details class="sm-usage-details" style="margin-top:20px">
+                        <summary class="sm-usage-summary"><i class="fa fa-bar-chart"></i> إحصائيات التصنيف الذكي</summary>
+                        <div class="sm-usage" style="margin-top:8px">
+                            <div style="display:flex; gap:4px; margin-bottom:12px; border-bottom:2px solid #eee; padding-bottom:8px">
+                                <button type="button" class="sm-tab-btn active" data-tab="local" style="padding:5px 14px; border:1px solid #ddd; border-radius:6px 6px 0 0; background:#800020; color:#fff; font-size:11px; font-weight:700; cursor:pointer; border-bottom:none">
+                                    <i class="fa fa-database"></i> تتبع النظام
+                                </button>
+                                <button type="button" class="sm-tab-btn" data-tab="google" style="padding:5px 14px; border:1px solid #ddd; border-radius:6px 6px 0 0; background:#fff; color:#555; font-size:11px; font-weight:700; cursor:pointer; border-bottom:none">
+                                    <i class="fa fa-google"></i> Google Cloud مباشر
+                                </button>
                             </div>
-                            <div class="sm-usage-bar"><div class="sm-usage-bar-fill" style="width:0%"></div></div>
-                            <div class="sm-usage-hint">تتبع محلي — من سجلات النظام</div>
-                        </div>
-
-                        <!-- GOOGLE Stats Panel -->
-                        <div class="sm-stats-panel" data-panel="google" style="display:none">
-                            <div class="sm-usage-grid">
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-g-total">—</div>
-                                    <div class="sm-usage-label">طلبات Google</div>
+                            <div class="sm-stats-panel" data-panel="local">
+                                <div class="sm-usage-grid">
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-usage-total">0</div><div class="sm-usage-label">إجمالي الطلبات</div></div>
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-usage-success">0</div><div class="sm-usage-label">ناجحة</div></div>
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-usage-cost">$0</div><div class="sm-usage-label">التكلفة (تقدير)</div></div>
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-usage-remaining">1000</div><div class="sm-usage-label">المتبقي مجاني</div></div>
                                 </div>
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-g-billable">—</div>
-                                    <div class="sm-usage-label">قابلة للفوترة</div>
-                                </div>
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-g-cost">—</div>
-                                    <div class="sm-usage-label">التكلفة الفعلية</div>
-                                </div>
-                                <div class="sm-usage-item">
-                                    <div class="sm-usage-val sm-g-remaining">—</div>
-                                    <div class="sm-usage-label">المتبقي مجاني</div>
-                                </div>
+                                <div class="sm-usage-bar"><div class="sm-usage-bar-fill" style="width:0%"></div></div>
+                                <div class="sm-usage-hint">تتبع محلي — من سجلات النظام</div>
                             </div>
-                            <div class="sm-usage-bar"><div class="sm-g-bar-fill sm-usage-bar-fill" style="width:0%"></div></div>
-                            <div class="sm-g-status" style="font-size:11px; color:#888; margin-top:6px">
-                                <i class="fa fa-spinner fa-spin"></i> جاري الاتصال بـ Google Cloud...
+                            <div class="sm-stats-panel" data-panel="google" style="display:none">
+                                <div class="sm-usage-grid">
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-g-total">—</div><div class="sm-usage-label">طلبات Google</div></div>
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-g-billable">—</div><div class="sm-usage-label">قابلة للفوترة</div></div>
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-g-cost">—</div><div class="sm-usage-label">التكلفة الفعلية</div></div>
+                                    <div class="sm-usage-item"><div class="sm-usage-val sm-g-remaining">—</div><div class="sm-usage-label">المتبقي مجاني</div></div>
+                                </div>
+                                <div class="sm-usage-bar"><div class="sm-g-bar-fill sm-usage-bar-fill" style="width:0%"></div></div>
+                                <div class="sm-g-status" style="font-size:11px; color:#888; margin-top:6px"><i class="fa fa-spinner fa-spin"></i> جاري الاتصال بـ Google Cloud...</div>
+                                <div class="sm-g-billing-status" style="margin-top:6px; font-size:11px"></div>
                             </div>
-                            <div class="sm-g-billing-status" style="margin-top:6px; font-size:11px"></div>
                         </div>
-                    </div>
-
-                    <!-- Smart Media handles all image uploads -->
+                    </details>
                 </div>
 
                 <!-- Decision Actions -->
@@ -716,19 +675,19 @@ if (!$isNew) {
                         <circle class="rp-gauge-fill approved" cx="64" cy="64" r="58" stroke-dasharray="364.42" stroke-dashoffset="364.42"></circle>
                     </svg>
                     <div class="rp-gauge-center">
-                        <div class="rp-score-num">—</div>
+                        <div class="rp-score-num" aria-live="polite">—</div>
                         <div class="rp-score-label">درجة المخاطر</div>
                     </div>
                 </div>
             </div>
-            <div class="rp-tier"><span class="rp-tier-badge rp-tier-conditional">جاري التقييم...</span></div>
+            <div class="rp-tier" aria-live="polite"><span class="rp-tier-badge rp-tier-conditional">جاري التقييم...</span></div>
             <div class="rp-completeness">
                 <div class="rp-completeness-header"><span class="rp-completeness-label">اكتمال الملف</span><span class="rp-completeness-val">0%</span></div>
                 <div class="rp-completeness-bar"><div class="rp-completeness-fill" style="width: 0"></div></div>
             </div>
             <div class="rp-factors">
                 <h4 class="rp-factors-title"><i class="fa fa-bar-chart"></i> أهم العوامل</h4>
-                <div class="rp-factors-list"><div style="text-align:center; color:#999; font-size:12px; padding:12px 0">أدخل البيانات لبدء التقييم</div></div>
+                <div class="rp-factors-list" aria-live="polite"><div style="text-align:center; color:#999; font-size:12px; padding:12px 0">أدخل البيانات لبدء التقييم</div></div>
             </div>
             <div class="rp-financing" style="display:none">
                 <h4 class="rp-financing-title"><i class="fa fa-calculator"></i> توصية التمويل</h4>

@@ -886,10 +886,24 @@
 .so-page .leaflet-container { direction: ltr; }
 
 /* ══════════════════════════════════════
-   STEP 0: Document Scan — Smart Extraction
+   STEP 0: Document Upload + Smart Scan
    ══════════════════════════════════════ */
 .scan-fieldset { text-align: center; }
 .scan-fieldset .so-fieldset-title { text-align: right; }
+
+.scan-guidance-banner {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 18px; margin-bottom: 20px;
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border: 1px solid #bfdbfe; border-radius: 10px;
+    text-align: right; font-size: 13px; color: #1e40af;
+    line-height: 1.7;
+}
+.scan-guidance-banner > i {
+    font-size: 22px; color: #3b82f6; margin-top: 2px; flex-shrink: 0;
+}
+.scan-guidance-banner strong { display: block; font-size: 14px; margin-bottom: 2px; }
+.scan-guidance-banner span { color: #64748b; font-size: 12px; }
 
 .scan-hint {
     font-size: 13px;
@@ -1197,6 +1211,223 @@
     .scan-actions { flex-direction: column; }
 }
 
+/* ══════════════════════════════════════
+   DOCUMENT CHECKLIST WIDGET
+   ══════════════════════════════════════ */
+.so-doc-checklist-fieldset {
+    background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%) !important;
+    border-color: #bbf7d0 !important;
+}
+.so-doc-checklist {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 12px;
+}
+.so-doc-check-item {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    background: #fff; border: 1.5px solid #e2e8f0;
+    color: #64748b; transition: all .25s;
+}
+.so-doc-check-item i { font-size: 14px; }
+.so-doc-check-item.uploaded {
+    background: #dcfce7; border-color: #86efac; color: #166534;
+}
+.so-doc-check-item.uploaded i::before { content: "\f14a"; }
+.so-doc-check-item.missing {
+    background: #fef2f2; border-color: #fecaca; color: #991b1b;
+}
+.so-doc-check-item.missing i::before { content: "\f096"; }
+.so-doc-checklist-summary {
+    font-size: 12px; color: #64748b;
+    padding-top: 8px; border-top: 1px solid #e2e8f0;
+}
+.so-doc-check-count { font-weight: 700; }
+
+/* ══════════════════════════════════════
+   DOCUMENT NUMBER INPUT (in sm-card)
+   ══════════════════════════════════════ */
+.sm-doc-number-input {
+    width: 100%; border: 1px solid #ddd; border-radius: 4px;
+    font-size: 11px; padding: 3px 6px; margin-top: 4px;
+    background: #fff; color: var(--clr-text, #333);
+    transition: border-color .2s;
+}
+.sm-doc-number-input:focus {
+    border-color: var(--clr-primary, #800020); outline: none;
+}
+.sm-doc-number-input::placeholder { color: #bbb; }
+
+/* ══════════════════════════════════════
+   GAP UPLOAD ZONE (smaller, secondary)
+   ══════════════════════════════════════ */
+.sm-zone-gap { padding: 20px 16px; }
+.sm-zone-gap .sm-zone-icon { font-size: 28px; margin-bottom: 6px; }
+.sm-zone-gap .sm-zone-text { font-size: 13px; }
+
+/* ══════════════════════════════════════
+   AI USAGE STATS (collapsible)
+   ══════════════════════════════════════ */
+.sm-usage-details { border: 1px solid #e5e5e5; border-radius: 10px; }
+.sm-usage-summary {
+    padding: 10px 16px; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    color: var(--clr-primary-800, #5a0016);
+    display: flex; align-items: center; gap: 6px;
+    list-style: none;
+}
+.sm-usage-summary::-webkit-details-marker { display: none; }
+.sm-usage-summary::before {
+    content: '\f0da'; font-family: FontAwesome;
+    transition: transform .2s; font-size: 12px;
+}
+details[open] > .sm-usage-summary::before { transform: rotate(90deg); }
+
+/* ══════════════════════════════════════
+   ACCESSIBLE MODAL
+   ══════════════════════════════════════ */
+.so-modal-overlay {
+    position: fixed; inset: 0; z-index: 10000;
+    background: rgba(0,0,0,.45); display: flex;
+    align-items: center; justify-content: center;
+    opacity: 0; transition: opacity .2s;
+}
+.so-modal-overlay.visible { opacity: 1; }
+.so-modal {
+    background: #fff; border-radius: 14px;
+    width: 92%; max-width: 440px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25);
+    transform: translateY(12px); transition: transform .25s;
+    direction: rtl;
+}
+.so-modal-overlay.visible .so-modal { transform: translateY(0); }
+.so-modal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; border-bottom: 1px solid #e5e5e5;
+}
+.so-modal-title { margin: 0; font-size: 16px; font-weight: 700; color: var(--clr-primary, #800020); }
+.so-modal-close {
+    background: none; border: none; font-size: 22px;
+    color: #999; cursor: pointer; padding: 0; line-height: 1;
+    min-width: 28px; min-height: 28px;
+}
+.so-modal-close:hover { color: #333; }
+.so-modal-body { padding: 20px; }
+.so-modal-body .form-control { direction: rtl; }
+.so-modal-footer {
+    display: flex; gap: 8px; justify-content: flex-start;
+    padding: 12px 20px 16px; border-top: 1px solid #f0f0f0;
+}
+.so-btn-danger {
+    background: #ef4444 !important; border-color: #ef4444 !important; color: #fff !important;
+}
+.so-btn-danger:hover { background: #dc2626 !important; }
+.so-btn-ghost {
+    background: transparent; border: 1px solid var(--clr-border, #ddd);
+    color: var(--clr-text-muted, #666); font-size: 12px;
+}
+.so-btn-ghost:hover { background: #f8f8f8; border-color: var(--clr-primary); color: var(--clr-primary); }
+
+/* ══════════════════════════════════════
+   STEP PROGRESS BAR
+   ══════════════════════════════════════ */
+.so-progress-bar {
+    position: relative; height: 26px; margin: 0 0 8px;
+    background: #f1f5f9; border-radius: 8px; overflow: hidden;
+}
+.so-progress-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #475569;
+    z-index: 1; letter-spacing: .3px;
+}
+.so-progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--clr-primary, #800020), var(--clr-primary-600, #a00030));
+    border-radius: 8px; transition: width .4s ease;
+    opacity: .15;
+}
+
+/* ══════════════════════════════════════
+   CONTEXTUAL HELP BUTTON
+   ══════════════════════════════════════ */
+.so-help-btn {
+    background: none; border: none; cursor: pointer;
+    color: #94a3b8; font-size: 14px; padding: 2px 4px;
+    vertical-align: middle; position: relative;
+    min-width: 28px; min-height: 28px;
+}
+.so-help-btn:hover, .so-help-btn:focus { color: var(--clr-primary, #800020); }
+.so-help-btn:focus { outline: 2px solid var(--clr-primary, #800020); outline-offset: 2px; border-radius: 4px; }
+.so-help-btn[aria-expanded="true"]::after,
+.so-help-btn:focus::after {
+    content: attr(data-help);
+    position: absolute; top: 100%; right: 0; z-index: 20;
+    background: #1e293b; color: #fff; font-size: 12px;
+    padding: 8px 12px; border-radius: 6px; white-space: normal;
+    width: max-content; max-width: 260px; line-height: 1.6;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15); pointer-events: none;
+    font-weight: 400; margin-top: 4px;
+}
+
+/* ══════════════════════════════════════
+   SCAN BADGE (for cards from Step 0)
+   ══════════════════════════════════════ */
+.sm-scan-badge {
+    position: absolute; top: 6px; left: 6px; z-index: 2;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: #fff; font-size: 9px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    display: inline-flex; align-items: center; gap: 3px;
+}
+
+/* ══════════════════════════════════════
+   UPLOAD PROGRESS BAR (in sm-card)
+   ══════════════════════════════════════ */
+.sm-upload-progress {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    height: 4px; background: rgba(0,0,0,.1);
+    border-radius: 0 0 10px 10px;
+}
+.sm-upload-progress-fill {
+    height: 100%; background: var(--clr-primary, #800020);
+    transition: width .2s; border-radius: 0 0 10px 10px;
+}
+
+/* ══════════════════════════════════════
+   FOCUS MANAGEMENT (Phase 2E)
+   ══════════════════════════════════════ */
+.so-mode-edit .so-fieldset-title,
+.so-mode-edit .form-group,
+.so-mode-create .so-fieldset-title,
+.so-mode-create .form-group {
+    scroll-margin-top: 80px;
+}
+
+*:focus-visible {
+    outline: 2px solid var(--clr-primary, #800020);
+    outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════
+   TARGET SIZE FIX (WCAG 2.5.8)
+   ══════════════════════════════════════ */
+.scan-card-remove {
+    width: 28px !important; height: 28px !important;
+    min-width: 28px; min-height: 28px;
+    font-size: 12px;
+}
+.sm-card-action {
+    width: 28px; height: 28px; min-width: 28px; min-height: 28px;
+}
+
+/* ══════════════════════════════════════
+   SAVE & EXIT BUTTON
+   ══════════════════════════════════════ */
+.so-save-exit-btn {
+    padding: 8px 16px; border-radius: var(--radius-sm, 6px);
+    font-size: 12px; cursor: pointer;
+}
+
 /* ── Responsive RTL ── */
 @media (max-width: 767px) {
     .so-page .so-risk-panel {
@@ -1206,4 +1437,9 @@
     .so-page .so-inline-alerts {
         left: 10px; right: 10px;
     }
+    .so-doc-checklist { gap: 6px; }
+    .so-doc-check-item { font-size: 11px; padding: 5px 10px; }
+    .so-modal { width: 96%; max-width: none; }
+    .so-progress-bar { height: 22px; }
+    .so-progress-text { font-size: 10px; }
 }

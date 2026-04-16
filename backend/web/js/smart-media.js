@@ -77,9 +77,10 @@
             : '/css/images/pdf-icon.png';
 
         var cardHtml =
-            '<div class="sm-card" id="' + tempId + '">' +
+            '<div class="sm-card" id="' + tempId + '" tabindex="0">' +
                 '<img class="sm-card-img" src="' + thumbUrl + '" alt="">' +
                 '<div class="sm-card-analyzing"><div class="spinner"></div><span>جاري الرفع...</span></div>' +
+                '<div class="sm-upload-progress"><div class="sm-upload-progress-fill" style="width:0%"></div></div>' +
                 '<div class="sm-card-body">' +
                     '<div class="sm-card-name">' + escapeHtml(file.name) + '</div>' +
                     '<div class="sm-card-meta"><span>' + formatSize(file.size) + '</span></div>' +
@@ -106,6 +107,7 @@
                     if (e.lengthComputable) {
                         var pct = Math.round((e.loaded / e.total) * 100);
                         $('#' + tempId).find('.sm-card-analyzing span').text('جاري الرفع... ' + pct + '%');
+                        $('#' + tempId).find('.sm-upload-progress-fill').css('width', pct + '%');
                     }
                 });
                 return xhr;
@@ -167,10 +169,12 @@
                 '<button class="sm-card-action sm-reclassify-btn" data-path="' + escapeHtml(f.path) + '" data-image-id="' + imageId + '" title="إعادة تصنيف AI"><i class="fa fa-magic"></i></button>' +
             '</div>';
 
+        $card.find('.sm-upload-progress').remove();
         $card.find('.sm-card-body').html(
             '<div class="sm-card-name">' + escapeHtml(f.name) + '</div>' +
             '<div class="sm-card-meta"><span>' + formatSize(f.size) + '</span><span>' + (ai ? ai.response_time + 'ms' : '') + '</span></div>' +
-            aiHtml + selectHtml
+            aiHtml + selectHtml +
+            '<input type="text" class="sm-doc-number-input" placeholder="رقم المستند (اختياري)" value="">'
         );
 
         $card.prepend(actionsHtml);
@@ -335,15 +339,30 @@
        GALLERY ACTIONS
        ══════════════════════════════════════════ */
     function initGalleryActions() {
-        // Delete
         $(document).on('click', '.sm-delete-btn', function(e) {
             e.stopPropagation();
-            var $card = $(this).closest('.sm-card');
-            var path = $(this).data('path');
-            var imageId = $(this).data('image-id') || 0;
+            var $btn = $(this);
+            var $card = $btn.closest('.sm-card');
+            var path = $btn.data('path');
+            var imageId = $btn.data('image-id') || 0;
 
-            if (!confirm('حذف هذا الملف؟')) return;
+            if (typeof window.soModal === 'function') {
+                window.soModal({
+                    title: 'حذف المستند',
+                    body: '<p style="text-align:right">هل أنت متأكد من حذف هذا الملف؟ لا يمكن التراجع عن هذا الإجراء.</p>',
+                    confirmText: 'حذف',
+                    confirmClass: 'so-btn-danger',
+                    onConfirm: function($m, closeFn) {
+                        closeFn();
+                        doDelete($card, path, imageId);
+                    }
+                });
+            } else {
+                doDelete($card, path, imageId);
+            }
+        });
 
+        function doDelete($card, path, imageId) {
             $.post(window.smConfig.deleteUrl, { file_path: path, image_id: imageId }, function(resp) {
                 if (resp.success) {
                     $card.fadeOut(200, function() { $(this).remove(); });
@@ -351,7 +370,7 @@
                     showToast('فشل الحذف: ' + (resp.error || ''), 'danger');
                 }
             });
-        });
+        }
 
         // Re-classify with AI
         $(document).on('click', '.sm-reclassify-btn', function(e) {
