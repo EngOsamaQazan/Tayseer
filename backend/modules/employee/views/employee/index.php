@@ -28,10 +28,10 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.
             'toolbar'=> [
                 ['content'=>
                     (Permissions::can(Permissions::EMP_CREATE)
-                        ? Html::a('<i class="fa fa-plus"></i>', ['create'], ['class'=>'btn btn-secondary', 'role'=>'modal-remote', 'data-pjax'=>0, 'title'=>'Create new Employees'])
+                        ? Html::a('<i class="fa fa-plus"></i>', ['create'], ['class'=>'btn btn-secondary', 'role'=>'modal-remote', 'data-pjax'=>0, 'title'=>'إضافة موظف جديد'])
                         : '') .
                     Html::a('<i class="fa fa-refresh"></i>', [''],
-                        ['data-pjax'=>1, 'class'=>'btn btn-secondary', 'title'=>'Reset Grid']).
+                        ['data-pjax'=>1, 'class'=>'btn btn-secondary', 'title'=>'إعادة تعيين']).
                     '{toggleData}'.
                     ExportButtons::widget([
                         'excelRoute' => 'export-excel',

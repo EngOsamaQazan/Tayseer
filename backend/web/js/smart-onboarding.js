@@ -73,10 +73,16 @@
 
     function showStep(idx) {
         $('.so-section').removeClass('active');
-        $('.so-section[data-step="' + idx + '"]').addClass('active');
+        var $newSection = $('.so-section[data-step="' + idx + '"]');
+        $newSection.addClass('active');
 
         $('.so-step').removeClass('active');
-        $('.so-step[data-step="' + idx + '"]').addClass('active');
+        var $activeStep = $('.so-step[data-step="' + idx + '"]');
+        $activeStep.addClass('active');
+
+        // ARIA: update step indicators
+        $('.so-step').attr('aria-current', 'false');
+        $activeStep.attr('aria-current', 'step');
 
         // In edit mode, mark all steps as completed (data already exists)
         if (window.soConfig && window.soConfig.isEditMode) {
@@ -86,6 +92,19 @@
                 }
             });
         }
+
+        // Focus management: move focus to the section heading or first input
+        setTimeout(function() {
+            var $title = $newSection.find('.so-fieldset-title').first();
+            if ($title.length) {
+                if (!$title.attr('tabindex')) $title.attr('tabindex', '-1');
+                $title[0].focus({ preventScroll: true });
+            } else {
+                var $firstInput = $newSection.find('input:not([type=hidden]),select,textarea').first();
+                if ($firstInput.length) $firstInput[0].focus({ preventScroll: true });
+            }
+            $newSection[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
 
         // Update nav buttons
         $('.so-prev-btn').toggle(idx > 0);

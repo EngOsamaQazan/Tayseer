@@ -51,10 +51,11 @@
 
             if (isAlreadyActive) {
                 clickedBtn.classList.remove('active');
+                clickedBtn.setAttribute('aria-selected', 'false');
                 var content = document.getElementById('tab-' + tabName);
                 if (content) {
                     content.style.maxHeight = content.scrollHeight + 'px';
-                    content.offsetHeight; // force reflow
+                    content.offsetHeight;
                     content.style.maxHeight = '0';
                     content.classList.add('ocp-collapsing');
                     setTimeout(function () {
@@ -67,6 +68,7 @@
             } else {
                 document.querySelectorAll('.ocp-tab').forEach(function (t) {
                     t.classList.remove('active');
+                    t.setAttribute('aria-selected', 'false');
                 });
                 document.querySelectorAll('.ocp-tab-content').forEach(function (c) {
                     if (!c.classList.contains('ocp-hidden')) {
@@ -81,7 +83,10 @@
                         }, 300);
                     }
                 });
-                if (clickedBtn) clickedBtn.classList.add('active');
+                if (clickedBtn) {
+                    clickedBtn.classList.add('active');
+                    clickedBtn.setAttribute('aria-selected', 'true');
+                }
                 var target = document.getElementById('tab-' + tabName);
                 if (target) {
                     target.classList.remove('ocp-hidden');

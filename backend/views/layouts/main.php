@@ -20,6 +20,7 @@ if (Yii::$app->controller->action->id === 'login') {
     }
 
     $baseUrl = Yii::$app->request->baseUrl;
+    $assetVersion = Yii::$app->params['assetVersion'] ?? '2026.04.16';
 
     // ── User data for navbar ──
     $_avatarRecord = \backend\modules\employee\models\EmployeeFiles::find()
@@ -76,6 +77,12 @@ if (Yii::$app->controller->action->id === 'login') {
         </script>
         <link rel="shortcut icon" href="<?= $baseUrl ?>/images/favicon.png" type="image/png">
         <link rel="icon" href="<?= $baseUrl ?>/images/favicon.png" type="image/png" sizes="192x192">
+        <link rel="manifest" href="<?= $baseUrl ?>/manifest.json">
+        <meta name="theme-color" content="#800020">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-title" content="تيسير">
+        <link rel="apple-touch-icon" href="<?= $baseUrl ?>/images/favicon.png">
         <title><?= Html::encode($this->title) ?></title>
         <?php $_og = \common\helper\CompanyOg::get(); $_ogTitle = $_og['title']; $_ogDesc = $_og['desc']; $_ogImg = $_og['image']; $_ogHost = Yii::$app->request->hostInfo; ?>
         <meta property="og:type" content="website">
@@ -122,11 +129,11 @@ if (Yii::$app->controller->action->id === 'login') {
         </style>
 
         <!-- Tayseer Feature CSS -->
-        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-modern-libs.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= $baseUrl ?>/css/fin-transactions.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-vuexy.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-responsive.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-themes.css?v=<?= time() ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-modern-libs.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/fin-transactions.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-vuexy.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-responsive.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-themes.css?v=<?= $assetVersion ?>">
 
         <!-- Vuexy Helpers (must load in head before body renders) -->
         <script src="<?= $baseUrl ?>/vuexy/vendor/js/helpers.js"></script>
@@ -137,11 +144,18 @@ if (Yii::$app->controller->action->id === 'login') {
     </head>
     <body>
     <?php $this->beginBody() ?>
+    <a class="skip-to-content" href="#main-content">انتقل للمحتوى الرئيسي</a>
 
     <?php
     yii\bootstrap5\Modal::begin([
         'id' => 'gModal',
-        'title' => '<h3 id="modalTitle"></h3>',
+        'title' => '<h3 id="gModalLabel"></h3>',
+        'options' => [
+            'aria-labelledby' => 'gModalLabel',
+            'aria-modal' => 'true',
+            'role' => 'dialog',
+        ],
+        'dialogOptions' => ['class' => 'modal-dialog modal-lg'],
     ]);
     yii\bootstrap5\Modal::end();
     ?>
@@ -165,21 +179,21 @@ if (Yii::$app->controller->action->id === 'login') {
 
                             <!-- Fullscreen Toggle -->
                             <li class="nav-item me-2">
-                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="btnFullscreen" title="وضع ملء الشاشة" onclick="toggleFullScreen()">
+                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="btnFullscreen" title="وضع ملء الشاشة" data-bs-toggle="tooltip" data-bs-placement="bottom" onclick="toggleFullScreen()" aria-label="وضع ملء الشاشة">
                                     <i class="fa-solid fa-expand fa-lg" id="fullscreenIcon"></i>
                                 </a>
                             </li>
 
                             <!-- Theme Toggle -->
                             <li class="nav-item dropdown me-2">
-                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="themeToggleBtn" title="تبديل المظهر">
+                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon" href="javascript:void(0)" id="themeToggleBtn" title="تبديل المظهر" data-bs-toggle="tooltip" data-bs-placement="bottom" aria-label="تبديل المظهر">
                                     <i class="fa-solid fa-sun fa-lg" id="themeToggleIcon"></i>
                                 </a>
                             </li>
 
                             <!-- Theme Palette -->
                             <li class="nav-item dropdown me-2">
-                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="ألوان النظام">
+                                <a class="nav-link btn btn-text-secondary rounded-pill btn-icon dropdown-toggle hide-arrow" href="javascript:void(0);" data-bs-toggle="dropdown" data-bs-auto-close="outside" title="ألوان النظام" aria-label="ألوان النظام">
                                     <i class="fa-solid fa-palette fa-lg"></i>
                                 </a>
                                 <div class="dropdown-menu dropdown-menu-end theme-switcher-menu p-3" style="min-width:240px">
@@ -307,13 +321,24 @@ if (Yii::$app->controller->action->id === 'login') {
     <script src="<?= $baseUrl ?>/vuexy/vendor/libs/perfect-scrollbar/perfect-scrollbar.js"></script>
     <script src="<?= $baseUrl ?>/vuexy/vendor/libs/hammer/hammer.js"></script>
     <script src="<?= $baseUrl ?>/vuexy/vendor/js/menu.js"></script>
-    <script src="<?= $baseUrl ?>/vuexy/js/main.js"></script>
+    <script src="<?= $baseUrl ?>/vuexy/js/main.js?v=<?= $assetVersion ?>"></script>
 
     <!-- Tayseer Theme System -->
-    <script src="<?= $baseUrl ?>/js/tayseer-theme.js?v=<?= time() ?>"></script>
+    <script src="<?= $baseUrl ?>/js/tayseer-theme.js?v=<?= $assetVersion ?>"></script>
 
     <!-- Tayseer Responsive -->
-    <script src="<?= $baseUrl ?>/js/tayseer-responsive.js?v=<?= time() ?>"></script>
+    <script src="<?= $baseUrl ?>/js/tayseer-responsive.js?v=<?= $assetVersion ?>"></script>
+
+    <script>
+    document.addEventListener('click', function(e) {
+        var toggle = e.target.closest('.menu-toggle');
+        if (!toggle) return;
+        var li = toggle.closest('.menu-item');
+        if (!li) return;
+        var expanded = li.classList.contains('open');
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    });
+    </script>
 
     <!-- Global Image Lightbox -->
     <div id="tLightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.88);align-items:center;justify-content:center;cursor:zoom-out">
@@ -436,6 +461,35 @@ if (Yii::$app->controller->action->id === 'login') {
 JS
     , \yii\web\View::POS_END);
     ?>
+
+    <?php
+    $this->registerJs("
+        /* Modal focus management — WCAG 2.4.3 */
+        var gModalEl = document.getElementById('gModal');
+        if (gModalEl) {
+            var _modalTrigger = null;
+            gModalEl.addEventListener('show.bs.modal', function() {
+                _modalTrigger = document.activeElement;
+            });
+            gModalEl.addEventListener('shown.bs.modal', function() {
+                var first = gModalEl.querySelector('input:not([type=hidden]),select,textarea,.btn-close');
+                if (first) first.focus();
+            });
+            gModalEl.addEventListener('hidden.bs.modal', function() {
+                if (_modalTrigger && _modalTrigger.focus) _modalTrigger.focus();
+                _modalTrigger = null;
+            });
+        }
+    ", \yii\web\View::POS_READY);
+    ?>
+
+    <script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js').catch(function() {});
+        });
+    }
+    </script>
 
     <?php $this->endBody() ?>
     </body>

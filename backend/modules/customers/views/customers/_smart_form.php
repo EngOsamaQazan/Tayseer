@@ -743,10 +743,12 @@ if (!$isNew) {
             <button type="button" class="rp-toggle-reasons">عرض سبب التقييم</button>
             <div class="rp-reasons"></div>
             <div class="rp-actions">
-                <button type="button" class="so-btn so-btn-success so-decision-btn" data-decision="approved"><i class="fa fa-check-circle"></i> حفظ — مقبول</button>
-                <button type="button" class="so-btn so-btn-warning so-decision-btn" data-decision="conditional"><i class="fa fa-exclamation-circle"></i> حفظ — مشروط</button>
-                <button type="button" class="so-btn so-btn-danger so-decision-btn" data-decision="rejected"><i class="fa fa-times-circle"></i> حفظ — مرفوض</button>
-                <button type="button" class="so-btn so-btn-ghost so-decision-btn" data-decision="draft"><i class="fa fa-save"></i> حفظ كمسودة</button>
+                <button type="button" class="so-btn so-btn-success so-decision-btn so-decision-primary" data-decision="approved"><i class="fa fa-check-circle"></i> حفظ — مقبول</button>
+                <div class="so-decision-secondary">
+                    <button type="button" class="so-btn so-btn-ghost so-decision-btn" data-decision="draft"><i class="fa fa-save"></i> حفظ كمسودة</button>
+                    <button type="button" class="so-btn so-btn-warning so-decision-btn" data-decision="conditional"><i class="fa fa-exclamation-circle"></i> مشروط</button>
+                    <button type="button" class="so-btn so-btn-danger so-decision-btn" data-decision="rejected"><i class="fa fa-times-circle"></i> مرفوض</button>
+                </div>
             </div>
 
             <?php else: ?>

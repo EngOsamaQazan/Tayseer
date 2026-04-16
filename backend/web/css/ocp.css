@@ -413,6 +413,25 @@
 .ocp-warning-strip--legal {
     background: linear-gradient(90deg, #7F1D1D 0%, #450A0A 100%);
 }
+.ocp-warning-strip--clickable {
+    text-decoration: none;
+    color: white;
+    cursor: pointer;
+    transition: filter 0.2s, gap 0.2s;
+}
+.ocp-warning-strip--clickable:hover {
+    filter: brightness(1.15);
+    color: white;
+}
+.ocp-warning-strip__arrow {
+    font-size: 14px;
+    opacity: 0.7;
+    transition: transform 0.2s, opacity 0.2s;
+}
+.ocp-warning-strip--clickable:hover .ocp-warning-strip__arrow {
+    transform: translateX(-4px);
+    opacity: 1;
+}
 
 .ocp-warning-strip--settled {
     background: linear-gradient(90deg, #166534 0%, #14532D 100%);

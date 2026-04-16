@@ -10,14 +10,12 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 
 <div class="contracts-create">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <h3 class="box-title"><i class="fa fa-file-text-o"></i> <?= $this->title ?></h3>
-            <div class="box-tools pull-left">
-                <?= Html::a('<i class="fa fa-arrow-right"></i> العقود', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
-            </div>
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+            <h5 class="card-title mb-0"><i class="fa-solid fa-file-lines me-2"></i><?= $this->title ?></h5>
+            <?= Html::a('<i class="fa-solid fa-arrow-right me-1"></i> العقود', ['index'], ['class' => 'btn btn-outline-secondary btn-sm']) ?>
         </div>
-        <div class="box-body">
+        <div class="card-body">
             <?= $this->render('_form', [
                 'model'              => $model,
                 'companies'          => $companies,

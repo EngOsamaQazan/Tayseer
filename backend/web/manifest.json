@@ -1,0 +1,21 @@
+{
+  "name": "نظام تيسير لإدارة التقسيط",
+  "short_name": "تيسير",
+  "description": "نظام تيسير لإدارة شركات التقسيط — Tayseer ERP",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#f4f6f9",
+  "theme_color": "#800020",
+  "categories": ["business", "finance"],
+  "icons": [
+    {
+      "src": "/images/favicon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

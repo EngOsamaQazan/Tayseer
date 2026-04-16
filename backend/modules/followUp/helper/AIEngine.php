@@ -27,9 +27,11 @@ class AIEngine
     private $brokenPromises;
     private $lastContactDate;
 
-    /** @var Judiciary|null */
+    /** @var Judiciary|null Primary (latest) judiciary case */
     private $judiciary;
-    /** @var array Judiciary customer actions for this contract */
+    /** @var Judiciary[] All judiciary cases for this contract */
+    private $allJudiciaries = [];
+    /** @var array Judiciary customer actions for the primary case */
     private $judiciaryActions;
     /** @var array|null Last judiciary action */
     private $lastJudiciaryAction;
@@ -96,11 +98,13 @@ class AIEngine
      */
     private function loadJudiciaryData()
     {
-        // Find the main judiciary case for this contract
-        $this->judiciary = Judiciary::find()
+        $this->allJudiciaries = Judiciary::find()
             ->where(['contract_id' => $this->contract->id, 'is_deleted' => 0])
             ->orderBy(['id' => SORT_DESC])
-            ->one();
+            ->all();
+
+        // Primary case = latest by id (used for AI recommendations)
+        $this->judiciary = !empty($this->allJudiciaries) ? $this->allJudiciaries[0] : null;
 
         $this->judiciaryActions = [];
         $this->lastJudiciaryAction = null;
@@ -108,7 +112,6 @@ class AIEngine
         $this->judiciaryStage = null;
 
         if ($this->judiciary) {
-            // Load all actions for this judiciary case with related data
             $actions = JudiciaryCustomersActions::find()
                 ->where(['judiciary_id' => $this->judiciary->id])
                 ->orderBy(['action_date' => SORT_ASC])
@@ -120,14 +123,12 @@ class AIEngine
                 $lastAction = end($actions);
                 $this->lastJudiciaryAction = $lastAction;
 
-                // Calculate days since last action
                 if ($lastAction->action_date) {
                     $this->daysSinceLastJudiciaryAction = max(0,
                         (int)((strtotime('today') - strtotime($lastAction->action_date)) / 86400)
                     );
                 }
 
-                // Determine current judiciary stage
                 $this->judiciaryStage = $this->detectJudiciaryStage();
             }
         }
@@ -829,6 +830,71 @@ class AIEngine
             'per_party' => $this->getPerPartyLastActions(),
             'action_tree' => $this->buildActionTree(),
         ];
+    }
+
+    /**
+     * Get judiciary data for ALL cases on this contract.
+     * Each element mirrors the structure of getJudiciaryData() so the
+     * view can render every case independently.
+     */
+    public function getAllJudiciaryData()
+    {
+        if (empty($this->allJudiciaries)) {
+            return [];
+        }
+
+        // Save originals so the AI recommendation state stays intact
+        $origJudiciary = $this->judiciary;
+        $origActions   = $this->judiciaryActions;
+        $origLast      = $this->lastJudiciaryAction;
+        $origDays      = $this->daysSinceLastJudiciaryAction;
+        $origStage     = $this->judiciaryStage;
+
+        $all = [];
+        foreach ($this->allJudiciaries as $case) {
+            $this->judiciary = $case;
+
+            $actions = JudiciaryCustomersActions::find()
+                ->where(['judiciary_id' => $case->id])
+                ->orderBy(['action_date' => SORT_ASC])
+                ->all();
+
+            $this->judiciaryActions = $actions;
+            $this->lastJudiciaryAction = null;
+            $this->daysSinceLastJudiciaryAction = 999;
+            $this->judiciaryStage = null;
+
+            if (!empty($actions)) {
+                $last = end($actions);
+                $this->lastJudiciaryAction = $last;
+                if ($last->action_date) {
+                    $this->daysSinceLastJudiciaryAction = max(0,
+                        (int)((strtotime('today') - strtotime($last->action_date)) / 86400)
+                    );
+                }
+                $this->judiciaryStage = $this->detectJudiciaryStage();
+            }
+
+            $all[] = [
+                'judiciary'       => $case,
+                'actions'         => $this->judiciaryActions,
+                'last_action'     => $this->lastJudiciaryAction,
+                'days_since_last' => $this->daysSinceLastJudiciaryAction,
+                'stage'           => $this->judiciaryStage,
+                'stage_label'     => $this->getStageLabel($this->judiciaryStage),
+                'per_party'       => $this->getPerPartyLastActions(),
+                'action_tree'     => $this->buildActionTree(),
+            ];
+        }
+
+        // Restore originals
+        $this->judiciary                   = $origJudiciary;
+        $this->judiciaryActions            = $origActions;
+        $this->lastJudiciaryAction         = $origLast;
+        $this->daysSinceLastJudiciaryAction = $origDays;
+        $this->judiciaryStage              = $origStage;
+
+        return $all;
     }
 
     /**

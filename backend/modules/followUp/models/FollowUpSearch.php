@@ -44,7 +44,7 @@ class FollowUpSearch extends FollowUp
      *
      * @return ActiveDataProvider
      */
-    public function search($params)
+    public function search($params, $contract_id = null)
     {
         $query = FollowUp::find();
         if(!empty($params['FollowUpSearch']['number_row'])){
@@ -64,18 +64,21 @@ class FollowUpSearch extends FollowUp
         $this->load($params);
 
         if (!$this->validate()) {
-            // uncomment the following line if you do not want to return any records when validation fails
-            // $query->where('0=1');
             return $dataProvider;
         }
 
         $query->andFilterWhere([
             'id' => $this->id,
-            'contract_id' => $this->contract_id,
             'date_time' => $this->date_time,
             'created_by' => $this->created_by,
         ]);
-        $query->where(['=', 'contract_id', $params['contract_id']])->orderBy(['date_time' => SORT_DESC]);
+
+        $resolvedContractId = $contract_id ?? ($params['contract_id'] ?? $this->contract_id ?? null);
+        if ($resolvedContractId) {
+            $query->andWhere(['contract_id' => $resolvedContractId]);
+        }
+
+        $query->orderBy(['date_time' => SORT_DESC]);
 
         return $dataProvider;
     }

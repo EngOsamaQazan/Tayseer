@@ -10,15 +10,15 @@ $this->params['breadcrumbs'][] = $this->title;
 ?>
 
 <div class="contracts-update">
-    <div class="box box-primary">
-        <div class="box-header with-border">
-            <h3 class="box-title"><i class="fa fa-pencil"></i> <?= $this->title ?></h3>
-            <div class="box-tools pull-left">
-                <?= Html::a('<i class="fa fa-eye"></i> عرض', ['view', 'id' => $model->id], ['class' => 'btn btn-info btn-sm']) ?>
-                <?= Html::a('<i class="fa fa-arrow-right"></i> العقود', ['index'], ['class' => 'btn btn-secondary btn-sm']) ?>
+    <div class="card">
+        <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <h5 class="card-title mb-0"><i class="fa-solid fa-pen-to-square me-2"></i><?= $this->title ?></h5>
+            <div class="d-flex gap-2">
+                <?= Html::a('<i class="fa-solid fa-eye me-1"></i> عرض', ['view', 'id' => $model->id], ['class' => 'btn btn-outline-info btn-sm']) ?>
+                <?= Html::a('<i class="fa-solid fa-arrow-right me-1"></i> العقود', ['index'], ['class' => 'btn btn-outline-secondary btn-sm']) ?>
             </div>
         </div>
-        <div class="box-body">
+        <div class="card-body">
             <?= $this->render('_form', [
                 'model'              => $model,
                 'companies'          => $companies,

@@ -81,13 +81,17 @@ class SiteController extends Controller
     public function actionIndex()
     {
         $companyId = isset(Yii::$app->params['company_id']) ? Yii::$app->params['company_id'] : null;
-        $cacheKey = 'dashboard_stats_' . ($companyId ?: 'all') . '_' . date('Y-m');
+        $prefix = 'dashboard_' . ($companyId ?: 'all') . '_';
 
-        $stats = Yii::$app->cache->getOrSet($cacheKey, function () use ($companyId) {
+        $stats = Yii::$app->cache->getOrSet($prefix . 'kpi_' . date('Ymd_H'), function () use ($companyId) {
             return $this->buildDashboardStats($companyId);
         }, 300);
 
-        return $this->render('index', $stats);
+        $recentData = Yii::$app->cache->getOrSet($prefix . 'recent_' . date('Ymd_Hi'), function () use ($companyId) {
+            return $this->buildDashboardRecent($companyId);
+        }, 60);
+
+        return $this->render('index', array_merge($stats, $recentData));
     }
 
     private function buildDashboardStats($companyId): array
@@ -104,9 +108,6 @@ class SiteController extends Controller
         $totalCases = 0;
         $totalSettlements = 0;
         $incomeChart = [];
-        $recentPayments = [];
-        $recentContracts = [];
-        $topCollectors = [];
 
         try {
             $contractStats = $db->createCommand(
@@ -164,12 +165,33 @@ class SiteController extends Controller
             $incomeChart = $db->createCommand(
                 "SELECT DATE_FORMAT(`date`, '%Y-%m') as month_key, SUM(amount) as total
                  FROM os_income
-                 WHERE `date` >= :startDate
+                 WHERE `date` >= :startDate AND `date` <= LAST_DAY(CURDATE())
                  GROUP BY DATE_FORMAT(`date`, '%Y-%m')
                  ORDER BY month_key ASC",
                 [':startDate' => date('Y-m-d', strtotime('-11 months', strtotime(date('Y-m-01'))))]
             )->queryAll();
         } catch (\Exception $e) {}
+
+        return [
+            'totalContracts'    => $totalContracts,
+            'contractsByStatus' => $contractsByStatus,
+            'totalContractValue'=> $totalContractValue,
+            'totalCustomers'    => $totalCustomers,
+            'monthlyIncome'     => $monthlyIncome,
+            'yearlyIncome'      => $yearlyIncome,
+            'monthlyExpenses'   => $monthlyExpenses,
+            'totalCases'        => $totalCases,
+            'totalSettlements'  => $totalSettlements,
+            'incomeChart'       => $incomeChart,
+        ];
+    }
+
+    private function buildDashboardRecent($companyId): array
+    {
+        $db = Yii::$app->db;
+        $recentPayments = [];
+        $recentContracts = [];
+        $topCollectors = [];
 
         try {
             $recentPayments = $db->createCommand(
@@ -209,16 +231,6 @@ class SiteController extends Controller
         } catch (\Exception $e) {}
 
         return [
-            'totalContracts'    => $totalContracts,
-            'contractsByStatus' => $contractsByStatus,
-            'totalContractValue'=> $totalContractValue,
-            'totalCustomers'    => $totalCustomers,
-            'monthlyIncome'     => $monthlyIncome,
-            'yearlyIncome'      => $yearlyIncome,
-            'monthlyExpenses'   => $monthlyExpenses,
-            'totalCases'        => $totalCases,
-            'totalSettlements'  => $totalSettlements,
-            'incomeChart'       => $incomeChart,
             'recentPayments'    => $recentPayments,
             'recentContracts'   => $recentContracts,
             'topCollectors'     => $topCollectors,

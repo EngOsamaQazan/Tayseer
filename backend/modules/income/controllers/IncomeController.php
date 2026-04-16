@@ -84,17 +84,18 @@ class IncomeController extends Controller
      * Lists all Installment models.
      * @return mixed
      */
-    public function actionIndex($customer_id)
+    public function actionIndex($customer_id = null)
     {
-        $customer_ids = $customer_id;
+        if ($customer_id === null) {
+            return $this->redirect(['income-list']);
+        }
+
         $searchModel = new IncomeSearch();
-//        $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
         $query = Income::find()->andFilterWhere(['customer_id' => $customer_id]);
         $dataProvider = new ActiveDataProvider([
             'query' => $query,
         ]);
         $incomeSummary = Income::findOne(['customer_id' => $customer_id]);
-
 
         return $this->render('index', [
             'searchModel' => $searchModel,

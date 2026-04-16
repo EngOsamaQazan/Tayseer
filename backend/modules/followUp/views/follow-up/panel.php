@@ -29,12 +29,13 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.
  * @var yii\data\ActiveDataProvider $dataProvider
  * @var array $modelsPhoneNumbersFollwUps
  * @var array $judiciaryData
+ * @var array $allJudiciaryData
  */
 
 $isJudiciaryPaid = $contract->isJudiciaryPaid();
 $isLegal = in_array($contract->status, ['judiciary', 'legal_department']) && !$isJudiciaryPaid;
 $isClosed = in_array($contract->status, ['finished', 'canceled']) || $isJudiciaryPaid;
-$hasCase = in_array($contract->status, ['judiciary', 'legal_department']) && !empty($judiciaryData['judiciary']);
+$hasCase = in_array($contract->status, ['judiciary', 'legal_department']) && !empty($allJudiciaryData);
 
 $this->title = 'لوحة تحكم العقد #' . $contract->id;
 $this->params['breadcrumbs'][] = ['label' => 'تقارير المتابعة', 'url' => ['/followUpReport']];
@@ -167,14 +168,18 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
     <?php // ═══ WARNING STRIP ═══ ?>
     <?php if ($showWarningStrip && !$isClosed): ?>
-    <div class="ocp-warning-strip <?= in_array($contract->status, ['judiciary', 'legal_department']) ? 'ocp-warning-strip--legal' : '' ?>">
+    <?php if (in_array($contract->status, ['judiciary', 'legal_department'])): ?>
+    <a href="#" class="ocp-warning-strip ocp-warning-strip--legal ocp-warning-strip--clickable" onclick="OCP.switchTab('judiciary');return false;" role="alert" aria-label="اضغط للانتقال لتبويب القضائي">
         <i class="fa fa-exclamation-triangle"></i>
-        <?php if (in_array($contract->status, ['judiciary', 'legal_department'])): ?>
-            <span>هذا العقد في المرحلة القضائية — تطبق قيود خاصة على الإجراءات المتاحة</span>
-        <?php else: ?>
-            <span>تنبيه: مستوى المخاطر <?= $riskLevelArabic[$riskLevel] ?? 'مرتفع' ?> — <?= Html::encode($riskData['primary_reason'] ?? '') ?></span>
-        <?php endif; ?>
+        <span>هذا العقد في المرحلة القضائية — تطبق قيود خاصة على الإجراءات المتاحة</span>
+        <i class="fa fa-arrow-left ocp-warning-strip__arrow"></i>
+    </a>
+    <?php else: ?>
+    <div class="ocp-warning-strip" role="alert">
+        <i class="fa fa-exclamation-triangle"></i>
+        <span>تنبيه: مستوى المخاطر <?= $riskLevelArabic[$riskLevel] ?? 'مرتفع' ?> — <?= Html::encode($riskData['primary_reason'] ?? '') ?></span>
     </div>
+    <?php endif; ?>
     <?php endif; ?>
 
     <?php // ═══ STATUS BAR ═══ ?>
@@ -318,54 +323,63 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             <div>
                 <?php // 1) TABS + TAB CONTENT — التبويبات ومحتواها معاً في الأعلى ?>
                 <div class="ocp-section">
-                    <div class="ocp-tabs" style="flex-wrap:wrap;gap:4px">
-                        <button class="ocp-tab" data-tab="timeline" onclick="OCP.switchTab('timeline')">
+                    <div class="ocp-tabs" role="tablist" aria-label="تبويبات لوحة التحكم" style="flex-wrap:wrap;gap:4px">
+                        <button class="ocp-tab" data-tab="timeline" role="tab" aria-selected="false" aria-controls="tab-timeline" id="btn-tab-timeline" onclick="OCP.switchTab('timeline')">
                             <i class="fa fa-clock-o"></i> السجل الزمني
                             <span class="ocp-tab__count"><?= count($timeline) ?></span>
                         </button>
-                        <button class="ocp-tab" data-tab="kanban" onclick="OCP.switchTab('kanban')">
+                        <button class="ocp-tab" data-tab="kanban" role="tab" aria-selected="false" aria-controls="tab-kanban" id="btn-tab-kanban" onclick="OCP.switchTab('kanban')">
                             <i class="fa fa-columns"></i> سير العمل
                             <?php $totalTasks = 0; foreach ($kanbanData as $col) $totalTasks += $col['total']; ?>
                             <span class="ocp-tab__count"><?= $totalTasks ?></span>
                         </button>
-                        <button class="ocp-tab" data-tab="financial" onclick="OCP.switchTab('financial')">
+                        <button class="ocp-tab" data-tab="financial" role="tab" aria-selected="false" aria-controls="tab-financial" id="btn-tab-financial" onclick="OCP.switchTab('financial')">
                             <i class="fa fa-money"></i> اللقطة المالية
                         </button>
-                        <button class="ocp-tab" data-tab="phones" onclick="OCP.switchTab('phones')">
+                        <button class="ocp-tab" data-tab="phones" role="tab" aria-selected="false" aria-controls="tab-phones" id="btn-tab-phones" onclick="OCP.switchTab('phones')">
                             <i class="fa fa-phone"></i> أرقام الهواتف
                         </button>
-                        <button class="ocp-tab" data-tab="payments" onclick="OCP.switchTab('payments')">
+                        <button class="ocp-tab" data-tab="payments" role="tab" aria-selected="false" aria-controls="tab-payments" id="btn-tab-payments" onclick="OCP.switchTab('payments')">
                             <i class="fa fa-credit-card"></i> الدفعات
                         </button>
-                        <button class="ocp-tab" data-tab="settlements" onclick="OCP.switchTab('settlements')">
+                        <button class="ocp-tab" data-tab="settlements" role="tab" aria-selected="false" aria-controls="tab-settlements" id="btn-tab-settlements" onclick="OCP.switchTab('settlements')">
                             <i class="fa fa-balance-scale"></i> التسويات
                         </button>
                         <?php if ($hasCase): ?>
-                        <button class="ocp-tab" data-tab="judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
+                        <?php
+                        $_totalJudActions = 0;
+                        foreach ($allJudiciaryData as $_cData) {
+                            $_totalJudActions += count($_cData['actions'] ?? []);
+                        }
+                        ?>
+                        <button class="ocp-tab" data-tab="judiciary-actions" role="tab" aria-selected="false" aria-controls="tab-judiciary-actions" id="btn-tab-judiciary-actions" onclick="OCP.switchTab('judiciary-actions')">
                             <i class="fa fa-gavel"></i> إجراءات قضائية
-                            <?php if (!empty($judiciaryData['actions'])): ?>
-                            <span class="ocp-tab__count"><?= count($judiciaryData['actions']) ?></span>
+                            <?php if (count($allJudiciaryData) > 1): ?>
+                            <span class="ocp-tab__count"><?= count($allJudiciaryData) ?> قضايا</span>
+                            <?php endif; ?>
+                            <?php if ($_totalJudActions > 0): ?>
+                            <span class="ocp-tab__count"><?= $_totalJudActions ?></span>
                             <?php endif; ?>
                         </button>
                         <?php endif; ?>
                     </div>
                     <?php // TIMELINE TAB ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-timeline">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-timeline" role="tabpanel" aria-labelledby="btn-tab-timeline">
                         <?= $this->render('panel/_timeline', ['timeline' => $timeline]) ?>
                     </div>
 
                     <?php // KANBAN TAB ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-kanban">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-kanban" role="tabpanel" aria-labelledby="btn-tab-kanban">
                         <?= $this->render('panel/_kanban', ['kanbanData' => $kanbanData, 'contract' => $contract]) ?>
                     </div>
 
                     <?php // FINANCIAL TAB ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-financial">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-financial" role="tabpanel" aria-labelledby="btn-tab-financial">
                         <?= $this->render('panel/_financial', ['financials' => $financials, 'settlementFinancials' => $settlementFinancials ?? null]) ?>
                     </div>
 
                     <?php // PHONE NUMBERS TAB (from old index) ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-phones">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-phones" role="tabpanel" aria-labelledby="btn-tab-phones">
                         <div class="ocp-card" style="padding:var(--ocp-space-lg)">
                             <?= $this->render('partial/tabs/phone_numbers.php', [
                                 'contractCalculations' => $contractCalculations,
@@ -376,7 +390,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     </div>
 
                     <?php // PAYMENTS TAB ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-payments">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-payments" role="tabpanel" aria-labelledby="btn-tab-payments">
                         <?= $this->render('partial/tabs/payments.php', [
                             'contract_id' => $contract_id,
                             'model' => $model,
@@ -384,7 +398,7 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     </div>
 
                     <?php // SETTLEMENTS TAB — Cards ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-settlements">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-settlements" role="tabpanel" aria-labelledby="btn-tab-settlements">
                         <?= $this->render('partial/tabs/loan_scheduling.php', [
                             'contract_id' => $contract_id,
                             'model' => $model,
@@ -394,11 +408,11 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
 
                     <?php // JUDICIARY ACTIONS TAB — يظهر فقط إذا العقد عليه قضية ?>
                     <?php if ($hasCase): ?>
-                    <div class="ocp-tab-content ocp-hidden" id="tab-judiciary-actions">
+                    <div class="ocp-tab-content ocp-hidden" id="tab-judiciary-actions" role="tabpanel" aria-labelledby="btn-tab-judiciary-actions">
                         <?= $this->render('panel/_judiciary_tab', [
                             'contract_id' => $contract_id,
                             'contract' => $contract,
-                            'judiciaryData' => $judiciaryData,
+                            'allJudiciaryData' => $allJudiciaryData,
                             'model' => $model,
                         ]) ?>
                     </div>

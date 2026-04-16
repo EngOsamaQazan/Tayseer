@@ -12,13 +12,9 @@ class AppAsset extends AssetBundle
     public $basePath = '@webroot';
     public $baseUrl = '@web';
     public $css = [
-        'css/bootstrap-fileinput.css',
-        'plugins/iCheck/square/blue.css',
-        'plugins/multiselect/multiselect.min.css',
-        'plugins/toastr/toastr.min.css',
         'css/site.css',
-        'css/custom.css?v=11',
-        'css/custom_2.css?v=13',
+        'css/custom.css',
+        'css/custom_2.css',
     ];
     public $js = [
         'js/script.js'

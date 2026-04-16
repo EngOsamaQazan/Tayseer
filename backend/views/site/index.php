@@ -33,6 +33,11 @@ $statusColors = [
     'settlement'       => '#6f42c1',
 ];
 
+$arabicDays = ['الأحد','الإثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+$arabicMonthsFull = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+$todayArabic = $arabicDays[(int)date('w')] . '، ' . date('d') . ' ' . $arabicMonthsFull[(int)date('n') - 1] . ' ' . date('Y');
+$currentMonthArabic = $arabicMonthsFull[(int)date('n') - 1] . ' ' . date('Y');
+
 // ─── بيانات الرسم البياني ───
 $chartLabels = [];
 $chartData   = [];
@@ -89,6 +94,7 @@ foreach ($contractsByStatus as $st => $cnt) {
     border-right: 4px solid var(--kpi-color, var(--clr-primary, #800020));
     position: relative; overflow: hidden;
 }
+a.db-kpi { text-decoration: none; color: inherit; cursor: pointer; }
 .db-kpi:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 .db-kpi-icon {
     width: 48px; height: 48px; border-radius: 12px;
@@ -181,14 +187,33 @@ foreach ($contractsByStatus as $st => $cnt) {
 .db-status-item-label { font-size: 12px; color: var(--clr-text-muted); }
 .db-status-item-val { font-size: 16px; font-weight: 800; color: var(--clr-text); margin-right: auto; }
 
+/* ── Tablet Responsive ── */
+@media (max-width: 991.98px) {
+    .db-kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+}
 /* ── Mobile Responsive ── */
 @media (max-width: 575.98px) {
     .db-page { padding: 10px 0; }
     .db-header h1 { font-size: 17px; }
-    .db-kpi { padding: 14px; gap: 10px; }
-    .db-kpi-icon { width: 38px; height: 38px; font-size: 16px; border-radius: 10px; }
-    .db-kpi-value { font-size: 18px; }
-    .db-kpi-label { font-size: 11px; }
+    .db-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: x proximity;
+        padding-bottom: 4px;
+    }
+    .db-kpi {
+        padding: 12px;
+        gap: 8px;
+        border-right-width: 3px;
+        scroll-snap-align: start;
+        min-width: 0;
+    }
+    .db-kpi-icon { width: 34px; height: 34px; font-size: 14px; border-radius: 8px; }
+    .db-kpi-value { font-size: 17px; }
+    .db-kpi-label { font-size: 10px; }
+    .db-kpi-sub { font-size: 10px; }
     .db-card-header { padding: 10px 14px; }
     .db-card-body { padding: 12px 14px; }
     .db-chart-wrap { height: 200px; }
@@ -197,10 +222,41 @@ foreach ($contractsByStatus as $st => $cnt) {
     .db-collector-name { min-width: 80px; font-size: 11px; }
     .db-collector-bar-wrap { height: 20px; }
     .db-collector-amount { font-size: 11px; min-width: 60px; }
+    .db-grid-2 { gap: 12px; }
+    .db-status-grid { gap: 8px; }
 }
 @media (max-width: 379.98px) {
     .db-kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+    .db-kpi { padding: 14px; gap: 10px; }
+    .db-kpi-icon { width: 38px; height: 38px; font-size: 16px; border-radius: 10px; }
+    .db-kpi-value { font-size: 18px; }
     .db-status-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Dark Mode overrides */
+[data-bs-theme="dark"] .db-page { --clr-surface: var(--clr-surface, #2f3349); }
+[data-bs-theme="dark"] .db-kpi { border-right-color: var(--kpi-color, var(--t-primary)); }
+[data-bs-theme="dark"] .db-table thead { background: var(--clr-surface, #2f3349); }
+[data-bs-theme="dark"] .db-table td { border-bottom-color: var(--clr-border, #44485e); }
+[data-bs-theme="dark"] .db-table .db-collector-bar { opacity: 0.85; }
+
+/* Drag & Drop Customization */
+.db-draggable {
+    cursor: grab;
+    border: 2px dashed transparent;
+    border-radius: 12px;
+    transition: border-color 0.2s, opacity 0.2s;
+}
+.db-draggable:hover { border-color: var(--clr-primary-200, #dd8098); }
+.db-dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+    border-color: var(--clr-primary, #800020);
+}
+.db-drag-over {
+    border-color: var(--clr-primary, #800020);
+    background: var(--clr-primary-50, #fdf0f3);
+    border-radius: 12px;
 }
 </style>
 
@@ -208,92 +264,100 @@ foreach ($contractsByStatus as $st => $cnt) {
     <!-- Header -->
     <div class="db-header">
         <h1><i class="fa fa-tachometer"></i> لوحة التحكم</h1>
-        <div class="db-date">
-            <i class="fa fa-calendar"></i>
-            <?= date('l، d F Y') ?>
+        <div style="display:flex;align-items:center;gap:8px">
+            <button class="btn btn-sm btn-outline-secondary" id="dbCustomizeBtn" title="تخصيص لوحة التحكم" aria-label="تخصيص ترتيب العناصر">
+                <i class="fa fa-th-large"></i> <span class="ct-hide-xs">تخصيص</span>
+            </button>
+            <div class="db-date">
+                <i class="fa fa-calendar"></i>
+                <?= $todayArabic ?>
+            </div>
         </div>
     </div>
 
-    <!-- KPI Cards (auto-animated by AOS via tayseer-modern.js) -->
-    <div class="db-kpi-grid">
-        <div class="db-kpi" style="--kpi-color:#800020" data-tippy-content="إجمالي قيمة العقود: <?= number_format($totalContractValue, 0) ?> د.أ">
+    <!-- KPI Cards -->
+    <div class="db-kpi-grid db-section" data-db-section="kpi">
+        <a href="<?= Url::to(['/contracts/contracts/index']) ?>" class="db-kpi" style="--kpi-color:#800020" data-tippy-content="إجمالي قيمة العقود: <?= number_format($totalContractValue, 0) ?> د.أ">
             <div class="db-kpi-icon"><i class="fa fa-file-text"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">إجمالي العقود</div>
                 <div class="db-kpi-value"><?= number_format($totalContracts) ?></div>
                 <div class="db-kpi-sub">قيمة: <?= number_format($totalContractValue, 0) ?> د.أ</div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#28a745" data-tippy-content="إيرادات <?= date('F Y') ?>">
+        <a href="<?= Url::to(['/income/income/income-list']) ?>" class="db-kpi" style="--kpi-color:#28a745" data-tippy-content="إيرادات <?= $currentMonthArabic ?>">
             <div class="db-kpi-icon"><i class="fa fa-money"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">إيرادات الشهر</div>
                 <div class="db-kpi-value"><?= number_format($monthlyIncome, 0) ?></div>
-                <div class="db-kpi-sub">د.أ — <?= date('F Y') ?></div>
+                <div class="db-kpi-sub">د.أ — <?= $currentMonthArabic ?></div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#17a2b8">
+        <a href="<?= Url::to(['/income/income/income-list']) ?>" class="db-kpi" style="--kpi-color:#17a2b8">
             <div class="db-kpi-icon"><i class="fa fa-line-chart"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">إيرادات السنة</div>
                 <div class="db-kpi-value"><?= number_format($yearlyIncome, 0) ?></div>
                 <div class="db-kpi-sub">د.أ — <?= date('Y') ?></div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#dc3545" data-tippy-content="صافي الشهر: <?= number_format($monthlyIncome - $monthlyExpenses, 0) ?> د.أ">
+        <a href="<?= Url::to(['/accounting/accounts-payable/index']) ?>" class="db-kpi" style="--kpi-color:#dc3545" data-tippy-content="صافي الشهر: <?= number_format($monthlyIncome - $monthlyExpenses, 0) ?> د.أ">
             <div class="db-kpi-icon"><i class="fa fa-minus-circle"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">مصاريف الشهر</div>
                 <div class="db-kpi-value"><?= number_format($monthlyExpenses, 0) ?></div>
                 <div class="db-kpi-sub">صافي: <?= number_format($monthlyIncome - $monthlyExpenses, 0) ?> د.أ</div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#6f42c1">
+        <a href="<?= Url::to(['/customers/customers/index']) ?>" class="db-kpi" style="--kpi-color:#6f42c1">
             <div class="db-kpi-icon"><i class="fa fa-users"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">العملاء</div>
                 <div class="db-kpi-value"><?= number_format($totalCustomers) ?></div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#fd7e14">
+        <a href="<?= Url::to(['/judiciary/judiciary/index']) ?>" class="db-kpi" style="--kpi-color:#fd7e14">
             <div class="db-kpi-icon"><i class="fa fa-gavel"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">القضايا</div>
                 <div class="db-kpi-value"><?= number_format($totalCases) ?></div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#c8a04a">
+        <a href="<?= Url::to(['/contracts/contracts/index', 'status' => 'settlement']) ?>" class="db-kpi" style="--kpi-color:#c8a04a">
             <div class="db-kpi-icon"><i class="fa fa-handshake-o"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">التسويات</div>
                 <div class="db-kpi-value"><?= number_format($totalSettlements) ?></div>
             </div>
-        </div>
+        </a>
 
-        <div class="db-kpi" style="--kpi-color:#28a745">
+        <a href="<?= Url::to(['/contracts/contracts/index', 'status' => 'active']) ?>" class="db-kpi" style="--kpi-color:#28a745">
             <div class="db-kpi-icon"><i class="fa fa-check-circle"></i></div>
             <div class="db-kpi-body">
                 <div class="db-kpi-label">عقود نشطة</div>
                 <div class="db-kpi-value"><?= number_format(isset($contractsByStatus['active']) ? $contractsByStatus['active'] : 0) ?></div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Charts Row (ApexCharts) -->
-    <div class="db-grid-2">
+    <div class="db-grid-2 db-section" data-db-section="charts">
         <!-- Income Area Chart -->
         <div class="db-card">
             <div class="db-card-header">
                 <h3><i class="fa fa-area-chart"></i> الإيرادات — آخر 12 شهر</h3>
             </div>
             <div class="db-card-body">
-                <div id="apexIncomeChart" style="height:280px"></div>
+                <div id="apexIncomeChart" style="height:280px" role="img" aria-label="رسم بياني للإيرادات آخر 12 شهر — إجمالي <?= number_format(array_sum($chartData), 0) ?> د.أ"></div>
+                <div class="visually-hidden">
+                    بيانات الإيرادات: <?php foreach ($chartLabels as $i => $label): ?><?= $label ?>: <?= number_format($chartData[$i]) ?> د.أ<?= $i < count($chartLabels) - 1 ? '، ' : '' ?><?php endforeach; ?>
+                </div>
             </div>
         </div>
 
@@ -304,7 +368,7 @@ foreach ($contractsByStatus as $st => $cnt) {
                 <span class="db-badge"><?= number_format($totalContracts) ?> عقد</span>
             </div>
             <div class="db-card-body">
-                <div id="apexDonutChart" style="height:220px"></div>
+                <div id="apexDonutChart" style="height:220px" role="img" aria-label="رسم دائري لتوزيع العقود حسب الحالة — <?= number_format($totalContracts) ?> عقد"></div>
                 <div class="db-status-grid">
                     <?php foreach ($contractsByStatus as $st => $cnt): ?>
                     <div class="db-status-item">
@@ -321,7 +385,7 @@ foreach ($contractsByStatus as $st => $cnt) {
     </div>
 
     <!-- Tables Row -->
-    <div class="db-grid-2">
+    <div class="db-grid-2 db-section" data-db-section="tables">
         <!-- Recent Payments -->
         <div class="db-card">
             <div class="db-card-header">
@@ -387,7 +451,7 @@ foreach ($contractsByStatus as $st => $cnt) {
     </div>
 
     <!-- Recent Contracts -->
-    <div class="db-card" style="margin-bottom:24px">
+    <div class="db-card db-section" data-db-section="recent-contracts" style="margin-bottom:24px">
         <div class="db-card-header">
             <h3><i class="fa fa-file-text"></i> آخر العقود</h3>
             <a href="<?= Url::to(['/contracts/contracts/index']) ?>" class="db-badge" style="text-decoration:none">عرض الكل</a>
@@ -418,15 +482,147 @@ foreach ($contractsByStatus as $st => $cnt) {
     </div>
 </div>
 
-<!-- ApexCharts Dashboard -->
+<!-- Dashboard Customization — Drag & Drop -->
+<script>
+(function() {
+    var STORAGE_KEY = 'tayseer_db_layout';
+    var isCustomizing = false;
+    var btn = document.getElementById('dbCustomizeBtn');
+    if (!btn) return;
+
+    function getSections() {
+        return Array.from(document.querySelectorAll('.db-section'));
+    }
+
+    function restoreOrder() {
+        try {
+            var saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+            if (!saved || !saved.length) return;
+            var container = document.querySelector('.db-page');
+            if (!container) return;
+            var sections = {};
+            getSections().forEach(function(s) { sections[s.dataset.dbSection] = s; });
+            var header = container.querySelector('.db-header');
+            var ref = header ? header.nextSibling : container.firstChild;
+            saved.forEach(function(key) {
+                if (sections[key]) {
+                    container.insertBefore(sections[key], null);
+                }
+            });
+        } catch(e) {}
+    }
+
+    function saveOrder() {
+        var order = getSections().map(function(s) { return s.dataset.dbSection; });
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(order)); } catch(e) {}
+    }
+
+    function enableDragDrop() {
+        getSections().forEach(function(section) {
+            section.setAttribute('draggable', 'true');
+            section.classList.add('db-draggable');
+            section.addEventListener('dragstart', onDragStart);
+            section.addEventListener('dragend', onDragEnd);
+            section.addEventListener('dragover', onDragOver);
+            section.addEventListener('drop', onDrop);
+        });
+    }
+
+    function disableDragDrop() {
+        getSections().forEach(function(section) {
+            section.setAttribute('draggable', 'false');
+            section.classList.remove('db-draggable', 'db-drag-over');
+            section.removeEventListener('dragstart', onDragStart);
+            section.removeEventListener('dragend', onDragEnd);
+            section.removeEventListener('dragover', onDragOver);
+            section.removeEventListener('drop', onDrop);
+        });
+    }
+
+    var draggedEl = null;
+
+    function onDragStart(e) {
+        draggedEl = this;
+        this.classList.add('db-dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', this.dataset.dbSection);
+    }
+
+    function onDragEnd() {
+        this.classList.remove('db-dragging');
+        getSections().forEach(function(s) { s.classList.remove('db-drag-over'); });
+        draggedEl = null;
+    }
+
+    function onDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (this !== draggedEl) {
+            this.classList.add('db-drag-over');
+        }
+    }
+
+    function onDrop(e) {
+        e.preventDefault();
+        this.classList.remove('db-drag-over');
+        if (draggedEl && this !== draggedEl) {
+            var parent = this.parentNode;
+            var allSections = getSections();
+            var dragIdx = allSections.indexOf(draggedEl);
+            var dropIdx = allSections.indexOf(this);
+            if (dragIdx < dropIdx) {
+                parent.insertBefore(draggedEl, this.nextSibling);
+            } else {
+                parent.insertBefore(draggedEl, this);
+            }
+            saveOrder();
+        }
+    }
+
+    btn.addEventListener('click', function() {
+        isCustomizing = !isCustomizing;
+        if (isCustomizing) {
+            enableDragDrop();
+            btn.classList.replace('btn-outline-secondary', 'btn-primary');
+            btn.innerHTML = '<i class="fa fa-check"></i> <span class="ct-hide-xs">تم</span>';
+            if (window.TyToast) TyToast({ type: 'info', message: 'اسحب الأقسام لإعادة ترتيبها ثم اضغط "تم"', duration: 3000 });
+        } else {
+            disableDragDrop();
+            btn.classList.replace('btn-primary', 'btn-outline-secondary');
+            btn.innerHTML = '<i class="fa fa-th-large"></i> <span class="ct-hide-xs">تخصيص</span>';
+        }
+    });
+
+    restoreOrder();
+})();
+</script>
+
+<!-- ApexCharts Dashboard — Lazy rendered via IntersectionObserver -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof ApexCharts === 'undefined') return;
 
-    // ─── Income Area Chart (ApexCharts) ───
+    function lazyChart(el, config) {
+        if (!el || el.dataset.chartRendered) return;
+        if ('IntersectionObserver' in window) {
+            var obs = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting) {
+                    obs.disconnect();
+                    el.dataset.chartRendered = '1';
+                    new ApexCharts(el, config).render();
+                }
+            }, { rootMargin: '200px' });
+            obs.observe(el);
+        } else {
+            el.dataset.chartRendered = '1';
+            new ApexCharts(el, config).render();
+        }
+    }
+
+    // ─── Income Area Chart ───
     var incomeEl = document.getElementById('apexIncomeChart');
     if (incomeEl) {
-        new ApexCharts(incomeEl, {
+        lazyChart(incomeEl, {
             chart: {
                 type: 'area', height: 280, fontFamily: 'Noto Kufi Arabic, Cairo, sans-serif',
                 toolbar: { show: true, tools: { download: true, selection: false, zoom: false, zoomin: false, zoomout: false, pan: false, reset: false } },
@@ -457,13 +653,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 style: { fontFamily: 'Noto Kufi Arabic' }
             },
             grid: { borderColor: '#f0f0f0', strokeDashArray: 4 }
-        }).render();
+        });
     }
 
-    // ─── Donut Chart (ApexCharts) ───
+    // ─── Donut Chart ───
     var donutEl = document.getElementById('apexDonutChart');
     if (donutEl) {
-        new ApexCharts(donutEl, {
+        lazyChart(donutEl, {
             chart: {
                 type: 'donut', height: 220, fontFamily: 'Noto Kufi Arabic, Cairo, sans-serif',
                 animations: { enabled: true, easing: 'easeinout', speed: 1000, animateGradually: { enabled: true, delay: 100 } }
@@ -493,7 +689,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 y: { formatter: function(v) { return v.toLocaleString() + ' عقد'; } },
                 style: { fontFamily: 'Noto Kufi Arabic' }
             }
-        }).render();
+        });
     }
 });
 </script>

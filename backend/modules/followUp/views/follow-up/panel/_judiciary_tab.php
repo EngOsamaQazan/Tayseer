@@ -1,7 +1,7 @@
 <?php
 /**
- * Judiciary Tab — Hierarchical Tree View
- * Displays: Request → Document → Status per customer
+ * Judiciary Tab — Displays ALL judiciary cases for a contract.
+ * Each case is rendered independently with its own action tree.
  */
 use yii\helpers\Html;
 use yii\helpers\Url;
@@ -10,23 +10,17 @@ use backend\helpers\NameHelper;
 /**
  * @var string|int $contract_id
  * @var backend\modules\contracts\models\Contracts $contract
- * @var array $judiciaryData
+ * @var array $allJudiciaryData  Array of per-case data, each with: judiciary, actions, last_action, days_since_last, stage_label, per_party, action_tree
  */
 
-$judiciary = $judiciaryData['judiciary'] ?? null;
-$actions = $judiciaryData['actions'] ?? [];
-$lastAction = $judiciaryData['last_action'] ?? null;
-$daysSinceLast = $judiciaryData['days_since_last'] ?? 999;
-$stageLabel = $judiciaryData['stage_label'] ?? '';
-$perParty = $judiciaryData['per_party'] ?? [];
-$actionTree = $judiciaryData['action_tree'] ?? [];
-
-// Request status styles
 $reqStatusStyles = [
     'pending'  => ['icon' => 'fa-clock-o',     'color' => '#F59E0B', 'bg' => '#FFFBEB', 'label' => 'معلق'],
     'approved' => ['icon' => 'fa-check-circle', 'color' => '#10B981', 'bg' => '#ECFDF5', 'label' => 'موافقة'],
     'rejected' => ['icon' => 'fa-times-circle', 'color' => '#EF4444', 'bg' => '#FEF2F2', 'label' => 'مرفوض'],
 ];
+
+$totalCases = count($allJudiciaryData);
+$caseColors = ['#3B82F6', '#8B5CF6', '#EC4899', '#F59E0B', '#10B981', '#EF4444'];
 ?>
 
 <style>
@@ -90,10 +84,23 @@ $reqStatusStyles = [
 }
 .jud-tree-edit:hover { background:#EFF6FF; }
 .jud-meta { font-size:11px;color:#94A3B8;display:flex;gap:8px;flex-wrap:wrap;margin-top:2px; }
+
+/* ═══ Multi-case tab switcher ═══ */
+.jud-case-tabs {
+    display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;
+}
+.jud-case-tab {
+    padding:8px 18px;border-radius:10px;cursor:pointer;
+    font-weight:600;font-size:13px;border:2px solid transparent;
+    transition:all .2s;background:#F1F5F9;color:#64748B;
+}
+.jud-case-tab:hover { background:#E2E8F0; }
+.jud-case-tab.active { color:#fff;border-color:transparent; }
+.jud-case-panel { display:none; }
+.jud-case-panel.active { display:block; }
 </style>
 
-<?php if (!$judiciary): ?>
-    <!-- No judiciary case -->
+<?php if (empty($allJudiciaryData)): ?>
     <div class="ocp-card" style="padding:var(--ocp-space-xl);text-align:center">
         <i class="fa fa-gavel" style="font-size:48px;color:var(--ocp-text-muted);margin-bottom:16px"></i>
         <h4 style="color:var(--ocp-text-secondary);margin-bottom:8px">لا يوجد ملف قضائي مسجل</h4>
@@ -104,8 +111,47 @@ $reqStatusStyles = [
     </div>
 <?php else: ?>
 
+    <?php if ($totalCases > 1): ?>
+    <!-- ═══ Case Tabs ═══ -->
+    <div class="jud-case-tabs">
+        <?php foreach ($allJudiciaryData as $ci => $caseData): ?>
+            <?php
+            $cj = $caseData['judiciary'];
+            $cColor = $caseColors[$ci % count($caseColors)];
+            ?>
+            <div class="jud-case-tab <?= $ci === 0 ? 'active' : '' ?>"
+                 style="<?= $ci === 0 ? 'background:' . $cColor . ';color:#fff;' : '' ?>"
+                 data-case-idx="<?= $ci ?>"
+                 data-color="<?= $cColor ?>"
+                 onclick="(function(el){
+                     document.querySelectorAll('.jud-case-tab').forEach(function(t){t.classList.remove('active');t.style.background='#F1F5F9';t.style.color='#64748B';});
+                     el.classList.add('active');el.style.background=el.dataset.color;el.style.color='#fff';
+                     document.querySelectorAll('.jud-case-panel').forEach(function(p){p.classList.remove('active');});
+                     document.getElementById('jud-case-'+el.dataset.caseIdx).classList.add('active');
+                 })(this)">
+                <i class="fa fa-gavel" style="margin-left:4px"></i>
+                قضية <?= Html::encode(($cj->judiciary_number ?: '-') . '/' . ($cj->year ?: '-')) ?>
+            </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <?php foreach ($allJudiciaryData as $ci => $caseData): ?>
+    <?php
+    $judiciary    = $caseData['judiciary'];
+    $actions      = $caseData['actions'] ?? [];
+    $lastAction   = $caseData['last_action'] ?? null;
+    $daysSinceLast = $caseData['days_since_last'] ?? 999;
+    $stageLabel   = $caseData['stage_label'] ?? '';
+    $perParty     = $caseData['per_party'] ?? [];
+    $actionTree   = $caseData['action_tree'] ?? [];
+    $cColor       = $caseColors[$ci % count($caseColors)];
+    ?>
+
+    <div class="jud-case-panel <?= $ci === 0 ? 'active' : '' ?>" id="jud-case-<?= $ci ?>" <?= $totalCases === 1 ? 'style="display:block"' : '' ?>>
+
     <!-- ═══ Case Header Card ═══ -->
-    <div class="ocp-card" style="padding:var(--ocp-space-lg);margin-bottom:var(--ocp-space-md)">
+    <div class="ocp-card" style="padding:var(--ocp-space-lg);margin-bottom:var(--ocp-space-md);border-top:3px solid <?= $cColor ?>">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
             <div style="display:flex;align-items:center;gap:12px">
                 <div style="width:48px;height:48px;border-radius:12px;background:#FFEBEE;display:flex;align-items:center;justify-content:center">
@@ -116,6 +162,9 @@ $reqStatusStyles = [
                         قضية <?= Html::encode(($judiciary->judiciary_number ?: '-') . '/' . ($judiciary->year ?: '-')) ?>
                         <?php if ($judiciary->case_status): ?>
                         <span class="jud-badge" style="background:#EDE7F6;color:#4527A0"><?= Html::encode($judiciary->case_status) ?></span>
+                        <?php endif; ?>
+                        <?php if ($totalCases > 1): ?>
+                        <span class="jud-badge" style="background:<?= $cColor ?>22;color:<?= $cColor ?>"><?= ($ci + 1) ?> من <?= $totalCases ?></span>
                         <?php endif; ?>
                     </div>
                     <div style="font-size:var(--ocp-font-size-sm);color:var(--ocp-text-muted);margin-top:2px">
@@ -441,5 +490,8 @@ $reqStatusStyles = [
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+
+    </div><!-- /.jud-case-panel -->
+    <?php endforeach; ?>
 
 <?php endif; ?>

@@ -7,11 +7,12 @@ use yii\helpers\Html;
 use yii\widgets\Breadcrumbs;
 ?>
 
+<main id="main-content" role="main">
 <div class="container-xxl flex-grow-1 container-p-y">
 
     <?php if ($this->title !== null || isset($this->params['breadcrumbs'])): ?>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-        <h4 class="fw-bold py-1 mb-0">
+        <h1 class="fw-bold py-1 mb-0" style="font-size:1.375rem">
             <?php
             if (isset($this->blocks['content-header'])) {
                 echo $this->blocks['content-header'];
@@ -19,7 +20,7 @@ use yii\widgets\Breadcrumbs;
                 echo Html::encode($this->title);
             }
             ?>
-        </h4>
+        </h1>
         <?= Breadcrumbs::widget([
             'links' => isset($this->params['breadcrumbs']) ? $this->params['breadcrumbs'] : [],
             'options' => ['class' => 'breadcrumb mb-0'],
@@ -32,6 +33,8 @@ use yii\widgets\Breadcrumbs;
     <?= $content ?>
 
 </div>
+
+</main>
 
 <footer class="content-footer footer bg-footer-theme">
     <div class="container-xxl">

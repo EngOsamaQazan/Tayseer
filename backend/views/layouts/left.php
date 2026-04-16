@@ -50,7 +50,7 @@ function isMenuActive($item, $currentUrl) {
 }
 ?>
 
-<aside id="layout-menu" class="layout-menu menu-vertical menu" data-bs-theme="dark">
+<aside id="layout-menu" class="layout-menu menu-vertical menu" data-bs-theme="dark" role="navigation" aria-label="القائمة الرئيسية">
 
     <!-- Brand -->
     <div class="app-brand demo">
@@ -86,11 +86,11 @@ function isMenuActive($item, $currentUrl) {
             <?php elseif (!empty($item['items'])): ?>
                 <?php $subActive = isMenuActive($item, $currentUrl); ?>
                 <li class="menu-item<?= $subActive ? ' active open' : '' ?>">
-                    <a href="javascript:void(0);" class="menu-link menu-toggle">
+                    <a href="javascript:void(0);" class="menu-link menu-toggle" aria-expanded="<?= $subActive ? 'true' : 'false' ?>" aria-haspopup="true">
                         <?= renderMenuIcon($item['icon'] ?? 'circle', $faMap) ?>
                         <div><?= Html::encode($item['label']) ?></div>
                     </a>
-                    <ul class="menu-sub">
+                    <ul class="menu-sub" role="menu">
                         <?php foreach ($item['items'] as $sub): ?>
                             <?php
                             if (isset($sub['visible']) && !$sub['visible']) continue;

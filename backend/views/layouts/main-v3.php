@@ -60,10 +60,11 @@ if (Yii::$app->controller->action->id === 'login') {
         <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/dist/tippy.css" />
         <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css" />
 
-        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/jadal-theme.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/tayseer-modern-libs.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/adminlte3-shim.css?v=<?= time() ?>">
-        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/fin-transactions.css?v=<?= time() ?>">
+        <?php $assetVersion = Yii::$app->params['assetVersion'] ?? '2026.04.16'; ?>
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/jadal-theme.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/tayseer-modern-libs.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/adminlte3-shim.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/fin-transactions.css?v=<?= $assetVersion ?>">
     </head>
     <!--
         AdminLTE 3 body classes:
@@ -156,7 +157,7 @@ if (Yii::$app->controller->action->id === 'login') {
     <script src="https://unpkg.com/@popperjs/core@2"></script>
     <script src="https://unpkg.com/tippy.js@6"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-    <script src="<?= Yii::$app->request->baseUrl ?>/js/tayseer-modern.js?v=<?= time() ?>"></script>
+    <script src="<?= Yii::$app->request->baseUrl ?>/js/tayseer-modern.js?v=<?= $assetVersion ?>"></script>
 
     <?php $this->endBody() ?>
     </body>

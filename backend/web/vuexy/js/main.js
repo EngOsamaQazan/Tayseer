@@ -95,10 +95,12 @@ if (document.getElementById('layout-menu')) {
     window.Helpers.showActiveTheme(window.Helpers.getPreferredTheme());
     getScrollbarWidth();
     window.Helpers.initSidebarToggle();
-  });
 
-  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+    if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+      var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+      tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el, { trigger: 'hover' }); });
+    }
+  });
 
   var accordionActiveFunction = function (e) {
     if (e.type === 'show.bs.collapse') {

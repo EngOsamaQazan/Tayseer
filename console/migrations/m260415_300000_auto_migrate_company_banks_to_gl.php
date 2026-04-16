@@ -48,6 +48,7 @@ class m260415_300000_auto_migrate_company_banks_to_gl extends Migration
             LEFT JOIN {{%bancks}}    b ON b.id = cb.bank_id
             LEFT JOIN {{%companies}} c ON c.id = cb.company_id
             WHERE  cb.is_deleted = 0
+              AND  (c.is_deleted = 0 OR c.is_deleted IS NULL)
             ORDER BY cb.company_id, cb.id
         ")->queryAll();
 

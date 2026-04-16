@@ -294,6 +294,9 @@
     display: flex; flex-direction: column; gap: 8px;
 }
 .rp-actions .so-btn { width: 100%; justify-content: center; font-size: 13px; }
+.rp-actions .so-decision-primary { font-size: 15px; padding: 12px; font-weight: 700; }
+.so-decision-secondary { display: flex; gap: 6px; }
+.so-decision-secondary .so-btn { font-size: 11px; padding: 6px 8px; }
 
 /* ── Reasons Expandable ── */
 .rp-reasons { display: none; padding: 0 4px; }

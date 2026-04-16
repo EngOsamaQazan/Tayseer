@@ -30,7 +30,8 @@ AppAsset::register($this);
     <meta name="twitter:description" content="<?= Html::encode($_ogDesc) ?>">
     <meta name="twitter:image" content="<?= Html::encode($_ogImg) ?>">
     <?php $this->head() ?>
-    <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/jadal-login.css?v=<?= time() ?>">
+    <?php $assetVersion = Yii::$app->params['assetVersion'] ?? '2026.04.16'; ?>
+    <link rel="stylesheet" href="<?= Yii::$app->request->baseUrl ?>/css/jadal-login.css?v=<?= $assetVersion ?>">
 </head>
 <body class="login-page" dir="rtl">
 

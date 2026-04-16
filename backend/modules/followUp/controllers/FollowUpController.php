@@ -929,6 +929,7 @@ class FollowUpController extends Controller
         $aiEngine = new AIEngine($contract);
         $aiData = $aiEngine->recommend();
         $judiciaryData = $aiEngine->getJudiciaryData();
+        $allJudiciaryData = $aiEngine->getAllJudiciaryData();
 
         // ContractCalculations — مصدر واحد لكل الحسابات المالية
         $calc = new ContractCalculations($contract_id);
@@ -941,8 +942,8 @@ class FollowUpController extends Controller
         // Kanban
         $kanbanData = FollowUpTask::getKanbanData($contract_id);
 
-        // Smart Alerts (now judiciary-aware)
-        $alerts = $this->buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises, $judiciaryData);
+        // Smart Alerts (now judiciary-aware, supports multiple cases)
+        $alerts = $this->buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises, $judiciaryData, $allJudiciaryData);
 
         // FollowUp model + search (for old form compatibility)
         $model = new FollowUp();
@@ -955,6 +956,7 @@ class FollowUpController extends Controller
             'riskData' => $riskData,
             'aiData' => $aiData,
             'judiciaryData' => $judiciaryData,
+            'allJudiciaryData' => $allJudiciaryData,
             'kanbanData' => $kanbanData,
             'timeline' => $timeline,
             'financials' => $financials,
@@ -1060,20 +1062,16 @@ class FollowUpController extends Controller
     /**
      * Build smart alerts based on contract state — judiciary-aware
      */
-    private function buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises, $judiciaryData = [])
+    private function buildAlerts($contract, $riskEngine, $riskAssessment, $dpd, $brokenPromises, $judiciaryData = [], $allJudiciaryData = [])
     {
         $alerts = [];
         $isLegal = in_array($contract->status, ['judiciary', 'legal_department']);
 
-        // ═══ JUDICIARY-SPECIFIC ALERTS ═══
+        // ═══ JUDICIARY-SPECIFIC ALERTS (per-case) ═══
         if ($isLegal) {
-            $judiciary = $judiciaryData['judiciary'] ?? null;
-            $lastAction = $judiciaryData['last_action'] ?? null;
-            $daysSinceLast = $judiciaryData['days_since_last'] ?? 999;
-            $stageLabel = $judiciaryData['stage_label'] ?? '';
+            $cases = !empty($allJudiciaryData) ? $allJudiciaryData : ($judiciaryData['judiciary'] ? [$judiciaryData] : []);
 
-            if (!$judiciary) {
-                // No case registered
+            if (empty($cases)) {
                 $alerts[] = [
                     'severity' => 'critical',
                     'icon' => 'fa-gavel',
@@ -1082,38 +1080,48 @@ class FollowUpController extends Controller
                     'cta' => ['label' => 'سجّل قضية', 'action' => 'add_judiciary_action'],
                 ];
             } else {
-                // Case exists — show stage info
-                $caseNum = ($judiciary->judiciary_number ?: '-') . '/' . ($judiciary->year ?: '-');
-                $courtName = $judiciary->court ? $judiciary->court->name : 'غير محدد';
-                $lawyerName = $judiciary->lawyer ? $judiciary->lawyer->name : 'غير محدد';
+                $totalCases = count($cases);
+                foreach ($cases as $caseData) {
+                    $judiciary    = $caseData['judiciary'] ?? null;
+                    $lastAction   = $caseData['last_action'] ?? null;
+                    $daysSinceLast = $caseData['days_since_last'] ?? 999;
+                    $stageLabel   = $caseData['stage_label'] ?? '';
 
-                $alerts[] = [
-                    'severity' => 'info',
-                    'icon' => 'fa-gavel',
-                    'title' => 'قضية ' . $caseNum . ' — ' . $courtName,
-                    'description' => 'المحامي: ' . $lawyerName . ' | المرحلة: ' . $stageLabel . ' | الإجراءات: ' . count($judiciaryData['actions'] ?? []),
-                    'cta' => null,
-                ];
+                    if (!$judiciary) continue;
 
-                // Stale case alert
-                if ($lastAction && $daysSinceLast > 14) {
-                    $lastActionName = $lastAction->judiciaryActions ? $lastAction->judiciaryActions->name : 'غير محدد';
-                    $severity = $daysSinceLast > 30 ? 'critical' : 'warning';
+                    $caseNum    = ($judiciary->judiciary_number ?: '-') . '/' . ($judiciary->year ?: '-');
+                    $courtName  = $judiciary->court ? $judiciary->court->name : 'غير محدد';
+                    $lawyerName = $judiciary->lawyer ? $judiciary->lawyer->name : 'غير محدد';
+
+                    $casePrefix = $totalCases > 1 ? ('قضية ' . $caseNum . ': ') : '';
+
                     $alerts[] = [
-                        'severity' => $severity,
-                        'icon' => 'fa-clock-o',
-                        'title' => 'لا إجراء قضائي منذ ' . $daysSinceLast . ' يوم',
-                        'description' => 'آخر إجراء: ' . $lastActionName . ' — يجب تحريك القضية منعاً للترك',
-                        'cta' => ['label' => 'إضافة إجراء', 'action' => 'add_judiciary_action'],
+                        'severity' => 'info',
+                        'icon' => 'fa-gavel',
+                        'title' => 'قضية ' . $caseNum . ' — ' . $courtName,
+                        'description' => 'المحامي: ' . $lawyerName . ' | المرحلة: ' . $stageLabel . ' | الإجراءات: ' . count($caseData['actions'] ?? []),
+                        'cta' => null,
                     ];
-                } elseif (!$lastAction) {
-                    $alerts[] = [
-                        'severity' => 'warning',
-                        'icon' => 'fa-exclamation-circle',
-                        'title' => 'لم يُسجل أي إجراء على القضية',
-                        'description' => 'يجب البدء بتسجيل الإجراءات القضائية',
-                        'cta' => ['label' => 'إضافة إجراء', 'action' => 'add_judiciary_action'],
-                    ];
+
+                    if ($lastAction && $daysSinceLast > 14) {
+                        $lastActionName = $lastAction->judiciaryActions ? $lastAction->judiciaryActions->name : 'غير محدد';
+                        $severity = $daysSinceLast > 30 ? 'critical' : 'warning';
+                        $alerts[] = [
+                            'severity' => $severity,
+                            'icon' => 'fa-clock-o',
+                            'title' => $casePrefix . 'لا إجراء قضائي منذ ' . $daysSinceLast . ' يوم',
+                            'description' => 'آخر إجراء: ' . $lastActionName . ' — يجب تحريك القضية منعاً للترك',
+                            'cta' => ['label' => 'إضافة إجراء', 'action' => 'add_judiciary_action'],
+                        ];
+                    } elseif (!$lastAction) {
+                        $alerts[] = [
+                            'severity' => 'warning',
+                            'icon' => 'fa-exclamation-circle',
+                            'title' => $casePrefix . 'لم يُسجل أي إجراء على القضية',
+                            'description' => 'يجب البدء بتسجيل الإجراءات القضائية',
+                            'cta' => ['label' => 'إضافة إجراء', 'action' => 'add_judiciary_action'],
+                        ];
+                    }
                 }
             }
         }

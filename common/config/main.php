@@ -48,6 +48,8 @@ return [
         'user' => [
             'class' => 'dektrium\user\Module',
             'admins' => ['zaxx44a7@gmail.com'],
+            'enableRegistration' => false,
+            'enableConfirmation' => false,
             'modelMap' => [
                 'User' => 'common\models\User',
                 'LoginForm' => 'backend\models\LoginForm',
