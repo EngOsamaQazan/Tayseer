@@ -1,44 +1,49 @@
 <?php
 /**
- * تبويب المحولين للشكوى — يُعرض عبر AJAX داخل الشاشة الموحدة
+ * تبويب المحولين للشكوى — GridView أصلي (بدون iframe)
+ * يُعرض عبر AJAX داخل الشاشة الموحدة — مطابق لتبويب القضايا
  */
 use yii\helpers\Url;
-
-$legalUrl = Url::to(['/contracts/contracts/index-legal-department', '_iframe' => 1]);
+use yii\helpers\Html;
+use yii\widgets\Pjax;
+use kartik\grid\GridView;
+use common\helper\Permissions;
+use backend\widgets\ExportButtons;
 ?>
 
 <script>
 $('#lh-badge-legal').text('<?= $dataCount ?>');
 </script>
 
-<div style="margin:-16px;position:relative">
-    <div id="lh-legal-loading" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:var(--clr-bg,rgba(255,255,255,.8));opacity:.85;z-index:5;display:flex;align-items:center;justify-content:center">
-        <div class="lh-loader"><i class="fa fa-spinner"></i><span>جاري التحميل...</span></div>
-    </div>
-    <iframe id="lh-legal-iframe" src="<?= $legalUrl ?>" style="width:100%;border:none;min-height:700px;display:block"></iframe>
+<?php Pjax::begin(['id' => 'legal-pjax', 'timeout' => 10000]) ?>
+<div id="legalDatatable">
+    <?= GridView::widget([
+        'id' => 'legal-datatable',
+        'dataProvider' => $dataProvider,
+        'toggleData' => false,
+        'columns' => (require __DIR__ . '/_legal_columns.php'),
+        'summary' => '<span class="text-muted" style="font-size:12px">عرض {begin}-{end} من {totalCount} عقد</span>',
+        'pjax' => true,
+        'pjaxSettings' => [
+            'options' => ['id' => 'legal-grid-pjax'],
+            'neverTimeout' => true,
+        ],
+        'toolbar' => [
+            [
+                'content' =>
+                    Html::a('<i class="fa fa-refresh"></i>', ['tab-legal'], ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .
+                    ExportButtons::widget([
+                        'excelRoute' => '/contracts/contracts/export-legal-excel',
+                        'pdfRoute'   => '/contracts/contracts/export-legal-pdf',
+                    ])
+            ],
+        ],
+        'striped' => true,
+        'condensed' => true,
+        'responsive' => true,
+        'panel' => [
+            'heading' => '<i class="fa fa-legal"></i> المحولين للشكوى <span class="badge">' . $dataCount . '</span>',
+        ],
+    ]) ?>
 </div>
-
-<script>
-(function(){
-    var iframe = document.getElementById('lh-legal-iframe');
-    var loading = document.getElementById('lh-legal-loading');
-
-    function resize() {
-        try { iframe.style.height = Math.max(700, iframe.contentWindow.document.body.scrollHeight + 20) + 'px'; } catch(e) {}
-    }
-
-    iframe.addEventListener('load', function() {
-        loading.style.display = 'none';
-        resize();
-        try {
-            var parentTheme = document.documentElement.getAttribute('data-bs-theme');
-            var parentColor = document.documentElement.getAttribute('data-theme-color');
-            var iDoc = iframe.contentDocument || iframe.contentWindow.document;
-            if (parentTheme) iDoc.documentElement.setAttribute('data-bs-theme', parentTheme);
-            if (parentColor) iDoc.documentElement.setAttribute('data-theme-color', parentColor);
-        } catch(e) {}
-    });
-
-    setInterval(resize, 2000);
-})();
-</script>
+<?php Pjax::end() ?>

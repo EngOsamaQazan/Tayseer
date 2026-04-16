@@ -1,6 +1,6 @@
 /**
- * Tayseer ERP — Service Worker (PWA)
- * Caches app shell for offline-first experience.
+ * نظام تيسير — Service Worker (PWA)
+ * يخزّن هيكل التطبيق مؤقتاً لتجربة تعمل بدون اتصال.
  */
 var CACHE_NAME = 'tayseer-v1';
 var SHELL_URLS = [
@@ -12,6 +12,7 @@ var SHELL_URLS = [
   '/images/favicon.png'
 ];
 
+// عند التثبيت: تخزين ملفات الهيكل الأساسي
 self.addEventListener('install', function(event) {
   event.waitUntil(
     caches.open(CACHE_NAME).then(function(cache) {
@@ -21,6 +22,7 @@ self.addEventListener('install', function(event) {
   self.skipWaiting();
 });
 
+// عند التفعيل: حذف النسخ القديمة من الكاش
 self.addEventListener('activate', function(event) {
   event.waitUntil(
     caches.keys().then(function(names) {
@@ -33,13 +35,18 @@ self.addEventListener('activate', function(event) {
   self.clients.claim();
 });
 
+// عند جلب الطلبات: الشبكة أولاً لـ API/HTML، الكاش أولاً للملفات الثابتة
 self.addEventListener('fetch', function(event) {
   var req = event.request;
+  var url = new URL(req.url);
 
+  // تجاهل الطلبات غير GET
   if (req.method !== 'GET') return;
+  // تجاهل البروتوكولات غير المدعومة (مثل chrome-extension://)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-  // Network-first for API/HTML, cache-first for static assets
   if (req.url.includes('/api/') || req.headers.get('accept').includes('text/html')) {
+    // الشبكة أولاً: جلب من السيرفر، وتخزين نسخة في الكاش
     event.respondWith(
       fetch(req).then(function(res) {
         if (res.ok) {
@@ -48,10 +55,12 @@ self.addEventListener('fetch', function(event) {
         }
         return res;
       }).catch(function() {
+        // في حال عدم الاتصال: إرجاع النسخة المخزّنة
         return caches.match(req);
       })
     );
   } else {
+    // الكاش أولاً: إرجاع النسخة المخزّنة، وإلا جلب من الشبكة
     event.respondWith(
       caches.match(req).then(function(cached) {
         return cached || fetch(req).then(function(res) {

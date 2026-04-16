@@ -166,13 +166,14 @@ class CustomersController extends Controller
             Model::loadMultiple($modelCustomerDocuments, Yii::$app->request->post());
             Model::loadMultiple($modelRealEstate, Yii::$app->request->post());
 
-// validate all models
             $valid = $model->validate();
             $valid = Model::validateMultiple($modelsAddress) && Model::validateMultiple($modelRealEstate) && Model::validateMultiple($modelsPhoneNumbers) && Model::validateMultiple($modelCustomerDocuments) && $valid;
 
+            if ($valid) {
                 $transaction = \Yii::$app->db->beginTransaction();
                 try {
                     if ($flag = $model->save(false)) {
+                        $addressFlag = true;
                         foreach ($modelsAddress as $modelAddress) {
                             $modelAddress->customers_id = $model->id;
                             if (!($addressFlag = $modelAddress->save())) {
@@ -180,16 +181,16 @@ class CustomersController extends Controller
                                 break;
                             }
                         }
+                        $phoneNumberflag = true;
                         foreach ($modelsPhoneNumbers as $modelsPhoneNumber) {
-
                             $modelsPhoneNumber->customers_id = $model->id;
                             if (!($phoneNumberflag = $modelsPhoneNumber->save())) {
                                 $transaction->rollBack();
                                 break;
                             }
                         }
+                        $modelRealEstatesflage = true;
                         foreach ($modelRealEstate as $modelRealEstates) {
-
                             $modelRealEstates->customer_id = $model->id;
                             if (!($modelRealEstatesflage = $modelRealEstates->save())) {
                                 $transaction->rollBack();
@@ -215,7 +216,6 @@ class CustomersController extends Controller
                     if ($flag && $addressFlag && $phoneNumberflag && $modelRealEstatesflage) {
                         $transaction->commit();
 
-                        // ═══ Link Smart Media uploads to the new customer ═══
                         $smartMedia = Yii::$app->request->post('SmartMedia', []);
                         if (!empty($smartMedia) && !empty($model->id)) {
                             foreach ($smartMedia as $item) {
@@ -233,7 +233,6 @@ class CustomersController extends Controller
                             }
                         }
 
-                        // ═══ Link scanned documents (from Step 0) ═══
                         $scanFileIds = Yii::$app->request->post('scan_file_ids', '');
                         if (!empty($scanFileIds) && !empty($model->id)) {
                             $ids = array_filter(array_map('intval', explode(',', $scanFileIds)));
@@ -254,16 +253,16 @@ class CustomersController extends Controller
                 } catch (Exception $e) {
                     $transaction->rollBack();
                 }
-
-        } else {
-            return $this->render('create', [
-                'model' => $model,
-                'modelsAddress' => (empty($modelsAddress)) ? [new Address] : $modelsAddress,
-                'modelsPhoneNumbers' => (empty($modelsPhoneNumbers)) ? [new PhoneNumbers] : $modelsPhoneNumbers,
-                'customerDocumentsModel' => (empty($modelCustomerDocuments)) ? [new CustomersDocument] : $modelCustomerDocuments,
-                'modelRealEstate' => (empty($modelRealEstate)) ? [new RealEstate] : $modelRealEstate
-            ]);
+            }
         }
+
+        return $this->render('create', [
+            'model' => $model,
+            'modelsAddress' => (empty($modelsAddress)) ? [new Address] : $modelsAddress,
+            'modelsPhoneNumbers' => (empty($modelsPhoneNumbers)) ? [new PhoneNumbers] : $modelsPhoneNumbers,
+            'customerDocumentsModel' => (empty($modelCustomerDocuments)) ? [new CustomersDocument] : $modelCustomerDocuments,
+            'modelRealEstate' => (empty($modelRealEstate)) ? [new RealEstate] : $modelRealEstate
+        ]);
     }
 
     /**

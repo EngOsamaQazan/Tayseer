@@ -420,12 +420,16 @@
   document.addEventListener('DOMContentLoaded', function() {
     var flashAlerts = document.querySelectorAll('.alert[class*="alert-"]');
     flashAlerts.forEach(function(alert) {
+      // Skip hidden alerts (Yii2 errorSummary is hidden when no errors)
+      if (alert.style.display === 'none' || alert.offsetParent === null) return;
+      // Skip error summaries (handled separately by buildErrorSummary)
+      if (alert.closest('.ty-error-summary') || alert.classList.contains('error-summary')) return;
       var type = 'info';
       if (alert.classList.contains('alert-success')) type = 'success';
       else if (alert.classList.contains('alert-danger') || alert.classList.contains('alert-error')) type = 'error';
       else if (alert.classList.contains('alert-warning')) type = 'warning';
       var text = alert.textContent.trim();
-      if (text && !alert.closest('.ty-error-summary')) {
+      if (text) {
         TyToast({ type: type, message: text, duration: 6000 });
         alert.style.display = 'none';
       }

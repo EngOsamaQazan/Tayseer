@@ -1149,6 +1149,36 @@
 }
 .scan-results-title i { margin-left: 6px; }
 
+.scan-doc-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #bbf7d0;
+}
+.scan-doc-tab {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid #86efac;
+    background: #fff;
+    color: #166534;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+}
+.scan-doc-tab:hover { background: #dcfce7; }
+.scan-doc-tab.active {
+    background: #166534;
+    color: #fff;
+    border-color: #166534;
+}
+.scan-card-selected { border-color: #166534 !important; box-shadow: 0 0 0 2px #86efac; }
+.scan-card.success .scan-card-body { cursor: pointer; }
+.scan-card.success .scan-card-body:hover { background: #f0fdf4; }
+
 .scan-fields {
     display: grid;
     grid-template-columns: 1fr 1fr;

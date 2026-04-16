@@ -17,6 +17,7 @@
         scanData: [],
         scanFileIds: [],
         scanFileTypes: {},
+        resetting: false,
     };
 
     var STORAGE_KEY = 'so_form_draft';
@@ -208,14 +209,26 @@
 
         var DOC_LABELS = {
             '0': 'هوية', '1': 'جواز سفر', '2': 'رخصة قيادة',
-            '3': 'شهادة ميلاد', '4': 'شهادة تعيين'
+            '3': 'شهادة ميلاد', '4': 'شهادة تعيين', '5': 'كتاب ضمان اجتماعي',
+            '6': 'كشف راتب', '7': 'شهادة عسكرية', '8': 'صورة شخصية', '9': 'أخرى'
         };
+
+        function getDocLabel(data) {
+            if (!data || !data.document) return 'مستند';
+            var type = data.document.type || '9';
+            var side = data.document.id_side || '';
+            if (type === '0' && side === 'front') return 'وجه هوية';
+            if (type === '0' && side === 'back') return 'ظهر هوية';
+            return DOC_LABELS[type] || 'مستند';
+        }
 
         var FIELD_LABELS = {
             name: 'الاسم', id_number: 'الرقم الوطني', birth_date: 'تاريخ الميلاد',
             sex: 'الجنس', birth_place: 'مكان الولادة', nationality_text: 'الجنسية',
             mother_name: 'اسم الأم', address: 'العنوان', name_en: 'الاسم (إنجليزي)',
             job_number: 'الرقم الوظيفي', rank: 'الرتبة', employer_name: 'جهة العمل',
+            ss_salary: 'راتب الضمان', ss_number: 'رقم اشتراك الضمان',
+            is_social_security: 'مشترك بالضمان',
             doc_type: 'نوع الوثيقة', doc_number: 'رقم الوثيقة'
         };
 
@@ -294,12 +307,9 @@
             }
         });
 
-        // Apply extracted data
-        $('#scanApplyBtn').on('click', function() {
-            applyExtractedFields();
-            goToStep(1);
-            $('#scanContinueBtn').show();
-        });
+        // Auto-apply is now triggered per-scan; keep button as explicit re-apply
+        $('#scanApplyBtn').hide();
+        $('#scanContinueBtn').show();
 
         // Add more docs
         $('#scanAddMoreBtn').on('click', function() {
@@ -361,7 +371,7 @@
                         var src = (resp.extraction && resp.extraction.meta) ? resp.extraction.meta.source : '?';
                         console.log('[Scan] ' + file.name + ' → ' + src);
                         var ext = resp.extraction || {};
-                        var docLabel = DOC_LABELS[ext.document && ext.document.type] || 'مستند';
+                        var docLabel = getDocLabel(ext);
 
                         $c.removeClass('processing').addClass('success');
                         $c.find('.scan-card-spinner').remove();
@@ -373,15 +383,20 @@
                             SO.scanFileIds.push(resp.file.id);
                             $c.attr('data-image-id', resp.file.id);
                             var detectedType = (ext.document && ext.document.type) || '9';
+                            var idSide = (ext.document && ext.document.id_side) || '';
                             SO.scanFileTypes[resp.file.id] = {
                                 type: detectedType,
+                                idSide: idSide,
                                 thumb: (resp.file && resp.file.thumb) || thumbSrc,
-                                fileName: file.name
+                                fileName: file.name,
+                                docNumber: (ext.document && ext.document.number) || ''
                             };
                         }
 
                         mergeExtractionData(ext);
+                        $c.attr('data-scan-idx', SO.scanData.length - 1);
                         renderScanResults();
+                        applyExtractedFields();
 
                         if (!isPdf) URL.revokeObjectURL(thumbSrc);
                         if (resp.file && resp.file.thumb) {
@@ -461,64 +476,138 @@
             return merged;
         }
 
-        function renderScanResults() {
-            var merged = getMergedFields();
+        function renderFieldsHtml(data) {
+            var html = '';
+            var count = 0;
+            if (data.customer) {
+                var sexVal = data.customer.sex;
+                var sexDisplay = (sexVal !== undefined && sexVal !== null && sexVal !== '') ? (sexVal == 1 ? 'أنثى' : 'ذكر') : '';
+                var pairs = [
+                    ['name', data.customer.name], ['id_number', data.customer.id_number],
+                    ['birth_date', data.customer.birth_date], ['sex', sexDisplay],
+                    ['birth_place', data.customer.birth_place], ['nationality_text', data.customer.nationality_text],
+                    ['mother_name', data.customer.mother_name], ['name_en', data.customer.name_en],
+                ];
+                for (var i = 0; i < pairs.length; i++) {
+                    var k = pairs[i][0], v = pairs[i][1];
+                    if (v !== undefined && v !== null && v !== '') {
+                        var isAr = /[\u0600-\u06FF]/.test(v);
+                        html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
+                            '<span class="scan-field-label">' + (FIELD_LABELS[k] || k) + '</span>' +
+                            '<span class="scan-field-value' + (isAr ? ' rtl-val' : '') + '">' + escapeHtml(v) + '</span></div>';
+                        count++;
+                    }
+                }
+            }
+            var j = data.job || {};
+            var jobPairs = [
+                ['employer_name', j.employer_name], ['ss_number', j.ss_number],
+                ['ss_salary', j.ss_salary ? j.ss_salary + ' د.أ' : ''],
+                ['job_number', j.job_number], ['rank', j.rank],
+            ];
+            for (var x = 0; x < jobPairs.length; x++) {
+                if (jobPairs[x][1]) {
+                    html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
+                        '<span class="scan-field-label">' + (FIELD_LABELS[jobPairs[x][0]] || jobPairs[x][0]) + '</span>' +
+                        '<span class="scan-field-value rtl-val">' + escapeHtml(jobPairs[x][1]) + '</span></div>';
+                    count++;
+                }
+            }
+            if (j.is_social_security) {
+                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle" style="color:#16A34A"></i></span>' +
+                    '<span class="scan-field-label">' + FIELD_LABELS.is_social_security + '</span>' +
+                    '<span class="scan-field-value" style="color:#16A34A;font-weight:600">نعم</span></div>';
+                count++;
+            }
+            if (j.ss_multiple_employers && j.ss_multiple_employers.length > 1) {
+                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-exclamation-triangle" style="color:#D97706"></i></span>' +
+                    '<span class="scan-field-label">تنبيه</span>' +
+                    '<span class="scan-field-value rtl-val" style="color:#D97706">العميل يعمل في ' + j.ss_multiple_employers.length + ' منشآت حالياً</span></div>';
+                count++;
+            }
+            if (data.document && !Array.isArray(data.document) && data.document.type !== undefined && data.document.type !== '') {
+                var docLabel = getDocLabel(data);
+                var docNum = data.document.number || data.document.certificate_number || '';
+                if (docNum) {
+                    html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-file-o"></i></span>' +
+                        '<span class="scan-field-label">' + docLabel + '</span>' +
+                        '<span class="scan-field-value">' + escapeHtml(docNum) + '</span></div>';
+                    count++;
+                }
+            }
+            return { html: html, count: count };
+        }
+
+        function renderScanResults(filterIdx) {
+            var showAll = (filterIdx === undefined || filterIdx === -1);
             var html = '';
             var fieldCount = 0;
 
-            // Customer fields
-            var sexVal = merged.customer.sex;
-            var sexDisplay = (sexVal !== undefined && sexVal !== null && sexVal !== '') ? (sexVal == 1 ? 'أنثى' : 'ذكر') : '';
-            var custFields = [
-                ['name', merged.customer.name],
-                ['id_number', merged.customer.id_number],
-                ['birth_date', merged.customer.birth_date],
-                ['sex', sexDisplay],
-                ['birth_place', merged.customer.birth_place],
-                ['nationality_text', merged.customer.nationality_text],
-                ['mother_name', merged.customer.mother_name],
-                ['name_en', merged.customer.name_en],
-            ];
-            for (var i = 0; i < custFields.length; i++) {
-                var key = custFields[i][0], val = custFields[i][1];
-                if (val !== undefined && val !== null && val !== '') {
-                    var isArabic = /[\u0600-\u06FF]/.test(val);
-                    html += '<div class="scan-field">' +
-                        '<span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
-                        '<span class="scan-field-label">' + (FIELD_LABELS[key] || key) + '</span>' +
-                        '<span class="scan-field-value' + (isArabic ? ' rtl-val' : '') + '">' + escapeHtml(val) + '</span>' +
-                        '</div>';
-                    fieldCount++;
+            // Document navigation tabs
+            if (SO.scanData.length > 1) {
+                html += '<div class="scan-doc-tabs">';
+                html += '<button class="scan-doc-tab' + (showAll ? ' active' : '') + '" data-filter="-1">الكل (' + SO.scanData.length + ')</button>';
+                for (var t = 0; t < SO.scanData.length; t++) {
+                    var d = SO.scanData[t];
+                    var tLabel = getDocLabel(d);
+                    var isActive = (!showAll && filterIdx === t);
+                    html += '<button class="scan-doc-tab' + (isActive ? ' active' : '') + '" data-filter="' + t + '">' + tLabel + '</button>';
+                }
+                html += '</div>';
+            }
+
+            if (showAll) {
+                var merged = getMergedFields();
+                var r = renderFieldsHtml(merged);
+                html += r.html;
+                fieldCount = r.count;
+                for (var dm = 0; dm < merged.document.length; dm++) {
+                    var doc = merged.document[dm];
+                    if (doc.number) {
+                        html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-file-o"></i></span>' +
+                            '<span class="scan-field-label">' + (doc.type_label || 'مستند') + '</span>' +
+                            '<span class="scan-field-value">' + escapeHtml(doc.number) + '</span></div>';
+                        fieldCount++;
+                    }
+                }
+            } else {
+                var single = SO.scanData[filterIdx];
+                if (single) {
+                    var r2 = renderFieldsHtml(single);
+                    html += r2.html;
+                    fieldCount = r2.count;
                 }
             }
 
-            // Job fields
-            if (merged.job.employer_name) {
-                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
-                    '<span class="scan-field-label">' + FIELD_LABELS.employer_name + '</span>' +
-                    '<span class="scan-field-value rtl-val">' + escapeHtml(merged.job.employer_name) + '</span></div>';
-                fieldCount++;
-            }
-            if (merged.job.job_number) {
-                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-check-circle"></i></span>' +
-                    '<span class="scan-field-label">' + FIELD_LABELS.job_number + '</span>' +
-                    '<span class="scan-field-value">' + escapeHtml(merged.job.job_number) + '</span></div>';
-                fieldCount++;
-            }
-
-            // Document records
-            for (var d = 0; d < merged.document.length; d++) {
-                var doc = merged.document[d];
-                html += '<div class="scan-field"><span class="scan-field-icon"><i class="fa fa-file-o"></i></span>' +
-                    '<span class="scan-field-label">' + (doc.type_label || 'مستند') + '</span>' +
-                    '<span class="scan-field-value">' + escapeHtml(doc.number) + '</span></div>';
-                fieldCount++;
+            if (fieldCount === 0 && !showAll) {
+                html += '<div class="scan-field" style="justify-content:center;color:#94a3b8"><i class="fa fa-info-circle"></i> لم يتم استخراج حقول من هذه الوثيقة</div>';
             }
 
             $('#scanFieldsList').html(html);
-            $('#scanResultsStatus').text('تم استخراج ' + fieldCount + ' حقل من ' + SO.scanData.length + ' وثيقة');
+            var statusText = showAll
+                ? 'تم استخراج ' + fieldCount + ' حقل من ' + SO.scanData.length + ' وثيقة'
+                : getDocLabel(SO.scanData[filterIdx]) + ' — ' + fieldCount + ' حقل';
+            $('#scanResultsStatus').text(statusText);
             $results.show();
+
+            // Highlight corresponding gallery card
+            $gallery.find('.scan-card').removeClass('scan-card-selected');
+            if (!showAll) {
+                $gallery.find('.scan-card[data-scan-idx="' + filterIdx + '"]').addClass('scan-card-selected');
+            }
         }
+
+        // Document tab click
+        $(document).on('click', '.scan-doc-tab', function() {
+            var idx = parseInt($(this).data('filter'));
+            renderScanResults(idx);
+        });
+
+        // Gallery card click → show that document's fields
+        $(document).on('click', '.scan-card.success .scan-card-body', function() {
+            var idx = parseInt($(this).closest('.scan-card').attr('data-scan-idx'));
+            if (!isNaN(idx)) renderScanResults(idx);
+        });
 
         function applyExtractedFields() {
             var merged = getMergedFields();
@@ -556,6 +645,38 @@
                 matchJobByName(merged.job.employer_name);
             }
 
+            // Social security fields
+            if (merged.job.is_social_security) {
+                var $ssSel = $('#customers-is_social_security');
+                if ($ssSel.length) {
+                    $ssSel.val('1').trigger('change');
+                }
+            }
+            if (merged.job.ss_number) {
+                var $ssNum = $('#customers-social_security_number');
+                if ($ssNum.length && !$ssNum.val()) {
+                    $ssNum.val(merged.job.ss_number).trigger('change');
+                }
+            }
+            if (merged.job.ss_salary) {
+                var $totalSalary = $('#customers-total_salary');
+                if ($totalSalary.length && !$totalSalary.val()) {
+                    $totalSalary.val(merged.job.ss_salary).trigger('change');
+                }
+            }
+
+            // Set last job query date to today
+            if (merged.job.employer_name || merged.job.is_social_security) {
+                var $queryDate = $('#customers-last_job_query_date');
+                if ($queryDate.length && !$queryDate.val()) {
+                    var today = new Date().toISOString().split('T')[0];
+                    $queryDate.val(today);
+                    if ($queryDate[0] && $queryDate[0]._flatpickr) {
+                        $queryDate[0]._flatpickr.setDate(today);
+                    }
+                }
+            }
+
             // Document records — fill first available CustomersDocument row
             for (var d = 0; d < merged.document.length; d++) {
                 var doc = merged.document[d];
@@ -583,12 +704,11 @@
         }
 
         function matchJobByName(name) {
-            // Search for job in the AJAX Select2
             var $jobSel = $('#customers-job_title');
-            if (!$jobSel.length) return;
+            if (!$jobSel.length || !name) return;
 
             $.ajax({
-                url: window.soConfig.searchListUrl,
+                url: window.soConfig.searchListUrl || '/jobs/jobs/search-list',
                 data: { q: name },
                 dataType: 'json',
                 success: function(data) {
@@ -596,6 +716,22 @@
                         var match = data.results[0];
                         var newOption = new Option(match.text, match.id, true, true);
                         $jobSel.append(newOption).trigger('change');
+                    } else {
+                        showToast(
+                            '<i class="fa fa-exclamation-triangle"></i> المنشأة "' + escapeHtml(name) + '" غير معرّفة على النظام — يرجى إضافتها من قسم الوظائف',
+                            'warning',
+                            8000
+                        );
+                        var $wrapper = $jobSel.closest('.form-group');
+                        if ($wrapper.length && !$wrapper.find('.job-not-found-hint').length) {
+                            $wrapper.append(
+                                '<div class="job-not-found-hint" style="color:#B45309;font-size:12px;margin-top:4px">' +
+                                '<i class="fa fa-exclamation-triangle"></i> ' +
+                                '"' + escapeHtml(name) + '" غير معرّفة — ' +
+                                '<a href="/jobs/jobs/create" target="_blank" style="color:#1D4ED8;text-decoration:underline">' +
+                                'أضفها من قسم الوظائف</a></div>'
+                            );
+                        }
                     }
                 }
             });
@@ -1244,7 +1380,7 @@
         restoreFormData();
 
         $form.on('change input', 'input, select, textarea', function() {
-            if (this.type === 'file') return;
+            if (this.type === 'file' || SO.resetting) return;
             clearTimeout(SO.saveTimer);
             SO.saveTimer = setTimeout(saveFormData, 400);
         });
@@ -1259,11 +1395,47 @@
         $(document).on('click', '.so-reset-btn', function() {
             soModal({
                 title: 'إعادة تعيين النموذج',
-                body: '<p style="font-size:14px;color:#991b1b;text-align:right"><i class="fa fa-exclamation-triangle"></i> هل أنت متأكد من إعادة تعيين جميع الحقول؟<br>سيتم حذف جميع البيانات المدخلة.</p>',
+                body: '<p style="font-size:14px;color:#991b1b;text-align:right"><i class="fa fa-exclamation-triangle"></i> هل أنت متأكد من إعادة تعيين جميع الحقول؟<br>سيتم حذف جميع البيانات المدخلة والوثائق المرفوعة.</p>',
                 confirmText: 'نعم، إعادة التعيين',
                 confirmClass: 'so-btn-danger',
                 onConfirm: function($m, closeFn) {
                     closeFn();
+                    SO.resetting = true;
+                    clearTimeout(SO.saveTimer);
+
+                    // Delete uploaded scan files from server
+                    var deleteUrl = (window.smConfig && window.smConfig.deleteUrl) || '/customers/smart-media/delete';
+                    for (var i = 0; i < SO.scanFileIds.length; i++) {
+                        $.post(deleteUrl, { image_id: SO.scanFileIds[i] });
+                    }
+
+                    // Delete hub files from server
+                    $('.sm-gallery .sm-card').each(function() {
+                        var imgId = $(this).data('image-id');
+                        if (imgId) $.post(deleteUrl, { image_id: imgId });
+                    });
+
+                    // Reset scan state
+                    SO.scanData = [];
+                    SO.scanFileIds = [];
+                    SO.scanFileTypes = {};
+
+                    // Clear scan gallery UI
+                    $('#scanGallery').empty();
+                    $('#scanResults').hide();
+                    $('#scanFieldsList').empty();
+                    $('#scanResultsStatus').text('');
+                    $('#scanApplyBtn').hide();
+                    $('#scanContinueBtn').show();
+                    $('#scanSkipBtn').show();
+                    $('#scanFileIdsInput').val('');
+
+                    // Clear hub gallery UI
+                    $('.sm-gallery').empty();
+                    $form.find('input[name="SmartMedia[]"]').remove();
+                    $form.find('input[name^="SmartMedia["]').remove();
+
+                    // Clear form data and local storage FIRST
                     clearFormData();
                     $form[0].reset();
                     $form.find('select').each(function() {
@@ -1271,12 +1443,23 @@
                         if ($(this).data('select2')) $(this).trigger('change.select2');
                     });
                     $form.find('.form-group').removeClass('has-error has-success so-warn');
-                    $form.find('.so-warn-hint, .so-duplicate-warn').remove();
+                    $form.find('.so-warn-hint, .so-duplicate-warn, .job-not-found-hint').remove();
+                    $form.find('.ty-error-summary').remove();
                     $('#customers-is_social_security').trigger('change');
                     $('#customers-has_social_security_salary').trigger('change');
                     $('#customers-do_have_any_property').trigger('change');
-                    goToStep(0);
+
+                    // Reset ALL step indicators to default (remove completed class)
+                    $('.so-step').removeClass('completed active');
+                    SO.currentStep = 0;
+                    showStep(0);
                     triggerRiskCalc();
+
+                    // Clear storage again after all triggers settled
+                    clearTimeout(SO.saveTimer);
+                    clearFormData();
+                    SO.resetting = false;
+
                     showToast('تم إعادة تعيين النموذج بالكامل', 'warning');
                 }
             });
@@ -1289,6 +1472,7 @@
             var $form = $('#smart-onboarding-form');
             var data = {};
             var SKIP = {'_csrf-backend':1, save_decision:1, risk_assessment:1, decision_notes:1, customer_id_for_media:1};
+            var hasValue = false;
 
             $form.find('input, select, textarea').each(function() {
                 var name = this.name;
@@ -1297,12 +1481,17 @@
 
                 if (this.type === 'checkbox') {
                     data[name] = this.checked ? this.value : '';
+                    if (this.checked) hasValue = true;
                 } else if (this.type === 'radio') {
-                    if (this.checked) data[name] = this.value;
+                    if (this.checked) { data[name] = this.value; hasValue = true; }
                 } else {
-                    data[name] = $(this).val();
+                    var v = $(this).val();
+                    data[name] = v;
+                    if (v && v !== '' && v !== '0' && v !== '0.00') hasValue = true;
                 }
             });
+
+            if (!hasValue && !SO.scanFileIds.length) return;
 
             data['__so_step'] = SO.currentStep;
             data['__so_ts'] = Date.now();
@@ -1342,20 +1531,26 @@
             Object.keys(data).forEach(function(name) {
                 if (name.charAt(0) === '_' && name.charAt(1) === '_') return;
                 var val = data[name];
-                if (val === null || val === undefined) return;
+                if (val === null || val === undefined || val === '') return;
 
                 var els = elMap[name];
                 if (!els || !els.length) return;
 
                 var el = els[0];
+                var currentVal = $(el).val() || '';
                 if (el.type === 'checkbox') {
-                    el.checked = !!val && val !== '';
+                    var wasCk = el.checked;
+                    el.checked = !!val;
+                    if (el.checked !== wasCk) restored++;
                 } else if (el.type === 'radio') {
                     els.forEach(function(r) { r.checked = (r.value === val); });
+                    restored++;
                 } else {
-                    $(el).val(val);
+                    if (String(val) !== String(currentVal)) {
+                        $(el).val(val);
+                        restored++;
+                    }
                 }
-                restored++;
             });
 
             if (restored > 0) {
@@ -1369,6 +1564,13 @@
                     $('#customers-is_social_security').trigger('change');
                     $('#customers-has_social_security_salary').trigger('change');
                     $('#customers-do_have_any_property').trigger('change');
+
+                    setTimeout(function() {
+                        $form.find('.has-error').removeClass('has-error');
+                        $form.find('.help-block').html('');
+                        var $summary = $form.find('.error-summary');
+                        if ($summary.length) $summary.hide().find('ul').html('');
+                    }, 50);
                 }, 300);
 
                 var savedStep = parseInt(data['__so_step']) || 0;
@@ -1456,6 +1658,7 @@
         var $sel = $('#customers-job_title');
         var newOption = new Option(text, id, true, true);
         $sel.append(newOption).trigger('change');
+        $sel.closest('.form-group').find('.job-not-found-hint').remove();
         fetchJobInfo(id);
     }
 
@@ -1543,7 +1746,8 @@
         if (initial) fetchJobInfo(initial);
     });
 
-    function showToast(msg, type) {
+    function showToast(msg, type, duration) {
+        var ms = duration || 4000;
         var html = '<div class="so-inline-alert so-inline-alert-' + type + '" role="alert">' +
             '<i class="fa fa-info-circle"></i>' +
             '<span>' + msg + '</span>' +
@@ -1557,7 +1761,7 @@
         $('.so-inline-alerts').append($alert);
         
         $alert.find('.so-inline-alert-close').on('click', function() { $alert.fadeOut(200, function(){$(this).remove();}); });
-        setTimeout(function() { $alert.fadeOut(300, function(){$(this).remove();}); }, 4000);
+        setTimeout(function() { $alert.fadeOut(300, function(){$(this).remove();}); }, ms);
     }
 
     /* ══════════════════════════════════════════
@@ -1577,6 +1781,15 @@
             '6': 'كشف راتب', '7': 'شهادة تعيين عسكري', '8': 'صورة شخصية', '9': 'أخرى'
         };
 
+        // Collect shared doc number across all ID cards (front+back share same number)
+        var sharedIdDocNumber = '';
+        SO.scanFileIds.forEach(function(fid) {
+            var inf = SO.scanFileTypes[fid] || {};
+            if (inf.type === '0' && inf.docNumber) {
+                sharedIdDocNumber = inf.docNumber;
+            }
+        });
+
         SO.scanFileIds.forEach(function(fileId) {
             if (existingIds.indexOf(String(fileId)) !== -1) return;
             var info = SO.scanFileTypes[fileId] || {};
@@ -1584,6 +1797,11 @@
             var typeLabel = DOC_TYPES_MAP[typeCode] || 'أخرى';
             var thumb = info.thumb || '';
             var fileName = info.fileName || '';
+            var docNumber = info.docNumber || '';
+            // For ID cards: use shared doc number from any side
+            if (typeCode === '0' && !docNumber && sharedIdDocNumber) {
+                docNumber = sharedIdDocNumber;
+            }
 
             var optionsHtml = '';
             Object.keys(DOC_TYPES_MAP).forEach(function(k) {
@@ -1602,7 +1820,7 @@
                         '<div class="sm-card-name">' + escapeHtml(fileName) + '</div>' +
                         '<div class="sm-card-meta"><span>' + typeLabel + '</span></div>' +
                         '<select class="sm-type-select" data-image-id="' + fileId + '">' + optionsHtml + '</select>' +
-                        '<input type="text" class="sm-doc-number-input" placeholder="رقم المستند (اختياري)" value="">' +
+                        '<input type="text" class="sm-doc-number-input" placeholder="رقم المستند (اختياري)" value="' + escapeHtml(docNumber) + '">' +
                     '</div>' +
                 '</div>'
             );

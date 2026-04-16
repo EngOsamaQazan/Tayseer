@@ -20,13 +20,18 @@
       .html('<div class="lh-loader"><i class="fa fa-spinner"></i><span>جاري التحميل...</span></div>')
       .addClass('loading');
 
-    $.get(urls[tab], function (html) {
-      $panel.html(html).removeClass('loading').data('loaded', '1');
-      if (window._lhInitColResize) setTimeout(window._lhInitColResize, 300);
-    }).fail(function () {
-      $panel
-        .html('<div style="padding:40px;text-align:center;color:#EF4444"><i class="fa fa-exclamation-triangle"></i> حدث خطأ في التحميل</div>')
-        .removeClass('loading');
+    $.ajax({
+      url: urls[tab],
+      cache: false,
+      success: function (html) {
+        $panel.html(html).removeClass('loading').data('loaded', '1');
+        if (window._lhInitColResize) setTimeout(window._lhInitColResize, 300);
+      },
+      error: function () {
+        $panel
+          .html('<div style="padding:40px;text-align:center;color:#EF4444"><i class="fa fa-exclamation-triangle"></i> حدث خطأ في التحميل</div>')
+          .removeClass('loading');
+      }
     });
   }
 

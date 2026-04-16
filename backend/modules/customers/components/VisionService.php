@@ -145,8 +145,8 @@ class VisionService
             'label' => 'صورة شخصية',
             'strong_keywords' => [],
             'keywords' => [],
-            'negative_keywords' => [],
-            'label_keywords' => ['selfie', 'face', 'portrait', 'person', 'chin', 'forehead', 'jaw', 'neck', 'head', 'cheek', 'nose', 'eyebrow', 'facial hair', 'beard', 'moustache', 'hair'],
+            'negative_keywords' => ['بطاقة شخصية', 'id card', 'passport', 'ضمان', 'راتب'],
+            'label_keywords' => ['selfie', 'face', 'portrait', 'person', 'chin', 'forehead', 'jaw', 'neck', 'head', 'cheek', 'nose', 'eyebrow', 'facial hair', 'beard', 'moustache', 'hair', 'facial expression', 'headgear', 'scarf', 'shawl', 'wrinkle', 'throat', 'smile', 'lip', 'eye', 'skin', 'photograph', 'photo', 'headshot', 'clothing', 'sleeve', 'gesture', 'iris', 'eyelash', 'wrap', 'stole', 'turban', 'hijab', 'veil'],
             'min_text_length' => 0,
         ],
     ];
@@ -367,24 +367,32 @@ class VisionService
             }
 
             // Special: personal_photo detection
-            // If this is the personal_photo rule, boost score when:
-            // - Very little or no text extracted
-            // - Face-related labels are present
             if ($key === 'personal_photo') {
                 $faceLabels = 0;
+                $hasStrongFace = false;
                 foreach ($labels as $label) {
                     $ld = mb_strtolower($label['description']);
-                    if (in_array($ld, ['face', 'selfie', 'portrait', 'person', 'chin', 'forehead', 'jaw', 'neck', 'head', 'cheek', 'nose', 'eyebrow', 'facial hair', 'beard', 'moustache', 'hair', 'smile', 'man', 'woman', 'boy', 'girl', 'human'])) {
+                    if (in_array($ld, ['face', 'selfie', 'portrait', 'person', 'chin', 'forehead', 'jaw', 'neck', 'head', 'cheek', 'nose', 'eyebrow', 'facial hair', 'beard', 'moustache', 'hair', 'smile', 'man', 'woman', 'boy', 'girl', 'human', 'lip', 'eye', 'skin', 'photograph', 'photo', 'headshot', 'clothing', 'sleeve', 'gesture', 'wrinkle', 'eyelash', 'iris', 'facial expression', 'headgear', 'scarf', 'shawl', 'throat', 'wrap', 'stole', 'turban', 'hijab', 'veil'])) {
                         $faceLabels++;
                     }
+                    if (in_array($ld, ['selfie', 'portrait', 'headshot', 'facial expression'])) {
+                        $hasStrongFace = true;
+                    }
                 }
-                // If 3+ face labels and very little text → strong personal photo signal
-                if ($faceLabels >= 3 && $textLength < 30) {
-                    $score += 40;
+                // No document text keywords → strong personal photo signal
+                $hasDocKeywords = preg_match('/(?:بطاقة|هوية|جواز|رخصة|شهادة|ضمان|راتب|الرقم الوطني|Name|ID|Passport)/u', $text);
+                if ($faceLabels >= 3 && $textLength < 100 && !$hasDocKeywords) {
+                    $score += 50;
+                    $matchedKeywords[] = "face_labels:{$faceLabels},text_len:{$textLength},no_doc_kw";
+                } elseif ($faceLabels >= 2 && $textLength < 60 && !$hasDocKeywords) {
+                    $score += 35;
                     $matchedKeywords[] = "face_labels:{$faceLabels},text_len:{$textLength}";
-                } elseif ($faceLabels >= 2 && $textLength < 60) {
-                    $score += 20;
-                    $matchedKeywords[] = "face_labels:{$faceLabels},text_len:{$textLength}";
+                } elseif ($hasStrongFace && !$hasDocKeywords) {
+                    $score += 30;
+                    $matchedKeywords[] = "strong_face,text_len:{$textLength}";
+                } elseif ($faceLabels >= 4 && !$hasDocKeywords) {
+                    $score += 25;
+                    $matchedKeywords[] = "many_face_labels:{$faceLabels}";
                 }
             }
 
@@ -1336,11 +1344,7 @@ PROMPT;
         $result = self::buildEmptyResult();
         $typeLabels = self::getTypeLabels();
 
-        // ═══ PERF TEST: Gemini disabled — Vision OCR + regex only ═══
-        // To re-enable Gemini, restore the extractFromImage() block below.
-        $geminiFields = null;
-
-        /*  ── Gemini Vision (disabled for performance testing) ──
+        // ── Gemini Vision: direct AI reading from image ──
         $geminiFields = self::extractFromImage($imagePath);
 
         if ($geminiFields && is_array($geminiFields)) {
@@ -1353,20 +1357,20 @@ PROMPT;
             }
             $result['meta']['confidence_notes'][] = 'Gemini Vision — قراءة مباشرة من الصورة';
         }
-        */
-
-        $result['meta']['confidence_notes'][] = 'Gemini معطّل — وضع اختبار الأداء';
 
         $ocrResult = self::analyze($imagePath, ['DOCUMENT_TEXT_DETECTION', 'LABEL_DETECTION']);
 
-        if ($ocrResult['success'] && !empty($ocrResult['text'])) {
-            $result['meta']['ocr_text'] = $ocrResult['text'];
-            $result['meta']['classification'] = $ocrResult['classification'] ?? null;
+        $ocrClassification = $ocrResult['classification'] ?? null;
+        $ocrText = ($ocrResult['success'] && !empty($ocrResult['text'])) ? $ocrResult['text'] : '';
+
+        if ($ocrText) {
+            $result['meta']['ocr_text'] = $ocrText;
+            $result['meta']['classification'] = $ocrClassification;
 
             $ocrExtraction = self::extractDocumentFields(
-                $ocrResult['text'],
+                $ocrText,
                 $ocrResult['labels'] ?? [],
-                $ocrResult['classification'] ?? null
+                $ocrClassification
             );
 
             foreach (['customer', 'document', 'job'] as $section) {
@@ -1380,7 +1384,28 @@ PROMPT;
             $result['meta']['source'] = $ocrExtraction['meta']['source'] ?? 'ocr+regex';
         }
 
-        self::finalizeResult($result, null, null);
+        // Pass classification even when text is empty (e.g., personal photos)
+        self::finalizeResult($result, $ocrText ?: null, $ocrClassification);
+
+        // ID back side → keep only document_number, strip personal fields
+        if (($result['document']['id_side'] ?? '') === 'back') {
+            $personalKeys = ['name', 'name_en', 'id_number', 'birth_date', 'sex',
+                             'birth_place', 'nationality', 'nationality_text', 'mother_name', 'address'];
+            foreach ($personalKeys as $pk) {
+                unset($result['customer'][$pk]);
+            }
+        }
+
+        // Non-ID docs → strip personal fields (must come from ID/passport only)
+        $docType = $result['document']['type'] ?? '';
+        if (in_array($docType, ['5', '6', '8', '9'])) {
+            $personalKeys = ['name', 'name_en', 'id_number', 'birth_date', 'sex',
+                             'birth_place', 'nationality', 'nationality_text', 'mother_name', 'address'];
+            foreach ($personalKeys as $pk) {
+                unset($result['customer'][$pk]);
+            }
+        }
+
         return $result;
     }
 
@@ -1398,10 +1423,7 @@ PROMPT;
         $result = self::buildEmptyResult();
         $typeLabels = self::getTypeLabels();
 
-        // ═══ PERF TEST: Gemini text extraction disabled ═══
-        $geminiFields = null;
-
-        /*  ── Gemini text extraction (disabled for performance testing) ──
+        // ── Gemini text extraction ──
         $geminiFields = self::extractWithGemini($ocrText, $classification);
 
         if ($geminiFields && is_array($geminiFields)) {
@@ -1414,7 +1436,6 @@ PROMPT;
             }
             $result['meta']['confidence_notes'][] = 'Gemini AI text extraction';
         }
-        */
 
         // ═══ Direct: MRZ + Regex extraction ═══
         $mrzFields = self::parseMRZ($ocrText);
@@ -1429,6 +1450,11 @@ PROMPT;
         $textFields = self::parseStructuredText($ocrText);
         self::mergeFields($result, $textFields, false);
 
+        // Propagate ID side detection to result
+        if (isset($textFields['_id_side'])) {
+            $result['document']['id_side'] = $textFields['_id_side'];
+        }
+
         if (empty($result['meta']['issuing_body'])) {
             $body = self::detectIssuingBody($ocrText);
             if ($body) {
@@ -1440,6 +1466,26 @@ PROMPT;
         }
 
         self::finalizeResult($result, $ocrText, $classification);
+
+        // ID back side → keep only document_number, strip personal fields
+        if (($result['document']['id_side'] ?? '') === 'back') {
+            $personalKeys = ['name', 'name_en', 'id_number', 'birth_date', 'sex',
+                             'birth_place', 'nationality', 'nationality_text', 'mother_name', 'address'];
+            foreach ($personalKeys as $pk) {
+                unset($result['customer'][$pk]);
+            }
+        }
+
+        // Non-ID docs → strip personal fields (must come from ID/passport only)
+        $docType = $result['document']['type'] ?? '';
+        if (in_array($docType, ['5', '6', '8', '9'])) {
+            $personalKeys = ['name', 'name_en', 'id_number', 'birth_date', 'sex',
+                             'birth_place', 'nationality', 'nationality_text', 'mother_name', 'address'];
+            foreach ($personalKeys as $pk) {
+                unset($result['customer'][$pk]);
+            }
+        }
+
         return $result;
     }
 
@@ -1464,8 +1510,10 @@ PROMPT;
     private static function getTypeLabels(): array
     {
         return [
-            '0' => 'هوية', '1' => 'جواز سفر', '2' => 'رخصة قيادة',
-            '3' => 'شهادة ميلاد', '4' => 'شهادة تعيين',
+            '0' => 'هوية وطنية', '1' => 'جواز سفر', '2' => 'رخصة قيادة',
+            '3' => 'شهادة ميلاد', '4' => 'شهادة تعيين', '5' => 'كتاب ضمان اجتماعي',
+            '6' => 'كشف راتب', '7' => 'شهادة تعيين عسكري', '8' => 'صورة شخصية',
+            '9' => 'أخرى',
         ];
     }
 
@@ -1487,10 +1535,10 @@ PROMPT;
         if (!isset($result['document']['type'])) {
             if (!empty($result['meta']['issuing_body'])) {
                 $result['document']['type'] = self::DOC_TYPE_MILITARY;
-            } elseif ($ocrText) {
-                $result['document']['type'] = self::detectDocumentType($ocrText, $classification);
+            } elseif ($ocrText || $classification) {
+                $result['document']['type'] = self::detectDocumentType($ocrText ?? '', $classification);
             } else {
-                $result['document']['type'] = 0;
+                $result['document']['type'] = '9';
             }
         }
 
@@ -1628,9 +1676,6 @@ PROMPT;
     {
         $fields = [];
 
-        // Build two views of the text:
-        //   $lines — array, preserving line breaks for line-by-line fallback
-        //   $flat  — single line, tabs/newlines collapsed to spaces
         $text  = str_replace("\r\n", "\n", $text);
         $text  = str_replace("\r", "\n", $text);
         $lines = array_values(array_filter(
@@ -1638,6 +1683,31 @@ PROMPT;
             function ($l) { return $l !== ''; }
         ));
         $flat = preg_replace('/\s+/u', ' ', implode(' ', $lines));
+
+        // ── Jordanian ID side detection ──
+        $isIdBack = (
+            (mb_strpos($flat, 'Expiry') !== false || mb_strpos($flat, 'الصلاحي') !== false) &&
+            (mb_strpos($flat, 'مكان الا') !== false || mb_strpos($flat, 'فصيلة') !== false || mb_strpos($flat, 'ID no') !== false)
+        ) && mb_strpos($flat, 'الاسم') === false && mb_strpos($flat, 'Name:') === false;
+
+        if ($isIdBack) {
+            $fields['_id_side'] = 'back';
+            $fields['document_type'] = self::DOC_TYPE_ID;
+
+            // Back side has ID no. and MRZ — extract those, but NOT name/birth/sex
+            if (preg_match('/ID\s*(?:no\.?|No\.?)\s*[:\-.]?\s*([A-Z0-9]{5,})/i', $flat, $m)) {
+                $fields['document_number'] = strtoupper($m[1]);
+            }
+            // Fallback for card number pattern
+            if (!isset($fields['document_number']) && preg_match('/\b([A-Z]{3}\d{5})\b/', $flat, $m)) {
+                $fields['document_number'] = $m[1];
+            }
+
+            return $fields;
+        }
+
+        $fields['_id_side'] = (mb_strpos($flat, 'بطاقة شخصية') !== false || mb_strpos($flat, 'ID Card') !== false)
+            ? 'front' : 'unknown';
 
         // Labels that signal "stop capturing" — used to trim greedy captures
         $stopLabels = 'الرقم|الجنس|تاريخ|مكان|اسم\s*الا|رقم|السجل|الجنسي|Name|National|Sex|Gender|Date|Birth|Place|No\.';
@@ -1877,6 +1947,270 @@ PROMPT;
             }
         }
 
+        // ── Social Security Document — extract current employer ──
+        $ssFields = self::parseSocialSecurityDocument($flat, $lines);
+        if ($ssFields) {
+            foreach ($ssFields as $k => $v) {
+                if ($v !== null && $v !== '' && !isset($fields[$k])) {
+                    $fields[$k] = $v;
+                }
+            }
+        }
+
+        return $fields;
+    }
+
+    /**
+     * Parse social security (ضمان اجتماعي) documents.
+     * Identifies the current employer from the subscription periods table:
+     * the row where "تاريخ الإيقاف" (stop date) and "سبب الإيقاف" (stop reason) are empty.
+     * Also extracts salary, national number, and personal info from the header.
+     *
+     * @return array|null  Extracted fields or null if not a social security document
+     */
+    private static function parseSocialSecurityDocument(string $flat, array $lines): ?array
+    {
+        $isSS = (
+            mb_strpos($flat, 'ضمان') !== false ||
+            mb_strpos($flat, 'الضمان') !== false ||
+            mb_strpos($flat, 'Social Security') !== false ||
+            mb_strpos(mb_strtolower($flat), 'social security') !== false
+        ) && (
+            mb_strpos($flat, 'فترات') !== false ||
+            mb_strpos($flat, 'اشتراك') !== false ||
+            mb_strpos($flat, 'المنشأة') !== false ||
+            mb_strpos($flat, 'المنشاة') !== false ||
+            mb_strpos($flat, 'منشأة') !== false ||
+            mb_strpos($flat, 'منشاة') !== false ||
+            mb_strpos($flat, 'المنش') !== false
+        );
+
+        if (!$isSS) return null;
+
+        $fields = [];
+        $fields['document_type'] = '5';
+
+        // ── Extract SS number (رقم تشفير / رقم التأمين) from header ──
+        if (preg_match('/رقم\s*(?:تش[فق]ير|التأمين|الت[اأ]مين|التشفير)\s*[:\-.]?\s*(\d{5,})/u', $flat, $m)) {
+            $fields['ss_number'] = $m[1];
+        }
+        if (!isset($fields['ss_number']) && preg_match('/(?:تشفير|تأمين|التأمين)\s*[:\-.]?\s*(\d{5,})/u', $flat, $m)) {
+            $fields['ss_number'] = $m[1];
+        }
+
+        // "راتب الخضوع" — subject salary from header
+        if (preg_match('/راتب\s*الخضوع\s*[:\-.]?\s*(\d+(?:\.\d+)?)/u', $flat, $m)) {
+            $fields['ss_base_salary'] = $m[1];
+        }
+
+        // ── Strategy 1: "المنشأة الحالية" label in header ──
+        if (preg_match('/المنش[اأ][ةه]\s*الحالي[ةه]\s*[:\-.]?\s*([\p{Arabic}][\p{Arabic}\s\.\-\(\)]{3,})/u', $flat, $m)) {
+            $employer = trim(preg_replace('/\s+/u', ' ', $m[1]));
+            $employer = preg_replace('/\s*(?:المعلومات|فترات|الرواتب|كشف|تاريخ|الراتب|الرقم|الجنس|عدد).*$/u', '', $employer);
+            if (mb_strlen(trim($employer)) >= 3) {
+                $fields['employer_name'] = trim($employer);
+            }
+        }
+
+        // ── Parse subscription periods table ──
+        $activeEmployers = [];
+        $activeSalaries = [];
+
+        $periodLines = [];
+        $inPeriods = false;
+        foreach ($lines as $i => $line) {
+            if (preg_match('/فترات\s*الا[شس]تراك/u', $line)) {
+                $inPeriods = true;
+                continue;
+            }
+            if ($inPeriods && preg_match('/الرواتب\s*المالي[ةه]/u', $line)) {
+                break;
+            }
+            if ($inPeriods) {
+                $periodLines[] = $line;
+            }
+        }
+
+        $periodText = implode(' ', $periodLines);
+
+        // Strategy 2a: date + salary + rest (original pattern)
+        preg_match_all('/(\d{2}\/\d{2}\/\d{4})\s+(\d+)\s+(.*?)(?=\d{2}\/\d{2}\/\d{4}|$)/su', $periodText, $periodMatches, PREG_SET_ORDER);
+
+        foreach ($periodMatches as $pm) {
+            $salary = $pm[2];
+            $rest = trim($pm[3]);
+
+            $hasStopDate = preg_match('/\d{2}\/\d{2}\/\d{4}/', $rest);
+            $hasStopReason = preg_match('/استقال|فصل|انته|إنها|تقاعد|وفا/u', $rest);
+
+            if (!$hasStopDate && !$hasStopReason) {
+                if (preg_match('/([\p{Arabic}][\p{Arabic}\s\.\-\(\)]{3,})/u', $rest, $estMatch)) {
+                    $estName = trim(preg_replace('/\s+/u', ' ', $estMatch[1]));
+                    $estName = preg_replace('/\s*\d+\s*$/u', '', $estName);
+                    $estName = preg_replace('/\s*(?:عدد|تسلسل|فترات|الرواتب).*$/u', '', $estName);
+                    if (mb_strlen($estName) >= 3) {
+                        $activeEmployers[] = $estName;
+                        $activeSalaries[] = $salary;
+                    }
+                }
+            }
+        }
+
+        // Strategy 2b: find Arabic company names near establishment numbers (8+ digits)
+        if (empty($activeEmployers)) {
+            $estPattern = '/(\d{7,})\s+([\p{Arabic}][\p{Arabic}\s\.\-\(\)\/]{3,})/u';
+            if (preg_match_all($estPattern, $periodText, $estMatches, PREG_SET_ORDER)) {
+                foreach ($estMatches as $em) {
+                    $estName = trim(preg_replace('/\s+/u', ' ', $em[2]));
+                    $estName = preg_replace('/\s*(?:عدد|تسلسل|فترات|الرواتب).*$/u', '', $estName);
+                    if (mb_strlen($estName) >= 3) {
+                        $activeEmployers[] = $estName;
+                    }
+                }
+            }
+        }
+
+        // Strategy 2c: look for known business prefixes anywhere in period text
+        if (empty($activeEmployers) && $periodText) {
+            $bizPattern = '/((?:مؤسسة|شركة|مستشفى|جامعة|مدرسة|مصنع|جمعية|بنك|مركز|هيئة)\s+[\p{Arabic}\s\.\-\(\)\/]{3,})/u';
+            if (preg_match_all($bizPattern, $periodText, $bizMatches)) {
+                foreach ($bizMatches[1] as $biz) {
+                    $biz = trim(preg_replace('/\s+/u', ' ', $biz));
+                    $biz = preg_replace('/\s*\d+\s*$/u', '', $biz);
+                    $biz = preg_replace('/\s*(?:عدد|تسلسل|فترات|الرواتب).*$/u', '', $biz);
+                    if (mb_strlen($biz) >= 5) {
+                        $activeEmployers[] = $biz;
+                    }
+                }
+            }
+        }
+
+        if (empty($activeEmployers) && !empty($fields['employer_name'])) {
+            $activeEmployers[] = $fields['employer_name'];
+        }
+
+        if (!empty($activeEmployers)) {
+            $fields['employer_name'] = $activeEmployers[0];
+            if (count($activeEmployers) > 1) {
+                $fields['ss_multiple_employers'] = $activeEmployers;
+                $fields['ss_multiple_salaries'] = $activeSalaries;
+            }
+        }
+
+        // ── Salary extraction from "الرواتب المالية" section ──
+        // OCR often splits table columns into separate lines. The salary section
+        // data may appear BEFORE or AFTER the "الرواتب المالية" heading.
+        // We search the entire text between "فترات الاشتراك" and the end for year/salary pairs.
+
+        // Collect all lines between "السنة"/"الأجر" headings and "عدد السجلات" or end
+        $salaryZoneLines = [];
+        $inSalaryZone = false;
+        foreach ($lines as $li => $line) {
+            // Start zone: either "الرواتب المالية" heading or "السنة"/"الأجر" column headers
+            if (preg_match('/الرواتب\s*المالي[ةه]/u', $line) ||
+                (preg_match('/السنة/u', $line) && $inPeriods)) {
+                $inSalaryZone = true;
+            }
+            // Also include lines after period section that have year-like numbers
+            if ($inPeriods && !$inSalaryZone && preg_match('/^\d{4}$/', trim($line))) {
+                $inSalaryZone = true;
+            }
+            if ($inSalaryZone) {
+                $salaryZoneLines[] = $line;
+                if (preg_match('/هذا\s*الكشف/u', $line)) break;
+            }
+        }
+
+        $latestSalary = null;
+        $latestYear = 0;
+
+        // Strategy A: year + salary on same line
+        foreach ($salaryZoneLines as $sl) {
+            if (preg_match('/(\d{4})\s+(\d+(?:\.\d+)?)/u', $sl, $salMatch)) {
+                $year = (int)$salMatch[1];
+                if ($year >= 2000 && $year <= 2030 && $year > $latestYear) {
+                    $latestYear = $year;
+                    $latestSalary = $salMatch[2];
+                }
+            }
+        }
+
+        // Strategy B: OCR puts year, salary, est_number on SEPARATE lines
+        // Scan for patterns: line with just a year (4 digits), preceded by salary, preceded by est_number
+        if (!$latestSalary) {
+            for ($li = 0; $li < count($salaryZoneLines); $li++) {
+                $val = trim($salaryZoneLines[$li]);
+                if (preg_match('/^(\d{4})$/', $val, $ym)) {
+                    $year = (int)$ym[1];
+                    if ($year >= 2000 && $year <= 2030) {
+                        // Look at previous 1-2 lines for the salary amount
+                        for ($back = 1; $back <= 2 && ($li - $back) >= 0; $back++) {
+                            $prev = trim($salaryZoneLines[$li - $back]);
+                            if (preg_match('/^(\d{2,5})$/', $prev)) {
+                                $sal = (int)$prev;
+                                if ($sal >= 10 && $sal <= 99999 && $year > $latestYear) {
+                                    $latestYear = $year;
+                                    $latestSalary = $prev;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Strategy C: also check period lines for salary data
+        if (!$latestSalary) {
+            $allNums = [];
+            foreach ($periodLines as $pl) {
+                if (preg_match('/^(\d{2,5})$/', trim($pl))) {
+                    $allNums[] = (int)trim($pl);
+                }
+            }
+            // The first number in period that looks like a salary (50-9999)
+            foreach ($allNums as $n) {
+                if ($n >= 50 && $n <= 9999) {
+                    $latestSalary = (string)$n;
+                    break;
+                }
+            }
+        }
+
+        // Extract employer name from salary zone lines if still missing
+        if (empty($fields['employer_name'])) {
+            $szFlat = implode(' ', $salaryZoneLines);
+            $bizPattern = '/((?:مؤسسة|شركة|مستشفى|جامعة|مدرسة|مصنع|جمعية|بنك|مركز|هيئة)\s+[\p{Arabic}\s\.\-\(\)\/]{3,})/u';
+            if (preg_match($bizPattern, $szFlat, $bm)) {
+                $estName = trim(preg_replace('/\s+/u', ' ', $bm[1]));
+                $estName = preg_replace('/\s*\d+\s*$/u', '', $estName);
+                if (mb_strlen($estName) >= 5) {
+                    $fields['employer_name'] = $estName;
+                }
+            }
+        }
+
+        // Latest salary from الرواتب المالية always takes priority
+        if ($latestSalary) {
+            $fields['ss_salary'] = $latestSalary;
+        } elseif (!empty($activeSalaries[0])) {
+            $fields['ss_salary'] = $activeSalaries[0];
+        }
+
+        // Strategy D: employer from entire flat text as last resort
+        if (empty($fields['employer_name'])) {
+            $bizPattern = '/((?:مؤسسة|شركة|مستشفى|جامعة|مدرسة|مصنع|جمعية|بنك|مركز|هيئة)\s+[\p{Arabic}\s\.\-\(\)\/]{3,})/u';
+            if (preg_match($bizPattern, $flat, $bm)) {
+                $estName = trim(preg_replace('/\s+/u', ' ', $bm[1]));
+                $estName = preg_replace('/\s*(?:\d+\s*$|عدد|تسلسل|فترات|الرواتب|كشف)/u', '', $estName);
+                if (mb_strlen(trim($estName)) >= 5) {
+                    $fields['employer_name'] = trim($estName);
+                }
+            }
+        }
+
+        $fields['is_social_security'] = '1';
+
         return $fields;
     }
 
@@ -1915,8 +2249,8 @@ PROMPT;
         // Use existing classification if available
         if ($classification && isset($classification['type'])) {
             $t = (string)$classification['type'];
-            if (in_array($t, ['0','1','2','3','4'])) return $t;
-            if ($t === '7') return self::DOC_TYPE_MILITARY; // military_certificate → شهادة تعيين
+            if (in_array($t, ['0','1','2','3','4','5','6','8','9'])) return $t;
+            if ($t === '7') return self::DOC_TYPE_MILITARY;
         }
 
         $textLower = mb_strtolower($text);
@@ -1939,8 +2273,36 @@ PROMPT;
         if (self::detectIssuingBody($text) !== null) {
             return self::DOC_TYPE_MILITARY;
         }
+        if (mb_strpos($textLower, 'ضمان') !== false && (mb_strpos($textLower, 'فترات') !== false || mb_strpos($textLower, 'اشتراك') !== false || mb_strpos($textLower, 'منشأة') !== false)) {
+            return '5';
+        }
+        if (mb_strpos($textLower, 'كشف راتب') !== false || mb_strpos($textLower, 'salary') !== false) {
+            return '6';
+        }
 
-        return '0'; // default to هوية
+        // Check classification result for personal_photo
+        if ($classification && isset($classification['type']) && $classification['type'] === '8') {
+            return '8';
+        }
+        if ($classification && isset($classification['key']) && $classification['key'] === 'personal_photo'
+            && ($classification['confidence'] ?? 0) >= 20) {
+            return '8';
+        }
+
+        // ID back side (has MRZ/Expiry but no "الاسم"/"ID Card"/"بطاقة شخصية")
+        if ((mb_strpos($textLower, 'expiry') !== false || mb_strpos($textLower, 'الصلاحي') !== false)
+            && (mb_strpos($textLower, 'id no') !== false || mb_strpos($textLower, 'فصيلة') !== false)
+            && mb_strpos($textLower, 'بطاقة شخصية') === false
+            && mb_strpos($textLower, 'id card') === false) {
+            return self::DOC_TYPE_ID;
+        }
+
+        // If text has strong ID indicators (national number + sufficient text)
+        if (preg_match('/\b\d{10}\b/', $text) && mb_strlen(trim($text)) > 40) {
+            return self::DOC_TYPE_ID;
+        }
+
+        return '9';
     }
 
     /**
@@ -1997,6 +2359,13 @@ PROMPT;
         $jobMap = [
             'military_number' => 'job_number',
             'rank' => 'rank',
+            'employer_name' => 'employer_name',
+            'ss_salary' => 'ss_salary',
+            'ss_base_salary' => 'ss_base_salary',
+            'is_social_security' => 'is_social_security',
+            'ss_number' => 'ss_number',
+            'ss_multiple_employers' => 'ss_multiple_employers',
+            'ss_multiple_salaries' => 'ss_multiple_salaries',
         ];
 
         foreach ($customerMap as $src => $dst) {

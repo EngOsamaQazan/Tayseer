@@ -1197,10 +1197,22 @@ class JudiciaryController extends Controller
 
     public function actionTabLegal()
     {
+        $params = Yii::$app->request->queryParams;
+        foreach ($params as $k => $v) {
+            if (strpos($k, '_tog') === 0) {
+                unset($params[$k]);
+            }
+        }
+
         $searchModel = new \backend\modules\contracts\models\ContractsSearch();
-        $dataProvider = $searchModel->searchLegalDepartment(Yii::$app->request->queryParams);
-        $dataCount = $searchModel->searchLegalDepartmentCount(Yii::$app->request->queryParams);
-        return $this->renderAjax('_tab_legal', ['dataCount' => $dataCount]);
+        $dataProvider = $searchModel->searchLegalDepartment($params);
+        $dataProvider->pagination->pageSize = $dataProvider->pagination->pageSize ?: 20;
+        $dataCount = $searchModel->searchLegalDepartmentCount($params);
+        return $this->renderAjax('_tab_legal', [
+            'searchModel' => $searchModel,
+            'dataProvider' => $dataProvider,
+            'dataCount' => $dataCount,
+        ]);
     }
 
     public function actionTabCounts()

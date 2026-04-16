@@ -126,6 +126,7 @@ if (!$isNew) {
                     'data-has-defaults' => $hasDefaults ? '1' : '0',
                 ],
                 'id' => 'smart-onboarding-form',
+                'enableClientValidation' => false,
             ];
             if (isset($id)) $formConfig['action'] = Url::to(['update', 'id' => $id]);
             $form = ActiveForm::begin($formConfig);
@@ -211,9 +212,9 @@ if (!$isNew) {
                         <h4 class="scan-results-title"><i class="fa fa-check-circle"></i> <span id="scanResultsStatus">تم استخراج البيانات</span></h4>
                         <div class="scan-fields" id="scanFieldsList"></div>
                         <div class="scan-results-actions">
-                            <button type="button" class="so-btn so-btn-primary" id="scanApplyBtn">
-                                <i class="fa fa-magic"></i> تعبئة الحقول والمتابعة
-                            </button>
+                            <div style="display:flex;align-items:center;gap:8px;color:#16A34A;font-size:13px">
+                                <i class="fa fa-check-circle"></i> تم تعبئة الحقول تلقائياً
+                            </div>
                             <button type="button" class="so-btn so-btn-outline" id="scanAddMoreBtn">
                                 <i class="fa fa-plus"></i> إضافة وثيقة أخرى
                             </button>
