@@ -12,8 +12,10 @@ use yii\helpers\Html;
 use yii\helpers\ArrayHelper;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
-
 use backend\modules\expenseCategories\models\ExpenseCategories;
+use backend\modules\accounting\models\Account;
+
+$cashFundAccounts = Account::getCashFundAccounts();
 
 /* === جلب البيانات من الكاش === */
 $users = Yii::$app->cache->getOrSet(Yii::$app->params['key_users'], function () {
@@ -29,15 +31,21 @@ $contract_id = Yii::$app->cache->getOrSet(Yii::$app->params['key_contract_id'], 
     <div class="box-body">
         <?php $form = ActiveForm::begin() ?>
 
-        <!-- التصنيف والمبلغ -->
+        <!-- التصنيف والمبلغ والصندوق -->
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <?= $form->field($model, 'category_id')->dropDownList(ArrayHelper::map(ExpenseCategories::find()->all(), 'id', 'name'), ['prompt' => '-- اختر التصنيف --', 'class' => 'form-control'])->label(Yii::t('app', 'تصنيف المصروف')) ?>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <?= $form->field($model, 'amount')
                     ->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])
                     ->label(Yii::t('app', 'المبلغ')) ?>
+            </div>
+            <div class="col-md-4">
+                <?= $form->field($model, 'cash_account_id')->dropDownList(
+                    $cashFundAccounts,
+                    ['prompt' => '-- اختر الصندوق / البنك --', 'class' => 'form-control']
+                )->label(Yii::t('app', 'الصندوق / البنك')) ?>
             </div>
         </div>
 

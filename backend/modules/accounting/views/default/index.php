@@ -1,9 +1,14 @@
 <?php
 
 use yii\helpers\Html;
+use yii\helpers\Url;
 
 $this->title = 'لوحة تحكم المحاسبة';
 $this->params['breadcrumbs'][] = $this->title;
+
+$cashFundBalances   = $cashFundBalances ?? [];
+$totalCashPosition  = $totalCashPosition ?? 0;
+$migrationNeedsReview = $migrationNeedsReview ?? false;
 ?>
 
 <div class="row" style="margin-bottom:20px;">
@@ -40,6 +45,88 @@ $this->params['breadcrumbs'][] = $this->title;
         </div>
     </div>
 </div>
+
+<!-- ═══ Migration Review Alert ═══ -->
+<?php if ($migrationNeedsReview): ?>
+    <?= $this->render('_cash_migration_alert') ?>
+<?php endif; ?>
+
+<!-- ═══ أرصدة الصناديق والبنوك (IAS 7 / ISO 9241) ═══ -->
+<div id="cash-funds" class="box box-primary" style="margin-bottom:25px;">
+    <div class="box-header with-border">
+        <h3 class="box-title"><i class="fa fa-bank"></i> أرصدة الصناديق والبنوك</h3>
+        <div class="box-tools">
+            <?= Html::a('<i class="fa fa-sitemap"></i> شجرة الحسابات', ['/accounting/chart-of-accounts/tree'], ['class' => 'btn btn-secondary btn-sm']) ?>
+        </div>
+    </div>
+    <div class="box-body">
+        <?php if (empty($cashFundBalances)): ?>
+            <div class="text-center text-muted" style="padding:30px 20px;">
+                <i class="fa fa-info-circle fa-3x" style="color:var(--clr-warning, #ffc107);"></i>
+                <p style="margin-top:12px; font-size:15px;">لا توجد حسابات صناديق بعد.</p>
+                <p style="color:#999;">أنشئ حسابات فرعية تحت <b>1101 — النقدية والبنوك</b> من <?= Html::a('شجرة الحسابات', ['/accounting/chart-of-accounts/index']) ?>.</p>
+            </div>
+        <?php else: ?>
+            <!-- إجمالي السيولة -->
+            <div style="text-align:center; margin-bottom:20px; padding:18px 15px; background:linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius:var(--radius-md, 8px);">
+                <div style="font-size:13px; color:var(--clr-text-muted, #777); font-weight:600; margin-bottom:4px;">إجمالي السيولة النقدية</div>
+                <div style="font-size:32px; font-weight:800; font-family:var(--font-heading, 'Noto Kufi Arabic', sans-serif); color:<?= $totalCashPosition >= 0 ? 'var(--clr-success, #28a745)' : 'var(--clr-danger, #dc3545)' ?>;">
+                    <?= number_format($totalCashPosition, 2) ?> <small style="font-size:14px; font-weight:600;">د.أ</small>
+                </div>
+            </div>
+
+            <!-- بطاقات الصناديق -->
+            <div class="row">
+                <?php foreach ($cashFundBalances as $fund): ?>
+                    <?php
+                    $account = $fund['account'];
+                    $balance = $fund['balance'];
+                    $isPositive = $balance >= 0;
+                    $borderColor = $isPositive ? 'var(--clr-success, #28a745)' : 'var(--clr-danger, #dc3545)';
+                    $valueColor  = $isPositive ? '#28a745' : '#dc3545';
+                    $ledgerUrl   = Url::to(['/accounting/general-ledger/account', 'id' => $account->id]);
+                    ?>
+                    <div class="col-md-4 col-sm-6" style="margin-bottom:15px;">
+                        <a href="<?= $ledgerUrl ?>" style="text-decoration:none; color:inherit; display:block;">
+                            <div class="cash-fund-card" style="
+                                background:var(--clr-surface, #fff);
+                                border:1px solid var(--clr-border, #e0e0e0);
+                                border-right:4px solid <?= $borderColor ?>;
+                                border-radius:var(--radius-md, 8px);
+                                padding:16px 18px;
+                                transition:all .2s ease;
+                                box-shadow:var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.08));
+                            ">
+                                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                                    <div>
+                                        <div style="font-size:14px; font-weight:700; color:var(--clr-text, #333); line-height:1.3;">
+                                            <?= Html::encode($account->name_ar) ?>
+                                        </div>
+                                        <div style="font-size:11px; color:var(--clr-text-muted, #777); font-family:monospace; margin-top:2px;">
+                                            <?= Html::encode($account->code) ?>
+                                        </div>
+                                    </div>
+                                    <i class="fa fa-bank" style="font-size:18px; color:<?= $borderColor ?>; opacity:0.6;"></i>
+                                </div>
+                                <div style="font-size:22px; font-weight:800; color:<?= $valueColor ?>; font-family:var(--font-heading, sans-serif);">
+                                    <?= number_format($balance, 2) ?>
+                                    <small style="font-size:12px; font-weight:600;">د.أ</small>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<style>
+.cash-fund-card:hover {
+    box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,0.12));
+    transform: translateY(-2px);
+}
+</style>
 
 <!-- Quick Links -->
 <div class="row" style="margin-bottom:25px;">

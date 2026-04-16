@@ -12,12 +12,14 @@ use backend\modules\incomeCategory\models\IncomeCategory;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\companies\models\Companies;
 use backend\modules\financialTransaction\models\FinancialTransaction;
+use backend\modules\accounting\models\Account;
 
 $isNew = $model->isNewRecord;
 $companies = ArrayHelper::map(Companies::find()->asArray()->all(), 'id', 'name');
 $categories = ArrayHelper::map(ExpenseCategories::find()->asArray()->all(), 'id', 'name');
 $incomeTypes = ArrayHelper::map(IncomeCategory::find()->asArray()->all(), 'id', 'name');
 $contractIds = ArrayHelper::map(Contracts::find()->select(['id'])->asArray()->all(), 'id', 'id');
+$cashFunds = Account::getCashFundAccounts();
 ?>
 
 <div class="financial-transaction-form"
@@ -28,13 +30,16 @@ $contractIds = ArrayHelper::map(Contracts::find()->select(['id'])->asArray()->al
     <fieldset>
         <legend><i class="fa fa-bank"></i> بيانات الحركة المالية</legend>
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <?= $form->field($model, 'amount')->textInput(['type' => 'number', 'step' => '0.01', 'placeholder' => '0.00'])->label('المبلغ') ?>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <?= $form->field($model, 'company_id')->dropDownList($companies, ['prompt' => '-- اختر الشركة --', 'class' => 'form-control'])->label('الشركة') ?>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <?= $form->field($model, 'cash_account_id')->dropDownList($cashFunds, ['prompt' => '-- اختر الصندوق --', 'class' => 'form-control'])->label('الصندوق') ?>
+            </div>
+            <div class="col-md-3">
                 <?= $form->field($model, 'receiver_number')->textInput(['placeholder' => 'رقم المستلم'])->label('رقم المستلم') ?>
             </div>
         </div>
@@ -109,6 +114,7 @@ $(document).on('change', '#ft-income-type', function(){
 $('#ft-income-type').on('change', function(){
     window.dispatchEvent(new CustomEvent('income-type-change', { detail: $(this).val() }));
 });
+
 JS
 );
 ?>

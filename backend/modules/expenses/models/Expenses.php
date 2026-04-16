@@ -9,6 +9,7 @@ use yii\db\Expression;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
 use yii\behaviors\BlameableBehavior;
 use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
+use backend\modules\accounting\models\Account;
 
 /**
  * This is the model class for table "os_expenses".
@@ -30,9 +31,12 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
  * @property int $receiver_number
  * @property int $contract_id
  * @property int|null $financial_transaction_id
-* @property int $document_number
-* @property int $number_row
+ * @property int $document_number
+ * @property int|null $cash_account_id
+ * @property int $number_row
  * @property string $notes
+ *
+ * @property Account $cashAccount
  */
 class Expenses extends \yii\db\ActiveRecord
 {
@@ -77,7 +81,9 @@ class Expenses extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['category_id', 'receiver_number', 'financial_transaction_id','document_number','contract_id','number_row'], 'integer'],
+            [['category_id', 'receiver_number', 'financial_transaction_id', 'document_number', 'contract_id', 'number_row', 'cash_account_id'], 'integer'],
+            [['cash_account_id'], 'exist', 'skipOnError' => true, 'skipOnEmpty' => true,
+                'targetClass' => Account::class, 'targetAttribute' => ['cash_account_id' => 'id']],
             [['description', 'amount', 'receiver_number'], 'required'],
             [['description','expenses_date','date_from','date_to'], 'string'],
             [['amount','amount_from','amount_to'], 'number'],
@@ -111,6 +117,7 @@ class Expenses extends \yii\db\ActiveRecord
             'notes' => Yii::t('app', 'notes'),
             'Expenses Date' => Yii::t('app', 'Expenses Date'),
             'contract_id' => Yii::t('app', 'Contract ID'),
+            'cash_account_id' => Yii::t('app', 'الصندوق / البنك'),
         ];
     }
     public function getCategory() {
@@ -123,6 +130,11 @@ class Expenses extends \yii\db\ActiveRecord
 
     public function getUpdatedBy() {
         return $this->hasOne(\common\models\User::className(), ['id' => 'last_updated_by']);
+    }
+
+    public function getCashAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'cash_account_id']);
     }
     public static function find()
     {
@@ -147,7 +159,8 @@ class Expenses extends \yii\db\ActiveRecord
                     (float)$this->amount,
                     $categoryName,
                     $this->description ?: ('مصروف #' . $this->id),
-                    $this->expenses_date ?: date('Y-m-d')
+                    $this->expenses_date ?: date('Y-m-d'),
+                    $this->cash_account_id
                 );
             } catch (\Exception $e) {
                 \Yii::error('AutoPosting Expense error: ' . $e->getMessage(), 'accounting');

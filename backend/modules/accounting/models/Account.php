@@ -200,6 +200,127 @@ class Account extends ActiveRecord
         });
     }
 
+    /**
+     * Returns leaf accounts under 1101 (النقدية والبنوك) — i.e. cash boxes & bank accounts.
+     */
+    public static function getCashFundAccounts($companyId = null)
+    {
+        $cashParent = self::find()->where(['code' => '1101', 'is_active' => 1])->one();
+        if (!$cashParent) {
+            return [];
+        }
+
+        $query = self::find()
+            ->where(['parent_id' => $cashParent->id, 'is_active' => 1, 'is_parent' => 0])
+            ->orderBy(['code' => SORT_ASC]);
+
+        if ($companyId) {
+            $query->andWhere(['or', ['company_id' => $companyId], ['company_id' => null]]);
+        }
+
+        return ArrayHelper::map($query->all(), 'id', function ($model) {
+            return $model->code . ' - ' . $model->name_ar;
+        });
+    }
+
+    /**
+     * Compute the current balance for this leaf account from posted journal entries.
+     * Debit-nature: opening + (debits - credits)
+     * Credit-nature: opening + (credits - debits)
+     */
+    public function getBalance($dateFrom = null, $dateTo = null)
+    {
+        $query = JournalEntryLine::find()
+            ->joinWith('journalEntry')
+            ->where(['{{%journal_entry_lines}}.account_id' => $this->id])
+            ->andWhere(['{{%journal_entries}}.status' => 'posted']);
+
+        if ($dateFrom) {
+            $query->andWhere(['>=', '{{%journal_entries}}.entry_date', $dateFrom]);
+        }
+        if ($dateTo) {
+            $query->andWhere(['<=', '{{%journal_entries}}.entry_date', $dateTo]);
+        }
+
+        $totalDebit  = (float) ($query->sum('{{%journal_entry_lines}}.debit') ?: 0);
+        $totalCredit = (float) ($query->sum('{{%journal_entry_lines}}.credit') ?: 0);
+
+        $balance = (float) $this->opening_balance;
+        if ($this->nature === self::NATURE_DEBIT) {
+            $balance += $totalDebit - $totalCredit;
+        } else {
+            $balance += $totalCredit - $totalDebit;
+        }
+
+        return $balance;
+    }
+
+    /**
+     * Batch-load balances for multiple accounts (avoids N+1 queries).
+     * @return array [account_id => ['account' => Account, 'balance' => float]]
+     */
+    public static function getCashFundBalances($dateFrom = null, $dateTo = null)
+    {
+        $cashParent = self::find()->where(['code' => '1101', 'is_active' => 1])->one();
+        if (!$cashParent) {
+            return [];
+        }
+
+        $accounts = self::find()
+            ->where(['parent_id' => $cashParent->id, 'is_active' => 1, 'is_parent' => 0])
+            ->orderBy(['code' => SORT_ASC])
+            ->all();
+
+        if (empty($accounts)) {
+            return [];
+        }
+
+        $ids = ArrayHelper::getColumn($accounts, 'id');
+
+        $query = (new \yii\db\Query())
+            ->select([
+                '{{%journal_entry_lines}}.account_id',
+                'SUM({{%journal_entry_lines}}.debit)  AS total_debit',
+                'SUM({{%journal_entry_lines}}.credit) AS total_credit',
+            ])
+            ->from('{{%journal_entry_lines}}')
+            ->innerJoin('{{%journal_entries}}', '{{%journal_entries}}.id = {{%journal_entry_lines}}.journal_entry_id')
+            ->where(['{{%journal_entry_lines}}.account_id' => $ids])
+            ->andWhere(['{{%journal_entries}}.status' => 'posted']);
+
+        if ($dateFrom) {
+            $query->andWhere(['>=', '{{%journal_entries}}.entry_date', $dateFrom]);
+        }
+        if ($dateTo) {
+            $query->andWhere(['<=', '{{%journal_entries}}.entry_date', $dateTo]);
+        }
+
+        $totals = $query->groupBy('{{%journal_entry_lines}}.account_id')
+            ->indexBy('account_id')
+            ->all();
+
+        $result = [];
+        foreach ($accounts as $account) {
+            $row = $totals[$account->id] ?? null;
+            $debit  = $row ? (float) $row['total_debit'] : 0;
+            $credit = $row ? (float) $row['total_credit'] : 0;
+
+            $balance = (float) $account->opening_balance;
+            if ($account->nature === self::NATURE_DEBIT) {
+                $balance += $debit - $credit;
+            } else {
+                $balance += $credit - $debit;
+            }
+
+            $result[$account->id] = [
+                'account' => $account,
+                'balance' => $balance,
+            ];
+        }
+
+        return $result;
+    }
+
     public function beforeSave($insert)
     {
         if (!parent::beforeSave($insert)) {

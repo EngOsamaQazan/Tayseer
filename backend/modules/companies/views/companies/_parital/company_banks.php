@@ -2,6 +2,9 @@
 
 use wbraganca\dynamicform\DynamicFormWidget;
 use yii\helpers\Html;
+use backend\modules\accounting\models\Account;
+
+$cashFundAccounts = Account::getCashFundAccounts();
 ?>
 
 <div class="card">
@@ -36,16 +39,20 @@ use yii\helpers\Html;
                     }
                     ?>
                     <div class="row">
-                        <div class="col-sm-4">
-                            <?= $form->field($modelsCompanieBank, "[{$i}]bank_id")->dropDownList([yii\helpers\ArrayHelper::map(\backend\modules\bancks\models\Bancks::find()->all(),'id','name')]) ?>  </div>
-
-
-                        <div class="col-sm-4">
-                            <?= $form->field($modelsCompanieBank, "[{$i}]bank_number")->textInput(['maxlength' => true])?> 
+                        <div class="col-sm-3">
+                            <?= $form->field($modelsCompanieBank, "[{$i}]bank_id")->dropDownList([yii\helpers\ArrayHelper::map(\backend\modules\bancks\models\Bancks::find()->all(),'id','name')]) ?>
                         </div>
-                        
+                        <div class="col-sm-2">
+                            <?= $form->field($modelsCompanieBank, "[{$i}]bank_number")->textInput(['maxlength' => true]) ?>
+                        </div>
+                        <div class="col-sm-2">
+                            <?= $form->field($modelsCompanieBank, "[{$i}]iban_number")->textInput(['maxlength' => true]) ?>
+                        </div>
                         <div class="col-sm-4">
-                            <?= $form->field($modelsCompanieBank, "[{$i}]iban_number")->textInput(['maxlength' => true])?> 
+                            <?= $form->field($modelsCompanieBank, "[{$i}]account_id")->dropDownList(
+                                $cashFundAccounts,
+                                ['prompt' => '-- ربط حساب من شجرة الحسابات --', 'class' => 'form-control']
+                            )->label('حساب الدفتر العام') ?>
                         </div>
                         <div class="col-sm-1">
                             <button type="button" class="c-remove-item btn btn-danger btn-xs" style="margin-top: 30px;">

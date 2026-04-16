@@ -3,10 +3,13 @@
 use yii\helpers\Html;
 use yii\widgets\ActiveForm;
 use backend\helpers\FlatpickrWidget;
+use backend\modules\accounting\models\Account;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\incomeCategory\models\IncomeCategory */
 /* @var $form yii\widgets\ActiveForm */
+
+$cashFundAccounts = Account::getCashFundAccounts();
 ?>
 
 <div class="questions-bank box box-primary">
@@ -22,10 +25,16 @@ use backend\helpers\FlatpickrWidget;
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-6">
+        <div class="col-lg-4">
             <?= $form->field($model, 'payment_type')->dropDownList(\yii\helpers\ArrayHelper::map(\backend\modules\paymentType\models\PaymentType::find()->all(), 'id', 'name'), ['prompt' => '-- اختر النوع --', 'class' => 'form-control']) ?>
         </div>
-        <div class="col-lg-6">
+        <div class="col-lg-4">
+            <?= $form->field($model, 'cash_account_id')->dropDownList(
+                $cashFundAccounts,
+                ['prompt' => '-- اختر الصندوق / البنك --', 'class' => 'form-control']
+            )->label('الصندوق / البنك') ?>
+        </div>
+        <div class="col-lg-4">
             <?= $form->field($model, 'receipt_bank')->textInput() ?>
         </div>
     </div>

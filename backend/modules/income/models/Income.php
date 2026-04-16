@@ -4,6 +4,7 @@ namespace backend\modules\income\models;
 
 use backend\modules\incomeCategory\IncomeCategory;
 use backend\modules\paymentType\PaymentType;
+use backend\modules\accounting\models\Account;
 use Yii;
 
 /**
@@ -24,8 +25,10 @@ use Yii;
  * @property string $from_date
  * @property string $to_date
  * @property string $payment_type
+ * @property int|null $cash_account_id
  * @property Contracts $contract
  * @property Contracts $type
+ * @property Account $cashAccount
  */
 class Income extends \yii\db\ActiveRecord
 {
@@ -56,7 +59,9 @@ class Income extends \yii\db\ActiveRecord
         return [
             [['payment_type'], 'required'],
             [['amount'], 'double'],
-            [['contract_id', 'type', 'document_number', 'type', 'document_number', 'bank_number', 'income_status', 'number_row'], 'integer'],
+            [['contract_id', 'type', 'document_number', 'type', 'document_number', 'bank_number', 'income_status', 'number_row', 'cash_account_id'], 'integer'],
+            [['cash_account_id'], 'exist', 'skipOnError' => true, 'skipOnEmpty' => true,
+                'targetClass' => Account::class, 'targetAttribute' => ['cash_account_id' => 'id']],
             [['date', 'financial_transaction_id', 'notes', 'from_date', 'to_date'], 'safe'],
             [['notes', '_by', 'payment_type', 'payment_purpose', 'receipt_bank', 'from_date', 'to_date'], 'string'],
             [['contract_id'], 'exist', 'skipOnError' => true, 'targetClass' => \backend\modules\contracts\models\Contracts::className(), 'targetAttribute' => ['contract_id' => 'id']],
@@ -87,6 +92,7 @@ class Income extends \yii\db\ActiveRecord
             'to_date' => Yii::t('app', 'System Date To'),
             'number_row' => Yii::t('app', 'Result Row Numbers'),
             'created_by' => Yii::t('app', 'Created By'),
+            'cash_account_id' => Yii::t('app', 'الصندوق / البنك'),
         ];
     }
 
@@ -124,6 +130,11 @@ class Income extends \yii\db\ActiveRecord
     {
         return $this->hasOne(\backend\modules\paymentType\models\PaymentType::className(), ['id' => 'payment_type']);
     }
+
+    public function getCashAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'cash_account_id']);
+    }
     public function getStatus()
     {
         return $this->hasOne(\backend\modules\contracts\models\Contracts::className(), ['id' => 'contract_id']);
@@ -145,7 +156,8 @@ class Income extends \yii\db\ActiveRecord
                     $customerId,
                     $contractId,
                     $this->payment_purpose ?: ('دفعة #' . $this->id),
-                    $this->date ?: date('Y-m-d')
+                    $this->date ?: date('Y-m-d'),
+                    $this->cash_account_id
                 );
             } catch (\Exception $e) {
                 Yii::error('AutoPosting Income error: ' . $e->getMessage(), 'accounting');

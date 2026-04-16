@@ -493,9 +493,10 @@ class FinancialTransactionController extends Controller
             return $this->redirect(['import-file']);
         }
 
-        /* رقم حساب البنك */
+        /* رقم حساب البنك + ربط حساب الدفتر العام */
         $companyBank = CompanyBanks::findOne(['bank_id' => $bankId, 'company_id' => $company]);
         $bankNumber  = $companyBank ? $companyBank->bank_number : '';
+        $bankGlAccountId = $companyBank ? $companyBank->account_id : null;
 
         try {
             /* قراءة الملف */
@@ -537,6 +538,7 @@ class FinancialTransactionController extends Controller
                     $ft->bank_number      = $bankNumber;
                     $ft->is_transfer      = 0;
                     $ft->receiver_number  = 0;
+                    $ft->cash_account_id  = $bankGlAccountId;
 
                     if ($ft->validate() && $ft->save()) {
                         $imported++;

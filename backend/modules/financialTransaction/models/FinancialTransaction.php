@@ -12,6 +12,7 @@ use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
 use backend\modules\expenseCategories\models\ExpenseCategories;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\companies\models\Companies;
+use backend\modules\accounting\models\Account;
 
 /**
  * This is the model class for table os_financial-transaction".
@@ -32,11 +33,13 @@ use backend\modules\companies\models\Companies;
  * @property int $company_id
  * @property int $bank_number
  * @property int $bank_id
+ * @property int|null $cash_account_id
  * @property int $number_row
  * @property int $is_transfer
  * @property string $date
  * @property string $bank_description
  * @property ExpenseCategories $category
+ * @property Account $cashAccount
  */
 class FinancialTransaction extends \yii\db\ActiveRecord
 {
@@ -95,7 +98,7 @@ class FinancialTransaction extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['category_id', 'created_at', 'created_by', 'updated_at', 'last_updated_by', 'is_deleted', 'receiver_number', 'document_number', 'contract_id', 'type', 'income_type', 'company_id', 'is_transfer', 'bank_id', 'number_row'], 'integer'],
+            [['category_id', 'created_at', 'created_by', 'updated_at', 'last_updated_by', 'is_deleted', 'receiver_number', 'document_number', 'contract_id', 'type', 'income_type', 'company_id', 'is_transfer', 'bank_id', 'cash_account_id', 'number_row'], 'integer'],
             [['description', 'amount', 'receiver_number', 'document_number', 'company_id', 'is_transfer'], 'required', 'on' => 'others'],
             [['bank_description', 'amount', 'receiver_number', 'document_number', 'company_id', 'is_transfer', 'date'], 'required', 'on' => 'ImportFile'],
             [['description', 'bank_description', 'bank_number'], 'string'],
@@ -116,7 +119,10 @@ class FinancialTransaction extends \yii\db\ActiveRecord
             }", 'on' => 'createAndUpadte'],
             [['income_type'], 'safe', 'on' => 'ImportFile'],
             [['Restriction'], 'safe'],
-            [['bank_id'], 'required']
+            [['bank_id'], 'required', 'on' => 'ImportFile'],
+            [['cash_account_id'], 'required', 'on' => 'createAndUpadte', 'message' => 'يجب اختيار الصندوق'],
+            [['cash_account_id'], 'exist', 'skipOnError' => true, 'skipOnEmpty' => true,
+                'targetClass' => Account::class, 'targetAttribute' => ['cash_account_id' => 'id']],
         ];
     }
 
@@ -146,6 +152,7 @@ class FinancialTransaction extends \yii\db\ActiveRecord
             'date' => Yii::t('app', 'Date'),
             'note' => Yii::t('app', 'Notes'),
             'bank_description' => Yii::t('app', 'Bank Description'),
+            'cash_account_id' => 'الصندوق',
         ];
     }
 
@@ -176,7 +183,12 @@ class FinancialTransaction extends \yii\db\ActiveRecord
 
     public function getCompany()
     {
-        return $this->hasOne(\backend\modules\companies\models\Companies::className(), ['id' => 'company_id']);
+        return $this->hasOne(Companies::className(), ['id' => 'company_id']);
+    }
+
+    public function getCashAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'cash_account_id']);
     }
 
     public static function find()

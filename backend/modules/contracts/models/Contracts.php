@@ -379,12 +379,12 @@ class Contracts extends \yii\db\ActiveRecord
         }
         $date = new DateTime($date_expire);
         $now = new DateTime();
-        $years = $date->diff($now)->format("%y") * 365 * 24 * 60;
-        $months = $date->diff($now)->format("%M") * 30 * 24 * 60;
-        $days = $date->diff($now)->format("%d") * 24 * 60;
-        $hours = $date->diff($now)->format("%h") * 60;
-        $minutes = $date->diff($now)->format("%m");
-        $total = $years + $months + $days + $hours + $minutes;
+        $diff = $date->diff($now);
+        $total = $diff->y * 365 * 24 * 60
+               + $diff->m * 30 * 24 * 60
+               + $diff->d * 24 * 60
+               + $diff->h * 60
+               + $diff->i;
         if ($this->follow_up_lock_by != Yii::$app->user->id && $this->follow_up_lock_by != 0 && $total < 30) {
             return true;
         } else {

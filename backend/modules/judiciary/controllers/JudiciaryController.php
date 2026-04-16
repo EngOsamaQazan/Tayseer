@@ -1475,7 +1475,7 @@ class JudiciaryController extends Controller
         } else {
             $queryParams = Yii::$app->request->queryParams;
             $contract_model = \backend\modules\contracts\models\Contracts::findOne($contract_id);
-            if ($contract_model->is_locked()) {
+            if ($contract_model->is_locked() && !Permissions::can(Permissions::JUD_CREATE)) {
                 throw new \yii\web\HttpException(403, 'هذا العقد مقفل ومتابع من قبل موظف اخر.');
             } else {
                 $contract_model->unlock();

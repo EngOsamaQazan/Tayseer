@@ -10,6 +10,7 @@ use yii\db\ActiveRecord;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
 use yii2tech\ar\softdelete\SoftDeleteQueryBehavior;
 use backend\modules\bancks\models\Bancks;
+use backend\modules\accounting\models\Account;
 /**
  * This is the model class for table "os_company_banks".
  *
@@ -23,6 +24,9 @@ use backend\modules\bancks\models\Bancks;
  * @property int|null $last_updated_by
  * @property int|null $is_deleted
  * @property string|null $iban_number
+ * @property int|null $account_id
+ *
+ * @property Account $account
  */
 class CompanyBanks extends \yii\db\ActiveRecord
 {
@@ -67,9 +71,11 @@ class CompanyBanks extends \yii\db\ActiveRecord
     public function rules()
     {
         return [
-            [['company_id', 'created_at', 'updated_at', 'created_by', 'last_updated_by', 'is_deleted','bank_id'], 'integer'],
+            [['company_id', 'created_at', 'updated_at', 'created_by', 'last_updated_by', 'is_deleted', 'bank_id', 'account_id'], 'integer'],
             [['bank_id', 'bank_number'], 'required'],
             [['bank_number', 'iban_number'], 'string', 'max' => 255],
+            [['account_id'], 'exist', 'skipOnError' => true, 'skipOnEmpty' => true,
+                'targetClass' => Account::class, 'targetAttribute' => ['account_id' => 'id']],
         ];
     }
 
@@ -88,6 +94,7 @@ class CompanyBanks extends \yii\db\ActiveRecord
             'created_by' => 'Created By',
             'last_updated_by' => 'Last Updated By',
             'is_deleted' => 'Is Deleted',
+            'account_id' => 'حساب الدفتر العام',
         ];
     }
     public static function find()
@@ -99,5 +106,10 @@ class CompanyBanks extends \yii\db\ActiveRecord
 
     public function getBank(){
         return $this->hasOne(Bancks::className(), ['id' => 'bank_id']);
+    }
+
+    public function getAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'account_id']);
     }
 }

@@ -18,17 +18,48 @@ use backend\modules\accounting\models\Payable;
 class AutoPostingService
 {
     /**
+     * Resolve the cash/fund account: use a specific sub-account if provided,
+     * otherwise fall back to the first active child of 1101, then 1101 itself.
+     * @param int|null $cashAccountId  specific account ID from the chart of accounts
+     */
+    private static function resolveCashAccount($cashAccountId = null)
+    {
+        if ($cashAccountId) {
+            $account = Account::find()->where(['id' => $cashAccountId, 'is_active' => 1])->one();
+            if ($account) {
+                return $account;
+            }
+        }
+
+        $parent = self::findAccountByCode('1101');
+        if (!$parent) {
+            return null;
+        }
+
+        if ($parent->is_parent) {
+            $child = Account::find()
+                ->where(['parent_id' => $parent->id, 'is_active' => 1, 'is_parent' => 0])
+                ->orderBy(['code' => SORT_ASC])
+                ->one();
+            return $child ?: $parent;
+        }
+
+        return $parent;
+    }
+
+    /**
      * Create a journal entry when a customer payment is recorded.
      * Debit: Cash/Bank  |  Credit: Revenue/Customer Receivable
+     * @param int|null $cashAccountId  specific fund account from chart of accounts
      */
-    public static function postCustomerPayment($amount, $customerId = null, $contractId = null, $description = '', $date = null)
+    public static function postCustomerPayment($amount, $customerId = null, $contractId = null, $description = '', $date = null, $cashAccountId = null)
     {
         $date = $date ?: date('Y-m-d');
-        $cashAccount = self::findAccountByCode('1101');
+        $cashAccount = self::resolveCashAccount($cashAccountId);
         $revenueAccount = self::findAccountByCode('4100');
 
         if (!$cashAccount || !$revenueAccount) {
-            Yii::warning('AutoPostingService: Missing cash (1101) or revenue (4100) account', 'accounting');
+            Yii::warning('AutoPostingService: Missing cash or revenue (4100) account', 'accounting');
             return null;
         }
 
@@ -37,7 +68,7 @@ class AutoPostingService
             $date,
             'دفعة عميل' . ($description ? ": {$description}" : ''),
             [
-                ['account_id' => $cashAccount->id, 'debit' => $amount, 'credit' => 0, 'description' => 'نقدية واردة'],
+                ['account_id' => $cashAccount->id, 'debit' => $amount, 'credit' => 0, 'description' => 'نقدية واردة — ' . $cashAccount->name_ar],
                 ['account_id' => $revenueAccount->id, 'debit' => 0, 'credit' => $amount, 'description' => 'إيراد دفعة عميل'],
             ]
         );
@@ -52,11 +83,12 @@ class AutoPostingService
     /**
      * Create a journal entry when an expense is recorded.
      * Debit: Expense Account  |  Credit: Cash/Bank
+     * @param int|null $cashAccountId  specific fund account from chart of accounts
      */
-    public static function postExpense($amount, $expenseCategory = null, $description = '', $date = null)
+    public static function postExpense($amount, $expenseCategory = null, $description = '', $date = null, $cashAccountId = null)
     {
         $date = $date ?: date('Y-m-d');
-        $cashAccount = self::findAccountByCode('1101');
+        $cashAccount = self::resolveCashAccount($cashAccountId);
         $expenseAccount = self::resolveExpenseAccount($expenseCategory);
 
         if (!$cashAccount || !$expenseAccount) {
@@ -70,7 +102,7 @@ class AutoPostingService
             'مصروف' . ($description ? ": {$description}" : ''),
             [
                 ['account_id' => $expenseAccount->id, 'debit' => $amount, 'credit' => 0, 'description' => $description ?: 'مصروف'],
-                ['account_id' => $cashAccount->id, 'debit' => 0, 'credit' => $amount, 'description' => 'صرف نقدي'],
+                ['account_id' => $cashAccount->id, 'debit' => 0, 'credit' => $amount, 'description' => 'صرف من ' . $cashAccount->name_ar],
             ]
         );
     }
@@ -78,11 +110,12 @@ class AutoPostingService
     /**
      * Create a journal entry when a loan installment is paid.
      * Debit: Loan Receivable / Revenue  |  Credit: Cash/Bank
+     * @param int|null $cashAccountId  specific fund account from chart of accounts
      */
-    public static function postLoanPayment($amount, $interestAmount = 0, $description = '', $date = null)
+    public static function postLoanPayment($amount, $interestAmount = 0, $description = '', $date = null, $cashAccountId = null)
     {
         $date = $date ?: date('Y-m-d');
-        $cashAccount = self::findAccountByCode('1101');
+        $cashAccount = self::resolveCashAccount($cashAccountId);
         $loanReceivable = self::findAccountByCode('1201');
         $interestRevenue = self::findAccountByCode('4200');
 
@@ -92,7 +125,7 @@ class AutoPostingService
         }
 
         $lines = [
-            ['account_id' => $cashAccount->id, 'debit' => $amount + $interestAmount, 'credit' => 0, 'description' => 'تحصيل قسط'],
+            ['account_id' => $cashAccount->id, 'debit' => $amount + $interestAmount, 'credit' => 0, 'description' => 'تحصيل قسط — ' . $cashAccount->name_ar],
             ['account_id' => $loanReceivable->id, 'debit' => 0, 'credit' => $amount, 'description' => 'سداد أصل القسط'],
         ];
 

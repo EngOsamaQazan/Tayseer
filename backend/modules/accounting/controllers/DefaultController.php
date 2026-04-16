@@ -21,7 +21,7 @@ class DefaultController extends Controller
                 'class' => AccessControl::class,
                 'rules' => [
                     [
-                        'actions' => ['index'],
+                        'actions' => ['index', 'dismiss-cash-migration-alert'],
                         'allow' => true,
                         'roles' => [Permissions::ACC_VIEW],
                     ],
@@ -51,9 +51,40 @@ class DefaultController extends Controller
             ->limit(10)
             ->all();
 
+        $cashFundBalances = Account::getCashFundBalances();
+        $totalCashPosition = array_sum(array_column($cashFundBalances, 'balance'));
+
+        $migrationNeedsReview = $this->checkCashMigrationReview();
+
         return $this->render('index', [
             'stats' => $stats,
             'recentEntries' => $recentEntries,
+            'cashFundBalances' => $cashFundBalances,
+            'totalCashPosition' => $totalCashPosition,
+            'migrationNeedsReview' => $migrationNeedsReview,
         ]);
+    }
+
+    /**
+     * AJAX: dismiss the cash migration review alert.
+     */
+    public function actionDismissCashMigrationAlert()
+    {
+        Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
+        Yii::$app->cache->set('cash_migration_reviewed', true, 0);
+        return ['success' => true];
+    }
+
+    private function checkCashMigrationReview()
+    {
+        if (Yii::$app->cache->get('cash_migration_reviewed')) {
+            return false;
+        }
+        $linked = (new \yii\db\Query())
+            ->from('{{%company_banks}}')
+            ->where(['is_deleted' => 0])
+            ->andWhere(['not', ['account_id' => null]])
+            ->count();
+        return $linked > 0;
     }
 }

@@ -34,6 +34,8 @@ $mainMenuItems = [
             ['label' => 'المصاريف',               'icon' => 'arrow-up',      'url' => ['/expenses/expenses/index']],
             ['label' => 'التسويات المالية',       'icon' => 'calendar',      'url' => ['/loanScheduling/loan-scheduling/index']],
             ['label' => 'المحاسبة', 'header' => true],
+            ['label' => 'لوحة المحاسبة',          'icon' => 'dashboard',     'url' => ['/accounting/default/index']],
+            ['label' => 'أرصدة الصناديق',         'icon' => 'bank',          'url' => ['/accounting/default/index#cash-funds']],
             ['label' => 'شجرة الحسابات',         'icon' => 'sitemap',       'url' => ['/accounting/chart-of-accounts/index']],
             ['label' => 'القيود اليومية',         'icon' => 'pencil-square', 'url' => ['/accounting/journal-entry/index']],
             ['label' => 'الأستاذ العام',          'icon' => 'book',          'url' => ['/accounting/general-ledger/index']],
