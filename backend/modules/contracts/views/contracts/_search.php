@@ -133,6 +133,15 @@ JS, View::POS_READY);
         ]) ?>
     </div>
     <div class="ct-filter-col">
+        <label>نوع العقد</label>
+        <?= $form->field($model, 'type', ['template' => '{input}'])->dropDownList(
+            \backend\modules\contracts\models\Contracts::getTypeLabels(), [
+            'prompt' => '-- جميع الأنواع --',
+            'class' => 'form-control',
+            'aria-label' => 'نوع العقد',
+        ]) ?>
+    </div>
+    <div class="ct-filter-col">
         <label>من تاريخ</label>
         <?= $form->field($model, 'from_date', ['template' => '{input}'])->widget(FlatpickrWidget::class, [
             'options' => ['placeholder' => 'من', 'aria-label' => 'من تاريخ', 'autocomplete' => 'off', 'style' => 'font-size:12px'],

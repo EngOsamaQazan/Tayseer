@@ -630,6 +630,10 @@ a.fur-id-link:hover {
 .ct-st-canceled  { background: #e9ecef; color: #6c757d; text-decoration: line-through; }
 .ct-st-judiciary-paid { background: #e8f5e9; color: #2e7d32; }
 
+.ct-type-normal           { background: #f0f4ff; color: #3b5998; }
+.ct-type-solidarity       { background: #fff7e6; color: #b45309; }
+.ct-type-direct_deduction { background: #fce4f6; color: #9b1c7a; }
+
 /* ---- 9. FOLLOW-UP SELECT ---- */
 .ct-follow-select {
   font-size: 12px !important;

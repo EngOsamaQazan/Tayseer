@@ -30,7 +30,7 @@ class ContractsSearch extends Contracts
     {
         return [
             [['id', 'seller_id', 'is_deleted', 'number_row', 'job_Type', 'followed_by'], 'integer'],
-            [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'notes', 'updated_at', 'customer_name', 'seller_name', 'from_date', 'job_Type', 'to_date', 'job_title', 'q', 'id_number', 'phone_number', 'followed_by'], 'safe'],
+            [['Date_of_sale', 'first_installment_date', 'monthly_installment_value', 'notes', 'updated_at', 'customer_name', 'seller_name', 'from_date', 'job_Type', 'to_date', 'job_title', 'q', 'id_number', 'phone_number', 'followed_by', 'type'], 'safe'],
             [['total_value', 'first_installment_value'], 'number'],
             [['from_date', 'to_date', 'job_title'], 'string']
         ];
@@ -183,6 +183,7 @@ class ContractsSearch extends Contracts
         $query->andFilterWhere(['os_contracts.seller_id' => $this->seller_id]);
         $query->andFilterWhere(['like', 'os_contracts.notes', $this->notes]);
         $query->andFilterWhere(['os_contracts.followed_by' => $this->followed_by]);
+        $query->andFilterWhere(['os_contracts.type' => $this->type]);
         if (!empty($params['ContractsSearch']['status'])) {
             $statusVal = $params['ContractsSearch']['status'];
             if ($statusVal === 'judiciary_active') {
@@ -327,6 +328,9 @@ class ContractsSearch extends Contracts
         $query->andFilterWhere(['like', 'os_contracts.notes', $this->notes]);
         if (!empty($params['ContractsSearch']['followed_by'])) {
             $query->andFilterWhere(['os_contracts.followed_by' => $params['ContractsSearch']['followed_by']]);
+        }
+        if (!empty($params['ContractsSearch']['type'])) {
+            $query->andFilterWhere(['os_contracts.type' => $params['ContractsSearch']['type']]);
         }
         if (!empty($params['ContractsSearch']['status'])) {
             $statusVal = $params['ContractsSearch']['status'];

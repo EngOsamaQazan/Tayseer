@@ -200,6 +200,7 @@ $end   = $begin + count($models) - 1;
                         <th>الدفعة الأولى</th>
                         <th><?= $sortLink('total_value', 'الإجمالي') ?></th>
                         <th><?= $sortLink('status', 'الحالة') ?></th>
+                        <th>النوع</th>
                         <th><?= $sortLink('remaining', 'المتبقي') ?></th>
                         <th>المتابع</th>
                         <th style="text-align:center">إجراءات</th>
@@ -257,6 +258,9 @@ $end   = $begin + count($models) - 1;
                                     <?= $statusLabels[$m->status] ?? $m->status ?>
                                 </span>
                             <?php endif ?>
+                        </td>
+                        <td class="ct-td-type" data-label="النوع">
+                            <span class="ct-badge ct-type-<?= $m->type ?? 'normal' ?>"><?= $m->getTypeLabel() ?></span>
                         </td>
                         <td class="ct-td-money ct-td-remain" data-label="المتبقي">
                             <?= number_format($remaining, 0) ?>
