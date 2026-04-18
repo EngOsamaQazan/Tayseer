@@ -282,6 +282,9 @@ $end   = $begin + count($models) - 1;
                                     <i class="fa fa-ellipsis-v"></i>
                                 </button>
                                 <div class="ct-act-menu" role="menu">
+                                    <a href="<?= Url::to(['view', 'id' => $m->id]) ?>" role="menuitem">
+                                        <i class="fa fa-eye" style="color:#0891B2"></i> مشاهدة
+                                    </a>
                                     <?php if (Permissions::can(Permissions::CONT_UPDATE)): ?>
                                     <a href="<?= Url::to(['update', 'id' => $m->id]) ?>" role="menuitem">
                                         <i class="fa fa-pencil" style="color:#3B82F6"></i> تعديل
