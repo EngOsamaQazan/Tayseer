@@ -54,6 +54,24 @@ RewriteEngine on
     Header unset ETag
     Header set X-Content-Type-Options "nosniff"
     Header set Connection "keep-alive"
+
+    # ═══ PERMISSIONS-POLICY ═══
+    # The production server's main config sends a restrictive default:
+    #   Permissions-Policy: camera=(), microphone=(), geolocation=()
+    # which BLOCKS the camera even for first-party use → the customer
+    # wizard's smart ID scan rejects with NotAllowedError before any
+    # permission prompt can appear.
+    #
+    # We override that here with `Header always set` so it wins regardless
+    # of where the upstream value was set:
+    #   - camera     enabled for SAME-ORIGIN only (the wizard needs it)
+    #   - microphone restricted to SAME-ORIGIN (future use)
+    #   - geolocation restricted to SAME-ORIGIN (future use)
+    #
+    # NOTE: `(self)` is the modern syntax; `'self'` (with quotes) is the
+    # older Feature-Policy spelling — Chrome accepts both, Safari prefers
+    # the unquoted form, so we use `(self)`.
+    Header always set Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"
 </IfModule>
 FileETag None
 
