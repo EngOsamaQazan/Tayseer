@@ -234,10 +234,20 @@
         e.preventDefault();
         var $btn = $(this);
 
-        if (window.CWCamera && window.CWCamera.isSupported() && !$btn.data('cw-prefer-upload')) {
+        // ── Try camera mode first. ──
+        // CWCamera.open() handles ALL failure modes with a proper UX:
+        //   • insecure context  → "افتح الموقع عبر https" message + fallback button
+        //   • permission denied → browser-specific recovery instructions
+        //   • no camera         → "لا توجد كاميرا" + fallback
+        // So we always route through it when available — the file picker
+        // is only the absolute last-resort path.
+        if (window.CWCamera && typeof window.CWCamera.open === 'function' &&
+            !$btn.data('cw-prefer-upload')) {
             openCamera($btn);
             return;
         }
+
+        toast('متصفحك لا يدعم الكاميرا الحيّة — سنفتح اختيار ملف بدلاً.', 'info', 4000);
         openFilePicker($btn);
     }
 

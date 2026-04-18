@@ -58,11 +58,59 @@
     var state = null;
 
     // ─── Capability detection ───────────────────────────────────────────────
+    /**
+     * Returns true when the browser theoretically can open a live camera.
+     * NOTE: this is a *capability* check, not a *permission* check. A return
+     * value of true does NOT guarantee getUserMedia() will succeed — the
+     * actual call can still be rejected with NotAllowedError if the user
+     * (or a Permissions-Policy header) blocks access.
+     *
+     * Crucially this returns false on insecure contexts (http://) because
+     * `navigator.mediaDevices` is undefined there on Chrome/Edge.
+     */
     CWCamera.isSupported = function () {
-        return !!(navigator.mediaDevices &&
+        return !!(window.isSecureContext &&
+                  navigator.mediaDevices &&
                   navigator.mediaDevices.getUserMedia &&
                   window.HTMLCanvasElement &&
                   window.Promise);
+    };
+
+    /**
+     * Detailed diagnostics object — surfaced in the error overlay so support
+     * can pinpoint the exact reason the camera failed without round-trips.
+     */
+    CWCamera.diagnose = function () {
+        var ua = navigator.userAgent || '';
+        return {
+            secureContext:  !!window.isSecureContext,
+            protocol:       window.location.protocol,
+            host:           window.location.host,
+            mediaDevices:   !!navigator.mediaDevices,
+            getUserMedia:   !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+            permissionsApi: !!(navigator.permissions && navigator.permissions.query),
+            isIOS:          /iPad|iPhone|iPod/i.test(ua) && !window.MSStream,
+            isAndroid:      /Android/i.test(ua),
+            isSafari:       /^((?!chrome|android).)*safari/i.test(ua),
+            isChromiumLike: /Chrome|Chromium|CriOS|EdgA?|OPR\//i.test(ua),
+            isFirefox:      /Firefox|FxiOS/i.test(ua),
+        };
+    };
+
+    /**
+     * Probe the Permissions API (where available) to detect that the user
+     * has previously denied camera access — so we can show a more helpful
+     * message instead of triggering another silent rejection.
+     *
+     * Returns a Promise<'granted'|'denied'|'prompt'|'unknown'>.
+     */
+    CWCamera.queryPermission = function () {
+        if (!navigator.permissions || !navigator.permissions.query) {
+            return Promise.resolve('unknown');
+        }
+        return navigator.permissions.query({ name: 'camera' })
+            .then(function (status) { return status.state || 'unknown'; })
+            .catch(function () { return 'unknown'; });
     };
 
     /* ════════════════════════════════════════════════════════════════════════
@@ -71,17 +119,36 @@
 
     CWCamera.open = function (opts) {
         if (state && state.open) return;     // already running
+        opts = opts || {};
+
+        // ── Pre-flight #1: insecure context (http:// on a real domain). ──
+        // getUserMedia rejects silently on Chrome/Edge over HTTP, leaving
+        // the user staring at "no permission" with no actionable hint.
+        // We check up-front so we can show a *correct* explanation.
+        if (!window.isSecureContext) {
+            // Bypass the regular UI mount — go straight to a focused error.
+            mountErrorOnly({
+                title:  'الكاميرا تتطلّب اتصالاً آمناً (HTTPS)',
+                detail: 'افتح الموقع باستخدام عنوان https:// (وليس http://) ثم حاول مرة أخرى. ' +
+                        'هذا قيد أمني من المتصفح لحماية كاميرتك.',
+                code:   'insecure_context',
+                opts:   opts,
+            });
+            return;
+        }
+
+        // ── Pre-flight #2: capability check (very old browsers). ──
         if (!CWCamera.isSupported()) {
-            opts && opts.onError && opts.onError('camera_unsupported');
+            opts.onError && opts.onError('camera_unsupported');
             return;
         }
 
         state = {
             open:           true,
-            opts:           opts || {},
+            opts:           opts,
             stream:         null,
             currentSide:    'front',
-            collectedFields:{},                 // merged across both sides
+            collectedFields:{},
             stableSinceTs:  0,
             lastFrameData:  null,
             sampleTimer:    null,
@@ -90,19 +157,32 @@
             $root:          null,
             $video:         null,
             $analysisCv:    null,
-            announce:       function (msg) {},  // set in mountUI
+            announce:       function (msg) {},
         };
 
         mountUI();
-        startStream().then(function () {
-            announce('الكاميرا جاهزة، ضع الوجه الأمامي للهوية داخل الإطار.');
-            startQualityLoop();
-        }).catch(function (err) {
-            handleStreamError(err);
-        });
-
         bindGlobalListeners();
+
+        // ── Pre-flight #3: probe Permissions API (non-blocking). ──
+        // If the state is already 'denied', skip the doomed getUserMedia call
+        // and show targeted instructions for the current browser.
+        CWCamera.queryPermission().then(function (perm) {
+            if (perm === 'denied') {
+                handleStreamError(makeErr('NotAllowedError', 'permissions_api_denied'));
+                return;
+            }
+            startStream().then(function () {
+                announce('الكاميرا جاهزة، ضع الوجه الأمامي للهوية داخل الإطار.');
+                startQualityLoop();
+            }).catch(handleStreamError);
+        });
     };
+
+    function makeErr(name, message) {
+        var e = new Error(message || name);
+        e.name = name;
+        return e;
+    }
 
     CWCamera.close = function () {
         if (!state) return;
@@ -147,28 +227,113 @@
         state.stream = null;
     }
 
+    /**
+     * Translate a getUserMedia error into a precise, actionable Arabic message
+     * tailored to the user's browser. We explicitly enumerate the common
+     * cases instead of a single "denied" message, because mobile users have
+     * very different recovery paths on iOS Safari vs. Android Chrome.
+     */
     function handleStreamError(err) {
-        var name = err && err.name || 'unknown';
-        var msg;
+        var name = (err && err.name) || 'unknown';
+        var diag = CWCamera.diagnose();
+
+        var title;
+        var detail;
+        var code = name;
+
         switch (name) {
             case 'NotAllowedError':
             case 'PermissionDeniedError':
-                msg = 'تم رفض إذن الكاميرا. اسمح بالوصول من إعدادات المتصفح أو ارفع ملفاً بدلاً.';
+                title = 'تم رفض إذن الكاميرا';
+                detail = buildPermissionInstructions(diag);
                 break;
+
             case 'NotFoundError':
             case 'DevicesNotFoundError':
-                msg = 'لا توجد كاميرا متاحة على هذا الجهاز.';
+            case 'OverconstrainedError':
+                title  = 'لا توجد كاميرا متاحة';
+                detail = 'لم نعثر على كاميرا خلفية على هذا الجهاز. جرّب جهازاً آخر أو ارفع صورة من المعرض.';
                 break;
+
             case 'NotReadableError':
-                msg = 'الكاميرا مستخدَمة بواسطة تطبيق آخر — أغلقه ثم أعد المحاولة.';
+            case 'TrackStartError':
+                title  = 'الكاميرا مستخدَمة الآن';
+                detail = 'تطبيق آخر يستخدم الكاميرا (مثلاً مكالمة فيديو). أغلقه ثم أعد المحاولة.';
                 break;
+
+            case 'AbortError':
+                title  = 'تمّ إلغاء فتح الكاميرا';
+                detail = 'حدث اضطراب أثناء بدء الكاميرا — جرّب مرّة أخرى.';
+                break;
+
+            case 'SecurityError':
+                title  = 'إعدادات الأمان تمنع الكاميرا';
+                detail = 'يبدو أنّ سياسة المتصفح أو الموقع تمنع تشغيل الكاميرا (Permissions-Policy). ' +
+                         'افتح الموقع مباشرةً (وليس داخل إطار iframe) ثم أعد المحاولة.';
+                break;
+
             default:
-                msg = 'تعذّر تشغيل الكاميرا (' + name + ').';
+                title  = 'تعذّر تشغيل الكاميرا';
+                detail = 'حدث خطأ غير متوقّع: ' + name + '. ' +
+                         'يمكنك المتابعة برفع صورة بدلاً من التصوير المباشر.';
         }
-        showError(msg);
+
+        showError(title, detail, diag, code);
+
         if (state && state.opts && state.opts.onError) {
             try { state.opts.onError(name); } catch (_) {}
         }
+    }
+
+    /**
+     * Build browser/OS-specific recovery instructions for a denied camera
+     * permission. This is the #1 support pain-point on mobile — most users
+     * don't know that "denied" can be reset only via the address-bar lock
+     * icon or the OS settings.
+     */
+    function buildPermissionInstructions(diag) {
+        if (diag.isIOS) {
+            return 'على آيفون: افتح "الإعدادات" ← Safari ← الكاميرا ← اختر "اسمح" أو "اسأل". ' +
+                   'ثم أعد تحميل الصفحة. يمكنك أيضاً استخدام رفع الصورة كبديل سريع.';
+        }
+        if (diag.isAndroid && diag.isChromiumLike) {
+            return 'على أندرويد: اضغط على أيقونة القفل 🔒 بجانب العنوان ← الأذونات ← الكاميرا ← اسمح. ' +
+                   'ثم أعد تحميل الصفحة. أو استخدم زر "ارفع ملفاً" أدناه.';
+        }
+        if (diag.isFirefox) {
+            return 'في فايرفوكس: اضغط على الأيقونة في شريط العنوان وغيّر إذن الكاميرا إلى "اسمح". ' +
+                   'ثم أعد المحاولة، أو ارفع صورة من جهازك.';
+        }
+        return 'في إعدادات المتصفح: اسمح بالوصول إلى الكاميرا لهذا الموقع، ثم أعد تحميل الصفحة. ' +
+               'بديلاً، استخدم زر "ارفع ملفاً" أدناه لرفع صورة الهوية.';
+    }
+
+    /**
+     * Mount only the error-state of the overlay (used when we know up-front
+     * — e.g. insecure context — that the camera will never start).
+     */
+    function mountErrorOnly(args) {
+        // Build a stripped-down state so showError + close work normally.
+        state = {
+            open:           true,
+            opts:           args.opts || {},
+            stream:         null,
+            currentSide:    'front',
+            collectedFields:{},
+            stableSinceTs:  0,
+            lastFrameData:  null,
+            sampleTimer:    null,
+            uploading:      false,
+            captureLocked:  true,
+            $root:          null,
+            $video:         null,
+            $analysisCv:    null,
+            announce:       function (msg) {},
+        };
+        mountUI();
+        bindGlobalListeners();
+        showError(args.title, args.detail, CWCamera.diagnose(), args.code || 'precondition_failed');
+        if (args.opts.onError) try { args.opts.onError(args.code); } catch (_) {}
     }
 
     /* ════════════════════════════════════════════════════════════════════════
@@ -236,13 +401,21 @@
             + '    <div class="cwcam__overlay cwcam__overlay--error" hidden'
             + '         data-cwcam-error role="alert">'
             + '      <i class="fa fa-exclamation-triangle cwcam__error-icon" aria-hidden="true"></i>'
-            + '      <p class="cwcam__overlay-title" data-cwcam-error-msg></p>'
+            + '      <p class="cwcam__overlay-title" data-cwcam-error-title></p>'
+            + '      <p class="cwcam__overlay-sub"   data-cwcam-error-detail></p>'
             + '      <div class="cwcam__overlay-actions">'
             + '        <button type="button" class="cwcam__btn cwcam__btn--primary"'
-            + '                data-cwcam-retry>أعد المحاولة</button>'
+            + '                data-cwcam-fallback>'
+            + '          <i class="fa fa-upload" aria-hidden="true"></i>'
+            + '          ارفع صورة بدلاً'
+            + '        </button>'
             + '        <button type="button" class="cwcam__btn cwcam__btn--ghost"'
-            + '                data-cwcam-fallback>ارفع ملفاً بدلاً</button>'
+            + '                data-cwcam-retry>أعد المحاولة</button>'
             + '      </div>'
+            + '      <details class="cwcam__diag" data-cwcam-diag-wrap>'
+            + '        <summary class="cwcam__diag-summary">تفاصيل تقنية للدعم</summary>'
+            + '        <pre class="cwcam__diag-body" data-cwcam-diag></pre>'
+            + '      </details>'
             + '    </div>'
             + '  </div>'
 
@@ -675,10 +848,39 @@
     function hideOverlay(name) {
         state.$root.find('[data-cwcam-' + name + ']').prop('hidden', true);
     }
-    function showError(msg) {
-        state.$root.find('[data-cwcam-error-msg]').text(msg);
+    /**
+     * Show the error overlay with a title, an actionable detail line, and a
+     * collapsible diagnostics dump.
+     *
+     * @param {string} title         short headline (used by SR announcer too)
+     * @param {string} detail        actionable explanation / next-step
+     * @param {object} [diag]        diagnostics object from CWCamera.diagnose()
+     * @param {string} [code]        error code (logged + included in diag)
+     */
+    function showError(title, detail, diag, code) {
+        state.$root.find('[data-cwcam-error-title]').text(title || 'تعذّر الإكمال');
+        state.$root.find('[data-cwcam-error-detail]').text(detail || '');
+
+        // Build the diagnostics block — kept as plain JSON so the user can
+        // copy/paste it into a support ticket without losing structure.
+        if (diag) {
+            var payload = $.extend({}, diag, {
+                error_code: code || 'unknown',
+                timestamp:  new Date().toISOString(),
+            });
+            try {
+                state.$root.find('[data-cwcam-diag]')
+                    .text(JSON.stringify(payload, null, 2));
+                state.$root.find('[data-cwcam-diag-wrap]').show();
+            } catch (_) {
+                state.$root.find('[data-cwcam-diag-wrap]').hide();
+            }
+        } else {
+            state.$root.find('[data-cwcam-diag-wrap]').hide();
+        }
+
         showOverlay('error');
-        announce(msg);
+        announce(title);
     }
     function announce(msg) {
         if (state && state.announce) state.announce(msg);

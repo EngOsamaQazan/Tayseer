@@ -311,6 +311,52 @@ html.cwcam-locked body {
     color: #f87171;
 }
 
+/* Diagnostic dump (collapsed by default, helps the support team without
+   overwhelming the average user). */
+.cwcam__diag {
+    margin-top: 14px;
+    max-width: 480px;
+    width: 100%;
+    text-align: start;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+.cwcam__diag-summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    user-select: none;
+    list-style: none;
+}
+.cwcam__diag-summary::-webkit-details-marker { display: none; }
+.cwcam__diag-summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-inline-end: 6px;
+    transition: transform 150ms ease;
+}
+.cwcam__diag[open] .cwcam__diag-summary::before {
+    transform: rotate(90deg);
+}
+.cwcam__diag-body {
+    margin: 8px 0 0;
+    padding: 8px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 6px;
+    max-height: 160px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    direction: ltr;
+    text-align: left;
+}
+
 /* ─── Bottom bar ──────────────────────────────────────────────────────── */
 .cwcam__bottombar {
     display: flex;
