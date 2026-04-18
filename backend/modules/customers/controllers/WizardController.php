@@ -10,6 +10,7 @@ use yii\web\NotFoundHttpException;
 use yii\web\BadRequestHttpException;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
+use yii\helpers\Url;
 use common\models\WizardDraft;
 use common\helper\Permissions;
 use backend\modules\customers\components\VisionService;
@@ -910,8 +911,21 @@ class WizardController extends Controller
             }
         }
 
-        // ── Stamp last income query date. ──
-        $fields['Customers[last_income_query_date]'] = date('Y-m-d');
+        // ── Stamp last income / job query dates from the kashf itself. ──
+        //
+        // The "تاريخ الكشف" stamped on the SS statement is what the user
+        // actually queried — using today's date instead would later make
+        // the customer record look like we double-checked the income on
+        // the day of customer creation, which is misleading. The same
+        // date applies to last_job_query_date because the SS kashf is
+        // the official confirmation of both the salary AND the employer.
+        // We fall back to today only if the kashf had no parseable date.
+        $stmtDate = (string)($extracted['statement_date'] ?? '');
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $stmtDate)) {
+            $stmtDate = date('Y-m-d');
+        }
+        $fields['Customers[last_income_query_date]'] = $stmtDate;
+        $fields['Customers[last_job_query_date]']    = $stmtDate;
 
         // ── Cross-fill Step 1 fields when they're authoritative on the kashf. ──
         if (!empty($extracted['name']) && is_string($extracted['name'])) {
@@ -1939,6 +1953,11 @@ class WizardController extends Controller
                 'has_phones'  => $hasPhones,
                 'has_hours'   => $hasHours,
                 'missing'     => $missing,
+                // The combobox alert links here so loan officers can fill
+                // missing data without losing their wizard progress (opens
+                // in a new tab). On wizard tab re-focus we re-poll this
+                // endpoint and the warning disappears once the data lands.
+                'edit_url'    => Url::to(['/jobs/jobs/update', 'id' => (int)$row['id']]),
             ];
         } catch (\Throwable $e) {
             Yii::error('actionJobMeta failed: ' . $e->getMessage(), __METHOD__);

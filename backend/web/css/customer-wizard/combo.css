@@ -213,3 +213,50 @@ body > .cw-combo__listbox { inset-inline-start: auto; }
     color: var(--cw-color-text-muted, #64748b);
     font-size: 0.86rem;
 }
+
+/* Update-employer CTA — sits at the end of the warn alert. Inherits the
+ * amber palette so it reads as part of the same warning, but uses a solid
+ * background to feel actionable (vs. the soft inline alert wash). */
+.cw-combo__meta-cta {
+    flex: 0 0 auto;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: #b45309; /* amber-700 — AA contrast on white text */
+    color: #fff !important;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1;
+    white-space: nowrap;
+    transition: background-color 120ms ease, transform 120ms ease;
+}
+.cw-combo__meta-cta:hover,
+.cw-combo__meta-cta:focus-visible {
+    background: #92400e; /* amber-800 */
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+.cw-combo__meta-cta:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(146, 64, 14, 0.5);
+}
+.cw-combo__meta-cta-ext {
+    font-size: 0.75em;
+    opacity: 0.85;
+}
+
+@media (max-width: 640px) {
+    .cw-combo__meta { flex-direction: column; align-items: stretch; }
+    .cw-combo__meta-cta { align-self: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cw-combo__meta-cta { transition: none; }
+    .cw-combo__meta-cta:hover { transform: none; }
+}

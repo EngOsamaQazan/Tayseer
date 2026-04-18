@@ -225,6 +225,19 @@
                 ? 'لا يوجد ' + pretty[0] + ' مخزن لهذه الجهة.'
                 : 'لم يتم تخزين ' + pretty.slice(0, -1).join('، ') + ' و' + pretty[pretty.length - 1] + ' لهذه الجهة.';
 
+            // The edit button only renders when the server provides a URL —
+            // keeps the UI sensible if the route is ever disabled by RBAC.
+            var btnHtml = '';
+            if (resp.edit_url) {
+                btnHtml =
+                    '<a class="cw-combo__meta-cta" data-cw-meta-edit ' +
+                       'href="' + resp.edit_url + '" target="_blank" rel="noopener">' +
+                      '<i class="fa fa-pencil-square-o" aria-hidden="true"></i> ' +
+                      '<span>تحديث جهة العمل</span>' +
+                      '<i class="fa fa-external-link cw-combo__meta-cta-ext" aria-hidden="true"></i>' +
+                    '</a>';
+            }
+
             $host.html(
                 '<div class="cw-combo__meta cw-combo__meta--warn" role="status">' +
                   '<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>' +
@@ -234,6 +247,7 @@
                       'يمكن استكمال هذه البيانات لاحقاً من شاشة «جهات العمل» — لن يمنعك ذلك من المتابعة الآن.' +
                     '</span>' +
                   '</div>' +
+                  btnHtml +
                 '</div>'
             ).removeAttr('hidden');
         }
@@ -241,6 +255,29 @@
             $select.on('change' + NS, refreshMeta);
             // Run once on bind in case the field is pre-filled from a draft.
             refreshMeta();
+
+            // When the user clicks "update" we open the jobs editor in a new
+            // tab; on return to the wizard tab we re-poll the endpoint so the
+            // alert vanishes the moment the missing fields land in the DB —
+            // no manual refresh needed. We register the focus listener once
+            // per combobox instance and mark a "needs refresh" intent only
+            // after the user actually clicked the CTA, so we don't spam
+            // the endpoint on every tab switch.
+            var pendingRefresh = false;
+            $wrap.on('click' + NS, '[data-cw-meta-edit]', function () {
+                pendingRefresh = true;
+            });
+            window.addEventListener('focus', function () {
+                if (!pendingRefresh) return;
+                pendingRefresh = false;
+                refreshMeta();
+            });
+            document.addEventListener('visibilitychange', function () {
+                if (document.visibilityState !== 'visible') return;
+                if (!pendingRefresh) return;
+                pendingRefresh = false;
+                refreshMeta();
+            });
         }
 
         function cssEscape(s) { return s.replace(/(["\\])/g, '\\$1'); }
