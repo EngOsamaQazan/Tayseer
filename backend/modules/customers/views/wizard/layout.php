@@ -57,6 +57,28 @@ $this->registerCssFile($ver('/css/customer-wizard/combo.css'), [
 $this->registerCssFile($ver('/css/customer-wizard/review.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
+// intl-tel-input — international phone-number widget (v27.0.11).
+// Vendored locally under /vendor/intl-tel-input/ to keep the wizard
+// fully functional on offline / air-gapped deployments. The CSS file
+// resolves its flag sprites via relative `../img/flags.webp` URLs, so
+// the {css/, img/, js/} sibling layout MUST be preserved on disk.
+$this->registerCssFile($ver('/vendor/intl-tel-input/css/intlTelInput.min.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
+$this->registerCssFile($ver('/css/customer-wizard/intl-phone.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
+// Leaflet — small (45 KB gzip) interactive-map library used by the
+// address-map widget on Step 3. Vendored locally so the wizard works
+// on offline / air-gapped deployments. The CSS resolves marker icons
+// via relative `images/marker-icon.png` URLs, so the {leaflet.css,
+// images/} sibling layout MUST be preserved on disk.
+$this->registerCssFile($ver('/vendor/leaflet/leaflet.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
+$this->registerCssFile($ver('/css/customer-wizard/address-map.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
 $this->registerJsFile($ver('/js/customer-wizard/core.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
@@ -84,6 +106,28 @@ $this->registerJsFile($ver('/js/customer-wizard/scan-income.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
+// intl-tel-input bundle (library + libphonenumber utils). MUST load
+// before our wrapper so `window.intlTelInput` exists when intl-phone.js
+// runs. The wrapper auto-polls for the global for ~5s as a safety net,
+// but the synchronous order is the happy path.
+$this->registerJsFile($ver('/vendor/intl-tel-input/js/intlTelInputWithUtils.min.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+$this->registerJsFile($ver('/js/customer-wizard/intl-phone.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+// Leaflet — must load BEFORE address-map.js so `window.L` exists when
+// the wrapper initializes its widgets.
+$this->registerJsFile($ver('/vendor/leaflet/leaflet.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+$this->registerJsFile($ver('/js/customer-wizard/address-map.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
 
 $urls = [
     'start'    => Url::to(['/customers/wizard/start']),
@@ -104,8 +148,8 @@ $urls = [
 
 $steps = [
     1 => ['label' => 'التعريف بالعميل',     'icon' => 'fa-user'],
-    2 => ['label' => 'العمل والدخل',         'icon' => 'fa-briefcase'],
-    3 => ['label' => 'المعرّفون والعقارات',  'icon' => 'fa-users'],
+    2 => ['label' => 'الوضع المالي',         'icon' => 'fa-briefcase'],
+    3 => ['label' => 'الكفلاء والعنوان',     'icon' => 'fa-users'],
     4 => ['label' => 'المراجعة والاعتماد',   'icon' => 'fa-check-circle'],
 ];
 ?>

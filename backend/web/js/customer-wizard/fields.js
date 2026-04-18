@@ -299,10 +299,16 @@
 
                 $rows.append(html);
                 renumberAndSync();
-                init($rows.children('[data-cw-dynamic-row]').last());
+                var $newRow = $rows.children('[data-cw-dynamic-row]').last();
+                init($newRow);
+
+                // Notify peer modules (intl-phone.js, combo.js, …) that a
+                // new row needs binding. We pass the row jQuery object so
+                // listeners can scope their query selectors instead of
+                // re-walking the entire document.
+                $(document).trigger('cw:rows:added', [$newRow]);
 
                 // Move focus to the first input of the new row for fast entry.
-                var $newRow = $rows.children('[data-cw-dynamic-row]').last();
                 $newRow.find(':input:visible').first().trigger('focus');
             });
 

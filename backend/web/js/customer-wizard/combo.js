@@ -221,9 +221,13 @@
                 hours:   'أوقات الدوام',
             };
             var pretty = missing.map(function (m) { return labels[m] || m; });
-            var msg = pretty.length === 1
-                ? 'لا يوجد ' + pretty[0] + ' مخزن لهذه الجهة.'
-                : 'لم يتم تخزين ' + pretty.slice(0, -1).join('، ') + ' و' + pretty[pretty.length - 1] + ' لهذه الجهة.';
+            // Headline: blunt, action-first. We deliberately don't soften with
+            // "you can do this later" — the kashf workflow assumes employer
+            // data is verified before the customer relationship is opened, so
+            // we want to nudge users to fix it on the spot.
+            var headline = pretty.length === 1
+                ? 'بيانات ناقصة: ' + pretty[0]
+                : 'بيانات ناقصة: ' + pretty.slice(0, -1).join('، ') + ' و' + pretty[pretty.length - 1];
 
             // The edit button only renders when the server provides a URL —
             // keeps the UI sensible if the route is ever disabled by RBAC.
@@ -233,7 +237,7 @@
                     '<a class="cw-combo__meta-cta" data-cw-meta-edit ' +
                        'href="' + resp.edit_url + '" target="_blank" rel="noopener">' +
                       '<i class="fa fa-pencil-square-o" aria-hidden="true"></i> ' +
-                      '<span>تحديث جهة العمل</span>' +
+                      '<span>تحديث بيانات جهة العمل الآن</span>' +
                       '<i class="fa fa-external-link cw-combo__meta-cta-ext" aria-hidden="true"></i>' +
                     '</a>';
             }
@@ -242,9 +246,10 @@
                 '<div class="cw-combo__meta cw-combo__meta--warn" role="status">' +
                   '<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>' +
                   '<div class="cw-combo__meta-body">' +
-                    '<strong>' + msg + '</strong>' +
+                    '<strong>' + headline + '</strong>' +
                     '<span class="cw-combo__meta-hint">' +
-                      'يمكن استكمال هذه البيانات لاحقاً من شاشة «جهات العمل» — لن يمنعك ذلك من المتابعة الآن.' +
+                      'يُرجى تحديث بيانات جهة العمل قبل المتابعة — العنوان وأرقام التواصل وأوقات الدوام ضرورية ' +
+                      'للتحصيل والمتابعة الميدانية وتقييم المخاطر.' +
                     '</span>' +
                   '</div>' +
                   btnHtml +

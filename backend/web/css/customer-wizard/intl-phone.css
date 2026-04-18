@@ -1,0 +1,125 @@
+/* ============================================================
+   Customer Wizard V2 — intl-tel-input theme overrides
+   -----------------------------------------------------------
+   The vanilla intl-tel-input stylesheet uses LTR-only assumptions
+   (flag dropdown sits to the LEFT of the input by visual order
+   rather than logical order). In an RTL document this lands the
+   flag combobox in the wrong place and breaks the field cell's
+   shape. These overrides:
+
+     1. Force the .iti container to occupy the full grid cell
+        width so it lines up with neighbouring fields.
+     2. Match the wizard's input border, radius, focus ring, and
+        typography so the widget doesn't look bolted-on.
+     3. Reposition the flag/dial-code combobox for RTL layouts.
+     4. Style the country search input + listbox to match
+        .cw-combo dropdowns the user already learned.
+     5. Render an invalid-state outline that matches our other
+        soft-validation hints.
+   ============================================================ */
+
+/* Container fills its grid cell. */
+.iti.iti--cw {
+    display: block;
+    width: 100%;
+}
+
+/* ── Input shape: identical to .cw-input ── */
+.iti--cw input.cw-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--cw-border, #d1d5db);
+    border-radius: 8px;
+    padding-block: 10px;
+    padding-inline-start: 14px;
+    /* The flag combobox sits to the *visual* left of the input even
+     * in RTL; intl-tel-input's --separateDialCode mode renders the
+     * dial-code chunk to the left of the text input. We add extra
+     * padding-inline-end so the dial code never overlaps the value. */
+    padding-inline-end: 92px;
+    background: var(--cw-input-bg, #fff);
+    font: inherit;
+    color: inherit;
+    direction: ltr;
+    text-align: start;
+}
+.iti--cw input.cw-input:focus {
+    border-color: var(--cw-primary, #2563eb);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cw-primary-soft, rgba(37, 99, 235, 0.18));
+}
+
+/* ── Flag combobox button ── */
+.iti--cw .iti__country-container,
+.iti--cw .iti__selected-country {
+    border-start-start-radius: 8px;
+    border-end-start-radius: 8px;
+    background: var(--cw-input-alt-bg, #f8fafc);
+    border-inline-end: 1px solid var(--cw-border, #d1d5db);
+    padding-inline: 10px;
+    height: 100%;
+}
+.iti--cw .iti__selected-country:hover,
+.iti--cw .iti__selected-country:focus {
+    background: var(--cw-hover, #eef2ff);
+}
+.iti--cw .iti__selected-dial-code {
+    margin-inline-start: 6px;
+    font-variant-numeric: tabular-nums;
+    color: var(--cw-text, #111827);
+}
+
+/* ── Dropdown listbox (countries) ── */
+.iti--cw .iti__dropdown-content {
+    /* Use the same elevated card styling our combo dropdowns use so
+     * the user perceives them as the same component family. */
+    border: 1px solid var(--cw-border, #d1d5db);
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18);
+    background: #fff;
+    overflow: hidden;
+    z-index: 10050; /* match .cw-combo__listbox */
+}
+.iti--cw .iti__search-input {
+    border: 0;
+    border-block-end: 1px solid var(--cw-border, #e5e7eb);
+    padding: 10px 12px;
+    width: 100%;
+    box-sizing: border-box;
+    font: inherit;
+    direction: ltr;
+}
+.iti--cw .iti__country-list {
+    max-height: 280px;
+}
+.iti--cw .iti__country.iti__highlight {
+    background: var(--cw-hover, #eef2ff);
+}
+.iti--cw .iti__country .iti__dial-code {
+    color: var(--cw-text-muted, #64748b);
+    margin-inline-start: 6px;
+}
+
+/* ── Soft validation outline (set by intl-phone.js on blur) ── */
+.cw-input--phone-invalid,
+.iti--cw input.cw-input.cw-input--phone-invalid {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+/* ── RTL document: keep the input value LTR but mirror the gap
+       so the flag stays on the visual left of the input. ── */
+[dir="rtl"] .iti--cw {
+    direction: ltr;
+}
+[dir="rtl"] .iti--cw input.cw-input {
+    text-align: left;
+}
+
+/* ── Mobile: collapse padding so we don't squeeze the value ── */
+@media (max-width: 480px) {
+    .iti--cw input.cw-input {
+        padding-inline-end: 80px;
+        font-size: 14px;
+    }
+}

@@ -5,15 +5,25 @@ use yii\helpers\ArrayHelper;
 use yii\helpers\Url;
 
 /**
- * Step 2 — Employment, income & bank account.
+ * Step 2 — Financial position (employment, income, social security,
+ *          real-estate assets & bank account).
+ *
+ * Why "financial position" and not "employment & income"?
+ *   Real-estate ownership is an *asset* — it informs creditworthiness, not
+ *   addressing. Mixing it with the residential-address card (Step 3) is a
+ *   classic information-architecture mistake: users mentally group "money +
+ *   what I own" and separately "where I live + who vouches for me". We follow
+ *   that mental model here.
  *
  * Mental model (per Baymard / NN/g grouping research): users think about
- * money in three sub-decks:
+ * money in five sub-decks:
  *   1. "Where do I work and how much do I make?" → core fields, always shown.
  *   2. "Am I in the social security system / receiving a pension?" →
  *      progressive-disclosure radios that reveal extra fields only when
  *      relevant. Keeps the form short for the 70% who answer "no".
- *   3. "Banking details" → accordion (collapsed by default) because most
+ *   3. "Do I own real estate?" → progressive-disclosure (yes/no) revealing
+ *      property name + tabu number. Stored in the Customers row itself.
+ *   4. "Banking details" → accordion (collapsed by default) because most
  *      Jordanian customers don't pay via transfer for instalment plans.
  *
  * Layout principles applied:
@@ -52,22 +62,93 @@ $showRetirement = in_array($pensionSource, ['retirement_directorate', 'both'], t
 $bankOpen       = trim((string)$g('bank_name')) !== ''
               || trim((string)$g('bank_branch')) !== ''
               || trim((string)$g('account_number')) !== '';
+
+/* Real-estate (property) — moved from Step 3.
+ * `do_have_any_property` is a 1/0 flag on Customers; the two text fields
+ * are revealed only when "yes" is selected. We pre-open the conditional
+ * row when the draft already says yes so the user lands back on a valid
+ * UI state after a refresh. */
+$ownsRaw  = $g('do_have_any_property', '');
+$ownsProp = (string)$ownsRaw === '1';
 ?>
 <div class="cw-card">
     <div class="cw-card__header">
         <h3 class="cw-card__title">
             <i class="fa fa-briefcase" aria-hidden="true"></i>
-            العمل والدخل المالي
+            الوضع المالي
         </h3>
     </div>
 
     <p class="cw-card__hint">
         <i class="fa fa-info-circle" aria-hidden="true"></i>
-        املأ بيانات جهة العمل والراتب — هذه أكثر الحقول تأثيراً على
-        تقييم المخاطر لاحقاً. الحقول الاختيارية مطوية وتُكشف عند الحاجة.
+        تشمل هذه المرحلة: العمل والدخل، الضمان الاجتماعي، الأصول العقارية،
+        والحساب البنكي. ابدأ برفع كشف الضمان الاجتماعي لتعبئة معظم الحقول
+        تلقائياً. الحقول الاختيارية مطوية وتُكشف عند الحاجة.
     </p>
 
     <div class="cw-card__body">
+
+        <!-- ── Smart upload: SS detailed statement (PDF / image) ──
+             Placed at the top of Step 2 because (a) it's the single
+             biggest accelerator on this step — one upload pre-fills
+             Sections A (employer), B (salary + last-query dates), and C
+             (SS subscription + number) in one round-trip, and (b) it
+             also cross-fills any missing Step-1 fields (name, ID, DOB,
+             sex). Burying it inside Section C made users miss it. -->
+        <div class="cw-scan-doc"
+             data-cw-scan-income
+             role="region"
+             aria-labelledby="cw-incscan-title">
+            <div class="cw-scan-doc__head">
+                <div class="cw-scan-doc__icon" aria-hidden="true">
+                    <i class="fa fa-file-pdf-o"></i>
+                </div>
+                <div class="cw-scan-doc__text">
+                    <h5 id="cw-incscan-title" class="cw-scan-doc__title">
+                        ابدأ هنا — ارفع كشف الضمان الاجتماعي وسنعبّئ البيانات تلقائياً
+                    </h5>
+                    <p class="cw-scan-doc__hint">
+                        "كشف البيانات التفصيلي" الصادر من المؤسسة العامة للضمان —
+                        <strong>PDF أو صورة (JPG/PNG)</strong> حتى 10 ميجابايت.
+                        سنقرأ منه: جهة العمل، الراتب، رقم التأمين، تاريخ آخر
+                        استعلام، وفترات الاشتراك تلقائياً.
+                    </p>
+                </div>
+                <div class="cw-scan-doc__actions">
+                    <button type="button"
+                            class="cw-btn cw-btn--primary cw-btn--sm"
+                            data-cw-action="pick-income-doc">
+                        <i class="fa fa-upload" aria-hidden="true"></i>
+                        <span>اختر الكشف</span>
+                    </button>
+                </div>
+                <input type="file"
+                       class="cw-sr-only"
+                       data-cw-role="income-input"
+                       accept="application/pdf,image/jpeg,image/png,image/webp"
+                       aria-hidden="true"
+                       tabindex="-1">
+            </div>
+
+            <!-- Status pill (idle | uploading | success | error) -->
+            <div class="cw-scan-doc__status"
+                 data-cw-role="income-status"
+                 role="status"
+                 aria-live="polite"
+                 hidden></div>
+
+            <!-- Summary block populated by scan-income.js -->
+            <div class="cw-scan-doc__summary"
+                 data-cw-role="income-summary"
+                 hidden>
+                <div class="cw-scan-doc__summary-grid"
+                     data-cw-role="income-summary-grid"></div>
+                <details class="cw-scan-doc__details">
+                    <summary>عرض جداول الكشف الكاملة (فترات الاشتراك + الرواتب)</summary>
+                    <div data-cw-role="income-summary-tables"></div>
+                </details>
+            </div>
+        </div>
 
         <!-- ── Section A: Employment basics. ── -->
         <div class="cw-fieldset">
@@ -197,63 +278,10 @@ $bankOpen       = trim((string)$g('bank_name')) !== ''
                 </h4>
                 <p class="cw-fieldset__hint">
                     اختر الإجابة المناسبة وستظهر الحقول الإضافية تلقائياً عند الحاجة.
+                    <span class="cw-fieldset__hint-aside">
+                        — رفعت كشف الضمان أعلاه؟ هذه الحقول مُعبّأة تلقائياً.
+                    </span>
                 </p>
-            </div>
-
-            <!-- ── Smart upload: SS detailed statement (PDF / image) ── -->
-            <div class="cw-scan-doc"
-                 data-cw-scan-income
-                 role="region"
-                 aria-labelledby="cw-incscan-title">
-                <div class="cw-scan-doc__head">
-                    <div class="cw-scan-doc__icon" aria-hidden="true">
-                        <i class="fa fa-file-pdf-o"></i>
-                    </div>
-                    <div class="cw-scan-doc__text">
-                        <h5 id="cw-incscan-title" class="cw-scan-doc__title">
-                            ارفع كشف الضمان الاجتماعي وسنعبّئ البيانات تلقائياً
-                        </h5>
-                        <p class="cw-scan-doc__hint">
-                            "كشف البيانات التفصيلي" الصادر من المؤسسة العامة للضمان —
-                            <strong>PDF أو صورة (JPG/PNG)</strong> حتى 10 ميجابايت.
-                            سنقرأ منه: رقم التأمين، آخر راتب شهري، جهة العمل الحالية،
-                            وفترات الاشتراك تلقائياً.
-                        </p>
-                    </div>
-                    <div class="cw-scan-doc__actions">
-                        <button type="button"
-                                class="cw-btn cw-btn--primary cw-btn--sm"
-                                data-cw-action="pick-income-doc">
-                            <i class="fa fa-upload" aria-hidden="true"></i>
-                            <span>اختر الكشف</span>
-                        </button>
-                    </div>
-                    <input type="file"
-                           class="cw-sr-only"
-                           data-cw-role="income-input"
-                           accept="application/pdf,image/jpeg,image/png,image/webp"
-                           aria-hidden="true"
-                           tabindex="-1">
-                </div>
-
-                <!-- Status pill (idle | uploading | success | error) -->
-                <div class="cw-scan-doc__status"
-                     data-cw-role="income-status"
-                     role="status"
-                     aria-live="polite"
-                     hidden></div>
-
-                <!-- Summary block populated by scan-income.js -->
-                <div class="cw-scan-doc__summary"
-                     data-cw-role="income-summary"
-                     hidden>
-                    <div class="cw-scan-doc__summary-grid"
-                         data-cw-role="income-summary-grid"></div>
-                    <details class="cw-scan-doc__details">
-                        <summary>عرض جداول الكشف الكاملة (فترات الاشتراك + الرواتب)</summary>
-                        <div data-cw-role="income-summary-tables"></div>
-                    </details>
-                </div>
             </div>
 
             <!-- Q1: Subscribed to social security? -->
@@ -388,7 +416,82 @@ $bankOpen       = trim((string)$g('bank_name')) !== ''
             </div>
         </div>
 
-        <!-- ── Section D: Bank details (collapsed by default). ── -->
+        <!-- ── Section D: Real-estate assets (progressive disclosure).
+             Treated as a financial asset — stored in the Customers row
+             via `do_have_any_property` + `property_name` + `property_number`.
+             Hidden by default until the user clicks "نعم". ── -->
+        <div class="cw-fieldset">
+            <div class="cw-fieldset__head">
+                <h4 class="cw-fieldset__title">
+                    <i class="fa fa-home" aria-hidden="true"></i>
+                    الأصول العقارية
+                </h4>
+                <p class="cw-fieldset__hint">
+                    العقارات تُعدّ ضمن أصول العميل لأغراض تقييم الملاءة المالية
+                    وقد تُستخدم كضمان إضافي للعقد عند الحاجة.
+                </p>
+            </div>
+
+            <div class="cw-grid cw-grid--3">
+                <div class="cw-field" data-cw-field="Customers[do_have_any_property]">
+                    <fieldset class="cw-radio-group">
+                        <legend class="cw-field__label">
+                            هل يملك العميل عقاراً؟
+                        </legend>
+                        <div class="cw-radio-row">
+                            <label class="cw-radio">
+                                <input type="radio"
+                                       name="Customers[do_have_any_property]" value="1"
+                                       data-cw-toggle="#cw-property-row"
+                                       <?= $ownsProp ? 'checked' : '' ?>>
+                                <span class="cw-radio__mark" aria-hidden="true"></span>
+                                <span>نعم</span>
+                            </label>
+                            <label class="cw-radio">
+                                <input type="radio"
+                                       name="Customers[do_have_any_property]" value="0"
+                                       data-cw-toggle="#cw-property-row"
+                                       data-cw-toggle-hide="1"
+                                       <?= !$ownsProp && $ownsRaw !== '' ? 'checked' : '' ?>>
+                                <span class="cw-radio__mark" aria-hidden="true"></span>
+                                <span>لا</span>
+                            </label>
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div id="cw-property-row"
+                     class="cw-field cw-field--span-2 cw-conditional <?= $ownsProp ? '' : 'cw-conditional--hidden' ?>"
+                     <?= $ownsProp ? '' : 'hidden' ?>>
+                    <div class="cw-grid cw-grid--2">
+                        <div class="cw-field" data-cw-field="Customers[property_name]">
+                            <label class="cw-field__label" for="cw-prop-name">اسم/نوع العقار</label>
+                            <input type="text"
+                                   id="cw-prop-name"
+                                   name="Customers[property_name]"
+                                   value="<?= Html::encode($g('property_name')) ?>"
+                                   class="cw-input"
+                                   maxlength="50"
+                                   dir="auto"
+                                   placeholder="مثال: شقة سكنية">
+                        </div>
+                        <div class="cw-field" data-cw-field="Customers[property_number]">
+                            <label class="cw-field__label" for="cw-prop-num">رقم العقار / الطابو</label>
+                            <input type="text"
+                                   id="cw-prop-num"
+                                   name="Customers[property_number]"
+                                   value="<?= Html::encode($g('property_number')) ?>"
+                                   class="cw-input cw-input--mono"
+                                   maxlength="100"
+                                   dir="ltr"
+                                   placeholder="—">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Section E: Bank details (collapsed by default). ── -->
         <details class="cw-fieldset cw-fieldset--collapsible" <?= $bankOpen ? 'open' : '' ?>>
             <summary class="cw-fieldset__summary">
                 <span>

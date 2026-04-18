@@ -60,6 +60,17 @@
     color: var(--cw-text-muted);
     font-size: 13px;
 }
+/* Inline aside that ties the section back to a related affordance higher
+ * up the page (e.g. "did you upload the SS kashf above? these fields were
+ * filled for you"). Subtler than a separate paragraph but still scannable. */
+.cw-fieldset__hint-aside {
+    display: inline-block;
+    margin-inline-start: 6px;
+    color: var(--cw-text-muted);
+    opacity: 0.85;
+    font-style: italic;
+    font-size: 12.5px;
+}
 
 /* ── Collapsible variant (uses native <details>/<summary>). ── */
 

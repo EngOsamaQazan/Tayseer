@@ -1,0 +1,227 @@
+/* ============================================================
+   Customer Wizard V2 — Address Map widget
+   -----------------------------------------------------------
+   Compact, focused replacement for the legacy multi-tab map
+   panel from the old wizard (~700 LoC). Goals:
+
+     • Smaller default footprint (~280px tall vs old 480px) so
+       the address card stays scannable on a 768p laptop.
+     • Single column on mobile, two columns on desktop:
+         [ search + tools ][ map ]
+       collapses to stacked layout under 720px.
+     • All controls keyboard-accessible; no hover-only interactions.
+
+   The widget reuses the wizard's CSS variables (defined in
+   core.css) so it adopts the user's selected theme automatically.
+   ============================================================ */
+
+.cw-addr-map {
+    margin-top: 12px;
+    border: 1px solid var(--cw-border, #e5e7eb);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--cw-card-bg, #fff);
+}
+
+.cw-addr-map__head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--cw-border, #eef0f4);
+    background: var(--cw-input-alt-bg, #f8fafc);
+}
+
+.cw-addr-map__title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cw-text-muted, #475569);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cw-addr-map__actions {
+    display: inline-flex;
+    gap: 6px;
+}
+
+.cw-addr-map__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid var(--cw-border, #d1d5db);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--cw-text, #111827);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.cw-addr-map__btn:hover {
+    background: var(--cw-hover, #eef2ff);
+    border-color: var(--cw-primary, #2563eb);
+}
+.cw-addr-map__btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.cw-addr-map__btn--primary {
+    background: var(--cw-primary, #2563eb);
+    color: #fff;
+    border-color: transparent;
+}
+.cw-addr-map__btn--primary:hover {
+    background: var(--cw-primary-hover, #1d4ed8);
+}
+
+.cw-addr-map__body {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 0;
+}
+@media (max-width: 720px) {
+    .cw-addr-map__body {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cw-addr-map__sidebar {
+    padding: 12px 14px;
+    border-inline-end: 1px solid var(--cw-border, #eef0f4);
+    background: var(--cw-card-bg, #fff);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 280px;
+}
+@media (max-width: 720px) {
+    .cw-addr-map__sidebar {
+        border-inline-end: 0;
+        border-block-end: 1px solid var(--cw-border, #eef0f4);
+        min-height: 0;
+    }
+}
+
+.cw-addr-map__field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.cw-addr-map__label {
+    font-size: 12px;
+    color: var(--cw-text-muted, #64748b);
+    font-weight: 600;
+}
+.cw-addr-map__input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--cw-border, #d1d5db);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font: inherit;
+    background: #fff;
+    color: inherit;
+    direction: ltr;
+    text-align: start;
+}
+.cw-addr-map__input:focus {
+    border-color: var(--cw-primary, #2563eb);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--cw-primary-soft, rgba(37, 99, 235, 0.18));
+}
+
+.cw-addr-map__hint {
+    font-size: 11.5px;
+    color: var(--cw-text-muted, #64748b);
+    margin: 0;
+    line-height: 1.45;
+}
+
+.cw-addr-map__results {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--cw-border, #e5e7eb);
+    border-radius: 8px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #fff;
+}
+.cw-addr-map__results:empty {
+    display: none;
+}
+.cw-addr-map__result {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-block-end: 1px solid var(--cw-border, #f1f5f9);
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--cw-text, #111827);
+}
+.cw-addr-map__result:last-child {
+    border-block-end: 0;
+}
+.cw-addr-map__result:hover,
+.cw-addr-map__result.is-active {
+    background: var(--cw-hover, #eef2ff);
+}
+.cw-addr-map__result-meta {
+    display: block;
+    font-size: 11.5px;
+    color: var(--cw-text-muted, #64748b);
+    margin-top: 2px;
+}
+
+.cw-addr-map__container {
+    width: 100%;
+    height: 320px;
+    background: #e2e8f0;
+}
+@media (max-width: 720px) {
+    .cw-addr-map__container {
+        height: 280px;
+    }
+}
+
+.cw-addr-map__footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 14px;
+    border-top: 1px solid var(--cw-border, #eef0f4);
+    background: var(--cw-input-alt-bg, #f8fafc);
+    font-size: 12px;
+    color: var(--cw-text-muted, #475569);
+    font-variant-numeric: tabular-nums;
+}
+.cw-addr-map__coord {
+    direction: ltr;
+}
+.cw-addr-map__plus {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--cw-primary, #2563eb);
+}
+
+/* Brief flash effect when a field is auto-filled by reverse-geocoding,
+   so the user can SEE which fields just changed and verify them. */
+.cw-input.cw-addr-flash,
+.cw-addr-map__input.cw-addr-flash {
+    animation: cwAddrFlash 1.6s ease;
+}
+@keyframes cwAddrFlash {
+    0%   { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.45); background: #f0fdf4; }
+    100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); background: transparent; }
+}
+
+/* Accessibility — visible focus ring on the map's focusable
+   children (Leaflet adds tabindex on overlays). */
+.cw-addr-map__container :focus-visible {
+    outline: 3px solid var(--cw-primary, #2563eb);
+    outline-offset: 2px;
+}

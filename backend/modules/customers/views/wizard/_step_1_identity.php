@@ -131,14 +131,14 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                            inputmode="tel"
                            autocomplete="tel"
                            dir="ltr"
-                           maxlength="20"
-                           placeholder="07XXXXXXXX"
+                           maxlength="22"
                            required
                            aria-describedby="cw-phone-hint"
                            aria-required="true"
-                           data-cw-mask="phone-jo">
+                           data-cw-phone>
                     <p id="cw-phone-hint" class="cw-field__hint">
-                        مثال: 0791234567 — أو بصيغة دولية +9627…
+                        اختر بلد الرقم من القائمة (الافتراضي الأردن)؛ سيتم
+                        حفظ الرقم بصيغة دولية موحّدة (E.164).
                     </p>
                 </div>
             </div>

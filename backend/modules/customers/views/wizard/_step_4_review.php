@@ -195,12 +195,12 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             </dl>
         </div>
 
-        <!-- ═══════════════ Employment recap ═══════════════ -->
+        <!-- ═══════════════ Financial position recap ═══════════════ -->
         <div class="cw-review-section">
             <div class="cw-review-section__head">
                 <h4 class="cw-review-section__title">
                     <i class="fa fa-briefcase" aria-hidden="true"></i>
-                    العمل والدخل
+                    الوضع المالي
                 </h4>
                 <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="2">
                     <i class="fa fa-pencil" aria-hidden="true"></i>
@@ -301,15 +301,17 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             </dl>
         </div>
 
-        <!-- ═══════════════ Real-estate recap (only if owns) ═══════════════ -->
+        <!-- ═══════════════ Real-estate recap (only if owns) ═══════════════
+             Edit button points to step 2 because real-estate now lives in
+             the financial-position card (see _step_2_employment.php § D). -->
         <?php if ($ownsProp): ?>
             <div class="cw-review-section">
                 <div class="cw-review-section__head">
                     <h4 class="cw-review-section__title">
                         <i class="fa fa-home" aria-hidden="true"></i>
-                        العقارات
+                        الأصول العقارية
                     </h4>
-                    <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="3">
+                    <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="2">
                         <i class="fa fa-pencil" aria-hidden="true"></i>
                         <span>تعديل</span>
                     </button>
