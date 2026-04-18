@@ -564,6 +564,28 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
             <div>
                 <?php // AI SUGGESTION PANEL ?>
                 <?= $this->render('panel/_ai_suggestions', ['aiData' => $aiData, 'contract' => $contract, 'isClosed' => $isClosed, 'isJudiciaryPaid' => $isJudiciaryPaid]) ?>
+
+                <?php
+                // ═══ SOCIAL SECURITY STATEMENT CARD ═══
+                // Renders only when the principal customer has a stored
+                // SS statement. Best-effort lookup — failures are silenced
+                // because this is a supplementary widget, not core data.
+                if ($customer && $customer->id):
+                    try {
+                        $ssStatement = \backend\modules\customers\models\CustomerSsStatement::findCurrentForCustomer((int)$customer->id);
+                        if ($ssStatement !== null) {
+                            $ssStatementCount = \backend\modules\customers\models\CustomerSsStatement::countForCustomer((int)$customer->id);
+                            echo $this->render('panel/_ss_summary', [
+                                'statement'      => $ssStatement,
+                                'customerId'     => (int)$customer->id,
+                                'statementCount' => $ssStatementCount,
+                            ]);
+                        }
+                    } catch (\Throwable $e) {
+                        Yii::warning('SS sidebar render failed: ' . $e->getMessage(), __METHOD__);
+                    }
+                endif;
+                ?>
             </div>
 
         </div>

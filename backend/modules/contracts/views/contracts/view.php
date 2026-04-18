@@ -7,6 +7,7 @@ use yii\helpers\Url;
 use yii\helpers\ArrayHelper;
 use backend\modules\contracts\models\Contracts;
 use backend\modules\inventoryItems\models\ContractInventoryItem;
+use backend\modules\customers\models\CustomerSsStatement;
 
 $this->title = 'العقد #' . $model->id;
 $this->params['breadcrumbs'][] = ['label' => 'العقود', 'url' => ['index']];
@@ -30,6 +31,16 @@ $paidAmount    = $calc->paidAmount();
 $remaining     = $calc->remainingAmount();
 $adjustments   = $calc->totalAdjustments();
 $isJudiciaryPaid = $model->isJudiciaryPaid();
+
+// Social-Security statement for the principal customer (first non-guarantor).
+// Defensive: $customers may be empty for orphaned/legacy contracts.
+$principalCustomer = (!empty($customers) && isset($customers[0])) ? $customers[0] : null;
+$ssStatement       = null;
+$ssStatementCount  = 0;
+if ($principalCustomer && $principalCustomer->id) {
+    $ssStatement      = CustomerSsStatement::findCurrentForCustomer((int)$principalCustomer->id);
+    $ssStatementCount = CustomerSsStatement::countForCustomer((int)$principalCustomer->id);
+}
 ?>
 
 <div class="cf">
@@ -205,6 +216,15 @@ $isJudiciaryPaid = $model->isJudiciaryPaid();
             <?= Html::a('<i class="fa fa-comments-o"></i> المتابعة', ['/followUp/follow-up/panel', 'contract_id' => $model->id], ['class' => 'btn', 'style' => 'background:var(--cf-teal);color:#fff;border:none']) ?>
         </div>
     </div>
+
+    <?php if ($ssStatement !== null): ?>
+        <?= $this->render('_ss_summary', [
+            'statement'      => $ssStatement,
+            'customerId'     => (int)$principalCustomer->id,
+            'statementCount' => $ssStatementCount,
+            'customer'       => $principalCustomer,
+        ]) ?>
+    <?php endif ?>
 </aside>
 
 </div><!-- /cf-layout -->

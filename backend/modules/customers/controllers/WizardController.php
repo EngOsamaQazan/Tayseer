@@ -327,6 +327,12 @@ class WizardController extends Controller
                 if (trim((string)($address[$k] ?? '')) !== '') { $hasAddr = true; break; }
             }
             if ($hasAddr) {
+                // Cast geo fields: empty string → NULL so the DB
+                // doesn't store a 0,0 (Atlantic) coordinate by accident.
+                $lat = isset($address['latitude'])  && $address['latitude']  !== '' ? (float)$address['latitude']  : null;
+                $lng = isset($address['longitude']) && $address['longitude'] !== '' ? (float)$address['longitude'] : null;
+                $plus = isset($address['plus_code']) && $address['plus_code'] !== '' ? (string)$address['plus_code'] : null;
+
                 $addrModel = new Address();
                 $addrModel->setAttributes([
                     'customers_id'     => $customer->id,
@@ -337,6 +343,9 @@ class WizardController extends Controller
                     'address_building' => $address['address_building'] ?? null,
                     'postal_code'      => $address['postal_code']      ?? null,
                     'address'          => $address['address']          ?? null,
+                    'latitude'         => $lat,
+                    'longitude'        => $lng,
+                    'plus_code'        => $plus,
                 ], false);
                 if (!$addrModel->save()) {
                     $tx->rollBack();
@@ -386,6 +395,16 @@ class WizardController extends Controller
         } catch (\Throwable $e) {
             $adopted = 0;
             Yii::warning('Wizard finish: linkScanImagesToCustomer failed: '
+                . $e->getMessage(), __METHOD__);
+        }
+
+        // ── 4b. Persist the SS statement (header + subscriptions + salaries). ──
+        // Best-effort: any failure here should not block customer creation,
+        // since the customer + media file are already saved successfully.
+        try {
+            $this->persistSocialSecurityStatement((int)$customer->id, $payload);
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finish: persistSocialSecurityStatement failed: '
                 . $e->getMessage(), __METHOD__);
         }
 
@@ -1076,10 +1095,38 @@ class WizardController extends Controller
     }
 
     /**
+     * Persist the Social Security statement (header + child tables) once the
+     * wizard finishes. Reads the cached extraction stashed in the draft by
+     * `rememberIncomeScanInDraft()` and delegates the heavy lifting to
+     * `CustomerSsStatement::saveExtracted()`.
+     *
+     * Best-effort — caller wraps this in a try/catch so a failure here will
+     * not abort customer creation.
+     */
+    protected function persistSocialSecurityStatement(int $customerId, array $payload): void
+    {
+        $extracted = $payload['_scan']['income_extracted'] ?? null;
+        if (!is_array($extracted) || empty($extracted)) {
+            return;
+        }
+
+        $imageId = isset($payload['_scan']['images']['income'])
+            ? (int)$payload['_scan']['images']['income']
+            : null;
+
+        \backend\modules\customers\models\CustomerSsStatement::saveExtracted(
+            $customerId,
+            $imageId ?: null,
+            $extracted
+        );
+    }
+
+    /**
      * Track the SS scan in the wizard's auto-draft so:
      *   • finish() adopts the Media row for the new customer.
      *   • the review screen can show the kashf as a known document.
      *   • re-uploading replaces the previous summary cleanly.
+     *   • finish() can persist the structured rows to the dedicated tables.
      */
     protected function rememberIncomeScanInDraft($imageId, array $extracted)
     {
@@ -1096,8 +1143,13 @@ class WizardController extends Controller
             if ($imageId) {
                 $payload['_scan']['images']['income'] = (int)$imageId;
             }
-            $payload['_scan']['income_summary'] = $this->buildIncomeSummary($extracted);
-            $payload['_scan']['updated'] = time();
+            $payload['_scan']['income_summary']   = $this->buildIncomeSummary($extracted);
+            // Stash the full normalised extraction so actionFinish() can
+            // persist the structured rows (subscriptions + salaries) without
+            // re-running OCR. JSON_UNESCAPED_UNICODE keeps Arabic readable in
+            // the draft store and small enough to fit MAX_DRAFT_BYTES easily.
+            $payload['_scan']['income_extracted'] = $extracted;
+            $payload['_scan']['updated']          = time();
 
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
@@ -2414,21 +2466,41 @@ class WizardController extends Controller
             $errors['Customers[job_number]'] = 'الرقم الوظيفي طويل جداً (الحد الأقصى 20 خانة).';
         }
 
+        // ── Real-estate (relocated from Step 3 — see _step_2_employment.php
+        //    Section D for rationale). Treat property fields as financial
+        //    assets, not as addressing data. ──
+        $owns = $this->dotGet($data, 'Customers[do_have_any_property]');
+        if ($owns !== null && $owns !== '' && !in_array((string)$owns, ['0', '1'], true)) {
+            $errors['Customers[do_have_any_property]'] = 'القيمة غير صالحة.';
+        }
+        if ((string)$owns === '1') {
+            $pname = trim((string)$this->dotGet($data, 'Customers[property_name]'));
+            if ($pname === '') {
+                $errors['Customers[property_name]'] = 'اسم/نوع العقار مطلوب.';
+            } elseif (mb_strlen($pname) > 50) {
+                $errors['Customers[property_name]'] = 'الاسم طويل جداً.';
+            }
+            $pnum = trim((string)$this->dotGet($data, 'Customers[property_number]'));
+            if (mb_strlen($pnum) > 100) {
+                $errors['Customers[property_number]'] = 'الرقم طويل جداً.';
+            }
+        }
+
         return $errors;
     }
 
     /**
-     * Validate Step 3 — guarantors, primary address, and real-estate.
+     * Validate Step 3 — guarantors & primary residential address.
      *
      * Required:
      *   • At least 1 guarantor with non-empty name + phone + relationship.
      *   • address[address_city] must be filled.
      *
-     * Conditional:
-     *   • property_name + property_number when do_have_any_property == 1.
-     *
      * Optional:
      *   • Additional guarantors (max 10), address area/street/etc.
+     *
+     * NOTE: Real-estate validation moved to validateStep2() — see Section D
+     * of the financial-position card for rationale.
      */
     protected function validateStep3($data)
     {
@@ -2517,23 +2589,28 @@ class WizardController extends Controller
             $errors['address[address_street]'] = 'الشارع طويل جداً (الحد الأقصى 500 حرف).';
         }
 
-        // ── Real-estate. ──
-        $owns = $this->dotGet($data, 'Customers[do_have_any_property]');
-        if ($owns !== null && $owns !== '' && !in_array((string)$owns, ['0', '1'], true)) {
-            $errors['Customers[do_have_any_property]'] = 'القيمة غير صالحة.';
+        // ── Map widget (optional). Validate when present, else skip
+        //    silently. We accept up to 8 decimals (~1mm precision). ──
+        $lat = trim((string)($address['latitude']  ?? ''));
+        $lng = trim((string)($address['longitude'] ?? ''));
+        if ($lat !== '') {
+            if (!is_numeric($lat) || (float)$lat < -90 || (float)$lat > 90) {
+                $errors['address[latitude]'] = 'خط العرض غير صالح (-90 إلى 90).';
+            }
         }
-
-        if ((string)$owns === '1') {
-            $pname = trim((string)$this->dotGet($data, 'Customers[property_name]'));
-            if ($pname === '') {
-                $errors['Customers[property_name]'] = 'اسم/نوع العقار مطلوب.';
-            } elseif (mb_strlen($pname) > 50) {
-                $errors['Customers[property_name]'] = 'الاسم طويل جداً.';
+        if ($lng !== '') {
+            if (!is_numeric($lng) || (float)$lng < -180 || (float)$lng > 180) {
+                $errors['address[longitude]'] = 'خط الطول غير صالح (-180 إلى 180).';
             }
-            $pnum = trim((string)$this->dotGet($data, 'Customers[property_number]'));
-            if (mb_strlen($pnum) > 100) {
-                $errors['Customers[property_number]'] = 'الرقم طويل جداً.';
-            }
+        }
+        // Either both or neither — partial coords would corrupt the
+        // map UX next time the wizard is reopened.
+        if (($lat === '') !== ($lng === '')) {
+            $errors['address[latitude]'] = 'يجب تحديد خط العرض وخط الطول معاً، أو تركهما فارغين.';
+        }
+        $plus = (string)($address['plus_code'] ?? '');
+        if (mb_strlen($plus) > 20) {
+            $errors['address[plus_code]'] = 'رمز Plus Code طويل جداً.';
         }
 
         return $errors;
