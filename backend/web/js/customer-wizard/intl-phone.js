@@ -39,6 +39,10 @@
     var NS = '.cwphone';
     var SELECTOR = 'input[data-cw-phone]';
     var INSTANCE_KEY = 'cwIntlInstance';
+    /* Buffer between the dial-code button's right edge and where typed
+     * digits start. Matches the visual breathing-room intl-tel-input ships
+     * by default (~6–8px) and keeps the caret well clear of the button. */
+    var BTN_PAD_BUFFER = 6;
 
     /* ── Defaults reflect Tayseer's primary customer geography ── */
     var DEFAULTS = {
@@ -124,6 +128,23 @@
                 $iti.css('width', '100%').addClass('iti--cw');
             }
 
+            // ── Keep input's inline padding-left in sync with the button ──
+            // intl-tel-input writes `style="padding-left: NNpx"` once at init
+            // based on the button width AT THAT INSTANT. Three things break
+            // that one-shot measurement:
+            //   1. Our `.iti--cw` overrides add `padding-inline: 8px` to the
+            //      country button → button ends up ~16px wider than the
+            //      library expected, so digits get drawn UNDER the flag.
+            //   2. The input is hidden inside an inactive `<section>` at
+            //      init time (display:none / inert), so the measured width
+            //      is 0, causing padding-left to collapse.
+            //   3. Locale / dial-code can change at runtime (user picks SA
+            //      `+966` after starting on JO `+962`) and the new dial-code
+            //      string is wider/narrower than the old one.
+            // A ResizeObserver on the button + a one-shot recompute on every
+            // step transition + countrychange covers all three cases.
+            syncInputPadding($el[0], $iti[0]);
+
             // ── E.164 normalization on blur ──
             // We rewrite to E.164 only when the number passes
             // libphonenumber validation; otherwise we leave the user's
@@ -158,6 +179,56 @@
         }
     }
 
+    /**
+     * Pin the input's inline `padding-left` to the live width of the
+     * dial-code button so typed digits never sit underneath it. We also
+     * stash the button on the input so a global step-changed handler can
+     * recompute everything in one pass.
+     */
+    function syncInputPadding(input, itiContainer) {
+        if (!input || !itiContainer) return;
+        var btn = itiContainer.querySelector(
+            '.iti__country-container, .iti__selected-country, .iti__flag-container'
+        );
+        if (!btn) return;
+
+        var apply = function () {
+            // Skip when the input is inside a hidden step (width=0) so we
+            // don't lock in a 0px padding. The post-step:changed hook will
+            // re-run apply() once the section is visible.
+            var w = btn.getBoundingClientRect().width;
+            if (w <= 0) return;
+            var px = Math.ceil(w) + BTN_PAD_BUFFER;
+            // Use setProperty(important) so we always beat any stale inline
+            // value the library wrote at init.
+            input.style.setProperty('padding-left', px + 'px', 'important');
+        };
+
+        apply();
+
+        // Track future button-width changes (locale switch, font load,
+        // viewport resize via responsive font-size). ResizeObserver fires
+        // synchronously after layout, before paint → no visual flicker.
+        if (typeof window.ResizeObserver === 'function') {
+            try {
+                var ro = new window.ResizeObserver(apply);
+                ro.observe(btn);
+                $(input).data('cwPhonePadObserver', ro);
+            } catch (_) { /* SSR / sandboxed env — silently skip. */ }
+        }
+
+        $(input).data('cwPhonePadResync', apply);
+    }
+
+    /** Re-run padding sync for every bound phone input. Cheap idempotent. */
+    function resyncAllPadding($root) {
+        $root = $root && $root.length ? $root : $(document);
+        $root.find(SELECTOR).each(function () {
+            var fn = $(this).data('cwPhonePadResync');
+            if (typeof fn === 'function') fn();
+        });
+    }
+
     /* ── Auto-init on DOM ready ── */
     $(function () {
         // Library is vendored locally and loaded synchronously before this
@@ -180,8 +251,26 @@
     });
 
     /* ── Re-enhance after a step transition (defensive) ── */
-    $(document).on('cw:step:changed', function () {
+    $(document).on('cw:step:changed cw:step:rendered', function () {
         window.CWPhone.enhance($(document));
+        // The step we're entering may host a phone input that was hidden
+        // (width=0) at init time, so its padding-left was skipped. Re-sync
+        // now that the section is visible.
+        resyncAllPadding($(document));
     });
+
+    /* ── Re-sync padding when a country changes its dial-code width. ── */
+    $(document).on('countrychange' + NS, SELECTOR, function () {
+        var fn = $(this).data('cwPhonePadResync');
+        if (typeof fn === 'function') fn();
+    });
+
+    /* ── Re-sync after window resize (font-size media queries kick in
+           between 480/768/1366px, which can change button width). ── */
+    var resizeT;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeT);
+        resizeT = setTimeout(function () { resyncAllPadding($(document)); }, 80);
+    }, { passive: true });
 
 })(jQuery);

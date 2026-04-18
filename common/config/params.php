@@ -17,6 +17,7 @@ return [
     'customerImagesBaseUrl' => null,
 
     /** Asset version — bump to force browser cache refresh
-     *  (uses this file's mtime; resave to bust caches site-wide) */
+     *  (uses this file's mtime; resave to bust caches site-wide).
+     *  Last bump: 2026-04-19 — intl-phone padding sync fix. */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];

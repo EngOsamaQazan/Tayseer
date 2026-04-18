@@ -24,19 +24,19 @@
     width: 100%;
 }
 
-/* ── Input shape: identical to .cw-input ── */
+/* ── Input shape: identical to .cw-input ──
+   We DON'T set padding-inline-start here because intl-tel-input writes
+   `style="padding-left: NNpx"` inline at init, and intl-phone.js keeps
+   that value in lockstep with the actual button width via a
+   ResizeObserver — see syncInputPadding(). The right side just needs
+   enough room for the clear-dropdown affordances some browsers add. */
 .iti--cw input.cw-input {
     width: 100%;
     box-sizing: border-box;
     border: 1px solid var(--cw-border, #d1d5db);
     border-radius: 8px;
     padding-block: 10px;
-    padding-inline-start: 14px;
-    /* The flag combobox sits to the *visual* left of the input even
-     * in RTL; intl-tel-input's --separateDialCode mode renders the
-     * dial-code chunk to the left of the text input. We add extra
-     * padding-inline-end so the dial code never overlaps the value. */
-    padding-inline-end: 92px;
+    padding-inline-end: 14px;
     background: var(--cw-input-bg, #fff);
     font: inherit;
     color: inherit;
@@ -49,14 +49,19 @@
     box-shadow: 0 0 0 3px var(--cw-primary-soft, rgba(37, 99, 235, 0.18));
 }
 
-/* ── Flag combobox button ── */
+/* ── Flag combobox button ──
+   Tight horizontal padding (6px each side) keeps the button compact so
+   the input's typing area stays usable on ~280–360px viewports. The
+   accompanying intl-phone.js sync layer pins the input's padding-left
+   to whatever width this button actually ends up being, so changing
+   this value here will Just Work. */
 .iti--cw .iti__country-container,
 .iti--cw .iti__selected-country {
     border-start-start-radius: 8px;
     border-end-start-radius: 8px;
     background: var(--cw-input-alt-bg, #f8fafc);
     border-inline-end: 1px solid var(--cw-border, #d1d5db);
-    padding-inline: 10px;
+    padding-inline: 6px;
     height: 100%;
 }
 .iti--cw .iti__selected-country:hover,
@@ -64,7 +69,7 @@
     background: var(--cw-hover, #eef2ff);
 }
 .iti--cw .iti__selected-dial-code {
-    margin-inline-start: 6px;
+    margin-inline-start: 4px;
     font-variant-numeric: tabular-nums;
     color: var(--cw-text, #111827);
 }
@@ -122,13 +127,24 @@
     text-align: left;
 }
 
-/* ── Mobile: collapse padding so we don't squeeze the value ── */
+/* ── Mobile: keep 16px font-size to defeat Safari iOS auto-zoom. ── */
 @media (max-width: 480px) {
     .iti--cw input.cw-input {
-        padding-inline-end: 80px;
-        /* Keep 16px on phones so Safari iOS doesn't auto-zoom on focus —
-           the dropdown trigger sits flush against the field, so any zoom
-           hides the flag selector behind the keyboard. */
+        /* 16px floor on focus or Safari iOS zooms the page in and the
+           floating dial-code button slides under the on-screen keyboard. */
         font-size: 16px;
+    }
+}
+
+/* ── Ultra-narrow viewports (Galaxy Z Fold cover ≤340px) ──
+   Hide the inline "+962" label so the dial-code button collapses to
+   flag + arrow (~30px). The country is still discoverable via the
+   dropdown and the canonical E.164 value still ships on submit, so
+   we lose no information — just visual real-estate that we genuinely
+   don't have. intl-phone.js's ResizeObserver picks up the new button
+   width and re-syncs the input's padding-left automatically. */
+@media (max-width: 340px) {
+    .iti--cw .iti__selected-dial-code {
+        display: none;
     }
 }
