@@ -40,6 +40,7 @@
         initJobAjaxSelect2();
         initDocChecklist();
         initHelpTooltips();
+        detectServerErrors();
     });
 
     /* ══════════════════════════════════════════
@@ -847,11 +848,14 @@
     }
 
     function initLiveValidation() {
-        // Debounced risk recalculation on any input change
         var $form = $('#smart-onboarding-form');
         $form.on('change input', 'input, select, textarea', function() {
             clearTimeout(SO.debounceTimer);
             SO.debounceTimer = setTimeout(triggerRiskCalc, 600);
+            var $group = $(this).closest('.form-group');
+            if ($group.hasClass('has-error') && $(this).val()) {
+                $group.removeClass('has-error');
+            }
         });
     }
 
@@ -1312,7 +1316,74 @@
         submitDecision(decision, $form);
     });
 
+    function detectServerErrors() {
+        var $errorFields = $('#smart-onboarding-form .has-error');
+        if (!$errorFields.length) return;
+        var firstStep = -1;
+        var labels = [];
+        $errorFields.each(function() {
+            var $section = $(this).closest('.so-section');
+            if ($section.length) {
+                var step = parseInt($section.attr('data-step')) || 0;
+                if (firstStep < 0 || step < firstStep) firstStep = step;
+            }
+            var lbl = $(this).find('label').first().text().replace('*', '').trim();
+            if (lbl) labels.push(lbl);
+        });
+        if (firstStep >= 0) {
+            showStep(firstStep);
+            if (labels.length) {
+                setTimeout(function() {
+                    showToast('يرجى تصحيح الحقول التالية: ' + labels.join('، '), 'error', 8000);
+                }, 500);
+            }
+        }
+    }
+
+    var REQUIRED_FIELDS = [
+        {id: 'customers-name',                  label: 'اسم العميل'},
+        {id: 'customers-sex',                   label: 'الجنس'},
+        {id: 'customers-birth_date',            label: 'تاريخ الميلاد'},
+        {id: 'customers-city',                  label: 'مدينة الولادة'},
+        {id: 'customers-id_number',             label: 'الرقم الوطني'},
+        {id: 'customers-citizen',               label: 'الجنسية'},
+        {id: 'customers-primary_phone_number',  label: 'الهاتف الرئيسي'},
+        {id: 'customers-hear_about_us',         label: 'كيف سمعت عنا'},
+        {id: 'customers-job_title',             label: 'جهة العمل'},
+        {id: 'customers-is_social_security',    label: 'مشترك بالضمان'},
+        {id: 'customers-do_have_any_property',  label: 'يملك عقارات'},
+    ];
+
+    function validateBeforeSubmit() {
+        var missing = [];
+        var firstErrorStep = -1;
+        REQUIRED_FIELDS.forEach(function(f) {
+            var el = document.getElementById(f.id);
+            if (!el) return;
+            var val = $(el).val();
+            if (val === null || val === undefined || val === '') {
+                missing.push(f.label);
+                if (firstErrorStep < 0) {
+                    var $section = $(el).closest('.so-section');
+                    if ($section.length) firstErrorStep = parseInt($section.attr('data-step')) || 0;
+                }
+                $(el).closest('.form-group').addClass('has-error');
+            }
+        });
+        if (missing.length > 0) {
+            showToast('الحقول التالية مطلوبة: ' + missing.join('، '), 'error', 8000);
+            if (firstErrorStep >= 0) {
+                showStep(firstErrorStep);
+                var $firstErr = $('.so-section.active .has-error').first().find('input,select,textarea').first();
+                if ($firstErr.length) setTimeout(function() { $firstErr.focus(); }, 300);
+            }
+            return false;
+        }
+        return true;
+    }
+
     function submitDecision(decision, $form) {
+        if (decision !== 'draft' && !validateBeforeSubmit()) return;
         $form.append('<input type="hidden" name="save_decision" value="' + decision + '">');
         if (SO.riskData) {
             $form.append('<input type="hidden" name="risk_assessment" value=\'' + JSON.stringify(SO.riskData) + '\'>');
