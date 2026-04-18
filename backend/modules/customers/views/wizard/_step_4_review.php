@@ -66,9 +66,8 @@ $displayBool = function ($v) {
 };
 
 $sexLabels = ['1' => 'ذكر', '2' => 'أنثى'];
-$sexLabel  = $cust['sex'] !== '' && isset($sexLabels[(string)($cust['sex'] ?? '')])
-    ? $sexLabels[(string)$cust['sex']]
-    : '—';
+$sexRaw    = (string)($cust['sex'] ?? '');
+$sexLabel  = ($sexRaw !== '' && isset($sexLabels[$sexRaw])) ? $sexLabels[$sexRaw] : '—';
 
 // ── Resolve scan media (front/back). ──
 $scanFront = null;
