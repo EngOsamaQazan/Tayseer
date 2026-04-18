@@ -40,11 +40,22 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
         <button type="button"
                 class="cw-btn cw-btn--outline cw-btn--sm"
                 data-cw-action="scan-identity"
-                disabled>
+                aria-describedby="cw-scan-hint">
             <i class="fa fa-camera" aria-hidden="true"></i>
-            <span>مسح ذكي للهوية</span>
+            <span class="cw-scan__label">مسح ذكي للهوية</span>
         </button>
+        <input type="file"
+               class="cw-sr-only"
+               data-cw-role="scan-input"
+               accept="image/jpeg,image/png,image/webp,application/pdf"
+               capture="environment"
+               aria-hidden="true"
+               tabindex="-1">
     </div>
+
+    <p id="cw-scan-hint" class="cw-card__hint">
+        التقط صورة واضحة للهوية أو ارفع ملفاً (JPG/PNG/PDF حتى 10MB) — سنُعبّئ الحقول تلقائياً.
+    </p>
 
     <div class="cw-card__body">
 

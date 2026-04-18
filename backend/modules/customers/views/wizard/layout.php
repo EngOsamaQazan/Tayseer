@@ -45,6 +45,10 @@ $this->registerJsFile($baseUrl . '/js/customer-wizard/fields.js', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
+$this->registerJsFile($baseUrl . '/js/customer-wizard/scan.js', [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
 
 $urls = [
     'start'    => Url::to(['/customers/wizard/start']),

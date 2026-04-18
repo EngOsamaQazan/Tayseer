@@ -5,12 +5,14 @@ namespace backend\modules\customers\controllers;
 use Yii;
 use yii\web\Controller;
 use yii\web\Response;
+use yii\web\UploadedFile;
 use yii\web\NotFoundHttpException;
 use yii\web\BadRequestHttpException;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use common\models\WizardDraft;
 use common\helper\Permissions;
+use backend\modules\customers\components\VisionService;
 
 /**
  * Customer Onboarding Wizard — V2.
@@ -46,6 +48,12 @@ class WizardController extends Controller
 
     /** Hard cap on the cumulative draft JSON kept in the DB. */
     const MAX_DRAFT_BYTES = 524288;
+
+    /** Hard cap on uploaded scan image (10 MB — matches legacy SmartMedia cap). */
+    const MAX_SCAN_BYTES = 10 * 1024 * 1024;
+
+    /** Whitelisted MIME types for the smart-scan endpoint. */
+    const SCAN_ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     public $defaultAction = 'start';
 
@@ -264,16 +272,221 @@ class WizardController extends Controller
     }
 
     /**
-     * OCR scan bridge — Phase 5 wires this to the existing smart-media
-     * extractor. Stubbed for now.
+     * Smart OCR scan — accepts an uploaded ID/passport image, sends it
+     * directly to Gemini Vision via the shared VisionService, then maps
+     * the structured fields back into the wizard's `Customers[*]` keys
+     * (including resolving free-text city/citizen → lookup IDs).
+     *
+     * The browser uploads a single image as multipart "file"; we stream it
+     * to Gemini WITHOUT persisting it to disk under `web/uploads/` (privacy:
+     * user may abort the wizard, no orphan files left behind). The temp
+     * file is deleted in a finally block.
+     *
+     * Response:
+     *   { ok: true,
+     *     fields: { 'Customers[name]': '...', 'Customers[id_number]': '...', ... },
+     *     unmapped: { city: 'عمان', citizen: 'أردني' },   // text we couldn't resolve to an ID
+     *     meta: { source: 'gemini-vision', elapsed_ms: 1234 } }
+     *
+     *   { ok: false, error: 'human-readable Arabic message' }
      */
     public function actionScan()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        return [
-            'ok'    => false,
-            'error' => 'المسح الذكي يُربط في المرحلة الخامسة.',
-        ];
+        $startedAt = microtime(true);
+
+        if (!VisionService::isEnabled()) {
+            return [
+                'ok'    => false,
+                'error' => 'المسح الذكي غير مفعّل في إعدادات النظام (Google Cloud).',
+            ];
+        }
+
+        $file = UploadedFile::getInstanceByName('file');
+        if (!$file) {
+            return ['ok' => false, 'error' => 'لم يتم استلام ملف للمسح.'];
+        }
+        if ($file->error !== UPLOAD_ERR_OK) {
+            return ['ok' => false, 'error' => 'خطأ في رفع الملف (#' . (int)$file->error . ').'];
+        }
+        if (!in_array($file->type, self::SCAN_ALLOWED_MIMES, true)) {
+            return ['ok' => false, 'error' => 'نوع الملف غير مدعوم — استخدم JPG / PNG / WEBP / PDF.'];
+        }
+        if ($file->size > self::MAX_SCAN_BYTES) {
+            return ['ok' => false, 'error' => 'حجم الملف أكبر من 10 ميجابايت.'];
+        }
+
+        // Save to runtime (NOT web/uploads) so a wizard abort leaves no
+        // orphan files inside the public tree.
+        $ext = strtolower($file->extension ?: 'jpg');
+        $tmpPath = Yii::getAlias('@runtime') . '/wizard_scan_'
+                 . Yii::$app->security->generateRandomString(8) . '.' . $ext;
+
+        if (!$file->saveAs($tmpPath, false)) {
+            return ['ok' => false, 'error' => 'تعذّر حفظ الملف للمعالجة.'];
+        }
+
+        // Don't hold the session lock during the multi-second Gemini call.
+        Yii::$app->session->close();
+
+        try {
+            $extracted = VisionService::extractFromImage($tmpPath);
+            if (!is_array($extracted) || empty($extracted)) {
+                return [
+                    'ok'    => false,
+                    'error' => 'لم يتمكّن النظام من قراءة الوثيقة — جرّب صورة أوضح.',
+                ];
+            }
+
+            $lookups = $this->loadLookups();
+            $mapped  = $this->mapScanToWizardFields($extracted, $lookups);
+
+            return [
+                'ok'         => true,
+                'fields'     => $mapped['fields'],
+                'unmapped'   => $mapped['unmapped'],
+                'raw'        => $extracted,
+                'meta'       => [
+                    'source'     => 'gemini-vision',
+                    'elapsed_ms' => (int)((microtime(true) - $startedAt) * 1000),
+                ],
+            ];
+
+        } catch (\Throwable $e) {
+            Yii::error('Wizard scan failed: ' . $e->getMessage(), __METHOD__);
+            return [
+                'ok'    => false,
+                'error' => 'تعذّر تحليل الوثيقة: ' . $e->getMessage(),
+            ];
+        } finally {
+            if (file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
+        }
+    }
+
+    /**
+     * Translate the raw Gemini extraction → wizard-form keys.
+     *
+     * Gemini returns fields like:
+     *   ['name' => '...', 'id_number' => '...', 'sex' => 0,
+     *    'birth_date' => 'YYYY-MM-DD', 'birth_place' => '...',
+     *    'nationality_text' => '...']
+     *
+     * We need to:
+     *   1. Map keys → 'Customers[name]', 'Customers[id_number]', etc.
+     *   2. Convert `sex` (0=male/1=female from Gemini) → '1'/'2' (model enum).
+     *   3. Resolve `birth_place` (Arabic string) → city dropdown ID.
+     *   4. Resolve `nationality_text` → citizen dropdown ID.
+     *
+     * Anything that can't be resolved goes into `unmapped` so the UI can
+     * surface a friendly hint to the user.
+     */
+    protected function mapScanToWizardFields(array $extracted, array $lookups)
+    {
+        $fields   = [];
+        $unmapped = [];
+
+        // Plain pass-through (string-safe).
+        if (!empty($extracted['name']) && is_string($extracted['name'])) {
+            $fields['Customers[name]'] = trim($extracted['name']);
+        }
+        if (!empty($extracted['id_number'])) {
+            $digits = preg_replace('/\D+/', '', (string)$extracted['id_number']);
+            if (strlen($digits) >= 9 && strlen($digits) <= 12) {
+                $fields['Customers[id_number]'] = $digits;
+            }
+        }
+
+        // Gemini uses 0=male, 1=female. Our model uses 1=male, 2=female.
+        if (isset($extracted['sex']) && $extracted['sex'] !== '') {
+            $g = (int)$extracted['sex'];
+            $fields['Customers[sex]'] = ($g === 1) ? '2' : '1';
+        }
+
+        // Birth date — only accept ISO YYYY-MM-DD that pass strtotime.
+        if (!empty($extracted['birth_date']) && is_string($extracted['birth_date'])) {
+            $bd = trim($extracted['birth_date']);
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $bd) && strtotime($bd) !== false) {
+                $fields['Customers[birth_date]'] = $bd;
+            }
+        }
+
+        // Resolve birth_place (Arabic text) → city ID.
+        if (!empty($extracted['birth_place']) && is_string($extracted['birth_place'])) {
+            $cityId = $this->resolveLookupId($extracted['birth_place'], $lookups['cities'] ?? []);
+            if ($cityId !== null) {
+                $fields['Customers[city]'] = (string)$cityId;
+            } else {
+                $unmapped['city'] = trim($extracted['birth_place']);
+            }
+        }
+
+        // Resolve nationality_text → citizen ID.
+        if (!empty($extracted['nationality_text']) && is_string($extracted['nationality_text'])) {
+            $citId = $this->resolveLookupId($extracted['nationality_text'], $lookups['citizens'] ?? []);
+            if ($citId !== null) {
+                $fields['Customers[citizen]'] = (string)$citId;
+            } else {
+                $unmapped['citizen'] = trim($extracted['nationality_text']);
+            }
+        }
+
+        return ['fields' => $fields, 'unmapped' => $unmapped];
+    }
+
+    /**
+     * Resolve free-form text (e.g. "عمان", "الأردن") to a lookup table ID
+     * using a two-pass match: exact first, then substring contained either way.
+     *
+     * @param string $text   the text to resolve
+     * @param array  $rows   array of rows like [{id, name}, ...]
+     * @return int|string|null  the ID if found, else null
+     */
+    protected function resolveLookupId($text, array $rows)
+    {
+        $needle = trim((string)$text);
+        if ($needle === '' || empty($rows)) return null;
+
+        $needleNorm = self::normalizeArabic($needle);
+
+        // Pass 1: exact (normalized) match.
+        foreach ($rows as $row) {
+            if (self::normalizeArabic($row['name'] ?? '') === $needleNorm) {
+                return $row['id'];
+            }
+        }
+
+        // Pass 2: substring match in either direction.
+        foreach ($rows as $row) {
+            $rowNorm = self::normalizeArabic($row['name'] ?? '');
+            if ($rowNorm === '') continue;
+            if (mb_strpos($rowNorm, $needleNorm) !== false
+             || mb_strpos($needleNorm, $rowNorm) !== false) {
+                return $row['id'];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Normalize Arabic text for fuzzy matching:
+     *   • Collapse alef variants  أإآ → ا
+     *   • Strip taa marbouta noise ة/ه equivalence
+     *   • Strip diacritics + tatweel + extra spaces
+     */
+    protected static function normalizeArabic($text)
+    {
+        $t = (string)$text;
+        $t = preg_replace('/[\x{064B}-\x{065F}\x{0640}]/u', '', $t); // diacritics + tatweel
+        $t = strtr($t, [
+            'إ' => 'ا', 'أ' => 'ا', 'آ' => 'ا',
+            'ى' => 'ي', 'ؤ' => 'و', 'ئ' => 'ي',
+            'ة' => 'ه',
+        ]);
+        $t = preg_replace('/\s+/u', ' ', $t);
+        return trim(mb_strtolower($t));
     }
 
     /* ════════════════════════════════════════════════════════════════

@@ -52,6 +52,9 @@
         if (state.initialized) CW.destroy();
 
         state.urls       = $.extend({}, opts.urls || {});
+        // Expose URLs to sibling modules (scan.js, fields.js, ...) so they
+        // can resolve endpoints without re-reading the markup.
+        CW._urls = state.urls;
         state.totalSteps = opts.totalSteps || 4;
         state.current    = clampStep(opts.currentStep || 1);
         state.completed  = {};
