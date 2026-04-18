@@ -38,6 +38,15 @@ class WizardController extends Controller
     const DRAFT_KEY = 'customer_create';
     const TOTAL_STEPS = 4;
 
+    /**
+     * Hard cap on a single step's POST body (after PHP's own post_max_size).
+     * 256 KB is generous: the heaviest step is identity (~1 KB serialized).
+     */
+    const MAX_STEP_PAYLOAD_BYTES = 262144;
+
+    /** Hard cap on the cumulative draft JSON kept in the DB. */
+    const MAX_DRAFT_BYTES = 524288;
+
     public $defaultAction = 'start';
 
     /** {@inheritdoc} */
@@ -139,6 +148,16 @@ class WizardController extends Controller
             return ['ok' => false, 'error' => 'Bad payload.'];
         }
 
+        // Defensive size caps to prevent draft-table abuse / DoS.
+        $encoded = json_encode($stepData, JSON_UNESCAPED_UNICODE);
+        if ($encoded === false) {
+            return ['ok' => false, 'error' => 'تعذّر ترميز البيانات.'];
+        }
+        if (strlen($encoded) > self::MAX_STEP_PAYLOAD_BYTES) {
+            Yii::warning('Wizard step payload exceeded cap: ' . strlen($encoded), __METHOD__);
+            return ['ok' => false, 'error' => 'حجم البيانات أكبر من المسموح به.'];
+        }
+
         $draft = $this->getOrCreateAutoDraft();
         $payload = $this->decodePayload($draft);
 
@@ -147,7 +166,12 @@ class WizardController extends Controller
         $payload['_summary'] = $this->buildSummary($payload);
         $payload['_updated'] = time();
 
-        WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $payload);
+        $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        if (strlen($finalJson) > self::MAX_DRAFT_BYTES) {
+            return ['ok' => false, 'error' => 'تجاوزت المسودة الحجم الأقصى. احذف بعض البيانات.'];
+        }
+
+        WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
 
         return [
             'ok'      => true,

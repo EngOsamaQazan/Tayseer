@@ -3,10 +3,10 @@
 ?>
 <div class="cw-card">
     <div class="cw-card__header">
-        <h2 class="cw-card__title">
+        <h3 class="cw-card__title">
             <i class="fa fa-check-circle" aria-hidden="true"></i>
             المراجعة والاعتماد
-        </h2>
+        </h3>
         <span class="cw-pill cw-pill--info">
             <i class="fa fa-info-circle" aria-hidden="true"></i>
             <span>الخطوة الأخيرة</span>
@@ -14,9 +14,9 @@
     </div>
     <div class="cw-card__body">
         <div class="cw-placeholder">
-            <div class="cw-placeholder__icon"><i class="fa fa-cube" aria-hidden="true"></i></div>
-            <div class="cw-placeholder__title">المرحلة 5 و 6 — المراجعة + المستندات + الاعتماد</div>
-            <div>سيشمل: ملخص بصري لكل البيانات، مركز المستندات، تقييم المخاطر، زر «اعتماد».</div>
+            <div class="cw-placeholder__icon"><i class="fa fa-clipboard" aria-hidden="true"></i></div>
+            <div class="cw-placeholder__title">قيد البناء — المراجعة النهائية والاعتماد</div>
+            <div>سيشمل هذا القسم: ملخص بصري لكل البيانات السابقة، مركز رفع المستندات (الهوية، إثبات الراتب، إلخ)، نتيجة تقييم المخاطر، وزر "اعتماد العميل".</div>
         </div>
     </div>
 </div>

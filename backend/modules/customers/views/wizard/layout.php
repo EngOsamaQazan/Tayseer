@@ -6,11 +6,20 @@ use yii\helpers\Url;
 /**
  * Customer Wizard V2 — shell view.
  *
- * @var \yii\web\View          $this
+ * Accessibility goals (WCAG 2.2 AA):
+ *   • Single h1 (avoid duplication with breadcrumb h1).
+ *   • Native <button> for stepper items (no role="button" on divs).
+ *   • Hidden step sections use the `hidden` attribute (removes from a11y tree
+ *     and tab order in one go) — supplemented by aria-hidden for legacy SR.
+ *   • Status pill is a polite live region.
+ *   • Bottom toolbar is <div role="toolbar"> (not <footer>).
+ *   • Single instructions live region for SR-only step announcements.
+ *
+ * @var \yii\web\View                   $this
  * @var \common\models\WizardDraft|null $draft
- * @var array                  $payload     decoded JSON payload (or empty array)
- * @var int                    $currentStep
- * @var int                    $totalSteps
+ * @var array                           $payload
+ * @var int                             $currentStep
+ * @var int                             $totalSteps
  */
 
 $this->title = 'إضافة عميل جديد';
@@ -51,15 +60,25 @@ $steps = [
     <div class="cw-container">
 
         <header class="cw-header">
-            <h1 class="cw-header__title">
-                <i class="fa fa-user-plus" aria-hidden="true"></i>
-                <?= Html::encode($this->title) ?>
-                <span class="cw-pill" data-cw-status>
+            <div class="cw-header__title-group">
+                <!-- The page layout supplies an h1 with the same text; here we
+                     give a useful subtitle (not a duplicate title) + the live
+                     status pill. h2 keeps the heading hierarchy clean. -->
+                <h2 class="cw-header__title">
+                    <i class="fa fa-magic" aria-hidden="true"></i>
+                    <span>إنشاء ملف عميل عبر 4 خطوات</span>
+                </h2>
+                <span class="cw-pill"
+                      data-cw-status
+                      role="status"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      aria-label="حالة الحفظ">
                     <i class="fa fa-cloud" aria-hidden="true"></i>
                     <span>جاهز</span>
                 </span>
-            </h1>
-            <div class="cw-header__actions">
+            </div>
+            <div class="cw-header__actions" role="group" aria-label="إجراءات سريعة">
                 <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-action="save-draft">
                     <i class="fa fa-floppy-o" aria-hidden="true"></i>
                     <span>حفظ كمسودة</span>
@@ -75,28 +94,41 @@ $steps = [
             </div>
         </header>
 
+        <!-- ARIA: progressbar pattern would be wrong here (we want navigation,
+             not just status). Use a tablist-like nav with native buttons. -->
         <nav class="cw-stepper" data-cw-stepper aria-label="خطوات إنشاء العميل">
+            <ol class="cw-stepper__list" role="list">
             <?php foreach ($steps as $n => $meta): ?>
-                <div class="cw-step <?= $n === $currentStep ? 'cw-step--current' : '' ?>"
-                     data-cw-step="<?= $n ?>"
-                     role="button"
-                     tabindex="0"
-                     aria-current="<?= $n === $currentStep ? 'step' : 'false' ?>"
-                     aria-label="الخطوة <?= $n ?> من <?= $totalSteps ?>: <?= Html::encode($meta['label']) ?>">
-                    <span class="cw-step__circle">
-                        <span class="cw-step__num"><?= $n ?></span>
-                    </span>
-                    <span class="cw-step__label"><?= Html::encode($meta['label']) ?></span>
-                </div>
+                <li class="cw-stepper__item">
+                    <button type="button"
+                            class="cw-step <?= $n === $currentStep ? 'cw-step--current' : '' ?>"
+                            data-cw-step="<?= $n ?>"
+                            <?= $n === $currentStep ? 'aria-current="step"' : '' ?>
+                            aria-label="الخطوة <?= $n ?> من <?= $totalSteps ?>: <?= Html::encode($meta['label']) ?>">
+                        <span class="cw-step__circle" aria-hidden="true">
+                            <span class="cw-step__num"><?= $n ?></span>
+                        </span>
+                        <span class="cw-step__label"><?= Html::encode($meta['label']) ?></span>
+                    </button>
+                </li>
             <?php endforeach ?>
+            </ol>
         </nav>
 
-        <main>
+        <!-- SR-only live region for step transitions ("الانتقال إلى الخطوة 2 من 4"). -->
+        <div class="cw-sr-only"
+             role="status"
+             aria-live="polite"
+             aria-atomic="true"
+             data-cw-announcer></div>
+
+        <main class="cw-main">
             <?php for ($i = 1; $i <= $totalSteps; $i++): ?>
                 <section class="cw-section <?= $i === $currentStep ? 'cw-section--active' : '' ?>"
                          data-cw-section="<?= $i ?>"
-                         aria-hidden="<?= $i === $currentStep ? 'false' : 'true' ?>"
-                         aria-label="<?= Html::encode($steps[$i]['label']) ?>">
+                         <?= $i === $currentStep ? '' : 'hidden inert' ?>
+                         tabindex="-1"
+                         aria-label="الخطوة <?= $i ?> من <?= $totalSteps ?>: <?= Html::encode($steps[$i]['label']) ?>">
                     <?php
                     $partial = [
                         1 => '_step_1_identity',
@@ -113,7 +145,8 @@ $steps = [
             <?php endfor ?>
         </main>
 
-        <footer class="cw-nav" role="navigation" aria-label="التنقّل بين الخطوات">
+        <!-- Toolbar (not <footer>) — semantically a navigation toolbar. -->
+        <div class="cw-nav" role="toolbar" aria-label="التنقّل بين خطوات المعالج">
             <div class="cw-nav__group">
                 <button type="button" class="cw-btn cw-btn--outline" data-cw-action="prev">
                     <i class="fa fa-arrow-right" aria-hidden="true"></i>
@@ -130,10 +163,13 @@ $steps = [
                     <i class="fa fa-arrow-left" aria-hidden="true"></i>
                 </button>
             </div>
-        </footer>
+        </div>
 
     </div>
 </div>
+
+<!-- Pre-mount the toast host so first toast doesn't insert a new live region. -->
+<div class="cw-toast-host" role="region" aria-label="إشعارات النظام" aria-live="polite"></div>
 
 <?php
 $urlsJson = json_encode($urls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);

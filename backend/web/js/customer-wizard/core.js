@@ -1,28 +1,31 @@
 /**
- * Customer Wizard V2 — Core (navigation, AJAX save, toasts).
+ * Customer Wizard V2 — Core (navigation, AJAX save, toasts, a11y).
  *
  * Design principles:
  *   • Server is the single source of truth — every step transition saves.
  *   • Client never holds canonical state; it just collects input and POSTs.
  *   • All UI updates respect prefers-reduced-motion and keyboard navigation.
- *   • Idempotent: safe to re-init on the same DOM.
+ *   • Idempotent: safe to re-init on the same DOM (handlers are namespaced).
+ *   • Save requests are serialized via a small promise queue (no thrash).
  *
  * Public surface (window.CW):
  *   CW.init(opts)      → bind events, mount stepper, set initial step.
  *   CW.goTo(n)         → navigate to step n (saves current first).
  *   CW.next() / .prev()
  *   CW.toast(msg, type, ttl?)
- *   CW.savePartial()   → fire-and-forget save of current step.
+ *   CW.savePartial({validate?})
+ *   CW.destroy()       → unbind everything (for SPA-style hot swaps).
  */
 (function (window, $) {
     'use strict';
 
     if (!$) {
-        window.console && console.error('[CW] jQuery is required.');
+        if (window.console) console.error('[CW] jQuery is required.');
         return;
     }
 
     var CW = window.CW = window.CW || {};
+    var EVT_NS = '.cw';
 
     // ─── State ──────────────────────────────────────────────────────────────
     var state = {
@@ -30,35 +33,56 @@
         totalSteps:  4,
         current:     1,
         completed:   {},
-        saving:      false,
         dirty:       false,
         autosaveTm:  null,
+        saveQueue:   $.Deferred().resolve().promise(),
         $shell:      null,
         $stepper:    null,
         $sections:   null,
         $statusPill: null,
+        $announcer:  null,
+        initialized: false,
     };
 
     // ─── Bootstrapping ──────────────────────────────────────────────────────
     CW.init = function (opts) {
         opts = opts || {};
-        state.urls       = $.extend({}, state.urls, opts.urls || {});
-        state.totalSteps = opts.totalSteps || state.totalSteps;
+
+        // Idempotent re-init: tear down previous bindings first.
+        if (state.initialized) CW.destroy();
+
+        state.urls       = $.extend({}, opts.urls || {});
+        state.totalSteps = opts.totalSteps || 4;
         state.current    = clampStep(opts.currentStep || 1);
+        state.completed  = {};
+        state.dirty      = false;
 
         state.$shell      = $(opts.shellSelector || '#cw-shell');
         if (!state.$shell.length) return;
         state.$stepper    = state.$shell.find('[data-cw-stepper]');
         state.$sections   = state.$shell.find('[data-cw-section]');
         state.$statusPill = state.$shell.find('[data-cw-status]');
+        state.$announcer  = state.$shell.find('[data-cw-announcer]');
 
         bindStepperClicks();
         bindNavButtons();
         bindAutoSave();
         bindKeyboard();
+        bindBeforeUnload();
 
         renderStepper();
         showSection(state.current, false);
+
+        state.initialized = true;
+    };
+
+    CW.destroy = function () {
+        if (!state.initialized) return;
+        $(document).off(EVT_NS);
+        $(window).off(EVT_NS);
+        if (state.$shell) state.$shell.off(EVT_NS);
+        clearTimeout(state.autosaveTm);
+        state.initialized = false;
     };
 
     // ─── Navigation ─────────────────────────────────────────────────────────
@@ -66,23 +90,23 @@
         n = clampStep(n);
         if (n === state.current) return;
 
-        // Forward navigation runs validation + save first; backward is free.
         if (n > state.current) {
+            // Forward: validate first; only advance on success.
             CW.savePartial({ validate: true })
-                .done(function (res) {
+                .then(function (res) {
                     if (res && res.ok) {
                         state.completed[state.current] = true;
                         switchTo(n);
                     } else if (res && res.errors) {
                         renderServerErrors(res.errors);
-                        CW.toast('يرجى تصحيح الحقول المُشار إليها قبل المتابعة.', 'error');
+                        CW.toast('يرجى تصحيح الحقول قبل المتابعة.', 'error');
                     }
-                })
-                .fail(function () {
-                    CW.toast('تعذّر الحفظ — تحقق من الاتصال وحاول مجدداً.', 'error');
+                }, function () {
+                    CW.toast('تعذّر الحفظ — تحقق من الاتصال وأعد المحاولة.', 'error');
                 });
         } else {
-            CW.savePartial({ validate: false }); // fire-and-forget
+            // Backward: free movement, but still save current state silently.
+            CW.savePartial();
             switchTo(n);
         }
     };
@@ -90,47 +114,45 @@
     CW.next = function () { CW.goTo(state.current + 1); };
     CW.prev = function () { CW.goTo(state.current - 1); };
 
-    // ─── Persistence ────────────────────────────────────────────────────────
-    /**
-     * @param {Object} opts.validate=false  — also run server-side validation
-     * @returns {jqXHR}
-     */
+    // ─── Persistence (queued — never two saves in flight) ────────────────────
     CW.savePartial = function (opts) {
         opts = opts || {};
-        if (state.saving) {
-            return $.Deferred().resolve({ ok: true, deferred: true }).promise();
-        }
-        state.saving = true;
-        setStatus('saving');
-
-        var data = collectStepData(state.current);
-        var url = opts.validate ? state.urls.save : state.urls.save;
-        // We always save; if validation also requested, the controller's
-        // `actionValidate` is what enforces `errors`. We use save in both
-        // cases for simplicity (server validates non-destructively).
+        var snapshotStep = state.current;
         var payload = {
-            step: state.current,
-            data: data,
+            step: snapshotStep,
+            data: collectStepData(snapshotStep),
         };
-
         var csrfParam = $('meta[name="csrf-param"]').attr('content') || '_csrf-backend';
         var csrfToken = $('meta[name="csrf-token"]').attr('content');
         if (csrfToken) payload[csrfParam] = csrfToken;
 
-        var xhr = $.post(url, payload).always(function () {
-            state.saving = false;
-        }).done(function (res) {
-            if (res && res.ok) {
-                state.dirty = false;
-                setStatus('saved');
-            } else {
+        var dfd = $.Deferred();
+        // Chain onto previous save so we never overlap.
+        state.saveQueue = state.saveQueue.then(function () {
+            setStatus('saving');
+            return $.ajax({
+                url: opts.validate ? state.urls.validate : state.urls.save,
+                method: 'POST',
+                data: payload,
+                dataType: 'json',
+                timeout: 15000,
+            }).then(function (res) {
+                if (res && res.ok) {
+                    state.dirty = false;
+                    setStatus('saved');
+                } else {
+                    setStatus('error');
+                }
+                dfd.resolve(res);
+                return res;
+            }, function (xhr, textStatus) {
                 setStatus('error');
-            }
-        }).fail(function () {
-            setStatus('error');
+                dfd.reject(xhr, textStatus);
+                // Don't break the chain — return a resolved promise.
+                return $.Deferred().resolve().promise();
+            });
         });
-
-        return xhr;
+        return dfd.promise();
     };
 
     // ─── UX helpers ─────────────────────────────────────────────────────────
@@ -140,7 +162,9 @@
 
         var $host = $('.cw-toast-host');
         if (!$host.length) {
-            $host = $('<div class="cw-toast-host" role="status" aria-live="polite"></div>').appendTo(document.body);
+            // Fallback if layout didn't pre-mount the host.
+            $host = $('<div class="cw-toast-host" role="region" aria-live="polite" aria-label="إشعارات النظام"></div>')
+                .appendTo(document.body);
         }
 
         var iconMap = {
@@ -150,13 +174,10 @@
             error:   'fa-times-circle'
         };
 
-        var $toast = $(
-            '<div class="cw-toast cw-toast--' + type + '" role="alert">'
-          +   '<i class="fa ' + (iconMap[type] || iconMap.info) + '" aria-hidden="true"></i>'
-          +   '<span></span>'
-          + '</div>'
-        );
-        $toast.find('span').text(message);
+        var $toast = $('<div class="cw-toast" role="alert"></div>')
+            .addClass('cw-toast--' + type)
+            .append($('<i class="fa" aria-hidden="true"></i>').addClass(iconMap[type] || iconMap.info))
+            .append($('<span></span>').text(String(message)));
         $host.append($toast);
 
         setTimeout(function () {
@@ -175,47 +196,39 @@
     }
 
     function bindStepperClicks() {
-        state.$stepper.on('click', '[data-cw-step]', function (e) {
+        // Use event delegation namespaced for clean teardown.
+        state.$stepper.on('click' + EVT_NS, '[data-cw-step]', function (e) {
             e.preventDefault();
             var n = parseInt($(this).attr('data-cw-step'), 10);
             CW.goTo(n);
         });
-        // Keyboard activation (Enter / Space) on stepper items.
-        state.$stepper.on('keydown', '[data-cw-step]', function (e) {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                $(this).trigger('click');
-            }
-        });
+        // Native <button> handles Enter/Space; no extra bindings needed.
     }
 
     function bindNavButtons() {
-        state.$shell.on('click', '[data-cw-action="next"]', function (e) {
+        state.$shell.on('click' + EVT_NS, '[data-cw-action="next"]',  function (e) { e.preventDefault(); CW.next(); });
+        state.$shell.on('click' + EVT_NS, '[data-cw-action="prev"]',  function (e) { e.preventDefault(); CW.prev(); });
+        state.$shell.on('click' + EVT_NS, '[data-cw-action="save-draft"]', function (e) {
             e.preventDefault();
-            CW.next();
-        });
-        state.$shell.on('click', '[data-cw-action="prev"]', function (e) {
-            e.preventDefault();
-            CW.prev();
-        });
-        state.$shell.on('click', '[data-cw-action="save-draft"]', function (e) {
-            e.preventDefault();
-            CW.savePartial().done(function (res) {
-                if (res && res.ok) CW.toast('تم حفظ المسودة.', 'success');
+            CW.savePartial().then(function (res) {
+                if (res && res.ok) CW.toast('تم حفظ المسودة بنجاح.', 'success');
             });
         });
-        state.$shell.on('click', '[data-cw-action="discard"]', function (e) {
+        state.$shell.on('click' + EVT_NS, '[data-cw-action="discard"]', function (e) {
             e.preventDefault();
-            if (!confirm('هل تريد إلغاء المسودة وبدء عميل جديد من الصفر؟')) return;
-            $.post(state.urls.discard, csrfPayload()).always(function () {
+            if (!window.confirm('هل تريد إلغاء المسودة وبدء عميل جديد من الصفر؟ سيتم فقدان البيانات الحالية.')) return;
+            $.ajax({
+                url: state.urls.discard,
+                method: 'POST',
+                data: csrfPayload(),
+            }).always(function () {
                 window.location.href = state.urls.start;
             });
         });
     }
 
     function bindAutoSave() {
-        // Mark dirty on any input/change in the active section.
-        state.$shell.on('input change', '[data-cw-section] :input', function () {
+        state.$shell.on('input' + EVT_NS + ' change' + EVT_NS, '[data-cw-section] :input', function () {
             state.dirty = true;
             setStatus('dirty');
             scheduleAutosave();
@@ -226,15 +239,31 @@
         clearTimeout(state.autosaveTm);
         state.autosaveTm = setTimeout(function () {
             if (state.dirty) CW.savePartial();
-        }, 1500); // 1.5s of inactivity
+        }, 1500);
     }
 
     function bindKeyboard() {
-        // Alt+Right/Left for fast nav (RTL-aware: Right = previous in RTL).
-        $(document).on('keydown.cw', function (e) {
-            if (!e.altKey) return;
-            if (e.key === 'ArrowLeft')  { e.preventDefault(); CW.next(); }
-            if (e.key === 'ArrowRight') { e.preventDefault(); CW.prev(); }
+        // SCOPED keyboard shortcuts — only when focus is inside the wizard
+        // shell. We DON'T grab Alt+Arrow globally (would hijack browser
+        // back/forward, violating WCAG 2.1.4 Character Key Shortcuts).
+        // Ctrl+Alt+N / Ctrl+Alt+P are safe combos that no browser uses.
+        state.$shell.on('keydown' + EVT_NS, function (e) {
+            if (!(e.ctrlKey && e.altKey)) return;
+            var key = (e.key || '').toLowerCase();
+            if (key === 'n' || key === 'arrowleft') { e.preventDefault(); CW.next(); }
+            if (key === 'p' || key === 'arrowright') { e.preventDefault(); CW.prev(); }
+            if (key === 's') { e.preventDefault(); state.$shell.find('[data-cw-action="save-draft"]').first().click(); }
+        });
+    }
+
+    function bindBeforeUnload() {
+        $(window).on('beforeunload' + EVT_NS, function (e) {
+            if (state.dirty) {
+                // Modern browsers ignore custom strings; just non-empty triggers prompt.
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
         });
     }
 
@@ -242,25 +271,41 @@
         state.current = n;
         showSection(n, true);
         renderStepper();
-        // Move focus to the section heading for screen readers.
-        var $heading = state.$sections.filter('[data-cw-section="' + n + '"]').find('h2, h3').first();
-        if ($heading.length) {
-            $heading.attr('tabindex', '-1').focus();
+        announce('انتقلت إلى الخطوة ' + n + ' من ' + state.totalSteps + '.');
+
+        var $target = state.$sections.filter('[data-cw-section="' + n + '"]');
+        // Move focus to the section itself (it has tabindex=-1 + aria-label
+        // describing the step) so screen readers announce the step on entry.
+        if ($target.length) {
+            $target.focus();
         }
-        // Scroll into view with small offset.
+        // Smooth scroll to top of shell.
+        var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var top = state.$shell.offset().top - 80;
-        $('html, body').stop().animate({ scrollTop: top }, 250);
+        if (prefersReduced) {
+            window.scrollTo(0, Math.max(0, top));
+        } else {
+            $('html, body').stop().animate({ scrollTop: top }, 250);
+        }
     }
 
     function showSection(n, animate) {
-        state.$sections.removeClass('cw-section--active').attr('aria-hidden', 'true');
-        var $target = state.$sections.filter('[data-cw-section="' + n + '"]');
-        $target.addClass('cw-section--active').attr('aria-hidden', 'false');
+        state.$sections.each(function () {
+            var $s = $(this);
+            var sn = parseInt($s.attr('data-cw-section'), 10);
+            if (sn === n) {
+                $s.removeAttr('hidden').removeAttr('inert').addClass('cw-section--active');
+            } else {
+                $s.attr('hidden', '').attr('inert', '').removeClass('cw-section--active');
+            }
+        });
         if (!animate) {
-            // Suppress fade-in on first paint.
-            $target.css('animation', 'none');
-            void $target[0].offsetWidth; // reflow
-            $target.css('animation', '');
+            var $target = state.$sections.filter('[data-cw-section="' + n + '"]');
+            if ($target.length) {
+                $target.css('animation', 'none');
+                void $target[0].offsetWidth; // force reflow
+                $target.css('animation', '');
+            }
         }
     }
 
@@ -270,47 +315,72 @@
             var n    = parseInt($s.attr('data-cw-step'), 10);
             var isCur  = (n === state.current);
             var isDone = !!state.completed[n] && n !== state.current;
-            $s.removeClass('cw-step--current cw-step--done')
-              .toggleClass('cw-step--current', isCur)
-              .toggleClass('cw-step--done', isDone)
-              .attr('aria-current', isCur ? 'step' : null);
+            $s.toggleClass('cw-step--done', isDone);
+            if (isCur) {
+                $s.attr('aria-current', 'step');
+            } else {
+                $s.removeAttr('aria-current');
+            }
         });
     }
 
-    function setStatus(state2) {
+    var STATUS_MAP = {
+        saving: { cls: 'cw-pill--info',    icon: 'fa-spinner fa-spin', text: 'جاري الحفظ…' },
+        saved:  { cls: 'cw-pill--saved',   icon: 'fa-check',           text: 'محفوظ' },
+        dirty:  { cls: 'cw-pill--warning', icon: 'fa-pencil',          text: 'تغييرات غير محفوظة' },
+        error:  { cls: 'cw-pill--error',   icon: 'fa-exclamation',     text: 'فشل الحفظ' },
+        ready:  { cls: '',                 icon: 'fa-cloud',           text: 'جاهز' },
+    };
+
+    function setStatus(name) {
         if (!state.$statusPill || !state.$statusPill.length) return;
-        var map = {
-            saving: { cls: 'cw-pill--info',    icon: 'fa-spinner fa-spin', text: 'جاري الحفظ…' },
-            saved:  { cls: 'cw-pill--saved',   icon: 'fa-check',           text: 'محفوظ' },
-            dirty:  { cls: 'cw-pill--warning', icon: 'fa-pencil',          text: 'تغييرات غير محفوظة' },
-            error:  { cls: 'cw-pill--error',   icon: 'fa-exclamation',     text: 'فشل الحفظ' },
-        };
-        var s = map[state2] || map.saved;
+        var s = STATUS_MAP[name] || STATUS_MAP.ready;
+        // Build via DOM (no innerHTML) to keep XSS-safe even if STATUS_MAP grows.
+        var $icon = $('<i class="fa" aria-hidden="true"></i>').addClass(s.icon);
+        var $txt  = $('<span></span>').text(s.text);
         state.$statusPill
             .removeClass('cw-pill--info cw-pill--saved cw-pill--warning cw-pill--error')
             .addClass(s.cls)
-            .html('<i class="fa ' + s.icon + '" aria-hidden="true"></i> <span>' + s.text + '</span>');
+            .empty()
+            .append($icon)
+            .append(' ')
+            .append($txt);
     }
 
-    /** Collect every input inside the active section, namespaced as the form
-     *  expects (legacy "Customers[name]" style preserved). */
+    function announce(msg) {
+        if (!state.$announcer || !state.$announcer.length) return;
+        // Clear first so identical messages re-announce.
+        state.$announcer.text('');
+        setTimeout(function () { state.$announcer.text(msg); }, 80);
+    }
+
+    /** Collect every input inside the active section. Handles arrays
+     *  (`name="foo[]"`), <select multiple>, checkboxes, radios. */
     function collectStepData(n) {
         var $section = state.$sections.filter('[data-cw-section="' + n + '"]');
         if (!$section.length) return {};
         var data = {};
         $section.find(':input[name]').each(function () {
-            var $el = $(this);
+            var $el  = $(this);
             var name = $el.attr('name');
             if (!name) return;
-            var type = (this.type || '').toLowerCase();
+            var type = ((this.type || '') + '').toLowerCase();
 
             if (type === 'checkbox') {
-                data[name] = this.checked ? ($el.val() || '1') : '';
+                if (/\[\]$/.test(name)) {
+                    if (this.checked) (data[name] = data[name] || []).push($el.val());
+                } else {
+                    data[name] = this.checked ? ($el.val() || '1') : '';
+                }
             } else if (type === 'radio') {
                 if (this.checked) data[name] = $el.val();
                 else if (!(name in data)) data[name] = '';
             } else if (type === 'file') {
-                /* file inputs are uploaded out-of-band */
+                /* file inputs uploaded out-of-band */
+            } else if (this.tagName === 'SELECT' && this.multiple) {
+                data[name] = $el.val() || [];
+            } else if (/\[\]$/.test(name)) {
+                (data[name] = data[name] || []).push($el.val());
             } else {
                 data[name] = $el.val();
             }
@@ -319,22 +389,26 @@
     }
 
     function renderServerErrors(errors) {
-        // Clear previous errors, then mark each named field.
         state.$shell.find('.cw-field--error').removeClass('cw-field--error');
         state.$shell.find('.cw-field__error-msg').remove();
 
         var firstName = null;
         Object.keys(errors).forEach(function (key) {
             if (!firstName) firstName = key;
-            var $input = state.$shell.find(':input[name="' + key.replace(/"/g, '\\"') + '"]').first();
+            var sel = '[name="' + cssEscape(key) + '"]';
+            var $input = state.$shell.find(sel).first();
             if (!$input.length) return;
             var $field = $input.closest('.cw-field, .form-group');
+            if (!$field.length) $field = $input.parent();
             $field.addClass('cw-field--error');
-            $field.append('<div class="cw-field__error-msg" role="alert">' + escapeHtml(errors[key]) + '</div>');
+            $field.append(
+                $('<div class="cw-field__error-msg" role="alert"></div>').text(errors[key])
+            );
+            $input.attr('aria-invalid', 'true');
         });
 
         if (firstName) {
-            var $first = state.$shell.find(':input[name="' + firstName.replace(/"/g, '\\"') + '"]').first();
+            var $first = state.$shell.find('[name="' + cssEscape(firstName) + '"]').first();
             if ($first.length) setTimeout(function () { $first.focus(); }, 100);
         }
     }
@@ -347,13 +421,10 @@
         return p;
     }
 
-    function escapeHtml(s) {
-        return String(s)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
+    /** Minimal CSS.escape polyfill for safe attribute selectors. */
+    function cssEscape(s) {
+        if (window.CSS && typeof window.CSS.escape === 'function') return window.CSS.escape(s);
+        return String(s).replace(/(["'\\\[\]\.\#\(\)\:])/g, '\\$1');
     }
 
 })(window, window.jQuery);
