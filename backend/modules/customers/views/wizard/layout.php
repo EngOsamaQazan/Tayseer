@@ -192,7 +192,7 @@ if ($googleMapsKey) {
 $steps = [
     1 => ['label' => 'التعريف بالعميل',     'icon' => 'fa-user'],
     2 => ['label' => 'الوضع المالي',         'icon' => 'fa-briefcase'],
-    3 => ['label' => 'الكفلاء والعنوان',     'icon' => 'fa-users'],
+    3 => ['label' => 'المعرّفون والعناوين',  'icon' => 'fa-users'],
     4 => ['label' => 'المراجعة والاعتماد',   'icon' => 'fa-check-circle'],
 ];
 ?>

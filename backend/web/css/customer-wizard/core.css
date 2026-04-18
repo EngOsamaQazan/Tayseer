@@ -400,6 +400,29 @@ html body .cw-shell .cw-container.cw-container {
 .cw-grid__col-span-2 { grid-column: span 1; }
 @media (min-width: 600px) { .cw-grid__col-span-2 { grid-column: span 2; } }
 
+/* ─── Phone-wide 4-col modifier ─────────────────────────────────────
+ * Used by guarantor rows where one of the four cells holds an
+ * intl-tel-input phone — that field needs ~220px+ to fit the dial-code
+ * flag/button + the formatted number without the digits sliding under
+ * the flag. The other three fields (name, relation, fb) compress
+ * gracefully at ~180-200px each, so we trade a little width from each
+ * neighbour to give the phone column the breathing room it needs.
+ *
+ * Layout breakpoints mirror .cw-grid--4 so the wide-phone behaviour
+ * only kicks in once the row actually goes 4-up; at narrower widths
+ * the parent .cw-grid stack rules already give every field the full
+ * row, so we don't need to override anything below 900px.
+ */
+@media (min-width: 900px) {
+    .cw-grid--4.cw-grid--phone-wide {
+        grid-template-columns:
+            minmax(0, 1fr)            /* name      */
+            minmax(220px, 1.35fr)     /* phone     */
+            minmax(0, 1fr)            /* relation  */
+            minmax(0, 1fr);           /* facebook  */
+    }
+}
+
 /* ─────────────── Bottom toolbar (sticky) ─────────────── */
 
 .cw-nav {

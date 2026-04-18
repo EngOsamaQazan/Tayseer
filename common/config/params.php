@@ -18,7 +18,7 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-19 — surface smart-picked salary in kashf summary
-     *  so "آخر راتب شهري" matches the salary input. */
+     *  Last bump: 2026-04-19 — rename step 3 to "المعرّفون والعناوين"
+     *  + widen guarantor phone column (cw-grid--phone-wide). */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];

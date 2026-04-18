@@ -63,7 +63,7 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
     <div class="cw-card__header">
         <h3 class="cw-card__title">
             <i class="fa fa-users" aria-hidden="true"></i>
-            الكفلاء والعنوان
+            المعرّفون والعناوين
         </h3>
     </div>
 
@@ -106,7 +106,7 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
                                 </button>
                             </div>
 
-                            <div class="cw-grid cw-grid--4">
+                            <div class="cw-grid cw-grid--4 cw-grid--phone-wide">
                                 <div class="cw-field" data-cw-field="guarantors[<?= (int)$i ?>][owner_name]">
                                     <label class="cw-field__label">
                                         الاسم <span class="cw-field__req" aria-hidden="true">*</span>
@@ -180,7 +180,7 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
                                 <i class="fa fa-trash-o" aria-hidden="true"></i>
                             </button>
                         </div>
-                        <div class="cw-grid cw-grid--4">
+                        <div class="cw-grid cw-grid--4 cw-grid--phone-wide">
                             <div class="cw-field" data-cw-field="guarantors[__INDEX__][owner_name]">
                                 <label class="cw-field__label">
                                     الاسم <span class="cw-field__req" aria-hidden="true">*</span>
