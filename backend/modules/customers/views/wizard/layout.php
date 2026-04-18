@@ -144,7 +144,29 @@ $urls = [
     'addJob'     => Url::to(['/customers/wizard/add-job']),
     'addBank'    => Url::to(['/customers/wizard/add-bank']),
     'jobMeta'    => Url::to(['/customers/wizard/job-meta']),
+    // Step 3 — address-map widget. Both endpoints proxy to LocationResolverService.
+    'resolveLocation' => Url::to(['/customers/wizard/resolve-location']),
+    'searchPlaces'    => Url::to(['/customers/wizard/search-places']),
 ];
+
+// ── Google Maps JS API (Places library) — loaded only when an API key is
+// configured; the address-map widget gracefully falls back to the Nominatim
+// + Photon multi-source search otherwise. We can't vendor this script
+// because the Places autocomplete element calls back to Google's CDN at
+// runtime regardless, so the CDN script tag is the canonical pattern.
+$googleMapsKey = \common\models\SystemSettings::get('google_maps', 'api_key', null)
+    ?? Yii::$app->params['googleMapsApiKey']
+    ?? null;
+if ($googleMapsKey) {
+    $this->registerJsFile(
+        'https://maps.googleapis.com/maps/api/js?key=' . urlencode($googleMapsKey) . '&libraries=places&language=ar&loading=async',
+        [
+            'position' => \yii\web\View::POS_END,
+            'async' => true,
+            'defer' => true,
+        ]
+    );
+}
 
 $steps = [
     1 => ['label' => 'التعريف بالعميل',     'icon' => 'fa-user'],

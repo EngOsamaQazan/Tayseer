@@ -20,8 +20,11 @@ use yii\helpers\ArrayHelper;
  *   • Each row: name + phone + relationship + facebook (optional).
  *   • Implemented via lightweight CWDynamic widget (see fields.js).
  *
- * Section B — العنوان الأساسي
- *   • Single primary address (city + area + street + building + notes).
+ * Section B — العناوين
+ *   • Two address blocks: residential (السكن) + work (العمل).
+ *   • Residential is required; work is optional. Both share the same
+ *     address-map widget but are scoped by data-cw-addr-fields-root="home"
+ *     vs ="work" so the two map instances never overwrite each other.
  *   • Map / geolocation polish handled by the address-map widget
  *     (Leaflet + Google Places) introduced in the Q4 follow-up.
  *
@@ -39,10 +42,19 @@ if (count($guarantors) === 0) {
     $guarantors[] = ['owner_name' => '', 'phone_number' => '', 'phone_number_owner' => '', 'fb_account' => ''];
 }
 
-$address = $d['address'] ?? [];
-$addrG = function (string $k, $default = '') use ($address) {
-    return isset($address[$k]) && $address[$k] !== null ? $address[$k] : $default;
-};
+// Address shape — supports both the new `addresses[home|work]` layout and
+// the legacy single `address` payload (auto-mapped to "home" so older
+// drafts still load cleanly without data loss).
+$addresses = $d['addresses'] ?? null;
+if (!is_array($addresses) || empty($addresses)) {
+    $legacy = is_array($d['address'] ?? null) ? $d['address'] : [];
+    $addresses = [
+        'home' => $legacy,
+        'work' => [],
+    ];
+}
+$homeValues = is_array($addresses['home'] ?? null) ? $addresses['home'] : [];
+$workValues = is_array($addresses['work'] ?? null) ? $addresses['work'] : [];
 
 $cousins = ArrayHelper::map($lookups['cousins'] ?? [], 'name', 'name');
 $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
@@ -58,7 +70,8 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
     <p class="cw-card__hint">
         <i class="fa fa-info-circle" aria-hidden="true"></i>
         نوصي بإضافة معرّفَين على الأقل لتقليل المخاطر المحتسبة، وإدخال
-        عنوان أساسي واحد للعميل.
+        عنوان السكن (إلزامي) وعنوان العمل (اختياري) لمساعدة الفريق على
+        الوصول إلى العميل.
     </p>
 
     <div class="cw-card__body">
@@ -230,220 +243,30 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
             </div>
         </div>
 
-        <!-- ── Section B: Primary address. ── -->
-        <div class="cw-fieldset">
-            <div class="cw-fieldset__head">
-                <h4 class="cw-fieldset__title">
-                    <i class="fa fa-map-marker" aria-hidden="true"></i>
-                    العنوان الأساسي
-                </h4>
-                <p class="cw-fieldset__hint">
-                    معلومات السكن الحالية للعميل. ابحث على الخريطة أو الصق
-                    رابط/إحداثيات لتعبئة الحقول تلقائياً.
-                </p>
-            </div>
+        <!-- ── Section B: Addresses (home + work). ── -->
+        <?= $this->render('_step_3_address_block', [
+            'key'         => 'home',
+            'title'       => 'عنوان السكن',
+            'iconCss'     => 'fa-home',
+            'typeCode'    => 2,           // 2 = residential, per Address.address_type
+            'required'    => true,
+            'values'      => $homeValues,
+            'cities'      => $cities,
+            'note'        => 'مكان إقامة العميل الحالي. ابحث على الخريطة أو الصق رابط/إحداثيات لتعبئة الحقول تلقائياً.',
+            'collapsible' => false,       // Required block — always expanded.
+        ]) ?>
 
-            <input type="hidden" name="address[address_type]" value="2">
-
-            <!-- ── Address fields root (referenced by the map widget for
-                 auto-fill via data-addr-fill="…"). ── -->
-            <div class="cw-addr-fields-root">
-                <div class="cw-grid cw-grid--3">
-
-                    <!-- City (free text or pick from cities lookup). -->
-                    <div class="cw-field" data-cw-field="address[address_city]">
-                        <label class="cw-field__label" for="cw-addr-city">
-                            المدينة <span class="cw-field__req" aria-hidden="true">*</span>
-                        </label>
-                        <input type="text"
-                               id="cw-addr-city"
-                               name="address[address_city]"
-                               value="<?= Html::encode($addrG('address_city')) ?>"
-                               class="cw-input"
-                               list="cw-addr-city-options"
-                               autocomplete="address-level2"
-                               maxlength="100"
-                               dir="auto"
-                               required
-                               aria-required="true"
-                               placeholder="مثال: عمّان"
-                               data-addr-fill="city">
-                        <datalist id="cw-addr-city-options">
-                            <?php foreach ($cities as $cid => $cname): ?>
-                                <option value="<?= Html::encode((string)$cname) ?>"></option>
-                            <?php endforeach ?>
-                        </datalist>
-                    </div>
-
-                    <!-- Area / neighbourhood. -->
-                    <div class="cw-field" data-cw-field="address[address_area]">
-                        <label class="cw-field__label" for="cw-addr-area">المنطقة / الحي</label>
-                        <input type="text"
-                               id="cw-addr-area"
-                               name="address[address_area]"
-                               value="<?= Html::encode($addrG('address_area')) ?>"
-                               class="cw-input"
-                               autocomplete="address-level3"
-                               maxlength="100"
-                               dir="auto"
-                               placeholder="مثال: الجبيهة"
-                               data-addr-fill="area">
-                    </div>
-
-                    <!-- Street. -->
-                    <div class="cw-field" data-cw-field="address[address_street]">
-                        <label class="cw-field__label" for="cw-addr-street">الشارع</label>
-                        <input type="text"
-                               id="cw-addr-street"
-                               name="address[address_street]"
-                               value="<?= Html::encode($addrG('address_street')) ?>"
-                               class="cw-input"
-                               autocomplete="address-line1"
-                               maxlength="500"
-                               dir="auto"
-                               placeholder="اسم الشارع والرقم"
-                               data-addr-fill="street">
-                    </div>
-
-                    <!-- Building / floor / apt. -->
-                    <div class="cw-field" data-cw-field="address[address_building]">
-                        <label class="cw-field__label" for="cw-addr-bldg">المبنى / الطابق</label>
-                        <input type="text"
-                               id="cw-addr-bldg"
-                               name="address[address_building]"
-                               value="<?= Html::encode($addrG('address_building')) ?>"
-                               class="cw-input"
-                               autocomplete="address-line2"
-                               maxlength="100"
-                               dir="auto"
-                               placeholder="مثال: عمارة 12 - طابق 3"
-                               data-addr-fill="building">
-                    </div>
-
-                    <!-- Postal code. -->
-                    <div class="cw-field" data-cw-field="address[postal_code]">
-                        <label class="cw-field__label" for="cw-addr-postal">الرمز البريدي</label>
-                        <input type="text"
-                               id="cw-addr-postal"
-                               name="address[postal_code]"
-                               value="<?= Html::encode($addrG('postal_code')) ?>"
-                               class="cw-input cw-input--mono"
-                               inputmode="numeric"
-                               autocomplete="postal-code"
-                               dir="ltr"
-                               maxlength="20"
-                               placeholder="مثال: 11953"
-                               data-addr-fill="postal">
-                    </div>
-
-                    <!-- Notes. -->
-                    <div class="cw-field" data-cw-field="address[address]">
-                        <label class="cw-field__label" for="cw-addr-notes">ملاحظات العنوان</label>
-                        <input type="text"
-                               id="cw-addr-notes"
-                               name="address[address]"
-                               value="<?= Html::encode($addrG('address')) ?>"
-                               class="cw-input"
-                               autocomplete="off"
-                               maxlength="255"
-                               dir="auto"
-                               placeholder="نقطة دلالية، علامة مميّزة…">
-                    </div>
-                </div>
-            </div>
-
-            <!-- ── Map widget (Leaflet + Nominatim).
-                 Reverse-geocoding writes only to EMPTY [data-addr-fill]
-                 inputs above so the user's manual edits are never lost. -->
-            <div class="cw-addr-map"
-                 data-cw-addr-map
-                 data-cw-addr-map-target=".cw-addr-fields-root">
-                <div class="cw-addr-map__head">
-                    <h5 class="cw-addr-map__title">
-                        <i class="fa fa-map" aria-hidden="true"></i>
-                        تحديد الموقع على الخريطة
-                    </h5>
-                    <div class="cw-addr-map__actions">
-                        <button type="button"
-                                class="cw-addr-map__btn"
-                                data-cw-addr-geolocate
-                                title="استخدام موقعي الحالي">
-                            <i class="fa fa-crosshairs" aria-hidden="true"></i>
-                            <span>موقعي</span>
-                        </button>
-                        <button type="button"
-                                class="cw-addr-map__btn"
-                                data-cw-addr-clear
-                                title="مسح الموقع المختار">
-                            <i class="fa fa-times" aria-hidden="true"></i>
-                            <span>مسح</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="cw-addr-map__body">
-                    <aside class="cw-addr-map__sidebar">
-                        <div class="cw-addr-map__field">
-                            <label class="cw-addr-map__label" for="cw-addr-search">بحث عن مكان أو عنوان</label>
-                            <input type="search"
-                                   id="cw-addr-search"
-                                   class="cw-addr-map__input"
-                                   placeholder="مثال: مستشفى الإسلامي، شارع المدينة المنورة…"
-                                   data-cw-addr-search
-                                   autocomplete="off"
-                                   dir="auto">
-                            <ul class="cw-addr-map__results"
-                                role="listbox"
-                                aria-label="نتائج البحث"
-                                data-cw-addr-results></ul>
-                        </div>
-
-                        <div class="cw-addr-map__field">
-                            <label class="cw-addr-map__label" for="cw-addr-paste">لصق رابط/إحداثيات</label>
-                            <input type="text"
-                                   id="cw-addr-paste"
-                                   class="cw-addr-map__input"
-                                   placeholder="رابط Google Maps أو 31.95, 35.91 أو DMS…"
-                                   data-cw-addr-paste
-                                   dir="ltr">
-                            <p class="cw-addr-map__hint">
-                                يمكنك لصق رابط Google Maps أو إحداثيات بأي
-                                صيغة (عشرية / DMS) — سنكتشف الموقع تلقائياً.
-                            </p>
-                        </div>
-
-                        <p class="cw-addr-map__hint">
-                            انقر على الخريطة أو اسحب الدبّوس لتعديل الموقع.
-                            ستُملأ حقول العنوان أعلاه تلقائياً (لن نستبدل أي
-                            قيمة كتبتها يدوياً).
-                        </p>
-                    </aside>
-
-                    <div class="cw-addr-map__container"
-                         data-cw-addr-map-canvas
-                         aria-label="الخريطة التفاعلية لاختيار العنوان"></div>
-                </div>
-
-                <div class="cw-addr-map__footer">
-                    <span>الإحداثيات:
-                        <span class="cw-addr-map__coord" data-cw-addr-coord>
-                            <?= ($addrG('latitude') !== '' && $addrG('longitude') !== '')
-                                ? Html::encode(number_format((float)$addrG('latitude'), 5) . ', ' . number_format((float)$addrG('longitude'), 5))
-                                : '—' ?>
-                        </span>
-                    </span>
-                    <span>Plus Code:
-                        <span class="cw-addr-map__plus" data-cw-addr-plus-out>
-                            <?= Html::encode($addrG('plus_code') ?: '—') ?>
-                        </span>
-                    </span>
-                </div>
-
-                <input type="hidden" name="address[latitude]"  value="<?= Html::encode($addrG('latitude')) ?>"  data-cw-addr-lat>
-                <input type="hidden" name="address[longitude]" value="<?= Html::encode($addrG('longitude')) ?>" data-cw-addr-lng>
-                <input type="hidden" name="address[plus_code]" value="<?= Html::encode($addrG('plus_code')) ?>" data-cw-addr-plus>
-            </div>
-        </div>
+        <?= $this->render('_step_3_address_block', [
+            'key'         => 'work',
+            'title'       => 'عنوان العمل',
+            'iconCss'     => 'fa-briefcase',
+            'typeCode'    => 1,           // 1 = work
+            'required'    => false,
+            'values'      => $workValues,
+            'cities'      => $cities,
+            'note'        => 'مقر عمل العميل (شركة، فرع، مكتب…). يساعد على تحديد ساعات الوصول الأنسب.',
+            'collapsible' => true,        // Optional block — starts collapsed unless draft has data.
+        ]) ?>
 
     </div>
 </div>

@@ -177,6 +177,73 @@
     margin-top: 2px;
 }
 
+/* Two-column row inside a search result — icon (place type) + body
+   (name + meta line with distance + provenance badge). The icon is
+   a passive label so screen readers skip it (aria-hidden in markup);
+   the dist label uses tabular numbers so multi-line lists align. */
+.cw-addr-map__result-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.cw-addr-map__result-icon {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cw-text-muted, #64748b);
+    margin-top: 2px;
+}
+.cw-addr-map__result-body {
+    display: block;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.cw-addr-map__result-name {
+    display: block;
+    font-weight: 600;
+    color: var(--cw-text, #111827);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.cw-addr-map__result-dist {
+    font-variant-numeric: tabular-nums;
+    color: var(--cw-primary, #2563eb);
+    font-weight: 600;
+}
+
+/* Provenance badge — tiny letter (G/P) inside the result name to
+   indicate which source returned the row. Keep it monochrome and
+   subtle so it doesn't distract from the address itself. */
+.cw-addr-map__src {
+    display: inline-block;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 5px;
+    margin-inline-start: 6px;
+    border-radius: 4px;
+    border: 1px solid currentColor;
+    vertical-align: middle;
+    opacity: 0.75;
+}
+.cw-addr-map__src--google { color: #4285f4; }
+.cw-addr-map__src--photon { color: #7c3aed; }
+
+/* Tiny visual cue while smart-paste is awaiting the server resolver
+   (Google short URLs + Plus Codes need an HTTP round-trip). */
+.cw-addr-paste--loading {
+    background-image: linear-gradient(90deg, rgba(37,99,235,0) 0%, rgba(37,99,235,0.10) 50%, rgba(37,99,235,0) 100%);
+    background-size: 200% 100%;
+    animation: cwAddrPasteShimmer 1.1s linear infinite;
+}
+@keyframes cwAddrPasteShimmer {
+    from { background-position:  200% 0; }
+    to   { background-position: -200% 0; }
+}
+
 .cw-addr-map__container {
     width: 100%;
     height: 320px;

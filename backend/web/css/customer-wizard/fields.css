@@ -124,6 +124,42 @@
     border: 1px solid var(--cw-border);
 }
 
+/* "Empty" state — used by collapsed address blocks when the user hasn't
+ * filled any field yet. The dashed border + italic copy make the chip
+ * read as a placeholder ("غير مُعبَّأ") rather than a saved value. */
+.cw-fieldset__chip--empty {
+    background: transparent;
+    border-style: dashed;
+    color: var(--cw-text-muted);
+    font-style: italic;
+    font-weight: 500;
+}
+
+/* The summary already wears a chevron — the standalone title's left-edge
+ * accent dot would compete with it. Hide the accent only when the title
+ * lives inside a <summary>. */
+.cw-fieldset__summary .cw-fieldset__title { margin: 0; }
+.cw-fieldset__summary .cw-fieldset__title::before { display: none; }
+
+/* ── Address-block-specific tweaks. The block reuses the generic
+ *    collapsible fieldset chrome but needs a roomy body and a chip that
+ *    can grow with the saved summary text without crowding the title. ── */
+.cw-addr-block.cw-fieldset--collapsible[open] > .cw-fieldset__summary {
+    border-bottom: 1px solid var(--cw-border);
+}
+
+.cw-addr-block__body {
+    padding: 16px;
+}
+
+.cw-addr-block__chip {
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 0 1 auto;
+}
+
 /* ─────────────── Field wrapper ─────────────── */
 
 .cw-field {

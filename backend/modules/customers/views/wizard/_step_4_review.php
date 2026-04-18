@@ -34,10 +34,29 @@ $cust2 = $payload['step2']['Customers'] ?? [];
 $cust3 = $payload['step3']['Customers'] ?? [];
 $cust  = array_merge((array)$cust1, (array)$cust2, (array)$cust3);
 
-$address    = $payload['step3']['address']    ?? [];
-$guarantors = $payload['step3']['guarantors'] ?? [];
-if (!is_array($address))    $address = [];
+// Address shape — supports both the new `addresses[home|work]` layout
+// and the legacy single `address` payload (mapped to "home"). This
+// keeps the recap in lockstep with the editing partial.
+$addresses = $payload['step3']['addresses'] ?? null;
+if (!is_array($addresses) || empty($addresses)) {
+    $legacy   = $payload['step3']['address'] ?? [];
+    $addresses = ['home' => is_array($legacy) ? $legacy : []];
+}
+$homeAddress = is_array($addresses['home'] ?? null) ? $addresses['home'] : [];
+$workAddress = is_array($addresses['work'] ?? null) ? $addresses['work'] : [];
+$guarantors  = $payload['step3']['guarantors'] ?? [];
 if (!is_array($guarantors)) $guarantors = [];
+
+// "Address present" probe used to decide whether to render an
+// optional block — rather than dump an empty card on the recap.
+$addrHasContent = function (array $a): bool {
+    foreach (['address_city', 'address_area', 'address_street',
+              'address_building', 'postal_code', 'address',
+              'latitude', 'longitude', 'plus_code'] as $k) {
+        if (trim((string)($a[$k] ?? '')) !== '') return true;
+    }
+    return false;
+};
 
 $scanInfo = $payload['_scan'] ?? [];
 
@@ -275,31 +294,49 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             <?php endif ?>
         </div>
 
-        <!-- ═══════════════ Address recap ═══════════════ -->
-        <div class="cw-review-section">
-            <div class="cw-review-section__head">
-                <h4 class="cw-review-section__title">
-                    <i class="fa fa-map-marker" aria-hidden="true"></i>
-                    العنوان الأساسي
-                </h4>
-                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="3">
-                    <i class="fa fa-pencil" aria-hidden="true"></i>
-                    <span>تعديل</span>
-                </button>
+        <!-- ═══════════════ Addresses recap (home + work) ═══════════════
+             Each block is rendered only when it carries content, so an
+             unfilled work address doesn't pollute the recap with an empty
+             card. Home is essentially always present (validation requires
+             city) — but we still gate it for safety. -->
+        <?php
+        $addressBlocks = [
+            ['key' => 'home', 'title' => 'عنوان السكن', 'icon' => 'fa-home',       'data' => $homeAddress],
+            ['key' => 'work', 'title' => 'عنوان العمل', 'icon' => 'fa-briefcase',  'data' => $workAddress],
+        ];
+        ?>
+        <?php foreach ($addressBlocks as $block):
+            $a = $block['data'];
+            if (!$addrHasContent($a)) continue;
+        ?>
+            <div class="cw-review-section">
+                <div class="cw-review-section__head">
+                    <h4 class="cw-review-section__title">
+                        <i class="fa <?= Html::encode($block['icon']) ?>" aria-hidden="true"></i>
+                        <?= Html::encode($block['title']) ?>
+                    </h4>
+                    <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="3">
+                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                        <span>تعديل</span>
+                    </button>
+                </div>
+                <dl class="cw-review-list">
+                    <div class="cw-review-list__row"><dt>المدينة</dt><dd><?= Html::encode($display($a['address_city'] ?? '')) ?></dd></div>
+                    <div class="cw-review-list__row"><dt>المنطقة</dt><dd><?= Html::encode($display($a['address_area'] ?? '')) ?></dd></div>
+                    <div class="cw-review-list__row"><dt>الشارع</dt><dd><?= Html::encode($display($a['address_street'] ?? '')) ?></dd></div>
+                    <div class="cw-review-list__row"><dt>المبنى / الطابق</dt><dd><?= Html::encode($display($a['address_building'] ?? '')) ?></dd></div>
+                    <?php if (!empty($a['postal_code'])): ?>
+                        <div class="cw-review-list__row"><dt>الرمز البريدي</dt><dd dir="ltr"><?= Html::encode($a['postal_code']) ?></dd></div>
+                    <?php endif ?>
+                    <?php if (!empty($a['plus_code'])): ?>
+                        <div class="cw-review-list__row"><dt>Plus Code</dt><dd dir="ltr"><?= Html::encode($a['plus_code']) ?></dd></div>
+                    <?php endif ?>
+                    <?php if (!empty($a['address'])): ?>
+                        <div class="cw-review-list__row"><dt>ملاحظات</dt><dd><?= Html::encode($a['address']) ?></dd></div>
+                    <?php endif ?>
+                </dl>
             </div>
-            <dl class="cw-review-list">
-                <div class="cw-review-list__row"><dt>المدينة</dt><dd><?= Html::encode($display($address['address_city'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>المنطقة</dt><dd><?= Html::encode($display($address['address_area'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>الشارع</dt><dd><?= Html::encode($display($address['address_street'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>المبنى / الطابق</dt><dd><?= Html::encode($display($address['address_building'] ?? '')) ?></dd></div>
-                <?php if (!empty($address['postal_code'])): ?>
-                    <div class="cw-review-list__row"><dt>الرمز البريدي</dt><dd dir="ltr"><?= Html::encode($address['postal_code']) ?></dd></div>
-                <?php endif ?>
-                <?php if (!empty($address['address'])): ?>
-                    <div class="cw-review-list__row"><dt>ملاحظات</dt><dd><?= Html::encode($address['address']) ?></dd></div>
-                <?php endif ?>
-            </dl>
-        </div>
+        <?php endforeach ?>
 
         <!-- ═══════════════ Real-estate recap (only if owns) ═══════════════
              Edit button points to step 2 because real-estate now lives in

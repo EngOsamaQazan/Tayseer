@@ -19,6 +19,7 @@ use backend\helpers\MediaHelper;
 use backend\modules\customers\models\Customers;
 use backend\modules\address\models\Address;
 use backend\modules\phoneNumbers\models\PhoneNumbers;
+use common\services\LocationResolverService;
 
 /**
  * Customer Onboarding Wizard — V2.
@@ -286,8 +287,17 @@ class WizardController extends Controller
             }
         }
 
-        $address    = $payload['step3']['address']    ?? [];
-        if (!is_array($address)) $address = [];
+        // Address payload — supports both the new addresses[home|work]
+        // shape and the legacy single-address shape (older drafts saved
+        // under "step3.address"). Legacy data is mapped onto the "home"
+        // slot so no field is silently dropped.
+        $addresses = $payload['step3']['addresses'] ?? null;
+        if (!is_array($addresses)) {
+            $legacy = $payload['step3']['address'] ?? [];
+            $addresses = [
+                'home' => is_array($legacy) ? $legacy : [],
+            ];
+        }
         $guarantors = $payload['step3']['guarantors'] ?? [];
         if (!is_array($guarantors)) $guarantors = [];
 
@@ -320,36 +330,52 @@ class WizardController extends Controller
                 return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العميل.'];
             }
 
-            // ── 3a. Address. ──
-            $hasAddr = false;
-            foreach (['address_city', 'address_area', 'address_street',
-                      'address_building', 'postal_code', 'address'] as $k) {
-                if (trim((string)($address[$k] ?? '')) !== '') { $hasAddr = true; break; }
-            }
-            if ($hasAddr) {
+            // ── 3a. Addresses (residential + work, each saved as its own
+            //       row). A block is persisted only when at least one
+            //       text field carries content — empty blocks are silently
+            //       skipped so an unfilled "work address" doesn't pollute
+            //       the DB with phantom rows. ──
+            $defaultTypeFor = ['home' => 2, 'work' => 1];
+            foreach ($addresses as $slotKey => $addr) {
+                if (!is_array($addr)) continue;
+
+                $hasAddr = false;
+                foreach (['address_city', 'address_area', 'address_street',
+                          'address_building', 'postal_code', 'address'] as $k) {
+                    if (trim((string)($addr[$k] ?? '')) !== '') { $hasAddr = true; break; }
+                }
+                if (!$hasAddr) continue;
+
                 // Cast geo fields: empty string → NULL so the DB
                 // doesn't store a 0,0 (Atlantic) coordinate by accident.
-                $lat = isset($address['latitude'])  && $address['latitude']  !== '' ? (float)$address['latitude']  : null;
-                $lng = isset($address['longitude']) && $address['longitude'] !== '' ? (float)$address['longitude'] : null;
-                $plus = isset($address['plus_code']) && $address['plus_code'] !== '' ? (string)$address['plus_code'] : null;
+                $lat  = isset($addr['latitude'])  && $addr['latitude']  !== '' ? (float)$addr['latitude']  : null;
+                $lng  = isset($addr['longitude']) && $addr['longitude'] !== '' ? (float)$addr['longitude'] : null;
+                $plus = isset($addr['plus_code']) && $addr['plus_code'] !== '' ? (string)$addr['plus_code'] : null;
+
+                // Resolve type code: trust the explicit field if present,
+                // otherwise fall back to the slot's conventional code
+                // (home=2, work=1) so legacy payloads still type correctly.
+                $typeCode = isset($addr['address_type']) && $addr['address_type'] !== ''
+                    ? (int)$addr['address_type']
+                    : ($defaultTypeFor[$slotKey] ?? 2);
 
                 $addrModel = new Address();
                 $addrModel->setAttributes([
                     'customers_id'     => $customer->id,
-                    'address_type'     => (int)($address['address_type'] ?? 2),
-                    'address_city'     => $address['address_city']     ?? null,
-                    'address_area'     => $address['address_area']     ?? null,
-                    'address_street'   => $address['address_street']   ?? null,
-                    'address_building' => $address['address_building'] ?? null,
-                    'postal_code'      => $address['postal_code']      ?? null,
-                    'address'          => $address['address']          ?? null,
+                    'address_type'     => $typeCode,
+                    'address_city'     => $addr['address_city']     ?? null,
+                    'address_area'     => $addr['address_area']     ?? null,
+                    'address_street'   => $addr['address_street']   ?? null,
+                    'address_building' => $addr['address_building'] ?? null,
+                    'postal_code'      => $addr['postal_code']      ?? null,
+                    'address'          => $addr['address']          ?? null,
                     'latitude'         => $lat,
                     'longitude'        => $lng,
                     'plus_code'        => $plus,
                 ], false);
                 if (!$addrModel->save()) {
                     $tx->rollBack();
-                    Yii::error('Wizard finish: address save failed: '
+                    Yii::error("Wizard finish: address save failed (slot={$slotKey}): "
                         . print_r($addrModel->getErrors(), true), __METHOD__);
                     return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العنوان.'];
                 }
@@ -2017,6 +2043,46 @@ class WizardController extends Controller
         }
     }
 
+    /* ════════════════════════════════════════════════════════════════
+       LOCATION (Step 3 — address map)
+       ════════════════════════════════════════════════════════════════ */
+
+    /**
+     * Smart "paste a location" resolver — accepts Google Maps short URLs,
+     * full + short Plus Codes, or free-text addresses, and returns lat/lng.
+     *
+     * Mirrors the legacy /jobs/resolve-location surface but lives under the
+     * wizard so we don't hard-couple the wizard's RBAC to the jobs module.
+     *
+     * GET params: ?q=<text>
+     * Response  : { success, lat?, lng?, display_name?, source? }
+     */
+    public function actionResolveLocation()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $raw = (string)Yii::$app->request->get('q', '');
+        return (new LocationResolverService())->resolveAny($raw);
+    }
+
+    /**
+     * Server-side proxy for Google Places "searchText", restricted to the
+     * Jordan bounding box. Lives on the server (not the browser) because:
+     *   • Hides the API key.
+     *   • Single SystemSettings source for the key (no per-tier config).
+     *   • Lets us swap the key / provider without redeploying the JS.
+     *
+     * GET params: ?q=<text>&lat=<float>&lng=<float>
+     * Response  : { results:[{name,addr,lat,lng,types}], source:string }
+     */
+    public function actionSearchPlaces()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $q   = (string)Yii::$app->request->get('q', '');
+        $lat = (float)Yii::$app->request->get('lat', 31.95);
+        $lng = (float)Yii::$app->request->get('lng', 35.91);
+        return (new LocationResolverService())->searchGooglePlaces($q, $lat, $lng);
+    }
+
     /**
      * Generic "insert (or restore) a row in a {id, name, is_deleted?} lookup
      * table" helper. Used by actionAddCity / actionAddCitizen and any future
@@ -2566,51 +2632,86 @@ class WizardController extends Controller
             }
         }
 
-        // ── Address. ──
-        $address = $this->dotGet($data, 'address');
-        if (!is_array($address)) $address = [];
-
-        $city = trim((string)($address['address_city'] ?? ''));
-        if ($city === '') {
-            $errors['address[address_city]'] = 'مدينة السكن مطلوبة.';
-        } elseif (mb_strlen($city) > 100) {
-            $errors['address[address_city]'] = 'اسم المدينة طويل جداً.';
+        // ── Addresses (residential required, work optional). Both blocks
+        //    share the same validation rules for length/coords; only the
+        //    "city is required" rule differs by slot. ──
+        $addresses = $this->dotGet($data, 'addresses');
+        if (!is_array($addresses)) {
+            // Backward-compat: a legacy single "address" key is mapped to
+            // the residential slot so older drafts still validate cleanly.
+            $legacy = $this->dotGet($data, 'address');
+            $addresses = [
+                'home' => is_array($legacy) ? $legacy : [],
+            ];
         }
 
-        foreach (['address_area' => 100, 'address_building' => 100,
-                  'postal_code'  => 20,  'address'          => 255] as $field => $cap) {
-            $v = (string)($address[$field] ?? '');
-            if (mb_strlen($v) > $cap) {
-                $errors["address[$field]"] = "القيمة طويلة جداً (الحد الأقصى {$cap}).";
-            }
-        }
-        $street = (string)($address['address_street'] ?? '');
-        if (mb_strlen($street) > 500) {
-            $errors['address[address_street]'] = 'الشارع طويل جداً (الحد الأقصى 500 حرف).';
-        }
+        $blocks = [
+            'home' => ['required' => true,  'cityLabel' => 'مدينة السكن'],
+            'work' => ['required' => false, 'cityLabel' => 'مدينة العمل'],
+        ];
 
-        // ── Map widget (optional). Validate when present, else skip
-        //    silently. We accept up to 8 decimals (~1mm precision). ──
-        $lat = trim((string)($address['latitude']  ?? ''));
-        $lng = trim((string)($address['longitude'] ?? ''));
-        if ($lat !== '') {
-            if (!is_numeric($lat) || (float)$lat < -90 || (float)$lat > 90) {
-                $errors['address[latitude]'] = 'خط العرض غير صالح (-90 إلى 90).';
+        foreach ($blocks as $slot => $cfg) {
+            $addr = isset($addresses[$slot]) && is_array($addresses[$slot])
+                ? $addresses[$slot]
+                : [];
+
+            // Detect whether the user filled ANY meaningful field. Optional
+            // blocks are validated only when at least one field is present
+            // — fully-empty optional blocks are silently ignored so users
+            // aren't forced to enter a work address.
+            $hasAny = false;
+            foreach (['address_city', 'address_area', 'address_street',
+                      'address_building', 'postal_code', 'address',
+                      'latitude', 'longitude', 'plus_code'] as $k) {
+                if (trim((string)($addr[$k] ?? '')) !== '') { $hasAny = true; break; }
             }
-        }
-        if ($lng !== '') {
-            if (!is_numeric($lng) || (float)$lng < -180 || (float)$lng > 180) {
-                $errors['address[longitude]'] = 'خط الطول غير صالح (-180 إلى 180).';
+
+            $city = trim((string)($addr['address_city'] ?? ''));
+
+            if ($cfg['required'] && $city === '') {
+                $errors["addresses[$slot][address_city]"] = $cfg['cityLabel'] . ' مطلوبة.';
+            } elseif (!$cfg['required'] && !$hasAny) {
+                // Optional & empty → skip the rest of this block entirely.
+                continue;
+            } elseif (mb_strlen($city) > 100) {
+                $errors["addresses[$slot][address_city]"] = 'اسم المدينة طويل جداً.';
             }
-        }
-        // Either both or neither — partial coords would corrupt the
-        // map UX next time the wizard is reopened.
-        if (($lat === '') !== ($lng === '')) {
-            $errors['address[latitude]'] = 'يجب تحديد خط العرض وخط الطول معاً، أو تركهما فارغين.';
-        }
-        $plus = (string)($address['plus_code'] ?? '');
-        if (mb_strlen($plus) > 20) {
-            $errors['address[plus_code]'] = 'رمز Plus Code طويل جداً.';
+
+            foreach (['address_area' => 100, 'address_building' => 100,
+                      'postal_code'  => 20,  'address'          => 255] as $field => $cap) {
+                $v = (string)($addr[$field] ?? '');
+                if (mb_strlen($v) > $cap) {
+                    $errors["addresses[$slot][$field]"] = "القيمة طويلة جداً (الحد الأقصى {$cap}).";
+                }
+            }
+            $street = (string)($addr['address_street'] ?? '');
+            if (mb_strlen($street) > 500) {
+                $errors["addresses[$slot][address_street]"] = 'الشارع طويل جداً (الحد الأقصى 500 حرف).';
+            }
+
+            // ── Map widget (optional within each block). We accept up
+            //    to 8 decimals (~1 mm precision). ──
+            $lat = trim((string)($addr['latitude']  ?? ''));
+            $lng = trim((string)($addr['longitude'] ?? ''));
+            if ($lat !== '') {
+                if (!is_numeric($lat) || (float)$lat < -90 || (float)$lat > 90) {
+                    $errors["addresses[$slot][latitude]"] = 'خط العرض غير صالح (-90 إلى 90).';
+                }
+            }
+            if ($lng !== '') {
+                if (!is_numeric($lng) || (float)$lng < -180 || (float)$lng > 180) {
+                    $errors["addresses[$slot][longitude]"] = 'خط الطول غير صالح (-180 إلى 180).';
+                }
+            }
+            // Either both or neither — partial coords would corrupt the
+            // map UX next time the wizard is reopened.
+            if (($lat === '') !== ($lng === '')) {
+                $errors["addresses[$slot][latitude]"] = 'يجب تحديد خط العرض وخط الطول معاً، أو تركهما فارغين.';
+            }
+            $plus = (string)($addr['plus_code'] ?? '');
+            if (mb_strlen($plus) > 20) {
+                $errors["addresses[$slot][plus_code]"] = 'رمز Plus Code طويل جداً.';
+            }
         }
 
         return $errors;
