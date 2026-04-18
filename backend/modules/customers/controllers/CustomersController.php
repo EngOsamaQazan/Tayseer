@@ -58,7 +58,7 @@ class CustomersController extends Controller
                         },
                     ],
                     [
-                        'actions' => ['create', 'calculate-risk', 'check-duplicate'],
+                        'actions' => ['create', 'create-legacy', 'calculate-risk', 'check-duplicate'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function ($rule, $action) {
@@ -176,11 +176,37 @@ class CustomersController extends Controller
 
     /**
      * Creates a new customers model.
-     * For ajax request will return json object
-     * and for non-ajax request if creation is successful, the browser will be redirected to the 'view' page.
-     * @return mixed
+     *
+     * The legacy single-page form was replaced by Customer Wizard v2 on
+     * 2026-04-19. This action now redirects to the new wizard so existing
+     * links, bookmarks, and inter-module navigations keep working.
+     *
+     * The original implementation has been preserved verbatim in
+     * {@see actionCreateLegacy()} for emergency rollback. Once the wizard
+     * has been running stable in production for a full release cycle,
+     * the legacy action and its `_smart_form.php` / `create.php` views
+     * can be removed.
+     *
+     * @return \yii\web\Response
      */
     public function actionCreate()
+    {
+        return $this->redirect(['/customers/wizard']);
+    }
+
+    /**
+     * Legacy "Smart Onboarding" single-page customer creation form.
+     *
+     * Reachable at `/customers/create-legacy`. Kept temporarily as an
+     * escape hatch in case Customer Wizard v2 needs to be rolled back
+     * quickly. Do NOT add new features here — all customer-creation
+     * work belongs in {@see \backend\modules\customers\controllers\WizardController}.
+     *
+     * @deprecated since 2026-04-19 — slated for removal after one stable
+     * release of the new wizard.
+     * @return mixed
+     */
+    public function actionCreateLegacy()
     {
         $request = Yii::$app->request;
         $model = new Customers();

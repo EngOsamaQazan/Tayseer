@@ -18,7 +18,7 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-19 — rename step 3 to "المعرّفون والعناوين"
-     *  + widen guarantor phone column (cw-grid--phone-wide). */
+     *  Last bump: 2026-04-19 — promote Customer Wizard v2 to default
+     *  /customers/create (legacy form moved to /customers/create-legacy). */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];

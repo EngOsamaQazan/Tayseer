@@ -50,7 +50,7 @@ $this->registerJsFile('/js/Tafqeet.js');
         </div>
 
         <div class="col-sm-2 col-xs-2">
-            <button title="add customer" class="btn btn-primary" onclick=" window.open('<?= Yii::$app->urlManager->createUrl('/customers/create') ?>', '_blank');
+            <button title="add customer" class="btn btn-primary" onclick=" window.open('<?= Yii::$app->urlManager->createUrl('/customers/wizard') ?>', '_blank');
                     return false;"><?=Yii::t('app', 'Add Customer')?></button>
         </div>
     </div>

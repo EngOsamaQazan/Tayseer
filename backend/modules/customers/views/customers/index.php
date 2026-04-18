@@ -102,7 +102,7 @@ $end   = $begin + count($models) - 1;
         </div>
         <div class="ct-hdr-actions">
             <?php if (Permissions::can(Permissions::CUST_CREATE)): ?>
-            <a href="<?= Url::to(['create']) ?>" class="ct-btn ct-btn-primary" aria-label="إضافة عميل جديد">
+            <a href="<?= Url::to(['/customers/wizard']) ?>" class="ct-btn ct-btn-primary" aria-label="إضافة عميل جديد">
                 <i class="fa fa-plus"></i> <span class="ct-hide-xs">إضافة عميل</span>
             </a>
             <?php endif ?>

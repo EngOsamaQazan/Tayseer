@@ -256,6 +256,10 @@ class Permissions
                 'index'         => self::CUST_VIEW,
                 'view'          => self::CUST_VIEW,
                 'create'        => self::CUST_CREATE,
+                /* Emergency rollback for Customer Wizard v2.
+                 * Same permission as the new wizard so existing CUST_CREATE
+                 * holders can fall back to the legacy form if ever needed. */
+                'create-legacy' => self::CUST_CREATE,
                 'create-summary'=> self::CUST_VIEW,
                 'update'        => self::CUST_UPDATE,
                 'update-contact'=> self::CUST_UPDATE,
