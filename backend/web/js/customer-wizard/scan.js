@@ -166,26 +166,122 @@
     }
 
     /**
-     * Main click handler — bound once at module load (idempotent via NS).
+     * Resolve the file-input that pairs with the given scan trigger.
      */
-    function onScanClick(e) {
-        e.preventDefault();
-        var $btn   = $(this);
-        var $input = $btn.closest('.cw-card__header').siblings('input[data-cw-role="scan-input"]')
-                       .add($btn.siblings('input[data-cw-role="scan-input"]'))
-                       .first();
-
-        // Fallback: search the whole step section if siblings traversal misses.
+    function findFileInput($trigger) {
+        var $input = $trigger.closest('.cw-card__header')
+                        .siblings('input[data-cw-role="scan-input"]')
+                        .add($trigger.siblings('input[data-cw-role="scan-input"]'))
+                        .first();
         if (!$input.length) {
-            $input = $btn.closest('[data-cw-section]')
+            $input = $trigger.closest('[data-cw-section]')
                          .find('input[data-cw-role="scan-input"]')
                          .first();
         }
+        return $input;
+    }
+
+    /**
+     * Apply a server-mapped fields object to the form. Wraps the lower-level
+     * snapshot+applyFields helpers and surfaces toasts/unmapped hints.
+     *
+     * @returns {number} count of fields that were actually changed
+     */
+    function applyServerFields(fields, unmapped, opts) {
+        opts = opts || {};
+        if (!fields || !Object.keys(fields).length) {
+            if (opts.silentEmpty !== true) {
+                toast('لم يتمكّن النظام من استخراج بيانات قابلة للاستخدام.', 'warning', 5000);
+            }
+            return 0;
+        }
+        if (!lastSnapshot) lastSnapshot = snapshot(fields);
+        var changed = applyFields(fields);
+
+        if (!changed) {
+            if (opts.silentEmpty !== true) {
+                toast('البيانات المُستخرَجة مطابقة للحقول الحالية.', 'info', 4000);
+            }
+            return 0;
+        }
+
+        if (opts.silentSuccess === true) return changed;
+
+        var msg = 'تمّ ملء ' + changed + ' حقلاً تلقائياً.';
+        var hints = [];
+        if (unmapped && unmapped.city)    hints.push('مدينة الولادة: «' + unmapped.city + '»');
+        if (unmapped && unmapped.citizen) hints.push('الجنسية: «' + unmapped.citizen + '»');
+        if (hints.length) {
+            msg += ' — يرجى اختيار يدوياً: ' + hints.join('، ') + '.';
+        }
+        toast(msg, 'success', 7000);
+        return changed;
+    }
+
+    /**
+     * Main click handler — bound once at module load (idempotent via NS).
+     *
+     * Strategy:
+     *   1. If the live-camera module (CWCamera) loaded AND the device supports
+     *      getUserMedia, open the bank-style auto-capture overlay.
+     *   2. Otherwise (desktop without camera, iframe sandbox, etc.) fall back
+     *      transparently to the file picker.
+     *
+     * The user can also explicitly choose "ارفع ملفاً" inside the camera UI
+     * to switch modes mid-flow.
+     */
+    function onScanClick(e) {
+        e.preventDefault();
+        var $btn = $(this);
+
+        if (window.CWCamera && window.CWCamera.isSupported() && !$btn.data('cw-prefer-upload')) {
+            openCamera($btn);
+            return;
+        }
+        openFilePicker($btn);
+    }
+
+    function openFilePicker($btn) {
+        var $input = findFileInput($btn);
         if (!$input.length) {
             toast('لم يتم العثور على حقل رفع الملف.', 'error');
             return;
         }
         $input.trigger('click');
+    }
+
+    function openCamera($btn) {
+        lastSnapshot = null;     // fresh snapshot will be built per-side
+        window.CWCamera.open({
+            scanUrl:   scanUrl(),
+            csrfToken: csrfToken(),
+            onFields:  function (fields, side, unmapped) {
+                // Apply incrementally so the user sees the form fill in real-time
+                // — but stay quiet about success toasts; the camera UI itself
+                // already shows "تم التقاط الوجه...".
+                applyServerFields(fields, unmapped, {
+                    silentEmpty:   true,
+                    silentSuccess: true,
+                });
+            },
+            onComplete: function (allFields) {
+                // Final toast once both sides processed.
+                var changedTotal = Object.keys(allFields || {}).length;
+                if (changedTotal) {
+                    toast('✓ تم استخراج بيانات الهوية ومسحها بالكامل.', 'success', 6000);
+                } else {
+                    toast('انتهى المسح ولم يتم استخراج بيانات.', 'warning', 5000);
+                }
+            },
+            onCancel:   function () { /* no toast — user closed deliberately */ },
+            onFallback: function () { openFilePicker($btn); },
+            onError:    function (code) {
+                if (code === 'camera_unsupported') {
+                    openFilePicker($btn);
+                }
+                // Other errors are shown inside the camera overlay itself.
+            },
+        });
     }
 
     /**

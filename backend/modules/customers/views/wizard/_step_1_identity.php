@@ -38,7 +38,7 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
             التعريف بالعميل
         </h3>
         <button type="button"
-                class="cw-btn cw-btn--outline cw-btn--sm"
+                class="cw-btn cw-btn--primary cw-btn--sm"
                 data-cw-action="scan-identity"
                 aria-describedby="cw-scan-hint">
             <i class="fa fa-camera" aria-hidden="true"></i>
@@ -54,7 +54,9 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
     </div>
 
     <p id="cw-scan-hint" class="cw-card__hint">
-        التقط صورة واضحة للهوية أو ارفع ملفاً (JPG/PNG/PDF حتى 10MB) — سنُعبّئ الحقول تلقائياً.
+        <i class="fa fa-info-circle" aria-hidden="true"></i>
+        سنفتح الكاميرا ونلتقط الوجهين تلقائياً عندما تكون الصورة واضحة (مثل تطبيقات البنوك)،
+        أو ارفع ملفاً (JPG/PNG/PDF حتى 10MB) — وسنُعبّئ الحقول لك.
     </p>
 
     <div class="cw-card__body">

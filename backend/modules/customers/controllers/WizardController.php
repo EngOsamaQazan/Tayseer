@@ -302,6 +302,14 @@ class WizardController extends Controller
             ];
         }
 
+        // ── Read the optional `side` flag (front | back | auto). ──
+        // Camera mode sends explicit side; file-upload mode defaults to "auto"
+        // — which means: try to auto-detect from Gemini's response.
+        $side = strtolower((string)Yii::$app->request->post('side', 'auto'));
+        if (!in_array($side, ['front', 'back', 'auto'], true)) {
+            $side = 'auto';
+        }
+
         $file = UploadedFile::getInstanceByName('file');
         if (!$file) {
             return ['ok' => false, 'error' => 'لم يتم استلام ملف للمسح.'];
@@ -338,15 +346,63 @@ class WizardController extends Controller
                 ];
             }
 
+            // ── Detect which side this actually is (front vs back). ──
+            // We trust three signals from the Gemini extraction:
+            //   • presence of `name` + `id_number`        → strong "front" signal
+            //   • presence of `document_number` only      → strong "back" signal
+            //   • complete absence of any usable fields   → likely a bad image
+            $hasName     = !empty($extracted['name']);
+            $hasIdNumber = !empty($extracted['id_number']);
+            $hasDocNum   = !empty($extracted['document_number']);
+
+            if ($hasName && $hasIdNumber)      $detectedSide = 'front';
+            elseif ($hasDocNum && !$hasName)   $detectedSide = 'back';
+            else                                $detectedSide = 'unknown';
+
+            // Reject mismatches with a friendly hint so the camera can re-prompt.
+            if ($side === 'front' && $detectedSide === 'back') {
+                return [
+                    'ok'             => false,
+                    'side_expected'  => 'front',
+                    'side_detected'  => 'back',
+                    'error'          => 'يبدو أنك صوّرت الوجه الخلفي — صوّر الوجه الأمامي (الذي يحمل الاسم والصورة).',
+                ];
+            }
+            if ($side === 'back' && $detectedSide === 'front') {
+                return [
+                    'ok'             => false,
+                    'side_expected'  => 'back',
+                    'side_detected'  => 'front',
+                    'error'          => 'يبدو أنك صوّرت الوجه الأمامي — صوّر الوجه الخلفي (الذي يحمل الـ MRZ والباركود).',
+                ];
+            }
+
             $lookups = $this->loadLookups();
-            $mapped  = $this->mapScanToWizardFields($extracted, $lookups);
+
+            // ── Filter the extraction by the side we're actually saving. ──
+            // Back-of-ID has limited useful info: only the card/document number
+            // and possibly a re-validation of id_number from the MRZ. We strip
+            // personal fields so we never overwrite values the user/front-side
+            // already established.
+            $filtered = $this->filterScanBySide($extracted, $side, $detectedSide);
+            $mapped   = $this->mapScanToWizardFields($filtered, $lookups);
+
+            // Tell the client what to do next:
+            //   • front captured → ask for back
+            //   • back captured (or auto/unknown) → done
+            $nextAction = ($side === 'front' || ($side === 'auto' && $detectedSide === 'front'))
+                ? 'capture_back'
+                : 'done';
 
             return [
-                'ok'         => true,
-                'fields'     => $mapped['fields'],
-                'unmapped'   => $mapped['unmapped'],
-                'raw'        => $extracted,
-                'meta'       => [
+                'ok'             => true,
+                'side'           => $side,
+                'side_detected'  => $detectedSide,
+                'next_action'    => $nextAction,
+                'fields'         => $mapped['fields'],
+                'unmapped'       => $mapped['unmapped'],
+                'raw'            => $extracted,
+                'meta'           => [
                     'source'     => 'gemini-vision',
                     'elapsed_ms' => (int)((microtime(true) - $startedAt) * 1000),
                 ],
@@ -363,6 +419,38 @@ class WizardController extends Controller
                 @unlink($tmpPath);
             }
         }
+    }
+
+    /**
+     * Drop the fields that don't belong to the side the user just scanned.
+     *
+     * Why: the back of a Jordanian ID frequently has Gemini accidentally
+     * picking up faint text from the front bleed-through (or returning stale
+     * cached impressions of a similar card). To prevent overwriting good
+     * front-side data with garbage from the back, we restrict back captures
+     * to a strict allow-list of fields.
+     *
+     * @param array  $extracted        raw fields from Gemini
+     * @param string $requestedSide    front | back | auto
+     * @param string $detectedSide     front | back | unknown
+     */
+    protected function filterScanBySide(array $extracted, $requestedSide, $detectedSide)
+    {
+        $effective = ($requestedSide === 'auto') ? $detectedSide : $requestedSide;
+
+        if ($effective !== 'back') {
+            return $extracted;
+        }
+
+        // Back-of-ID: only these fields are reliably present + safe to use.
+        $backWhitelist = ['document_number', 'id_number'];
+        $filtered = [];
+        foreach ($backWhitelist as $key) {
+            if (isset($extracted[$key]) && $extracted[$key] !== '') {
+                $filtered[$key] = $extracted[$key];
+            }
+        }
+        return $filtered;
     }
 
     /**

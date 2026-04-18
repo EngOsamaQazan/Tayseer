@@ -37,11 +37,21 @@ $this->registerCssFile($baseUrl . '/css/customer-wizard/core.css', [
 $this->registerCssFile($baseUrl . '/css/customer-wizard/fields.css', [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
+$this->registerCssFile($baseUrl . '/css/customer-wizard/scan-camera.css', [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
 $this->registerJsFile($baseUrl . '/js/customer-wizard/core.js', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
 $this->registerJsFile($baseUrl . '/js/customer-wizard/fields.js', [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+// scan-camera.js MUST load before scan.js — the latter feature-detects
+// `window.CWCamera` synchronously at click time, so the camera module
+// has to be present in the global scope first.
+$this->registerJsFile($baseUrl . '/js/customer-wizard/scan-camera.js', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
