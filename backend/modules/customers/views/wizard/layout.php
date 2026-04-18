@@ -116,6 +116,13 @@ $this->registerJsFile($ver('/js/customer-wizard/extras.js'), [
 $this->registerCssFile($ver('/css/customer-wizard/extras.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
+// Step-4 review enhancements (PDF first-page thumbs via PDF.js loaded
+// on demand from CDN). Only the review tile <thumb> elements are
+// touched, so the script is a safe no-op on every other step.
+$this->registerJsFile($ver('/js/customer-wizard/review.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
 // intl-tel-input bundle (library + libphonenumber utils). MUST load
 // before our wrapper so `window.intlTelInput` exists when intl-phone.js
 // runs. The wrapper auto-polls for the global for ~5s as a safety net,

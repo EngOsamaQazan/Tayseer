@@ -60,6 +60,20 @@ $addrHasContent = function (array $a): bool {
 
 $scanInfo = $payload['_scan'] ?? [];
 
+// ── Customer-uploaded extras (personal photo + ad-hoc documents). ──
+//
+// These live under `_extras` in the draft, populated by the Step 1
+// uploaders in `_step_1_extras.php`. The review needs them so the
+// reviewer can:
+//   • Confirm the headshot that will land on the contract print preview
+//     (Customers.selected_image gets stamped on finish).
+//   • See/open every supporting document (utility bills, salary letters,
+//     vehicle registrations, …) without leaving the wizard.
+$extras       = is_array($payload['_extras'] ?? null) ? $payload['_extras'] : [];
+$personalPic  = (is_array($extras['photo'] ?? null) && !empty($extras['photo']['url']))
+              ? $extras['photo'] : null;
+$extraDocs    = (is_array($extras['docs']  ?? null)) ? array_values($extras['docs']) : [];
+
 // ── Lookup name helpers (id → display label). ──
 $cityMap   = ArrayHelper::map($lookups['cities']   ?? [], 'id', 'name');
 $citizenMap= ArrayHelper::map($lookups['citizens'] ?? [], 'id', 'name');
@@ -109,10 +123,10 @@ if (is_array($scanImageIds)) {
 // Score components — each "miss" adds risk weight. Capped at 100.
 $riskScore = 0;
 $riskReasons = [];
-if (empty($cust['id_number']))          { $riskScore += 25; $riskReasons[] = 'رقم الهوية ناقص'; }
-if (empty($cust['phone_number']))       { $riskScore += 15; $riskReasons[] = 'رقم الهاتف ناقص'; }
-if (empty($cust['total_salary']))       { $riskScore += 20; $riskReasons[] = 'الراتب غير محدد'; }
-if (empty($cust['job_title']))          { $riskScore += 15; $riskReasons[] = 'جهة العمل غير محددة'; }
+if (empty($cust['id_number']))            { $riskScore += 25; $riskReasons[] = 'رقم الهوية ناقص'; }
+if (empty($cust['primary_phone_number'])) { $riskScore += 15; $riskReasons[] = 'رقم الهاتف ناقص'; }
+if (empty($cust['total_salary']))         { $riskScore += 20; $riskReasons[] = 'الراتب غير محدد'; }
+if (empty($cust['job_title']))            { $riskScore += 15; $riskReasons[] = 'جهة العمل غير محددة'; }
 if (count(array_filter($guarantors, function ($g) {
         return is_array($g) && trim((string)($g['owner_name'] ?? '')) !== '';
     })) < 2) {
@@ -141,9 +155,17 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
     <!-- ═══════════════ HERO ═══════════════ -->
     <div class="cw-review__hero">
         <div class="cw-review__hero-main">
-            <div class="cw-review__avatar" aria-hidden="true">
-                <i class="fa fa-user-circle-o"></i>
-            </div>
+            <?php if ($personalPic): ?>
+                <div class="cw-review__avatar cw-review__avatar--photo">
+                    <img src="<?= Html::encode((string)$personalPic['url']) ?>"
+                         alt="الصورة الشخصية للعميل"
+                         loading="lazy">
+                </div>
+            <?php else: ?>
+                <div class="cw-review__avatar" aria-hidden="true">
+                    <i class="fa fa-user-circle-o"></i>
+                </div>
+            <?php endif ?>
             <div class="cw-review__hero-text">
                 <div class="cw-review__hero-name"><?= Html::encode($display($cust['name'] ?? '')) ?></div>
                 <div class="cw-review__hero-meta">
@@ -153,10 +175,10 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
                             <span>هوية: <?= Html::encode($cust['id_number']) ?></span>
                         </span>
                     <?php endif ?>
-                    <?php if (!empty($cust['phone_number'])): ?>
+                    <?php if (!empty($cust['primary_phone_number'])): ?>
                         <span class="cw-review__chip">
                             <i class="fa fa-phone" aria-hidden="true"></i>
-                            <span dir="ltr"><?= Html::encode($cust['phone_number']) ?></span>
+                            <span dir="ltr"><?= Html::encode($cust['primary_phone_number']) ?></span>
                         </span>
                     <?php endif ?>
                     <?php if (!empty($cust['birth_date'])): ?>
@@ -206,15 +228,21 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             <dl class="cw-review-list">
                 <div class="cw-review-list__row"><dt>الاسم الكامل</dt><dd><?= Html::encode($display($cust['name'] ?? '')) ?></dd></div>
                 <div class="cw-review-list__row"><dt>الرقم الوطني</dt><dd dir="ltr"><?= Html::encode($display($cust['id_number'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>الجنسية</dt><dd><?= Html::encode($display($lookupName($cust['citizen_id'] ?? null, $citizenMap))) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الجنسية</dt><dd><?= Html::encode($display($lookupName($cust['citizen'] ?? null, $citizenMap))) ?></dd></div>
                 <div class="cw-review-list__row"><dt>الجنس</dt><dd><?= Html::encode($sexLabel) ?></dd></div>
                 <div class="cw-review-list__row"><dt>تاريخ الميلاد</dt><dd dir="ltr"><?= Html::encode($display($cust['birth_date'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>مكان الولادة</dt><dd><?= Html::encode($display($lookupName($cust['birth_place'] ?? null, $cityMap))) ?></dd></div>
-                <div class="cw-review-list__row"><dt>الحالة الاجتماعية</dt><dd><?= Html::encode($display($cust['social_status'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>عدد الأبناء</dt><dd><?= Html::encode($display($cust['children_count'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>هاتف</dt><dd dir="ltr"><?= Html::encode($display($cust['phone_number'] ?? '')) ?></dd></div>
-                <div class="cw-review-list__row"><dt>هاتف بديل</dt><dd dir="ltr"><?= Html::encode($display($cust['secondary_phone'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>مكان الولادة</dt><dd><?= Html::encode($display($lookupName($cust['city'] ?? null, $cityMap))) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الهاتف الرئيسي</dt><dd dir="ltr"><?= Html::encode($display($cust['primary_phone_number'] ?? '')) ?></dd></div>
                 <div class="cw-review-list__row"><dt>كيف تعرّفت علينا</dt><dd><?= Html::encode($display($lookupName($cust['hear_about_us'] ?? null, $hearMap))) ?></dd></div>
+                <?php if (!empty($cust['email'])): ?>
+                    <div class="cw-review-list__row"><dt>البريد الإلكتروني</dt><dd dir="ltr"><?= Html::encode($cust['email']) ?></dd></div>
+                <?php endif ?>
+                <?php if (!empty($cust['facebook_account'])): ?>
+                    <div class="cw-review-list__row"><dt>حساب فيسبوك</dt><dd dir="ltr"><?= Html::encode($cust['facebook_account']) ?></dd></div>
+                <?php endif ?>
+                <?php if (!empty($cust['notes'])): ?>
+                    <div class="cw-review-list__row cw-review-list__row--wide"><dt>ملاحظات</dt><dd><?= Html::encode($cust['notes']) ?></dd></div>
+                <?php endif ?>
             </dl>
         </div>
 
@@ -232,22 +260,41 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             </div>
             <dl class="cw-review-list">
                 <div class="cw-review-list__row"><dt>جهة العمل</dt><dd><?= Html::encode($display($lookupName($cust['job_title'] ?? null, $jobMap))) ?></dd></div>
-                <div class="cw-review-list__row"><dt>المسمى الوظيفي / الرقم</dt><dd dir="ltr"><?= Html::encode($display($cust['job_number'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الرقم الوظيفي</dt><dd dir="ltr"><?= Html::encode($display($cust['job_number'] ?? '')) ?></dd></div>
                 <div class="cw-review-list__row"><dt>إجمالي الراتب</dt><dd><?= Html::encode($display($cust['total_salary'] ?? '')) ?> <small class="cw-review-list__unit">د.أ</small></dd></div>
-                <div class="cw-review-list__row"><dt>تاريخ بدء العمل</dt><dd dir="ltr"><?= Html::encode($display($cust['date_of_query'] ?? '')) ?></dd></div>
+                <?php if (!empty($cust['last_income_query_date'])): ?>
+                    <div class="cw-review-list__row"><dt>تاريخ آخر فحص دخل</dt><dd dir="ltr"><?= Html::encode($cust['last_income_query_date']) ?></dd></div>
+                <?php endif ?>
+                <?php if (!empty($cust['last_job_query_date'])): ?>
+                    <div class="cw-review-list__row"><dt>تاريخ آخر فحص عمل</dt><dd dir="ltr"><?= Html::encode($cust['last_job_query_date']) ?></dd></div>
+                <?php endif ?>
                 <div class="cw-review-list__row"><dt>مشترك بالضمان</dt><dd><?= Html::encode($displayBool($cust['is_social_security'] ?? '')) ?></dd></div>
                 <?php if ((string)($cust['is_social_security'] ?? '') === '1'): ?>
                     <div class="cw-review-list__row"><dt>رقم اشتراك الضمان</dt><dd dir="ltr"><?= Html::encode($display($cust['social_security_number'] ?? '')) ?></dd></div>
                 <?php endif ?>
-                <div class="cw-review-list__row"><dt>يستلم راتب تقاعد/ضمان</dt><dd><?= Html::encode($displayBool($cust['has_social_security_salary'] ?? '')) ?></dd></div>
-                <?php if ((string)($cust['has_social_security_salary'] ?? '') === '1'): ?>
+                <?php
+                // has_social_security_salary stored as 'yes'/'no' (radio values),
+                // not 1/0 — see _step_2_employment.php line ~347. The earlier
+                // displayBool() helper expects 1/0, so we map manually here.
+                $hasPension = (string)($cust['has_social_security_salary'] ?? '');
+                $hasPensionLabel = $hasPension === 'yes' ? 'نعم'
+                                  : ($hasPension === 'no' ? 'لا' : '—');
+                ?>
+                <div class="cw-review-list__row"><dt>يستلم راتب تقاعد/ضمان</dt><dd><?= Html::encode($hasPensionLabel) ?></dd></div>
+                <?php if ($hasPension === 'yes'): ?>
+                    <?php if (!empty($cust['social_security_salary_source'])): ?>
+                        <div class="cw-review-list__row"><dt>مصدر الراتب التقاعدي</dt><dd><?= Html::encode($cust['social_security_salary_source']) ?></dd></div>
+                    <?php endif ?>
+                    <?php if (!empty($cust['retirement_status'])): ?>
+                        <div class="cw-review-list__row"><dt>حالة التقاعد</dt><dd><?= Html::encode($cust['retirement_status']) ?></dd></div>
+                    <?php endif ?>
                     <div class="cw-review-list__row"><dt>إجمالي دخل التقاعد</dt><dd><?= Html::encode($display($cust['total_retirement_income'] ?? '')) ?> <small class="cw-review-list__unit">د.أ</small></dd></div>
                 <?php endif ?>
                 <div class="cw-review-list__row"><dt>البنك</dt><dd><?= Html::encode($display($lookupName($cust['bank_name'] ?? null, $bankMap))) ?></dd></div>
-                <div class="cw-review-list__row"><dt>رقم الحساب البنكي</dt><dd dir="ltr"><?= Html::encode($display($cust['bank_account_number'] ?? '')) ?></dd></div>
-                <?php if (!empty($cust['iban_number'])): ?>
-                    <div class="cw-review-list__row"><dt>IBAN</dt><dd dir="ltr"><?= Html::encode($cust['iban_number']) ?></dd></div>
+                <?php if (!empty($cust['bank_branch'])): ?>
+                    <div class="cw-review-list__row"><dt>الفرع</dt><dd><?= Html::encode($cust['bank_branch']) ?></dd></div>
                 <?php endif ?>
+                <div class="cw-review-list__row"><dt>رقم الحساب البنكي</dt><dd dir="ltr"><?= Html::encode($display($cust['account_number'] ?? '')) ?></dd></div>
             </dl>
         </div>
 
@@ -379,6 +426,9 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
 
             <div class="cw-review-docs">
                 <?php
+                // Required slots — every customer file should have these three.
+                // Renders missing-state tiles when a slot is empty so the
+                // reviewer immediately sees what still needs uploading.
                 $docTiles = [
                     ['key' => 'front',  'media' => $scanFront,  'label' => 'وجه الهوية'],
                     ['key' => 'back',   'media' => $scanBack,   'label' => 'ظهر الهوية'],
@@ -388,10 +438,19 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
                     $media = $tile['media'];
                     if ($media):
                         $imgUrl = method_exists($media, 'getUrl') ? $media->getUrl() : '';
+                        $ext    = strtolower(pathinfo((string)$media->fileName, PATHINFO_EXTENSION));
+                        $isPdf  = $ext === 'pdf';
                 ?>
-                    <a href="<?= Html::encode($imgUrl) ?>" target="_blank" rel="noopener" class="cw-review-doc cw-review-doc--filled">
-                        <div class="cw-review-doc__thumb">
-                            <?php if ($imgUrl): ?>
+                    <a href="<?= Html::encode($imgUrl) ?>" target="_blank" rel="noopener"
+                       class="cw-review-doc cw-review-doc--filled <?= $isPdf ? 'cw-review-doc--pdf' : '' ?>">
+                        <div class="cw-review-doc__thumb"
+                             <?= $isPdf ? 'data-cw-pdf-thumb data-pdf-url="' . Html::encode($imgUrl) . '"' : '' ?>>
+                            <?php if ($isPdf): ?>
+                                <i class="fa fa-file-pdf-o cw-review-doc__pdf-fallback" aria-hidden="true"></i>
+                                <span class="cw-review-doc__pdf-loading">
+                                    <i class="fa fa-spinner fa-pulse" aria-hidden="true"></i>
+                                </span>
+                            <?php elseif ($imgUrl): ?>
                                 <img src="<?= Html::encode($imgUrl) ?>" alt="<?= Html::encode($tile['label']) ?>" loading="lazy">
                             <?php else: ?>
                                 <i class="fa fa-file-image-o" aria-hidden="true"></i>
@@ -413,11 +472,59 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
                         </div>
                     </div>
                 <?php endif; endforeach ?>
+
+                <!-- Personal photo (if uploaded) — also visible in the hero
+                     avatar but rendered here too so reviewers can open it
+                     full-size and so the docs hub gives a complete picture
+                     of what's attached to the customer file. -->
+                <?php if ($personalPic): ?>
+                    <a href="<?= Html::encode((string)$personalPic['url']) ?>" target="_blank" rel="noopener"
+                       class="cw-review-doc cw-review-doc--filled cw-review-doc--photo">
+                        <div class="cw-review-doc__thumb">
+                            <img src="<?= Html::encode((string)$personalPic['url']) ?>"
+                                 alt="الصورة الشخصية للعميل" loading="lazy">
+                        </div>
+                        <div class="cw-review-doc__label">
+                            <i class="fa fa-check-circle" aria-hidden="true"></i>
+                            الصورة الشخصية
+                        </div>
+                    </a>
+                <?php endif ?>
+
+                <!-- Ad-hoc supporting documents the user added in step 1.
+                     PDFs get a first-page render via PDF.js (see review.js). -->
+                <?php foreach ($extraDocs as $idx => $doc):
+                    if (!is_array($doc) || empty($doc['url'])) continue;
+                    $docUrl   = (string)$doc['url'];
+                    $docName  = (string)($doc['file_name'] ?? ('مستند ' . ($idx + 1)));
+                    $mime     = (string)($doc['mime'] ?? '');
+                    $isPdfDoc = $mime === 'application/pdf'
+                              || strtolower(pathinfo($docName, PATHINFO_EXTENSION)) === 'pdf';
+                ?>
+                    <a href="<?= Html::encode($docUrl) ?>" target="_blank" rel="noopener"
+                       class="cw-review-doc cw-review-doc--filled cw-review-doc--extra <?= $isPdfDoc ? 'cw-review-doc--pdf' : '' ?>">
+                        <div class="cw-review-doc__thumb"
+                             <?= $isPdfDoc ? 'data-cw-pdf-thumb data-pdf-url="' . Html::encode($docUrl) . '"' : '' ?>>
+                            <?php if ($isPdfDoc): ?>
+                                <i class="fa fa-file-pdf-o cw-review-doc__pdf-fallback" aria-hidden="true"></i>
+                                <span class="cw-review-doc__pdf-loading">
+                                    <i class="fa fa-spinner fa-pulse" aria-hidden="true"></i>
+                                </span>
+                            <?php else: ?>
+                                <img src="<?= Html::encode($docUrl) ?>" alt="<?= Html::encode($docName) ?>" loading="lazy">
+                            <?php endif ?>
+                        </div>
+                        <div class="cw-review-doc__label">
+                            <i class="fa fa-paperclip" aria-hidden="true"></i>
+                            <?= Html::encode(mb_strimwidth($docName, 0, 26, '…', 'UTF-8')) ?>
+                        </div>
+                    </a>
+                <?php endforeach ?>
             </div>
 
             <p class="cw-review-section__hint">
                 <i class="fa fa-info-circle" aria-hidden="true"></i>
-                المستندات الإضافية (إثبات راتب، عقود، …) يمكن رفعها من صفحة العميل بعد الاعتماد.
+                يمكن إضافة المزيد من المستندات لاحقاً من صفحة العميل بعد الاعتماد.
             </p>
         </div>
 
@@ -470,7 +577,7 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             <div class="cw-review-final__actions">
                 <button type="button" class="cw-btn cw-btn--lg cw-btn--success" data-cw-action="finish">
                     <i class="fa fa-check-circle" aria-hidden="true"></i>
-                    <span>اعتماد العميل وحفظه</span>
+                    <span>اعتماد وإضافة العميل</span>
                 </button>
             </div>
         </div>

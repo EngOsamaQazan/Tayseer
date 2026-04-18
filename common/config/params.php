@@ -18,6 +18,7 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-19 — wizard fuzzy combo + customer photo + extras. */
+     *  Last bump: 2026-04-19 — wizard review fixes (field keys, PDF
+     *  first-page thumb, personal-photo avatar, smart salary pick). */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];

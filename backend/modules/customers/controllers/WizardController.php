@@ -938,12 +938,35 @@ class WizardController extends Controller
             }
         }
 
-        // ── Latest monthly salary → total_salary. ──
-        if (!empty($extracted['latest_monthly_salary'])) {
-            $sal = (float)$extracted['latest_monthly_salary'];
-            if ($sal > 0) {
-                $fields['Customers[total_salary]'] = (string)round($sal, 2);
-            }
+        // ── Smart salary pick: most recent wage across BOTH SS tables. ──
+        //
+        // The kashf carries two salary-bearing tables:
+        //   • فترات الاشتراك (subscription_periods): each row = a contract
+        //     span with from / to / salary. The salary represents what the
+        //     customer earned during that span; for an ACTIVE period (to=null)
+        //     this IS the current salary, evidenced as-of the period's `from`
+        //     date.
+        //   • الرواتب المالية (salary_history): per-year aggregate, evidenced
+        //     as-of Dec 31 of that year.
+        //
+        // The naive previous pick of `latest_monthly_salary` (= max year in
+        // salary_history) misses the very common case where a raise / new
+        // employer started AFTER the most recent salary_history tally — e.g.
+        // the kashf shows a 2025 row at 425 JOD but a subscription period
+        // starting 2026-02-01 at 600 JOD. The right answer is 600. We
+        // compare every salary-bearing row by its evidence date and pick
+        // the freshest, with two tie-breakers: an active period beats a
+        // closed one, and on a same-date tie the higher salary wins (a
+        // tiny, clearly-residual 0.500 row should not overshadow a real
+        // wage stamped on the same day).
+        $smartSalary = $this->pickLatestSalaryByDate(
+            (array)($extracted['subscription_periods'] ?? []),
+            (array)($extracted['salary_history']       ?? []),
+            isset($extracted['latest_monthly_salary']) ? (float)$extracted['latest_monthly_salary'] : 0.0,
+            isset($extracted['latest_salary_year'])    ? (int)$extracted['latest_salary_year']      : 0
+        );
+        if ($smartSalary !== null && $smartSalary > 0) {
+            $fields['Customers[total_salary]'] = (string)round($smartSalary, 2);
         }
 
         // ── Current employer → job_title.
@@ -1008,6 +1031,74 @@ class WizardController extends Controller
         }
 
         return ['fields' => $fields, 'unmapped' => $unmapped];
+    }
+
+    /**
+     * Most-recent salary in JOD evidenced anywhere on the SS kashf, or null
+     * if none. See the long block comment above the call site in
+     * mapIncomeScanToWizardFields() for the full rationale.
+     *
+     * @param array $periods       subscription_periods rows (from, to, salary, …)
+     * @param array $history       salary_history rows (year, salary, …)
+     * @param float $latestMonthly server-derived fallback (latest_monthly_salary)
+     * @param int   $latestYear    server-derived fallback (latest_salary_year)
+     * @return float|null
+     */
+    protected function pickLatestSalaryByDate(array $periods, array $history,
+                                              float $latestMonthly = 0.0,
+                                              int   $latestYear    = 0)
+    {
+        $candidates = [];
+
+        // Subscription periods → as-of = `from` (start of contract span).
+        foreach ($periods as $p) {
+            if (!is_array($p)) continue;
+            $from = (string)($p['from'] ?? '');
+            $sal  = isset($p['salary']) ? (float)$p['salary'] : 0.0;
+            if ($sal <= 0) continue;
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) continue;
+            $candidates[] = [
+                'date'   => $from,
+                'salary' => $sal,
+                'active' => empty($p['to']),
+            ];
+        }
+
+        // Salary-history rows → as-of = Dec 31 of the year.
+        foreach ($history as $r) {
+            if (!is_array($r)) continue;
+            $year = isset($r['year']) ? (int)$r['year'] : 0;
+            $sal  = isset($r['salary']) ? (float)$r['salary'] : 0.0;
+            if ($sal <= 0 || $year < 1900) continue;
+            $candidates[] = [
+                'date'   => sprintf('%04d-12-31', $year),
+                'salary' => $sal,
+                'active' => false,
+            ];
+        }
+
+        // Server-derived fallback so we never regress below the old behavior.
+        if ($latestMonthly > 0 && $latestYear >= 1900) {
+            $candidates[] = [
+                'date'   => sprintf('%04d-12-31', $latestYear),
+                'salary' => $latestMonthly,
+                'active' => false,
+            ];
+        }
+
+        if (!$candidates) {
+            return $latestMonthly > 0 ? $latestMonthly : null;
+        }
+
+        // Most recent date first; active wins ties; higher salary wins same-date ties.
+        usort($candidates, function ($a, $b) {
+            $cmp = strcmp($b['date'], $a['date']);
+            if ($cmp !== 0) return $cmp;
+            if ($a['active'] !== $b['active']) return $a['active'] ? -1 : 1;
+            return $b['salary'] <=> $a['salary'];
+        });
+
+        return $candidates[0]['salary'];
     }
 
     /**
