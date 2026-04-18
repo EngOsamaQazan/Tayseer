@@ -519,8 +519,11 @@ return [
                  */
 
                 // --- Multi-controller modules: shortened rules ---
-                // customers: has smart-media, test controllers
+                // customers: has smart-media, wizard, test controllers
                 $rules['customers/smart-media/<action:[\w-]+>'] = 'customers/smart-media/<action>';
+                $rules['customers/wizard/<action:[\w-]+>/<id:\d+>'] = 'customers/wizard/<action>';
+                $rules['customers/wizard/<action:[\w-]+>']      = 'customers/wizard/<action>';
+                $rules['customers/wizard']                      = 'customers/wizard/start';
                 $rules['customers/test/<action:[\w-]+>']        = 'customers/test/<action>';
                 $rules['customers/<action:[\w-]+>/<id:\d+>']    = 'customers/customers/<action>';
                 $rules['customers/<action:[\w-]+>']             = 'customers/customers/<action>';

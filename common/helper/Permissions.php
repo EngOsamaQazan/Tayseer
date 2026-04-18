@@ -262,6 +262,18 @@ class Permissions
                 'delete'        => self::CUST_DELETE,
                 'bulkdelete'    => self::CUST_DELETE,
             ],
+            /* معالج إنشاء العميل (الإصدار الجديد) */
+            'customers/wizard' => [
+                'start'    => self::CUST_CREATE,
+                'step'     => self::CUST_CREATE,
+                'save'     => self::CUST_CREATE,
+                'finish'   => self::CUST_CREATE,
+                'resume'   => self::CUST_CREATE,
+                'drafts'   => self::CUST_CREATE,
+                'discard'  => self::CUST_CREATE,
+                'scan'     => self::CUST_CREATE,
+                'validate' => self::CUST_CREATE,
+            ],
             /* المستثمرين */
             'companies/companies' => [
                 'index'  => self::COMP_VIEW,
@@ -646,6 +658,7 @@ class Permissions
             /* العملاء */
             'customers/customers' => self::getModulePermissions(self::CUSTOMERS),
             'customers/smart-media' => self::getModulePermissions(self::CUSTOMERS),
+            'customers/wizard' => self::getModulePermissions(self::CUSTOMERS),
             /* العقود والمتابعة */
             'contracts/contracts' => array_merge(
                 self::getModulePermissions(self::CONTRACTS),

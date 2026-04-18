@@ -123,15 +123,37 @@ class WizardDraft extends ActiveRecord
 
     /* ─── helpers ─── */
 
+    /**
+     * Extract a short, human-readable summary from the draft payload for the
+     * drafts list UI.
+     *
+     * Polymorphic: each wizard writes its own `_summary` field into the JSON
+     * (preferred). Falls back to legacy `selectedItems` extraction so existing
+     * inventory drafts keep rendering correctly without a data migration.
+     */
     protected static function extractSummary($json)
     {
         $decoded = is_string($json) ? json_decode($json, true) : $json;
-        if (!$decoded || empty($decoded['selectedItems'])) return null;
-        $names = [];
-        foreach ($decoded['selectedItems'] as $item) {
-            $names[] = $item['name'] ?? $item['text'] ?? '?';
+        if (!is_array($decoded) || empty($decoded)) {
+            return null;
         }
-        $summary = implode('، ', $names);
-        return mb_strlen($summary) > 250 ? mb_substr($summary, 0, 247) . '...' : $summary;
+
+        // Preferred: wizard-supplied summary field.
+        if (!empty($decoded['_summary']) && is_string($decoded['_summary'])) {
+            $summary = trim($decoded['_summary']);
+            return mb_strlen($summary) > 250 ? mb_substr($summary, 0, 247) . '...' : $summary;
+        }
+
+        // Legacy: inventory wizard selectedItems list.
+        if (!empty($decoded['selectedItems']) && is_array($decoded['selectedItems'])) {
+            $names = [];
+            foreach ($decoded['selectedItems'] as $item) {
+                $names[] = $item['name'] ?? $item['text'] ?? '?';
+            }
+            $summary = implode('، ', $names);
+            return mb_strlen($summary) > 250 ? mb_substr($summary, 0, 247) . '...' : $summary;
+        }
+
+        return null;
     }
 }
