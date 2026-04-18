@@ -273,6 +273,12 @@
         if (!$targetRoot || !$targetRoot.length || !addr) return;
         opts = opts || {};
         var includeBuilding = opts.includeBuilding !== false;
+        // Map-triggered fills (clicks, marker drag, Plus-Code paste, search
+        // pick, Google Places select) must overwrite EVERYTHING the source
+        // returned — that's how the legacy wizard worked, and field officers
+        // explicitly preferred it (they want a fresh refill on every map
+        // action; manual edits stick only until the next map action).
+        var force           = !!opts.force;
 
         var city   = addr.city || addr.town || addr.village || addr.county || addr.state || '';
         // Nominatim's "area"-shaped fields vary wildly by region — some
@@ -300,8 +306,9 @@
         Object.keys(mapping).forEach(function (key) {
             var $f = $targetRoot.find('[data-addr-fill="' + key + '"]').first();
             if (!$f.length) return;
-            // The user explicitly typed here — leave it alone forever.
-            if ($f.attr('data-cw-user-touched') === 'true') return;
+            // Respect manual edits ONLY for non-forced fills (e.g. soft
+            // enrichment passes). Map actions always pass force:true.
+            if (!force && $f.attr('data-cw-user-touched') === 'true') return;
 
             var newVal  = mapping[key] || '';
             var current = $.trim($f.val());
@@ -309,11 +316,16 @@
 
             if (newVal) {
                 $f.val(newVal).addClass('cw-addr-flash').trigger('change');
+                // After a successful map-triggered overwrite, clear the
+                // user-touched flag — a fresh map action is the new source
+                // of truth and subsequent edits start counting again.
+                if (force) $f.removeAttr('data-cw-user-touched');
                 setTimeout(function () { $f.removeClass('cw-addr-flash'); }, 1700);
-            } else if (current) {
-                // No value from the new source — clear the stale entry so
-                // we never display a postcode/building from a previous
-                // location that doesn't apply here.
+            } else if (current && force) {
+                // Forced fill, no value from source — clear the stale entry
+                // so we never display a postcode/building from a previous
+                // location that doesn't apply here. (Non-forced soft passes
+                // leave existing values alone.)
                 $f.val('').trigger('change');
             }
         });
@@ -477,7 +489,7 @@
             if (!url) return;
             $.getJSON(url, { lat: lat, lng: lng }).done(function (resp) {
                 if (resp && resp.ok && resp.address) {
-                    fillAddressFields($fieldsRoot, resp.address, { includeBuilding: false });
+                    fillAddressFields($fieldsRoot, resp.address, { force: true });
                 }
             });
         }
@@ -491,12 +503,12 @@
                     'accept-language': 'ar', zoom: 18
                 }).done(function (data) {
                     if (data && data.address) {
-                        // includeBuilding:false — Nominatim's `house_number`
-                        // for an arbitrary clicked coordinate is whatever
-                        // the closest road segment got tagged with in OSM,
-                        // not the building the user actually picked. The
-                        // user will type their building/floor by hand.
-                        fillAddressFields($fieldsRoot, data.address, { includeBuilding: false });
+                        // Mirror the legacy wizard exactly — every map
+                        // action overwrites all reverse-geocoded fields
+                        // (city/area/street/building/postal). Field staff
+                        // explicitly preferred this: a fresh click means
+                        // "use what the map says, drop my previous typing".
+                        fillAddressFields($fieldsRoot, data.address, { force: true });
 
                         // Nominatim's coverage of Jordanian sub-localities
                         // is patchy — when no area-shaped field came back,
@@ -610,7 +622,7 @@
                     // fallback for sources like Photon that don't.
                     if (r.address) {
                         setMarker(lat, lng, { geocode: false });
-                        fillAddressFields($fieldsRoot, r.address);
+                        fillAddressFields($fieldsRoot, r.address, { force: true });
                     } else {
                         setMarker(lat, lng);
                     }
@@ -893,7 +905,7 @@
                             // user-typed fields with stale data.
                             setMarker(place.location.lat(), place.location.lng(), { fly: true, geocode: false });
                             var addr = googleComponentsToAddress(place.addressComponents || []);
-                            if (addr) fillAddressFields($fieldsRoot, addr);
+                            if (addr) fillAddressFields($fieldsRoot, addr, { force: true });
                             // Fall back to Nominatim only if Google didn't
                             // give us a usable city/area pair (rare but
                             // happens for points-of-interest in unmapped
@@ -928,7 +940,7 @@
                     // Legacy API uses snake_case `address_components`; our
                     // helper handles both shapes.
                     var addr = googleComponentsToAddress(place.address_components || []);
-                    if (addr) fillAddressFields($fieldsRoot, addr);
+                    if (addr) fillAddressFields($fieldsRoot, addr, { force: true });
                     if (!addr || (!addr.city && !addr.suburb)) {
                         reverseGeocode(place.geometry.location.lat(), place.geometry.location.lng());
                     }
