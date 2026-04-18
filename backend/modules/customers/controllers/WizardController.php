@@ -91,6 +91,8 @@ class WizardController extends Controller
                     'add-citizen' => ['POST'],
                     'add-job'     => ['POST'],
                     'add-bank'    => ['POST'],
+                    'upload-extra' => ['POST'],
+                    'delete-extra' => ['POST'],
                 ],
             ],
         ];
@@ -421,6 +423,19 @@ class WizardController extends Controller
         } catch (\Throwable $e) {
             $adopted = 0;
             Yii::warning('Wizard finish: linkScanImagesToCustomer failed: '
+                . $e->getMessage(), __METHOD__);
+        }
+
+        // ── 4a. Adopt orphan extras (personal photo + ad-hoc documents).
+        // Also writes customers.selected_image for the photo so legacy
+        // contract-print-preview code paths keep rendering the buyer's
+        // headshot without changes.
+        try {
+            $extrasAdopted = $this->linkExtrasToCustomer((int)$customer->id, $payload);
+            $adopted += (int)($extrasAdopted['photo'] ?? 0)
+                      + (int)($extrasAdopted['docs']  ?? 0);
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finish: linkExtrasToCustomer failed: '
                 . $e->getMessage(), __METHOD__);
         }
 
@@ -1868,6 +1883,413 @@ class WizardController extends Controller
         if ($name) return $name;
         if ($id)   return 'هوية ' . $id;
         return 'مسودة عميل جديدة';
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       CUSTOMER EXTRAS — personal photo + ad-hoc supporting documents
+       ────────────────────────────────────────────────────────────────
+       Two endpoints that mirror the smart-scan persistence pattern but
+       are user-driven (no OCR, no field auto-fill). Used by the «الصور
+       والمستندات الإضافية» fieldset on Step 1:
+
+         • upload-extra (POST file=<binary>, purpose=photo|doc)
+              Saves a Media row tagged with groupName='8' (شخصية) or
+              '9' (أخرى), records its id in the auto-draft so finalize()
+              can adopt it.
+         • delete-extra (POST image_id, purpose)
+              Removes the row from the draft + soft-deletes the Media
+              file on disk if the row was an orphan still pending
+              adoption (i.e. customer_id IS NULL).
+
+       Why both purposes share an endpoint:
+         The persistence shape is identical (Media row + draft index
+         entry) — the only differences are the groupName and where the
+         id ends up in the draft (`_extras.photo_id` vs `_extras.docs[]`).
+         A single endpoint keeps the JS contract trivially simple.
+       ════════════════════════════════════════════════════════════════ */
+
+    /**
+     * POST /customers/wizard/upload-extra
+     *
+     * Inputs (multipart/form-data):
+     *   • file    — the image / PDF the user picked.
+     *   • purpose — 'photo' (single, becomes selected_image on finish)
+     *               'doc'   (multi, lives under «أخرى» in documents).
+     *
+     * Response (JSON):
+     *   { ok: true, image_id, url, file_name, purpose }
+     *   { ok: false, error }
+     *
+     * Storage convention (matches print_preview + customers/getSelectedImagePath):
+     *   • Media.customer_id = NULL until actionFinish() adopts the row.
+     *   • Media.groupName   = '8' for photo, '9' for doc.
+     *   • Draft tracks the id so the orphan row can be reconciled even
+     *     if the user closes the tab and resumes hours later.
+     */
+    public function actionUploadExtra()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $purpose = strtolower((string)Yii::$app->request->post('purpose', 'doc'));
+        if (!in_array($purpose, ['photo', 'doc'], true)) {
+            return ['ok' => false, 'error' => 'نوع الملف غير معروف.'];
+        }
+
+        $file = UploadedFile::getInstanceByName('file');
+        if (!$file) {
+            return ['ok' => false, 'error' => 'لم يتم استلام ملف للرفع.'];
+        }
+        if ($file->error !== UPLOAD_ERR_OK) {
+            return ['ok' => false, 'error' => 'خطأ في رفع الملف (#' . (int)$file->error . ').'];
+        }
+        // Photos are images only (the customer's face is later embedded
+        // in the contract print preview as <img>); documents allow PDFs
+        // alongside images so kashfs / utility bills don't need conversion.
+        $allowed = $purpose === 'photo'
+            ? ['image/jpeg', 'image/png', 'image/webp']
+            : self::SCAN_ALLOWED_MIMES;
+        if (!in_array($file->type, $allowed, true)) {
+            return [
+                'ok'    => false,
+                'error' => $purpose === 'photo'
+                    ? 'الصورة الشخصية يجب أن تكون JPG / PNG / WEBP.'
+                    : 'نوع الملف غير مدعوم — استخدم JPG / PNG / WEBP / PDF.',
+            ];
+        }
+        if ($file->size > self::MAX_SCAN_BYTES) {
+            return ['ok' => false, 'error' => 'حجم الملف أكبر من 10 ميجابايت.'];
+        }
+
+        // Persist via the same Media plumbing the scan flow uses so we
+        // benefit from its file naming / thumbnail / chmod logic.
+        $groupName = $purpose === 'photo' ? '8' : '9';
+        $sideTag   = $purpose === 'photo' ? 'photo' : 'extra';
+
+        // Stage to runtime first so a failed Media row insert can't leave
+        // a half-uploaded blob in the canonical store.
+        $ext = strtolower($file->extension ?: ($purpose === 'photo' ? 'jpg' : 'bin'));
+        $tmpPath = Yii::getAlias('@runtime') . '/wizard_extra_'
+                 . Yii::$app->security->generateRandomString(8) . '.' . $ext;
+        if (!$file->saveAs($tmpPath, false)) {
+            return ['ok' => false, 'error' => 'تعذّر حفظ الملف للمعالجة.'];
+        }
+
+        try {
+            $imageRef = $this->persistExtraMedia($tmpPath, $file, $groupName);
+            if (!$imageRef) {
+                return ['ok' => false, 'error' => 'تعذّر حفظ الملف في مخزن الصور.'];
+            }
+            $this->rememberExtraInDraft($purpose, (int)$imageRef['image_id'], [
+                'file_name' => $imageRef['file_name'],
+                'url'       => $imageRef['url'],
+                'mime'      => $file->type,
+                'size'      => (int)$file->size,
+                'uploaded'  => time(),
+            ]);
+
+            return [
+                'ok'        => true,
+                'purpose'   => $purpose,
+                'image_id'  => (int)$imageRef['image_id'],
+                'url'       => $imageRef['url'],
+                'file_name' => $imageRef['file_name'],
+                'mime'      => $file->type,
+            ];
+        } catch (\Throwable $e) {
+            Yii::error('Wizard upload-extra failed: ' . $e->getMessage(), __METHOD__);
+            return ['ok' => false, 'error' => 'حدث خطأ غير متوقع أثناء حفظ الملف.'];
+        } finally {
+            // persistExtraMedia rename()s the file out of runtime; clean up
+            // only if it's still here (i.e. persistence failed).
+            if (file_exists($tmpPath)) @unlink($tmpPath);
+        }
+    }
+
+    /**
+     * POST /customers/wizard/delete-extra
+     *
+     * Inputs (form-encoded): image_id, purpose=photo|doc.
+     *
+     * Strategy:
+     *   • If the Media row is still an orphan (customer_id IS NULL) we
+     *     hard-delete it — the draft is the only thing referencing it.
+     *   • If the row is already adopted (someone reused image_id from a
+     *     prior wizard run) we DON'T delete it from the DB; we just drop
+     *     the reference from the current draft. Defensive — protects
+     *     accidental cross-customer data loss.
+     */
+    public function actionDeleteExtra()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $imageId = (int)Yii::$app->request->post('image_id', 0);
+        $purpose = strtolower((string)Yii::$app->request->post('purpose', 'doc'));
+        if ($imageId <= 0 || !in_array($purpose, ['photo', 'doc'], true)) {
+            return ['ok' => false, 'error' => 'بيانات غير صحيحة.'];
+        }
+
+        $this->forgetExtraInDraft($purpose, $imageId);
+
+        try {
+            $row = Media::findOne($imageId);
+            if ($row && (int)$row->customer_id === 0) {
+                // Best-effort: delete the disk file before the DB row so
+                // a failure mid-way doesn't strand bytes on disk.
+                try {
+                    $abs = MediaHelper::filePath((int)$row->id, $row->fileHash, $row->fileName);
+                    if ($abs && is_file($abs)) @unlink($abs);
+                } catch (\Throwable $fe) {
+                    Yii::warning('delete-extra: file unlink failed: ' . $fe->getMessage(), __METHOD__);
+                }
+                $row->delete();
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('delete-extra: media cleanup failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        return ['ok' => true];
+    }
+
+    /**
+     * Persist a user-uploaded extra (photo / document) into Media.
+     * Mirrors persistScanImage() but without the side / issuing-body
+     * machinery — the user already told us what kind of file this is.
+     *
+     * @return array{image_id:int,url:string,file_name:string}|null
+     */
+    protected function persistExtraMedia($tmpPath, $uploadedFile, $groupName)
+    {
+        if (!is_file($tmpPath)) return null;
+
+        $fileHash = Yii::$app->security->generateRandomString(32);
+        $origName = $uploadedFile->name ?: ('extra_' . time() . '.bin');
+        $origName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($origName));
+        if ($origName === '' || $origName === '.' || $origName === '..') {
+            $origName = 'extra_' . time() . '.' . (strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'bin');
+        }
+
+        $media = new Media([
+            'fileName'    => $origName,
+            'fileHash'    => $fileHash,
+            'customer_id' => null,           // adopted by linkExtrasToCustomer() on finish
+            'contractId'  => null,
+            'groupName'   => $groupName,
+            'created'     => date('Y-m-d H:i:s'),
+            'modified'    => date('Y-m-d H:i:s'),
+            'createdBy'   => Yii::$app->user->id ?? null,
+            'modifiedBy'  => Yii::$app->user->id ?? null,
+        ]);
+        if (!$media->save(false)) {
+            Yii::warning('Wizard upload-extra: failed to persist Media row', __METHOD__);
+            return null;
+        }
+
+        $destPath = MediaHelper::filePath((int)$media->id, $fileHash, $origName);
+        $destDir  = dirname($destPath);
+        if (!is_dir($destDir)) @mkdir($destDir, 0755, true);
+        if (!@rename($tmpPath, $destPath)) {
+            if (!@copy($tmpPath, $destPath)) {
+                $media->delete();
+                return null;
+            }
+            @unlink($tmpPath);
+        }
+        @chmod($destPath, 0644);
+
+        return [
+            'image_id'  => (int)$media->id,
+            'url'       => $media->getUrl(),
+            'file_name' => $origName,
+        ];
+    }
+
+    /**
+     * Track the uploaded extra inside the auto-draft so:
+     *   • The wizard's finalize step can adopt it.
+     *   • A returning user (e.g. resumed draft after browser close) can
+     *     see it pre-rendered without re-uploading.
+     *
+     * Shape:
+     *   _extras: {
+     *     photo: { image_id, file_name, url, mime, size, uploaded }   // single
+     *     docs:  [ { image_id, file_name, url, mime, size, uploaded }, … ]
+     *   }
+     */
+    protected function rememberExtraInDraft($purpose, $imageId, array $meta)
+    {
+        try {
+            $draft   = $this->getOrCreateAutoDraft();
+            $payload = $this->decodePayload($draft);
+
+            if (!isset($payload['_extras']) || !is_array($payload['_extras'])) {
+                $payload['_extras'] = [];
+            }
+            $entry = array_merge(['image_id' => (int)$imageId], $meta);
+
+            if ($purpose === 'photo') {
+                // Replace any prior photo (single-slot semantics): the
+                // user picked a NEW headshot; the old orphan Media row
+                // becomes safely deletable but we don't bother — if it
+                // wasn't adopted it'll be reaped by housekeeping later.
+                $prior = $payload['_extras']['photo'] ?? null;
+                if (is_array($prior) && !empty($prior['image_id']) &&
+                    (int)$prior['image_id'] !== (int)$imageId) {
+                    $this->safeDeleteOrphanMedia((int)$prior['image_id']);
+                }
+                $payload['_extras']['photo'] = $entry;
+            } else {
+                if (!isset($payload['_extras']['docs']) || !is_array($payload['_extras']['docs'])) {
+                    $payload['_extras']['docs'] = [];
+                }
+                // Dedupe by image_id so a double-submit never doubles up.
+                $payload['_extras']['docs'] = array_values(array_filter(
+                    $payload['_extras']['docs'],
+                    function ($d) use ($imageId) {
+                        return is_array($d) && (int)($d['image_id'] ?? 0) !== (int)$imageId;
+                    }
+                ));
+                $payload['_extras']['docs'][] = $entry;
+            }
+
+            $payload['_updated'] = time();
+            $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+            if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard upload-extra: draft remember failed: ' . $e->getMessage(), __METHOD__);
+        }
+    }
+
+    /**
+     * Remove an extra from the draft (server-side mirror of the JS delete).
+     */
+    protected function forgetExtraInDraft($purpose, $imageId)
+    {
+        try {
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            if (!$draft) return;
+            $payload = $this->decodePayload($draft);
+            if (empty($payload['_extras'])) return;
+
+            if ($purpose === 'photo') {
+                $current = $payload['_extras']['photo'] ?? null;
+                if (is_array($current) && (int)($current['image_id'] ?? 0) === (int)$imageId) {
+                    unset($payload['_extras']['photo']);
+                }
+            } else {
+                if (!empty($payload['_extras']['docs']) && is_array($payload['_extras']['docs'])) {
+                    $payload['_extras']['docs'] = array_values(array_filter(
+                        $payload['_extras']['docs'],
+                        function ($d) use ($imageId) {
+                            return is_array($d) && (int)($d['image_id'] ?? 0) !== (int)$imageId;
+                        }
+                    ));
+                }
+            }
+
+            $payload['_updated'] = time();
+            $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
+            if ($json !== false) {
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $json);
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('forget-extra failed: ' . $e->getMessage(), __METHOD__);
+        }
+    }
+
+    /**
+     * Hard-delete an orphan Media row + its file. Safe-noop when the row
+     * is already adopted by a customer (customer_id IS NOT NULL).
+     */
+    protected function safeDeleteOrphanMedia($imageId)
+    {
+        try {
+            $row = Media::findOne((int)$imageId);
+            if (!$row) return;
+            if ((int)$row->customer_id !== 0) return;     // adopted → leave alone
+            try {
+                $abs = MediaHelper::filePath((int)$row->id, $row->fileHash, $row->fileName);
+                if ($abs && is_file($abs)) @unlink($abs);
+            } catch (\Throwable $fe) {
+                Yii::warning('safeDeleteOrphanMedia: unlink failed: ' . $fe->getMessage(), __METHOD__);
+            }
+            $row->delete();
+        } catch (\Throwable $e) {
+            Yii::warning('safeDeleteOrphanMedia failed: ' . $e->getMessage(), __METHOD__);
+        }
+    }
+
+    /**
+     * Adopt orphan extras (personal photo + ad-hoc documents) into the
+     * freshly-created customer record. Called from actionFinish() right
+     * after linkScanImagesToCustomer().
+     *
+     * For the photo we ALSO write its id into customers.selected_image
+     * so legacy UI that consults `selected_image` directly (rather than
+     * Customers::getSelectedImagePath()) shows the right face — important
+     * because the contract print-preview's secondary code paths still
+     * rely on that column for the buyer headshot.
+     *
+     * @return array{photo:int,docs:int}  count adopted in each bucket
+     */
+    public function linkExtrasToCustomer($customerId, array $payload)
+    {
+        $extras = $payload['_extras'] ?? [];
+        $report = ['photo' => 0, 'docs' => 0];
+        if (!is_array($extras) || empty($extras)) return $report;
+
+        $db = Yii::$app->db;
+
+        // ── Photo (single). ──
+        $photo = $extras['photo'] ?? null;
+        if (is_array($photo) && !empty($photo['image_id'])) {
+            try {
+                $photoId = (int)$photo['image_id'];
+                $db->createCommand()->update(
+                    Media::tableName(),
+                    [
+                        'customer_id' => (int)$customerId,
+                        'modified'    => date('Y-m-d H:i:s'),
+                    ],
+                    ['id' => $photoId, 'customer_id' => null]
+                )->execute();
+
+                // Keep the legacy customers.selected_image FK in sync so
+                // older code paths that don't go through Media still see
+                // the headshot. The relation is by media id (string).
+                $db->createCommand()->update(
+                    Customers::tableName(),
+                    ['selected_image' => (string)$photoId],
+                    ['id' => (int)$customerId]
+                )->execute();
+                $report['photo'] = 1;
+            } catch (\Throwable $e) {
+                Yii::warning('linkExtras: photo adopt failed: ' . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        // ── Additional documents (many). ──
+        $docs = $extras['docs'] ?? [];
+        if (is_array($docs)) {
+            foreach ($docs as $doc) {
+                if (!is_array($doc) || empty($doc['image_id'])) continue;
+                try {
+                    $db->createCommand()->update(
+                        Media::tableName(),
+                        [
+                            'customer_id' => (int)$customerId,
+                            'modified'    => date('Y-m-d H:i:s'),
+                        ],
+                        ['id' => (int)$doc['image_id'], 'customer_id' => null]
+                    )->execute();
+                    $report['docs']++;
+                } catch (\Throwable $e) {
+                    Yii::warning('linkExtras: doc adopt failed: ' . $e->getMessage(), __METHOD__);
+                }
+            }
+        }
+
+        return $report;
     }
 
     /**

@@ -339,5 +339,12 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
             </div>
         </details>
 
+        <!-- ── Section D: Customer photo + ad-hoc supporting documents.
+             Self-contained partial — handles its own draft hydration,
+             upload flow, and delete buttons. Renders here so it lives
+             alongside the rest of "personal info" rather than fighting
+             for screen real-estate on the busy review step. ── -->
+        <?= $this->render('_step_1_extras', ['payload' => $payload]) ?>
+
     </div>
 </div>

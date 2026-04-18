@@ -38,15 +38,121 @@
         return $('meta[name="csrf-token"]').attr('content') || '';
     }
 
-    /** Loose-match Arabic-aware normalization for filtering & dup checks. */
+    /**
+     * Arabic-aware normalization for filtering, fuzzy scoring & duplicate
+     * detection. Mirrors the server-side `WizardController::normalizeArabic()`
+     * so client suggestions agree with what the «Add new» endpoint would
+     * dedupe against. We do NOT strip the leading «ال» (definite article)
+     * because that would collapse very different employer names ("الشركة"
+     * vs "شركة") in the suggestions list — a usability regression that
+     * outweighs the typo-tolerance win.
+     */
     function normalize(s) {
         s = String(s || '').toLowerCase();
         s = s.replace(/[\u064B-\u0652\u0670\u0640]/g, '');     // diacritics + tatweel
-        s = s.replace(/[إأآا]/g, 'ا');
-        s = s.replace(/ى/g, 'ي');
-        s = s.replace(/ة/g, 'ه');
+        s = s.replace(/[إأآٱا]/g, 'ا');                          // alif variants → ا
+        s = s.replace(/[ىئ]/g, 'ي');                            // alif maqsura + ya hamza → ي
+        s = s.replace(/[ؤ]/g, 'و');                             // wa hamza → و
+        s = s.replace(/ة/g, 'ه');                              // taa marbouta → ha
+        s = s.replace(/گ/g, 'ك').replace(/ڤ/g, 'ف').replace(/پ/g, 'ب'); // Persianisms
+        s = s.replace(/[٠-٩]/g, function (d) {
+            return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d));            // Arabic digits → ASCII
+        });
+        s = s.replace(/[^\p{L}\p{N} ]+/gu, ' ');                // punctuation → space
         s = s.replace(/\s+/g, ' ').trim();
         return s;
+    }
+
+    /**
+     * Damerau-Levenshtein distance on two normalized strings. Capped early
+     * so we don't waste cycles on obviously-different option labels (the
+     * filter only cares about "close enough" — anything beyond ~4 edits
+     * isn't a real "did you mean?" candidate).
+     */
+    function editDistance(a, b, cap) {
+        a = String(a || ''); b = String(b || '');
+        cap = (typeof cap === 'number' && cap >= 0) ? cap : 6;
+        if (a === b) return 0;
+        var la = a.length, lb = b.length;
+        if (Math.abs(la - lb) > cap) return cap + 1;       // length-gap shortcut
+        if (la === 0) return Math.min(lb, cap + 1);
+        if (lb === 0) return Math.min(la, cap + 1);
+
+        var prev = new Array(lb + 1);
+        var curr = new Array(lb + 1);
+        for (var j = 0; j <= lb; j++) prev[j] = j;
+
+        for (var i = 1; i <= la; i++) {
+            curr[0] = i;
+            var rowMin = curr[0];
+            var ai = a.charCodeAt(i - 1);
+            for (var k = 1; k <= lb; k++) {
+                var cost = (ai === b.charCodeAt(k - 1)) ? 0 : 1;
+                var v = Math.min(
+                    curr[k - 1] + 1,
+                    prev[k]     + 1,
+                    prev[k - 1] + cost
+                );
+                // Damerau transposition (swap of two adjacent chars).
+                if (i > 1 && k > 1 &&
+                    ai === b.charCodeAt(k - 2) &&
+                    a.charCodeAt(i - 2) === b.charCodeAt(k - 1)) {
+                    v = Math.min(v, prev[k - 2] !== undefined ? prev[k - 2] + cost : v);
+                }
+                curr[k] = v;
+                if (v < rowMin) rowMin = v;
+            }
+            // Early exit: every cell in this row already exceeds the cap →
+            // no path through the remaining rows can beat it.
+            if (rowMin > cap) return cap + 1;
+            var swap = prev; prev = curr; curr = swap;
+        }
+        return prev[lb];
+    }
+
+    /**
+     * Score how relevant `option` is to a normalized query. Lower is better.
+     *   0           → exact (after normalization)
+     *   1..N        → starts-with / substring at index N
+     *   100+        → token-prefix match (any whitespace-split token starts
+     *                 with the query) — useful for "احمد" matching
+     *                 "محمد احمد سعيد"
+     *   1000+dist   → fuzzy candidate (tolerable typos / hamza slips)
+     *   Infinity    → not a candidate
+     */
+    function scoreMatch(qN, optN) {
+        if (!qN) return 0;                                  // no query → list everything
+        if (qN === optN) return 0;
+        var idx = optN.indexOf(qN);
+        if (idx === 0)  return 1;                           // starts-with → very strong
+        if (idx >  0)   return 1 + idx;                     // mid-substring, prefer earlier hits
+
+        // Token-prefix: e.g. user typed "احمد" → match "محمد احمد سعيد".
+        var tokens = optN.split(' ');
+        for (var t = 0; t < tokens.length; t++) {
+            if (tokens[t].length && tokens[t].indexOf(qN) === 0) {
+                return 100 + t;                             // prefer earlier tokens
+            }
+        }
+
+        // Fuzzy fallback: only worth computing for short-ish queries (≥3
+        // chars) to avoid noisy matches when the user has barely typed.
+        if (qN.length < 3) return Infinity;
+
+        // Allow up to ⌈len/4⌉ edits, capped between 2 and 4. Empirically:
+        //   "احمد"   (4) → 2 edits OK
+        //   "ضمان اجتماعي" (12) → 3 edits OK
+        var cap = Math.max(2, Math.min(4, Math.ceil(qN.length / 4)));
+        // Compare against either the full label OR its closest token,
+        // whichever wins — handles "الشركه السعودي" matching one token of
+        // "الشركة السعودية للكهرباء".
+        var best = editDistance(qN, optN, cap);
+        for (var ti = 0; ti < tokens.length; ti++) {
+            var d = editDistance(qN, tokens[ti], cap);
+            if (d < best) best = d;
+        }
+        if (best <= cap) return 1000 + best;
+        return Infinity;
     }
 
     function uid(prefix) {
@@ -366,6 +472,21 @@
         }
 
         // ── Render ──────────────────────────────────────────────────────
+        //
+        // Two-tier matching:
+        //   1. Exact / substring / token-prefix → strong matches, shown
+        //      with <mark> highlight on the matched substring (when present).
+        //   2. Fuzzy candidates (Damerau-Levenshtein ≤ ⌈len/4⌉) → grouped
+        //      under a "هل تقصد؟" divider so the user perceives them as
+        //      "did-you-mean" suggestions, not exact hits. Critical for the
+        //      employer/jobs combobox where users frequently type names with
+        //      different hamza placements, missing تاء مربوطة, or transposed
+        //      letters and we don't want them creating duplicate rows.
+        //
+        // We also cap the fuzzy bucket at 8 entries so a typo against a 5k-row
+        // jobs table doesn't render an enormous popup that scrolls forever.
+        var FUZZY_CAP = 8;
+
         function renderList(query) {
             $listbox.empty();
             visibleOpts = [];
@@ -373,43 +494,83 @@
             activeIdx = -1;
             $input.attr('aria-activedescendant', '');
 
-            var q = normalize(query);
+            var rawQuery = String(query || '');
+            var q = normalize(rawQuery);
             var seenExact = false;
 
+            // 1) Score every option once.
+            var strong = [];   // { score, value, label, n, idx }
+            var fuzzy  = [];   // { score, value, label, n }
             $select.find('option').each(function () {
                 var val   = String(this.value || '');
                 var label = String(this.text || '').trim();
-                if (val === '' || !label) return;     // skip the empty placeholder
+                if (val === '' || !label) return;          // skip placeholder
 
                 var n = normalize(label);
-                if (q !== '' && n.indexOf(q) === -1) return;
                 if (q !== '' && n === q) seenExact = true;
 
-                var liId = uid('cwcombo-opt');
-                var $li = $('<li/>', {
-                    id:    liId,
-                    'class': 'cw-combo__option',
-                    'role':  'option',
-                    'aria-selected': (val === String($select.val() || '')) ? 'true' : 'false',
-                    'data-value': val,
-                    text: label,
-                });
-                if (q) {
-                    var idx = n.indexOf(q);
-                    if (idx >= 0) {
-                        $li.html(
-                            $('<span/>').text(label.substring(0, idx)).prop('outerHTML') +
-                            '<mark>' + $('<span/>').text(label.substring(idx, idx + query.length)).html() + '</mark>' +
-                            $('<span/>').text(label.substring(idx + query.length)).prop('outerHTML')
-                        );
-                    }
+                var s = scoreMatch(q, n);
+                if (!isFinite(s)) return;
+
+                if (s < 1000) {
+                    strong.push({ score: s, value: val, label: label, n: n,
+                                  idx: q ? n.indexOf(q) : -1 });
+                } else {
+                    fuzzy.push({ score: s, value: val, label: label, n: n });
                 }
-                $listbox.append($li);
-                visibleOpts.push({ id: liId, value: val, label: label, $li: $li });
             });
 
-            // "Add new" entry — only when there's a query, no exact match,
-            // and the form has an add-url.
+            // 2) Sort each bucket: best score first, then alphabetical so
+            //    ties stay deterministic across re-renders.
+            var byScore = function (a, b) {
+                if (a.score !== b.score) return a.score - b.score;
+                return a.label.localeCompare(b.label, 'ar');
+            };
+            strong.sort(byScore);
+            fuzzy.sort(byScore);
+            if (fuzzy.length > FUZZY_CAP) fuzzy.length = FUZZY_CAP;
+
+            var currentVal = String($select.val() || '');
+
+            function highlightLabel(label, n, idx) {
+                // Substring highlight only fires when the user's typed query
+                // appears literally inside the OPTION (idx ≥ 0). For fuzzy
+                // matches, idx is -1 and we just render the plain label —
+                // wrapping random characters in <mark> would mislead.
+                if (!q || idx < 0) {
+                    return $('<span/>').text(label).prop('outerHTML');
+                }
+                // Use the SAME substring length on the original label as on
+                // the normalized form, since our normalize() is per-codepoint
+                // (no expansion). This works for hamza/alif fold-ins because
+                // each Arabic letter normalizes 1:1 to a single character.
+                var qLen = q.length;
+                return $('<span/>').text(label.substring(0, idx)).prop('outerHTML') +
+                       '<mark>' +
+                          $('<span/>').text(label.substring(idx, idx + qLen)).html() +
+                       '</mark>' +
+                       $('<span/>').text(label.substring(idx + qLen)).prop('outerHTML');
+            }
+
+            function appendOption(item, extraClass) {
+                var liId = uid('cwcombo-opt');
+                var $li  = $('<li/>', {
+                    id:               liId,
+                    'class':          'cw-combo__option' + (extraClass ? ' ' + extraClass : ''),
+                    'role':           'option',
+                    'aria-selected':  (item.value === currentVal) ? 'true' : 'false',
+                    'data-value':     item.value,
+                });
+                $li.html(highlightLabel(item.label, item.n, item.idx != null ? item.idx : -1));
+                $listbox.append($li);
+                visibleOpts.push({
+                    id: liId, value: item.value, label: item.label, $li: $li,
+                });
+            }
+
+            // 3) "إضافة «X»" entry — the topmost item when the user typed
+            //    something and there's no exact match. Showing it FIRST
+            //    matches the previous UX so muscle memory doesn't break.
             if (q && !seenExact && addUrl) {
                 var addLiId = uid('cwcombo-add');
                 var $add = $('<li/>', {
@@ -420,12 +581,29 @@
                     html: '<i class="fa fa-plus" aria-hidden="true"></i> ' +
                           '<span>إضافة «<strong></strong>» <em></em></span>',
                 });
-                $add.find('strong').text(query.trim());
+                $add.find('strong').text(rawQuery.trim());
                 $add.find('em').text(addAsLabel);
-                $listbox.prepend($add);
-                addEntry = { id: addLiId, label: query.trim(), $li: $add };
-                // Move add entry to position 0 in visibleOpts for nav.
-                visibleOpts.unshift({ id: addLiId, value: '__ADD__', label: addEntry.label, $li: $add, isAdd: true });
+                $listbox.append($add);
+                addEntry = { id: addLiId, label: rawQuery.trim(), $li: $add };
+                visibleOpts.push({
+                    id: addLiId, value: '__ADD__', label: addEntry.label,
+                    $li: $add, isAdd: true,
+                });
+            }
+
+            // 4) Strong matches.
+            strong.forEach(function (item) { appendOption(item, ''); });
+
+            // 5) Fuzzy "did you mean?" matches under a non-interactive header.
+            //    The header is role="presentation" so AT readers skip it; the
+            //    fuzzy options themselves remain reachable via arrow keys.
+            if (fuzzy.length) {
+                $listbox.append($('<li/>', {
+                    'class': 'cw-combo__divider',
+                    'role':  'presentation',
+                    text:    'هل تقصد؟',
+                }));
+                fuzzy.forEach(function (item) { appendOption(item, 'cw-combo__option--fuzzy'); });
             }
 
             if (!visibleOpts.length) {
@@ -435,12 +613,10 @@
                 }));
             }
 
-            // Pre-highlight the first item so Enter is meaningful.
             if (visibleOpts.length) {
                 setActive(0);
             }
 
-            // List height likely changed → re-anchor (esp. for "open up").
             positionListbox();
         }
 

@@ -146,6 +146,49 @@ body > .cw-combo__listbox { inset-inline-start: auto; }
     cursor: default;
 }
 
+/* "هل تقصد؟" — non-interactive divider that introduces fuzzy / typo-tolerant
+   suggestions. role="presentation" in markup, so it never traps focus or
+   announces. The visual separation matters more than the heading here:
+   users need to know these options matched the spirit, not the letter,
+   of what they typed. */
+.cw-combo__divider {
+    padding: 8px 12px 4px;
+    margin-top: 4px;
+    border-top: 1px dashed var(--cw-color-border, #cbd5e1);
+    background: var(--cw-color-surface-alt, #f8fafc);
+    color: var(--cw-color-text-muted, #64748b);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    cursor: default;
+    user-select: none;
+}
+.cw-combo__option--fuzzy {
+    /* Subtle italics + a small inline "تقريبية" badge cue (rendered via the
+       ::after pseudo) so a sighted user can tell at a glance the match
+       isn't an exact substring. We don't add any meaning AT users would
+       miss — the parent divider already establishes the section. */
+    font-style: italic;
+}
+.cw-combo__option--fuzzy::after {
+    content: 'تقريبي';
+    margin-inline-start: 8px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--cw-color-warning-soft, #fef3c7);
+    color: var(--cw-color-warning-strong, #92400e);
+    font-size: 0.7rem;
+    font-style: normal;
+    font-weight: 600;
+    vertical-align: middle;
+}
+.cw-combo__option--fuzzy.cw-combo__option--active::after,
+.cw-combo__option--fuzzy:hover::after {
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--cw-color-warning-strong, #92400e);
+}
+
 /* Mobile: take more vertical space for big-thumb tapping.                */
 @media (max-width: 640px) {
     .cw-combo__listbox  { max-height: 60vh; }

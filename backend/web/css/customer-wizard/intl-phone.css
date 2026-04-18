@@ -54,15 +54,41 @@
    the input's typing area stays usable on ~280–360px viewports. The
    accompanying intl-phone.js sync layer pins the input's padding-left
    to whatever width this button actually ends up being, so changing
-   this value here will Just Work. */
+   this value here will Just Work.
+
+   The `inset-inline-start: 0` + zero margin on .iti__country-container
+   pins the dial-code chip flush to the input's start edge (overriding
+   intl-tel-input's default `inset-inline-start: 1px` which shows as a
+   visible 4–6px gap once we add our own 1px input border on top).
+   Result: the chip looks integrated with the input, not floating. */
+.iti--cw .iti__country-container {
+    /* Pin the wrapper flush to the input's start edge — overriding the
+       library's default `inset-inline-start: 1px` which shows as a 4-6px
+       visible gap once we layer our own 1px input border on top. NO
+       padding here: any horizontal padding on the wrapper translates
+       directly into a gap between the input edge and the visible button,
+       which looks like a layout bug. The button (.iti__selected-country)
+       owns ALL the internal whitespace. */
+    inset-inline-start: 0;
+    margin: 0;
+    padding: 0;
+    top: 0;
+    bottom: 0;
+}
 .iti--cw .iti__country-container,
 .iti--cw .iti__selected-country {
     border-start-start-radius: 8px;
     border-end-start-radius: 8px;
     background: var(--cw-input-alt-bg, #f8fafc);
     border-inline-end: 1px solid var(--cw-border, #d1d5db);
-    padding-inline: 6px;
     height: 100%;
+}
+.iti--cw .iti__selected-country {
+    /* Tight horizontal padding (6px each side) keeps the button compact
+       so the input's typing area stays usable on ~280–360px viewports.
+       intl-phone.js's ResizeObserver pins the input's padding-left to
+       this button's measured width, so changing 6px will Just Work. */
+    padding-inline: 6px;
 }
 .iti--cw .iti__selected-country:hover,
 .iti--cw .iti__selected-country:focus {

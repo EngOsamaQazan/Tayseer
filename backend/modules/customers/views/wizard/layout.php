@@ -106,6 +106,16 @@ $this->registerJsFile($ver('/js/customer-wizard/scan-income.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
+// Customer extras (personal photo + ad-hoc documents) — independent from
+// the OCR-driven scan flow because these uploads carry no extraction
+// payload, only a Media row reference to be adopted on finish.
+$this->registerJsFile($ver('/js/customer-wizard/extras.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+$this->registerCssFile($ver('/css/customer-wizard/extras.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
 // intl-tel-input bundle (library + libphonenumber utils). MUST load
 // before our wrapper so `window.intlTelInput` exists when intl-phone.js
 // runs. The wrapper auto-polls for the global for ~5s as a safety net,
@@ -144,6 +154,9 @@ $urls = [
     'addJob'     => Url::to(['/customers/wizard/add-job']),
     'addBank'    => Url::to(['/customers/wizard/add-bank']),
     'jobMeta'    => Url::to(['/customers/wizard/job-meta']),
+    // Customer extras — personal photo + ad-hoc supporting documents.
+    'uploadExtra' => Url::to(['/customers/wizard/upload-extra']),
+    'deleteExtra' => Url::to(['/customers/wizard/delete-extra']),
     // Step 3 — address-map widget. Both endpoints proxy to LocationResolverService.
     'resolveLocation' => Url::to(['/customers/wizard/resolve-location']),
     'searchPlaces'    => Url::to(['/customers/wizard/search-places']),

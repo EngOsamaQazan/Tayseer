@@ -1,0 +1,220 @@
+/* ============================================================
+   Customer Wizard V2 — extras uploader styles.
+   Personal photo + ad-hoc supporting documents fieldset.
+   -----------------------------------------------------------
+   Visual goals:
+     • Two side-by-side cards on tablet+ (1-col on phones).
+     • Generous, finger-friendly delete buttons (44×44 minimum).
+     • Photo thumbnails are square (1:1), document thumbs are
+       1:1 with a flat icon for PDFs (no broken-image placeholder).
+     • Status:
+         - .cw-extras__item--deleting    → 50% opacity + ignore
+                                            pointer events while the
+                                            delete request is in flight.
+         - .cw-extras__item:hover .__del → reveal soft red highlight on
+                                            the trash button so it's
+                                            obviously the destructive
+                                            affordance.
+   ============================================================ */
+
+.cw-extras__grid {
+    margin-top: 4px;
+    gap: 16px;
+}
+
+.cw-extras__uploader {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: var(--cw-color-surface-alt, #f8fafc);
+    border: 1px dashed var(--cw-color-border, #cbd5e1);
+    border-radius: 12px;
+    transition: border-color 120ms ease, background-color 120ms ease;
+}
+.cw-extras__uploader:hover {
+    border-color: var(--cw-color-primary, #2563eb);
+    background: var(--cw-color-primary-soft, #eff6ff);
+}
+.cw-extras__uploader .cw-field__label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    color: var(--cw-color-text-strong, #0f172a);
+    font-weight: 600;
+}
+.cw-extras__uploader .cw-field__label .fa {
+    color: var(--cw-color-primary, #2563eb);
+}
+
+.cw-extras__hint-inline {
+    margin-inline-start: auto;
+    color: var(--cw-color-text-muted, #64748b);
+    font-size: 0.78rem;
+    font-weight: 500;
+}
+
+.cw-extras__dropzone {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-height: 72px;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid var(--cw-color-border, #e2e8f0);
+    border-radius: 10px;
+}
+.cw-extras__dropzone:empty::before {
+    content: 'لا توجد ملفات بعد — اضغط الزر أدناه لاختيار ملف من جهازك أو الكاميرا.';
+    align-self: center;
+    margin: auto;
+    color: var(--cw-color-text-muted, #94a3b8);
+    font-size: 0.85rem;
+    font-style: italic;
+    text-align: center;
+    padding: 8px 16px;
+}
+
+.cw-extras__item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: var(--cw-color-surface, #fff);
+    border: 1px solid var(--cw-color-border, #e2e8f0);
+    border-radius: 8px;
+    /* Photo slot has only one item → take full row width.
+       Doc slot allows multiple chips → cap at min-content + flex grow
+       so items stack neatly when wrapping. */
+    min-width: 200px;
+    max-width: 100%;
+    flex: 1 1 240px;
+    transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+}
+.cw-extras__item--photo {
+    /* Single-slot uploader → stretch the lone item to fill the row. */
+    flex-basis: 100%;
+}
+.cw-extras__item:hover {
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+.cw-extras__item--deleting {
+    opacity: 0.5;
+    pointer-events: none;
+    transform: scale(0.98);
+}
+
+.cw-extras__thumb {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    background: var(--cw-color-surface-alt, #f1f5f9);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cw-extras__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.cw-extras__thumb--pdf .fa {
+    font-size: 28px;
+    color: #dc2626;     /* PDF red — universally recognized */
+}
+
+.cw-extras__meta {
+    flex: 1 1 auto;
+    min-width: 0;       /* allow text-overflow to kick in inside flex child */
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.cw-extras__name {
+    font-size: 0.88rem;
+    color: var(--cw-color-text-strong, #0f172a);
+    /* Long PDF names like "salary_letter_january_2026_signed_v2.pdf" must
+       not push the delete button off-screen on narrow phones. */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: ltr;
+}
+.cw-extras__sub {
+    font-size: 0.75rem;
+    color: var(--cw-color-text-muted, #64748b);
+}
+
+.cw-extras__del {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--cw-color-text-muted, #94a3b8);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease,
+                border-color 120ms ease;
+}
+.cw-extras__del:hover,
+.cw-extras__del:focus-visible {
+    color: #dc2626;
+    background: #fef2f2;
+    border-color: #fecaca;
+    outline: none;
+}
+.cw-extras__del[disabled] {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.cw-extras__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.cw-extras__actions .cw-btn {
+    flex: 1 1 auto;
+    justify-content: center;
+}
+.cw-extras__actions .cw-btn[aria-busy="true"] .fa {
+    animation: cw-extras-spin 800ms linear infinite;
+}
+@keyframes cw-extras-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+/* Mobile: single column, taller delete buttons for thumb-first interaction. */
+@media (max-width: 640px) {
+    .cw-extras__grid {
+        grid-template-columns: 1fr;
+    }
+    .cw-extras__del {
+        width: 44px;
+        height: 44px;
+    }
+    .cw-extras__name {
+        font-size: 0.95rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cw-extras__item,
+    .cw-extras__del,
+    .cw-extras__uploader {
+        transition: none;
+    }
+    .cw-extras__actions .cw-btn[aria-busy="true"] .fa {
+        animation: none;
+    }
+}
