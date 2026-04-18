@@ -108,6 +108,18 @@
     padding: 16px;
 }
 
+/* `!important` here is intentional and surgical: the project-wide
+   layer in `css/tayseer-responsive.css` ships
+   `html body .layout-wrapper [class*="container"] { max-width: 100% !important }`
+   which sweeps the wizard's optimal 1100px reading width along with every
+   other Bootstrap container. We can't out-specify an !important without
+   one of our own, so we add a tightly-scoped (`html body .cw-shell …`)
+   override here. Result: form rows stay at 50–75ch on ≥1366px screens,
+   matching Baymard Institute / NN/g form-design research. */
+html body .cw-shell .cw-container.cw-container {
+    max-width: 1100px !important;
+}
+
 @media (min-width: 768px) {
     .cw-container { padding: 24px; }
 }
@@ -353,6 +365,19 @@
 
 @media (max-width: 575px) {
     .cw-card__body { padding: 16px; }
+}
+
+/* Card-header action group (e.g. "scan camera" + "upload from device" pair). */
+.cw-scan-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (max-width: 575px) {
+    .cw-scan-actions { width: 100%; }
+    .cw-scan-actions .cw-btn { flex: 1 1 auto; justify-content: center; }
 }
 
 /* ─────────────── Form field grid ─────────────── */

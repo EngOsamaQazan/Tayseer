@@ -87,7 +87,13 @@
     width: 100%;
     box-sizing: border-box;
     font: inherit;
+    /* Same 16px floor as `.cw-input` — Safari iOS zooms in on any focused
+       form field below 16px regardless of where the field lives. */
+    font-size: 16px;
     direction: ltr;
+}
+@media (min-width: 768px) {
+    .iti--cw .iti__search-input { font-size: 14px; }
 }
 .iti--cw .iti__country-list {
     max-height: 280px;
@@ -120,6 +126,9 @@
 @media (max-width: 480px) {
     .iti--cw input.cw-input {
         padding-inline-end: 80px;
-        font-size: 14px;
+        /* Keep 16px on phones so Safari iOS doesn't auto-zoom on focus —
+           the dropdown trigger sits flush against the field, so any zoom
+           hides the flag selector behind the keyboard. */
+        font-size: 16px;
     }
 }

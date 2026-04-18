@@ -95,12 +95,16 @@
         if (n === state.current) return;
 
         if (n > state.current) {
-            // Forward: validate first; only advance on success.
+            // Forward: validate first; only advance on success. The validate
+            // endpoint does NOT persist, so chain a real save() afterwards
+            // before advancing — otherwise the destination step (especially
+            // the read-only review at step 4) would render against a stale
+            // server-side draft.
             CW.savePartial({ validate: true })
                 .then(function (res) {
                     if (res && res.ok) {
                         state.completed[state.current] = true;
-                        switchTo(n);
+                        CW.savePartial().always(function () { advanceTo(n); });
                     } else if (res && res.errors) {
                         renderServerErrors(res.errors);
                         CW.toast('يرجى تصحيح الحقول قبل المتابعة.', 'error');
@@ -110,10 +114,53 @@
                 });
         } else {
             // Backward: free movement, but still save current state silently.
-            CW.savePartial();
-            switchTo(n);
+            CW.savePartial().always(function () { advanceTo(n); });
         }
     };
+
+    /**
+     * Switch to step `n`, re-fetching the partial from the server first for
+     * read-only review steps so it reflects the latest persisted draft.
+     * Input-bearing steps already have their state in the live DOM, so we
+     * skip the round-trip there to avoid wiping unsaved local edits.
+     */
+    function advanceTo(n) {
+        if (isReviewStep(n)) {
+            refetchStep(n).always(function () { switchTo(n); });
+        } else {
+            switchTo(n);
+        }
+    }
+
+    function isReviewStep(n) {
+        // Step 4 today is the only review/recap surface — it has no editable
+        // inputs, just a server-rendered snapshot of the draft.
+        return n === state.totalSteps;
+    }
+
+    /**
+     * Re-render a step's section by fetching its partial HTML from the
+     * server. The outer <section data-cw-section> wrapper stays in place so
+     * focus, hidden/inert toggling and aria-label keep working.
+     */
+    function refetchStep(n) {
+        var $section = state.$sections.filter('[data-cw-section="' + n + '"]');
+        if (!$section.length || !state.urls.step) {
+            return $.Deferred().resolve().promise();
+        }
+        return $.ajax({
+            url: state.urls.step,
+            method: 'GET',
+            data: { n: n },
+            dataType: 'html',
+            timeout: 15000,
+        }).done(function (html) {
+            $section.html(html);
+            $(document).trigger('cw:step:rendered', [{ n: n, $section: $section }]);
+        }).fail(function () {
+            CW.toast('تعذّر تحديث شاشة المراجعة — جرّب إعادة التحميل.', 'warning');
+        });
+    }
 
     CW.next = function () { CW.goTo(state.current + 1); };
     CW.prev = function () { CW.goTo(state.current - 1); };

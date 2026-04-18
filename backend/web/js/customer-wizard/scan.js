@@ -444,30 +444,60 @@
     function onScanClick(e) {
         e.preventDefault();
         var $btn = $(this);
+        var preferUpload = !!($btn.data('cw-prefer-upload') ||
+                              $btn.attr('data-cw-prefer-upload'));
 
-        // ── Try camera mode first. ──
+        // ── Try camera mode first (unless user explicitly chose upload). ──
         // CWCamera.open() handles ALL failure modes with a proper UX:
         //   • insecure context  → "افتح الموقع عبر https" message + fallback button
         //   • permission denied → browser-specific recovery instructions
         //   • no camera         → "لا توجد كاميرا" + fallback
-        // So we always route through it when available — the file picker
-        // is only the absolute last-resort path.
+        // So we route through it when available unless the trigger explicitly
+        // opts out via `data-cw-prefer-upload="1"` — the dedicated
+        // "رفع من الجهاز" button uses that to jump straight to the file
+        // picker (and force gallery/files mode on mobile, see below).
         if (window.CWCamera && typeof window.CWCamera.open === 'function' &&
-            !$btn.data('cw-prefer-upload')) {
+            !preferUpload) {
             openCamera($btn);
             return;
         }
 
-        toast('متصفحك لا يدعم الكاميرا الحيّة — سنفتح اختيار ملف بدلاً.', 'info', 4000);
-        openFilePicker($btn);
+        if (!preferUpload) {
+            // Implicit fallback (no live camera available) — tell the user
+            // why we're switching modes. The explicit "upload" button is
+            // silent because the user already knows what they asked for.
+            toast('متصفحك لا يدعم الكاميرا الحيّة — سنفتح اختيار ملف بدلاً.', 'info', 4000);
+        }
+        openFilePicker($btn, { preferUpload: preferUpload });
     }
 
-    function openFilePicker($btn) {
+    function openFilePicker($btn, opts) {
+        opts = opts || {};
         var $input = findFileInput($btn);
         if (!$input.length) {
             toast('لم يتم العثور على حقل رفع الملف.', 'error');
             return;
         }
+
+        // Mobile browsers honour the `capture` attribute by jumping straight
+        // to the rear camera, which defeats the purpose of the "رفع من الجهاز"
+        // button. Strip the attribute for that path so the OS picker (gallery
+        // + files + cloud sources) opens instead, then restore it after the
+        // change event fires so the camera-fallback path keeps working.
+        if (opts.preferUpload && $input.is('[capture]')) {
+            var prevCapture = $input.attr('capture');
+            $input.removeAttr('capture');
+            $input.one('change' + NS + ' cancel' + NS, function () {
+                $input.attr('capture', prevCapture);
+            });
+            // Safety net: some browsers don't fire `cancel`; restore on focus.
+            setTimeout(function () {
+                if ($input.attr('capture') == null) {
+                    $input.attr('capture', prevCapture);
+                }
+            }, 60000);
+        }
+
         $input.trigger('click');
     }
 

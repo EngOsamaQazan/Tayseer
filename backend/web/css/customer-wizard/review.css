@@ -93,7 +93,13 @@
     border-radius: var(--cw-radius-md, 10px);
     padding: 10px 14px;
     text-align: center;
-    min-width: 84px;
+    /* `min-width: 84px` was forcing the 3-stat hero to require ≥268px of
+       horizontal space, which overflows on Galaxy Z Fold5 cover (280px) and
+       similar ultra-narrow devices. Switching to a flex basis with no hard
+       floor lets the row wrap to two lines gracefully on those viewports
+       while keeping the optimal 84px width whenever space allows. */
+    flex: 1 1 84px;
+    min-width: 0;
 }
 .cw-review__stat-num {
     font-size: 22px;

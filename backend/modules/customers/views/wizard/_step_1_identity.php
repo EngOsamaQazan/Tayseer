@@ -37,13 +37,23 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
             <i class="fa fa-id-card-o" aria-hidden="true"></i>
             التعريف بالعميل
         </h3>
-        <button type="button"
-                class="cw-btn cw-btn--primary cw-btn--sm"
-                data-cw-action="scan-identity"
-                aria-describedby="cw-scan-hint">
-            <i class="fa fa-camera" aria-hidden="true"></i>
-            <span class="cw-scan__label">مسح ذكي للهوية</span>
-        </button>
+        <div class="cw-scan-actions" role="group" aria-label="خيارات إدخال صور الهوية">
+            <button type="button"
+                    class="cw-btn cw-btn--primary cw-btn--sm"
+                    data-cw-action="scan-identity"
+                    aria-describedby="cw-scan-hint">
+                <i class="fa fa-camera" aria-hidden="true"></i>
+                <span class="cw-scan__label">مسح ذكي للهوية</span>
+            </button>
+            <button type="button"
+                    class="cw-btn cw-btn--outline cw-btn--sm"
+                    data-cw-action="scan-identity"
+                    data-cw-prefer-upload="1"
+                    aria-describedby="cw-scan-hint">
+                <i class="fa fa-upload" aria-hidden="true"></i>
+                <span class="cw-scan__label">رفع من الجهاز</span>
+            </button>
+        </div>
         <input type="file"
                class="cw-sr-only"
                data-cw-role="scan-input"
@@ -56,8 +66,9 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
 
     <p id="cw-scan-hint" class="cw-card__hint">
         <i class="fa fa-info-circle" aria-hidden="true"></i>
-        سنفتح الكاميرا ونلتقط الوجهين تلقائياً عندما تكون الصورة واضحة (مثل تطبيقات البنوك)،
-        أو ارفع <strong>صورتين</strong> (وجه الهوية ثم ظهرها — JPG/PNG/PDF حتى 10MB لكلٍّ منهما) وسنُعبّئ الحقول لك.
+        افتح <strong>الكاميرا</strong> ليلتقط النظام وجهَي الهوية تلقائياً (مثل تطبيقات البنوك)،
+        أو اختر <strong>رفع من الجهاز</strong> لاختيار صور موجودة لديك (JPG/PNG/PDF حتى 10MB لكلٍّ منهما).
+        ارفع <strong>صورتين</strong> (وجه الهوية ثم ظهرها) وسنُعبّئ الحقول لك.
     </p>
 
     <div class="cw-card__body">

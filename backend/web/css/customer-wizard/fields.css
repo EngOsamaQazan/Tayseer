@@ -219,7 +219,11 @@
     min-height: var(--cw-touch);
     padding: 10px 12px;
     font-family: inherit;
-    font-size: 15px;
+    /* 16px floor on touch viewports — anything smaller triggers Safari iOS
+       auto-zoom on focus (a known WCAG 1.4.4 + Apple HIG defect that breaks
+       single-handed form filling). On ≥768px (tablet/desktop) we can drop
+       to 15px because pointer input doesn't trigger the zoom heuristic. */
+    font-size: 16px;
     color: var(--cw-text);
     background: #fff;
     border: 1px solid var(--cw-border);
@@ -229,6 +233,10 @@
         box-shadow   150ms var(--cw-step-easing),
         background-color 150ms var(--cw-step-easing);
     line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+    .cw-input { font-size: 15px; }
 }
 
 .cw-input::placeholder { color: var(--cw-text-muted); opacity: 0.75; }

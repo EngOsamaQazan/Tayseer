@@ -88,9 +88,10 @@ $sexLabels = ['1' => 'ذكر', '2' => 'أنثى'];
 $sexRaw    = (string)($cust['sex'] ?? '');
 $sexLabel  = ($sexRaw !== '' && isset($sexLabels[$sexRaw])) ? $sexLabels[$sexRaw] : '—';
 
-// ── Resolve scan media (front/back). ──
-$scanFront = null;
-$scanBack  = null;
+// ── Resolve scan media (front/back/SS income statement). ──
+$scanFront  = null;
+$scanBack   = null;
+$scanIncome = null;
 $scanImageIds = $scanInfo['images'] ?? [];
 if (is_array($scanImageIds)) {
     if (!empty($scanImageIds['front'])) {
@@ -98,6 +99,9 @@ if (is_array($scanImageIds)) {
     }
     if (!empty($scanImageIds['back'])) {
         try { $scanBack = Media::findOne((int)$scanImageIds['back']); } catch (\Throwable $e) {}
+    }
+    if (!empty($scanImageIds['income'])) {
+        try { $scanIncome = Media::findOne((int)$scanImageIds['income']); } catch (\Throwable $e) {}
     }
 }
 
@@ -127,7 +131,7 @@ else                       { $riskBand = ['label' => 'مرتفع', 'class' => 'c
 $guarantorCount = count(array_filter($guarantors, function ($g) {
     return is_array($g) && trim((string)($g['owner_name'] ?? '')) !== '';
 }));
-$docCount = ($scanFront ? 1 : 0) + ($scanBack ? 1 : 0);
+$docCount = ($scanFront ? 1 : 0) + ($scanBack ? 1 : 0) + ($scanIncome ? 1 : 0);
 
 $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
 ?>
@@ -376,8 +380,9 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
             <div class="cw-review-docs">
                 <?php
                 $docTiles = [
-                    ['key' => 'front', 'media' => $scanFront, 'label' => 'وجه الهوية'],
-                    ['key' => 'back',  'media' => $scanBack,  'label' => 'ظهر الهوية'],
+                    ['key' => 'front',  'media' => $scanFront,  'label' => 'وجه الهوية'],
+                    ['key' => 'back',   'media' => $scanBack,   'label' => 'ظهر الهوية'],
+                    ['key' => 'income', 'media' => $scanIncome, 'label' => 'كشف الضمان / إثبات الدخل', 'editStep' => 2],
                 ];
                 foreach ($docTiles as $tile):
                     $media = $tile['media'];
