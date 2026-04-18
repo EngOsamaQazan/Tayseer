@@ -20,7 +20,7 @@ if (Yii::$app->controller->action->id === 'login') {
     }
 
     $baseUrl = Yii::$app->request->baseUrl;
-    $assetVersion = Yii::$app->params['assetVersion'] ?? '2026.04.16';
+    $assetVersion = Yii::$app->params['assetVersion'] ?? '2026.04.19c';
 
     // ── User data for navbar ──
     $_avatarRecord = \backend\modules\employee\models\EmployeeFiles::find()

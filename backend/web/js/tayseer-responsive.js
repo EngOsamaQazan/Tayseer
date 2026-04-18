@@ -52,6 +52,93 @@
       }, 150);
     });
   }
+  /* ── Helpers: pick ONE outer wrapper per actual table ──
+     We only target Kartik GridView tables (`.kv-grid-table`).
+     For each one we walk OUT to the outermost meaningful wrapper
+     and store BOTH the wrapper and its persistent-key candidates,
+     so the column-toggle cleanup can find legacy storage keys
+     created by older builds (which used different container ids). */
+  function uniqueGridContainers() {
+    var seen = [];
+    var seenWrappers = [];
+    var tables = document.querySelectorAll('.kv-grid-table');
+    tables.forEach(function (t) {
+      var pjaxWrap = t.closest('[id*="crud-datatable-pjax"]');
+      var gridWrap = t.closest('.grid-view');
+      var anyWrap  = t.closest('[id*="crud-datatable"]');
+      var wrap = gridWrap || anyWrap || pjaxWrap;
+      if (!wrap) return;
+      if (seenWrappers.indexOf(wrap) !== -1) return;
+
+      // Bail out if any ancestor of this wrap is already chosen
+      // (avoids nested duplicates like .grid-view inside #crud-datatable-pjax).
+      var ancestorAlready = false;
+      for (var i = 0; i < seenWrappers.length; i++) {
+        if (seenWrappers[i].contains(wrap) || wrap.contains(seenWrappers[i])) {
+          ancestorAlready = true;
+          break;
+        }
+      }
+      if (ancestorAlready) return;
+
+      seenWrappers.push(wrap);
+      // Attach all related ids so cleanup can be exhaustive.
+      var relatedIds = [];
+      [pjaxWrap, gridWrap, anyWrap, wrap].forEach(function (w) {
+        if (w && w.id && relatedIds.indexOf(w.id) === -1) relatedIds.push(w.id);
+      });
+      wrap._tyRelatedIds = relatedIds;
+      seen.push(wrap);
+    });
+    return seen;
+  }
+
+  function isActionColumnHeader(th) {
+    if (!th) return false;
+    if (th.classList && (th.classList.contains('kv-action-column') || th.classList.contains('action-column'))) return true;
+    var label = (th.textContent || '').replace(/[\n\r]/g, ' ').trim();
+    if (!label) return true; // empty header is usually an action/select column
+    return /^(\s)*(إجراءات|الإجراءات|العمليات|Actions?|Operations?)(\s)*$/i.test(label);
+  }
+
+  /* One-off: scrub ALL ty-cols-* localStorage keys so any column whose
+     index belongs to an action column is unhidden, regardless of which
+     wrapper id was used to persist it.  Runs at most once per page load. */
+  var _tyColsScrubbed = false;
+  function scrubLegacyHiddenActions() {
+    if (_tyColsScrubbed) return;
+    _tyColsScrubbed = true;
+    try {
+      var actionIndexes = [];
+      document.querySelectorAll('.kv-grid-table').forEach(function (table) {
+        var ths = table.querySelectorAll('thead th');
+        ths.forEach(function (th, i) {
+          if (isActionColumnHeader(th) && actionIndexes.indexOf(i) === -1) {
+            actionIndexes.push(i);
+          }
+        });
+      });
+      if (!actionIndexes.length) return;
+
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!k || k.indexOf('ty-cols-') !== 0) continue;
+        var raw = localStorage.getItem(k);
+        if (!raw) continue;
+        var data;
+        try { data = JSON.parse(raw); } catch (e) { continue; }
+        if (!data || typeof data !== 'object') continue;
+        var changed = false;
+        actionIndexes.forEach(function (idx) {
+          if (data[idx] === false) { delete data[idx]; changed = true; }
+        });
+        if (changed) {
+          try { localStorage.setItem(k, JSON.stringify(data)); } catch (e) {}
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
   /* ── Persistent Quick Search for GridView / Tables ── */
   function injectQuickSearch(gridView) {
     if (!gridView || gridView.dataset.tySearchInjected) return;
@@ -105,7 +192,7 @@
   }
 
   function injectAllQuickSearches() {
-    document.querySelectorAll('.grid-view, [id*="crud-datatable"]').forEach(injectQuickSearch);
+    uniqueGridContainers().forEach(injectQuickSearch);
   }
 
   if (document.readyState === 'loading') {
@@ -169,6 +256,21 @@
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch(e) {}
 
+    // Cleanup: never honor a persisted "hidden" state for an Actions column.
+    // (Earlier builds allowed users to accidentally hide it, then it stayed
+    //  hidden across PJAX reloads — making it look like actions vanished
+    //  after every search.)
+    var cleanupNeeded = false;
+    headers.forEach(function (th, i) {
+      if (isActionColumnHeader(th) && saved[i] === false) {
+        delete saved[i];
+        cleanupNeeded = true;
+      }
+    });
+    if (cleanupNeeded) {
+      try { localStorage.setItem(storageKey, JSON.stringify(saved)); } catch(e) {}
+    }
+
     var btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'btn btn-sm btn-outline-secondary ty-col-toggle-btn';
@@ -183,7 +285,12 @@
     headers.forEach(function(th, i) {
       var label = th.textContent.replace(/[\n\r]/g, ' ').trim();
       if (!label || label === '#') return;
-      var id = 'tyCol_' + i;
+      // Actions / Operations columns are essential; never offer to hide them.
+      if (isActionColumnHeader(th)) {
+        // Force-show in case any older code path hid them.
+        toggleColumn(table, i, true);
+        return;
+      }
       var isHidden = saved[i] === false;
 
       var item = document.createElement('label');
@@ -236,7 +343,21 @@
   }
 
   function injectAllColumnToggles() {
-    document.querySelectorAll('.grid-view, [id*="crud-datatable"]').forEach(injectColumnToggle);
+    scrubLegacyHiddenActions();
+    uniqueGridContainers().forEach(injectColumnToggle);
+    forceShowActionColumns();
+  }
+
+  /* Defensive: even if some other code path hid an action cell/header,
+     un-hide them on every render. */
+  function forceShowActionColumns() {
+    document.querySelectorAll('.kv-grid-table').forEach(function (table) {
+      var headers = table.querySelectorAll('thead th');
+      headers.forEach(function (th, i) {
+        if (!isActionColumnHeader(th)) return;
+        toggleColumn(table, i, true);
+      });
+    });
   }
 
   if (document.readyState === 'loading') {

@@ -16,6 +16,7 @@ return [
      */
     'customerImagesBaseUrl' => null,
 
-    /** Asset version — bump to force browser cache refresh */
+    /** Asset version — bump to force browser cache refresh
+     *  (uses this file's mtime; resave to bust caches site-wide) */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];
