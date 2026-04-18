@@ -139,6 +139,42 @@ class CustomersController extends Controller
     }
 
     /**
+     * Drop sub-form rows whose user-fillable attributes are all empty.
+     * Yii's DynamicFormWidget always renders at least one placeholder row;
+     * if the user never touched it, we don't want required-field validators
+     * to block the save. A row is "empty" when every attribute in
+     * $checkAttributes is null/empty/whitespace-only.
+     *
+     * @param array $models
+     * @param string[] $checkAttributes
+     * @return array
+     */
+    private function filterEmptyRows(array $models, array $checkAttributes)
+    {
+        $kept = [];
+        foreach ($models as $m) {
+            // Existing records (have an id) are always kept so the user can
+            // intentionally clear fields without losing the row.
+            if (!empty($m->id)) {
+                $kept[] = $m;
+                continue;
+            }
+            $hasData = false;
+            foreach ($checkAttributes as $attr) {
+                $val = $m->{$attr} ?? null;
+                if ($val !== null && trim((string)$val) !== '') {
+                    $hasData = true;
+                    break;
+                }
+            }
+            if ($hasData) {
+                $kept[] = $m;
+            }
+        }
+        return $kept;
+    }
+
+    /**
      * Creates a new customers model.
      * For ajax request will return json object
      * and for non-ajax request if creation is successful, the browser will be redirected to the 'view' page.
@@ -165,6 +201,13 @@ class CustomersController extends Controller
             Model::loadMultiple($modelsPhoneNumbers, Yii::$app->request->post());
             Model::loadMultiple($modelCustomerDocuments, Yii::$app->request->post());
             Model::loadMultiple($modelRealEstate, Yii::$app->request->post());
+
+            // Drop completely empty rows (auto-created placeholders) so they don't
+            // trigger required-field validation errors on optional sub-forms.
+            $modelsAddress = $this->filterEmptyRows($modelsAddress, ['address_city', 'address_area', 'address_street', 'address_building', 'postal_code', 'latitude', 'longitude', 'address']);
+            $modelsPhoneNumbers = $this->filterEmptyRows($modelsPhoneNumbers, ['phone_number', 'owner_name', 'fb_account', 'phone_number_owner']);
+            $modelCustomerDocuments = $this->filterEmptyRows($modelCustomerDocuments, ['document_number', 'document_image', 'images']);
+            $modelRealEstate = $this->filterEmptyRows($modelRealEstate, ['property_type', 'property_number']);
 
             $valid = $model->validate();
             $valid = Model::validateMultiple($modelsAddress) && Model::validateMultiple($modelRealEstate) && Model::validateMultiple($modelsPhoneNumbers) && Model::validateMultiple($modelCustomerDocuments) && $valid;
@@ -326,6 +369,12 @@ class CustomersController extends Controller
             $deletedPhoneIDs = array_diff($oldPhoneIDs, array_filter(yii\helpers\ArrayHelper::map($modelsPhoneNumbers, 'id', 'id')));
             $deletedDocumentsIDs = array_diff($oldDocumentsIDs, array_filter(yii\helpers\ArrayHelper::map($customerDocumentsModel, 'id', 'id')));
             $deleteRealEstateIDs = array_diff($oldmodelRealEstateIDs, array_filter(yii\helpers\ArrayHelper::map($modelRealEstate, 'id', 'id')));
+
+            $modelsAddress = $this->filterEmptyRows($modelsAddress, ['address_city', 'address_area', 'address_street', 'address_building', 'postal_code', 'latitude', 'longitude', 'address']);
+            $modelsPhoneNumbers = $this->filterEmptyRows($modelsPhoneNumbers, ['phone_number', 'owner_name', 'fb_account', 'phone_number_owner']);
+            $customerDocumentsModel = $this->filterEmptyRows($customerDocumentsModel, ['document_number', 'document_image', 'images']);
+            $modelRealEstate = $this->filterEmptyRows($modelRealEstate, ['property_type', 'property_number']);
+
             // validate all models
             $valid = $model->validate();
             $valid = Model::validateMultiple($modelsAddress) && Model::validateMultiple($modelRealEstate)&& Model::validateMultiple($modelsPhoneNumbers) && Model::validateMultiple($customerDocumentsModel) && $valid;

@@ -1322,19 +1322,49 @@
         var firstStep = -1;
         var labels = [];
         $errorFields.each(function() {
-            var $section = $(this).closest('.so-section');
+            var $field = $(this);
+            var $section = $field.closest('.so-section');
             if ($section.length) {
                 var step = parseInt($section.attr('data-step')) || 0;
                 if (firstStep < 0 || step < firstStep) firstStep = step;
             }
-            var lbl = $(this).find('label').first().text().replace('*', '').trim();
-            if (lbl) labels.push(lbl);
+            var lbl = $field.find('label').first().text().replace('*', '').trim();
+            if (!lbl) return;
+
+            // Prefix the field label with its sub-form group title (when inside a
+            // dynamic-form item) so e.g. "الرقم" becomes "المستندات → الرقم".
+            var $group = $field.closest('.customer-documents-item, .phone-numbers-item, .addrres-item');
+            if ($group.length) {
+                var groupLabel = '';
+                if ($group.hasClass('customer-documents-item')) {
+                    groupLabel = 'المستندات';
+                } else if ($group.hasClass('phone-numbers-item')) {
+                    groupLabel = 'المعرّفون';
+                } else if ($group.hasClass('addrres-item')) {
+                    groupLabel = 'العناوين';
+                }
+                if (groupLabel) lbl = groupLabel + ' → ' + lbl;
+            }
+            labels.push(lbl);
         });
         if (firstStep >= 0) {
             showStep(firstStep);
+            // Scroll the first error field into view for clarity.
+            setTimeout(function() {
+                var $first = $('#smart-onboarding-form .has-error').first();
+                if ($first.length) {
+                    var top = $first.offset().top - 120;
+                    $('html, body').animate({ scrollTop: top }, 300);
+                    var $input = $first.find('input,select,textarea').first();
+                    if ($input.length) $input.trigger('focus');
+                }
+            }, 350);
             if (labels.length) {
+                // De-duplicate while preserving order.
+                var seen = {};
+                var uniq = labels.filter(function(l) { if (seen[l]) return false; seen[l] = true; return true; });
                 setTimeout(function() {
-                    showToast('يرجى تصحيح الحقول التالية: ' + labels.join('، '), 'error', 8000);
+                    showToast('يرجى تصحيح الحقول التالية: ' + uniq.join('، '), 'error', 8000);
                 }, 500);
             }
         }
