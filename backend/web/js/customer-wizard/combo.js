@@ -73,6 +73,12 @@
                          || (kind === 'citizen' ? 'كجنسية جديدة'
                                                 : (kind === 'city' ? 'كمدينة جديدة'
                                                                    : 'كقيمة جديدة'));
+        // Optional "selection-meta" endpoint. When set, every selection
+        // change will hit this URL with ?id=<value> and render the JSON
+        // response into a sibling [data-cw-combo-meta] container (created
+        // on demand) — used by the employer combobox to warn when the
+        // chosen job has no stored address / phones / working hours.
+        var metaUrl      = $select.attr('data-cw-combo-meta-url') || '';
         var listboxId    = uid('cwcombo-listbox');
         var inputId      = uid('cwcombo-input');
         var origLabelId  = $select.closest('.cw-field').find('.cw-field__label').attr('id');
@@ -154,6 +160,88 @@
         }
         syncFromSelect();
         $select.on('change' + NS, syncFromSelect);
+
+        // Meta-fetch (e.g. employer enrichment alert).
+        var metaXhr = null;
+        function refreshMeta() {
+            if (!metaUrl) return;
+            var $host = ensureMetaHost();
+            var val   = $select.val();
+            if (!val) { $host.empty().attr('hidden', ''); return; }
+
+            if (metaXhr && metaXhr.readyState !== 4) { try { metaXhr.abort(); } catch (e) {} }
+
+            $host.removeAttr('hidden').html(
+                '<div class="cw-combo__meta cw-combo__meta--loading">' +
+                  '<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> جارٍ التحقق من بيانات الجهة…' +
+                '</div>'
+            );
+
+            metaXhr = $.ajax({
+                url:      metaUrl,
+                type:     'GET',
+                dataType: 'json',
+                data:     { id: val },
+                cache:    false,
+            }).done(function (resp) {
+                renderMeta($host, resp);
+            }).fail(function (xhr) {
+                if (xhr && xhr.statusText === 'abort') return;
+                $host.empty().attr('hidden', '');
+            });
+        }
+        function ensureMetaHost() {
+            var $host = $wrap.next('[data-cw-combo-meta]');
+            if (!$host.length) {
+                $host = $('<div/>', {
+                    'data-cw-combo-meta': '',
+                    'class': 'cw-combo__meta-host',
+                    'aria-live': 'polite',
+                    hidden: true,
+                });
+                $wrap.after($host);
+            }
+            return $host;
+        }
+        function renderMeta($host, resp) {
+            if (!resp || resp.ok !== true) { $host.empty().attr('hidden', ''); return; }
+            var missing = resp.missing || [];
+            if (!missing.length) {
+                $host.html(
+                    '<div class="cw-combo__meta cw-combo__meta--ok">' +
+                      '<i class="fa fa-check-circle" aria-hidden="true"></i> ' +
+                      '<span>بيانات الجهة مكتملة (عنوان، هواتف، ودوام).</span>' +
+                    '</div>'
+                ).removeAttr('hidden');
+                return;
+            }
+            var labels = {
+                address: 'العنوان',
+                phones:  'أرقام الهواتف',
+                hours:   'أوقات الدوام',
+            };
+            var pretty = missing.map(function (m) { return labels[m] || m; });
+            var msg = pretty.length === 1
+                ? 'لا يوجد ' + pretty[0] + ' مخزن لهذه الجهة.'
+                : 'لم يتم تخزين ' + pretty.slice(0, -1).join('، ') + ' و' + pretty[pretty.length - 1] + ' لهذه الجهة.';
+
+            $host.html(
+                '<div class="cw-combo__meta cw-combo__meta--warn" role="status">' +
+                  '<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>' +
+                  '<div class="cw-combo__meta-body">' +
+                    '<strong>' + msg + '</strong>' +
+                    '<span class="cw-combo__meta-hint">' +
+                      'يمكن استكمال هذه البيانات لاحقاً من شاشة «جهات العمل» — لن يمنعك ذلك من المتابعة الآن.' +
+                    '</span>' +
+                  '</div>' +
+                '</div>'
+            ).removeAttr('hidden');
+        }
+        if (metaUrl) {
+            $select.on('change' + NS, refreshMeta);
+            // Run once on bind in case the field is pre-filled from a draft.
+            refreshMeta();
+        }
 
         function cssEscape(s) { return s.replace(/(["\\])/g, '\\$1'); }
 
@@ -473,6 +561,25 @@
         $(document).on('cw:step:changed' + NS, function () {
             if (open) closeList();
         });
+
+        // ── Public, per-instance API attached to the wrapper element ────
+        // Used by scan-income.js to "type" the extracted employer name
+        // into the search box and surface the inline "إضافة «X»" CTA so
+        // the user can confirm before any DB write happens.
+        $wrap.data('cwComboApi', {
+            prefillSearch: function (text) {
+                var s = String(text || '').trim();
+                if (!s) return;
+                $select.val('').trigger('change');
+                $input.val(s);
+                $clear.show();
+                openList();
+                renderList(s);
+                // Keep focus on the input so the user can hit Enter to commit.
+                try { $input[0].focus({ preventScroll: false }); } catch (e) { $input.focus(); }
+            },
+            refreshMeta: refreshMeta,
+        });
     }
 
     function enhanceAll($root) {
@@ -481,10 +588,28 @@
         });
     }
 
+    /**
+     * Static helper used by external scripts (e.g. scan-income.js): given
+     * a target <select>, find its enhanced wrapper and call prefillSearch.
+     * Idempotent — if the select isn't enhanced yet, enhance it first.
+     */
+    function prefillSearch($select, text) {
+        if (!$select || !$select.length) return false;
+        if ($select.attr('data-cw-combo-bound') !== '1') enhance($select);
+        var $wrap = $select.next('.cw-combo');
+        var api = $wrap.data('cwComboApi');
+        if (api && typeof api.prefillSearch === 'function') {
+            api.prefillSearch(text);
+            return true;
+        }
+        return false;
+    }
+
     // Public API for re-binding after partial DOM updates.
     window.CWCombo = {
-        enhance:    enhance,
-        enhanceAll: enhanceAll,
+        enhance:       enhance,
+        enhanceAll:    enhanceAll,
+        prefillSearch: prefillSearch,
     };
 
     $(function () {

@@ -77,7 +77,7 @@ $bankOpen       = trim((string)$g('bank_name')) !== ''
 
             <div class="cw-grid cw-grid--3">
 
-                <!-- Employer / job (searchable combobox + add new). -->
+                <!-- Employer / job (searchable combobox + add new + meta alert). -->
                 <div class="cw-field cw-field--span-2" data-cw-field="Customers[job_title]">
                     <label class="cw-field__label" for="cw-job">
                         جهة العمل <span class="cw-field__req" aria-hidden="true">*</span>
@@ -90,7 +90,8 @@ $bankOpen       = trim((string)$g('bank_name')) !== ''
                             data-cw-combo="job"
                             data-cw-combo-placeholder="ابحث عن جهة العمل أو اكتب اسماً جديداً…"
                             data-cw-combo-add-as="كجهة عمل جديدة"
-                            data-cw-combo-add-url="<?= Html::encode(Url::to(['/customers/wizard/add-job'])) ?>">
+                            data-cw-combo-add-url="<?= Html::encode(Url::to(['/customers/wizard/add-job'])) ?>"
+                            data-cw-combo-meta-url="<?= Html::encode(Url::to(['/customers/wizard/job-meta'])) ?>">
                         <option value="">— اختر جهة العمل —</option>
                         <?php foreach ($jobs as $jid => $jname): ?>
                             <option value="<?= Html::encode((string)$jid) ?>"
@@ -99,8 +100,15 @@ $bankOpen       = trim((string)$g('bank_name')) !== ''
                             </option>
                         <?php endforeach ?>
                     </select>
+                    <!-- combo.js auto-creates [data-cw-combo-meta] right after
+                         .cw-combo with the address/phones/hours warning, but we
+                         pre-mount it so the layout doesn't shift on first fetch. -->
+                    <div data-cw-combo-meta
+                         class="cw-combo__meta-host"
+                         aria-live="polite"
+                         hidden></div>
                     <p class="cw-field__hint">
-                        ابدأ الكتابة للبحث، وإن لم تجدها يمكنك إضافتها فوراً.
+                        ابدأ الكتابة للبحث، وإن لم تجدها يمكنك إضافتها فوراً من القائمة.
                     </p>
                 </div>
 
@@ -190,6 +198,62 @@ $bankOpen       = trim((string)$g('bank_name')) !== ''
                 <p class="cw-fieldset__hint">
                     اختر الإجابة المناسبة وستظهر الحقول الإضافية تلقائياً عند الحاجة.
                 </p>
+            </div>
+
+            <!-- ── Smart upload: SS detailed statement (PDF / image) ── -->
+            <div class="cw-scan-doc"
+                 data-cw-scan-income
+                 role="region"
+                 aria-labelledby="cw-incscan-title">
+                <div class="cw-scan-doc__head">
+                    <div class="cw-scan-doc__icon" aria-hidden="true">
+                        <i class="fa fa-file-pdf-o"></i>
+                    </div>
+                    <div class="cw-scan-doc__text">
+                        <h5 id="cw-incscan-title" class="cw-scan-doc__title">
+                            ارفع كشف الضمان الاجتماعي وسنعبّئ البيانات تلقائياً
+                        </h5>
+                        <p class="cw-scan-doc__hint">
+                            "كشف البيانات التفصيلي" الصادر من المؤسسة العامة للضمان —
+                            <strong>PDF أو صورة (JPG/PNG)</strong> حتى 10 ميجابايت.
+                            سنقرأ منه: رقم التأمين، آخر راتب شهري، جهة العمل الحالية،
+                            وفترات الاشتراك تلقائياً.
+                        </p>
+                    </div>
+                    <div class="cw-scan-doc__actions">
+                        <button type="button"
+                                class="cw-btn cw-btn--primary cw-btn--sm"
+                                data-cw-action="pick-income-doc">
+                            <i class="fa fa-upload" aria-hidden="true"></i>
+                            <span>اختر الكشف</span>
+                        </button>
+                    </div>
+                    <input type="file"
+                           class="cw-sr-only"
+                           data-cw-role="income-input"
+                           accept="application/pdf,image/jpeg,image/png,image/webp"
+                           aria-hidden="true"
+                           tabindex="-1">
+                </div>
+
+                <!-- Status pill (idle | uploading | success | error) -->
+                <div class="cw-scan-doc__status"
+                     data-cw-role="income-status"
+                     role="status"
+                     aria-live="polite"
+                     hidden></div>
+
+                <!-- Summary block populated by scan-income.js -->
+                <div class="cw-scan-doc__summary"
+                     data-cw-role="income-summary"
+                     hidden>
+                    <div class="cw-scan-doc__summary-grid"
+                         data-cw-role="income-summary-grid"></div>
+                    <details class="cw-scan-doc__details">
+                        <summary>عرض جداول الكشف الكاملة (فترات الاشتراك + الرواتب)</summary>
+                        <div data-cw-role="income-summary-tables"></div>
+                    </details>
+                </div>
             </div>
 
             <!-- Q1: Subscribed to social security? -->

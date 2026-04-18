@@ -80,6 +80,10 @@ $this->registerJsFile($ver('/js/customer-wizard/scan.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
+$this->registerJsFile($ver('/js/customer-wizard/scan-income.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
 
 $urls = [
     'start'    => Url::to(['/customers/wizard/start']),
@@ -89,11 +93,13 @@ $urls = [
     'finish'   => Url::to(['/customers/wizard/finish']),
     'discard'  => Url::to(['/customers/wizard/discard']),
     'drafts'   => Url::to(['/customers/wizard/drafts']),
-    'scan'     => Url::to(['/customers/wizard/scan']),
+    'scan'       => Url::to(['/customers/wizard/scan']),
+    'scanIncome' => Url::to(['/customers/wizard/scan-income']),
     'addCity'    => Url::to(['/customers/wizard/add-city']),
     'addCitizen' => Url::to(['/customers/wizard/add-citizen']),
     'addJob'     => Url::to(['/customers/wizard/add-job']),
     'addBank'    => Url::to(['/customers/wizard/add-bank']),
+    'jobMeta'    => Url::to(['/customers/wizard/job-meta']),
 ];
 
 $steps = [

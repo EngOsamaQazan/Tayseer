@@ -83,7 +83,8 @@ class WizardController extends Controller
                     'validate' => ['POST'],
                     'finish'   => ['POST'],
                     'discard'  => ['POST'],
-                    'scan'     => ['POST'],
+                    'scan'        => ['POST'],
+                    'scan-income' => ['POST'],
                     'add-city'    => ['POST'],
                     'add-citizen' => ['POST'],
                     'add-job'     => ['POST'],
@@ -708,6 +709,392 @@ class WizardController extends Controller
         }
     }
 
+    /* ════════════════════════════════════════════════════════════════
+       SOCIAL-SECURITY STATEMENT SCAN (كشف الضمان الاجتماعي)
+       Step 2 helper — accepts a PDF/image of the SSC's "كشف البيانات
+       التفصيلي" and pre-fills employment + income fields.
+       ════════════════════════════════════════════════════════════════ */
+
+    /**
+     * POST /customers/wizard/scan-income
+     *
+     * Inputs (multipart/form-data):
+     *   • file  — the kashf statement (PDF, JPG, PNG, WEBP — up to 10 MB).
+     *
+     * Returns (JSON):
+     *   { ok: true,
+     *     fields: { 'Customers[is_social_security]': '1', … },   // ready for auto-fill
+     *     unmapped: { current_employer: 'مؤسسة …' },             // text we couldn't resolve
+     *     summary: { … }                                         // raw structured fields for UI
+     *     image_id, image_url,
+     *     meta: { source, elapsed_ms } }
+     *
+     * Why a separate action (not reusing actionScan)?
+     *   • The prompt is fundamentally different (multi-page table reading vs.
+     *     single ID card).
+     *   • The mapping target is different (employment + income, not identity).
+     *   • The persisted media's groupName is "5" (كتاب ضمان اجتماعي).
+     *   • Side / MRZ / issuing-body logic from the ID flow is irrelevant here.
+     */
+    public function actionScanIncome()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $startedAt = microtime(true);
+
+        if (!VisionService::isEnabled()) {
+            return [
+                'ok'    => false,
+                'error' => 'المسح الذكي غير مفعّل في إعدادات النظام (Google Cloud).',
+            ];
+        }
+
+        $file = UploadedFile::getInstanceByName('file');
+        if (!$file) {
+            return ['ok' => false, 'error' => 'لم يتم استلام ملف الكشف.'];
+        }
+        if ($file->error !== UPLOAD_ERR_OK) {
+            return ['ok' => false, 'error' => 'خطأ في رفع الملف (#' . (int)$file->error . ').'];
+        }
+        if (!in_array($file->type, self::SCAN_ALLOWED_MIMES, true)) {
+            return [
+                'ok'    => false,
+                'error' => 'نوع الملف غير مدعوم — استخدم PDF / JPG / PNG / WEBP فقط.',
+            ];
+        }
+        if ($file->size > self::MAX_SCAN_BYTES) {
+            return ['ok' => false, 'error' => 'حجم الملف أكبر من 10 ميجابايت.'];
+        }
+
+        // Save to runtime first; promote to Media only on successful extraction.
+        $ext = strtolower($file->extension ?: 'pdf');
+        $tmpPath = Yii::getAlias('@runtime') . '/wizard_income_'
+                 . Yii::$app->security->generateRandomString(8) . '.' . $ext;
+
+        if (!$file->saveAs($tmpPath, false)) {
+            return ['ok' => false, 'error' => 'تعذّر حفظ الملف للمعالجة.'];
+        }
+
+        // Don't hold the session lock during the multi-second Gemini call.
+        Yii::$app->session->close();
+
+        $promoted = false;
+
+        try {
+            $extracted = VisionService::extractFromIncomeStatement($tmpPath);
+            $extracted = is_array($extracted) ? $extracted : [];
+
+            // Defensive: if the document doesn't look like a SS statement,
+            // tell the user politely and don't pretend we extracted anything.
+            if (isset($extracted['is_social_security_document'])
+                && $extracted['is_social_security_document'] === false) {
+                return [
+                    'ok'    => false,
+                    'error' => 'لا يبدو أن الملف هو كشف ضمان اجتماعي رسمي. '
+                             . 'تأكد أنه "كشف البيانات التفصيلي" الصادر من المؤسسة العامة للضمان.',
+                ];
+            }
+            // Heuristic: empty result OR no SS-specific field at all.
+            $hasAny = !empty($extracted['social_security_number'])
+                   || !empty($extracted['salary_history'])
+                   || !empty($extracted['subscription_periods'])
+                   || !empty($extracted['current_employer']);
+            if (!$hasAny) {
+                return [
+                    'ok'    => false,
+                    'error' => 'لم نتمكّن من قراءة الكشف بوضوح — '
+                             . 'تأكّد من جودة الصورة/PDF وأن جميع الجداول ظاهرة بالكامل.',
+                ];
+            }
+
+            $lookups = $this->loadLookups();
+            $mapped  = $this->mapIncomeScanToWizardFields($extracted, $lookups);
+
+            // Persist to Media as "كتاب ضمان اجتماعي" (groupName='5').
+            $imageRef = $this->persistIncomeScanImage($tmpPath, $file);
+            if ($imageRef) {
+                $promoted = true;
+            }
+
+            // Track in draft so finish() can adopt the orphan Media row.
+            $this->rememberIncomeScanInDraft($imageRef['image_id'] ?? null, $extracted);
+
+            return [
+                'ok'        => true,
+                'fields'    => $mapped['fields'],
+                'unmapped'  => $mapped['unmapped'],
+                'summary'   => $this->buildIncomeSummary($extracted),
+                'image_id'  => $imageRef['image_id'] ?? null,
+                'image_url' => $imageRef['url']      ?? null,
+                'meta'      => [
+                    'source'     => 'gemini-vision',
+                    'elapsed_ms' => (int)((microtime(true) - $startedAt) * 1000),
+                ],
+            ];
+
+        } catch (\Throwable $e) {
+            Yii::error('Wizard income scan failed: ' . $e->getMessage()
+                . "\n" . $e->getTraceAsString(), __METHOD__);
+            return [
+                'ok'    => false,
+                'error' => 'تعذّر تحليل الكشف: ' . $e->getMessage(),
+            ];
+        } finally {
+            if (!$promoted && file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
+        }
+    }
+
+    /**
+     * Translate the SS statement extraction → wizard form keys (Step 2 / 1).
+     *
+     * Auto-fills (when the statement carries the data):
+     *   Step 1 cross-fill (only when the value is missing in the draft):
+     *     Customers[name], Customers[id_number], Customers[birth_date],
+     *     Customers[sex]
+     *
+     *   Step 2 (always, the SS statement is authoritative for these):
+     *     Customers[is_social_security]      → '1'
+     *     Customers[social_security_number]  → from "رقم تأمين"
+     *     Customers[total_salary]            → latest year's wage
+     *     Customers[job_title]               → resolved against jobs lookup
+     *                                          (Arabic name → id), else unmapped
+     *     Customers[last_income_query_date]  → today (we just queried)
+     */
+    protected function mapIncomeScanToWizardFields(array $extracted, array $lookups)
+    {
+        $fields   = [];
+        $unmapped = [];
+
+        // ── Step 2: SS flag is on. ──
+        $fields['Customers[is_social_security]'] = '1';
+
+        // ── SS number — strict digits-only. ──
+        if (!empty($extracted['social_security_number'])) {
+            $digits = preg_replace('/\D+/', '', (string)$extracted['social_security_number']);
+            if ($digits !== '') {
+                $fields['Customers[social_security_number]'] = $digits;
+            }
+        }
+
+        // ── Latest monthly salary → total_salary. ──
+        if (!empty($extracted['latest_monthly_salary'])) {
+            $sal = (float)$extracted['latest_monthly_salary'];
+            if ($sal > 0) {
+                $fields['Customers[total_salary]'] = (string)round($sal, 2);
+            }
+        }
+
+        // ── Current employer → job_title.
+        //
+        // We only auto-select on an EXACT (Arabic-normalized) match. The
+        // generic resolveLookupId() also does a Pass-2 substring match,
+        // which is great for cities (where "عمّان" should match "عمان")
+        // but dangerous for employers — "شركة الخير لذبح وتجهيز الدواجن"
+        // could substring-collide with "شركة الخير للنقل" and silently
+        // pick the wrong one. Force the user to confirm via the combobox
+        // when there's any ambiguity.
+        $employer = trim((string)($extracted['current_employer'] ?? ''));
+        if ($employer !== '') {
+            // Always surface the raw text so the frontend can prefill the
+            // combobox input regardless of match outcome.
+            $unmapped['job_title_text'] = $employer;
+
+            $jobId = $this->resolveExactLookupId($employer, $lookups['jobs'] ?? []);
+            if ($jobId !== null) {
+                $fields['Customers[job_title]'] = (string)$jobId;
+            } else {
+                // Legacy contract — kept so the UI still gets a hint when
+                // the employer is brand new.
+                $unmapped['job_title'] = $employer;
+            }
+        }
+
+        // ── Stamp last income query date. ──
+        $fields['Customers[last_income_query_date]'] = date('Y-m-d');
+
+        // ── Cross-fill Step 1 fields when they're authoritative on the kashf. ──
+        if (!empty($extracted['name']) && is_string($extracted['name'])) {
+            $fields['Customers[name]'] = trim(preg_replace('/\s+/u', ' ', $extracted['name']));
+        }
+        if (!empty($extracted['id_number'])) {
+            $idDigits = preg_replace('/\D+/', '', (string)$extracted['id_number']);
+            if (preg_match('/^[920][0-9]{9}$/', $idDigits)) {
+                $fields['Customers[id_number]'] = $idDigits;
+            }
+        }
+        if (!empty($extracted['birth_date'])
+            && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$extracted['birth_date'])) {
+            $fields['Customers[birth_date]'] = $extracted['birth_date'];
+        }
+        if (isset($extracted['sex']) && $extracted['sex'] !== '' && $extracted['sex'] !== null) {
+            // Gemini schema: 0 = ذكر, 1 = أنثى
+            // Customers model:  '1' = male, '2' = female
+            $fields['Customers[sex]'] = ((int)$extracted['sex'] === 1) ? '2' : '1';
+        }
+
+        return ['fields' => $fields, 'unmapped' => $unmapped];
+    }
+
+    /**
+     * Build a compact, JSON-safe summary the JS can render under the upload
+     * widget so the user sees what we actually read (and can sanity-check
+     * before continuing).
+     */
+    protected function buildIncomeSummary(array $extracted)
+    {
+        $periods = [];
+        foreach ((array)($extracted['subscription_periods'] ?? []) as $p) {
+            if (!is_array($p)) continue;
+            $periods[] = [
+                'from'   => $p['from'] ?? null,
+                'to'     => $p['to']   ?? null,
+                'salary' => isset($p['salary']) ? (float)$p['salary'] : null,
+                'reason' => $p['reason'] ?? null,
+                'name'   => $p['establishment_name'] ?? null,
+                'months' => isset($p['months']) ? (int)$p['months'] : null,
+            ];
+        }
+
+        $salaries = [];
+        foreach ((array)($extracted['salary_history'] ?? []) as $r) {
+            if (!is_array($r)) continue;
+            $salaries[] = [
+                'year'    => isset($r['year']) ? (int)$r['year'] : null,
+                'salary'  => isset($r['salary']) ? (float)$r['salary'] : null,
+                'name'    => $r['establishment_name'] ?? null,
+            ];
+        }
+
+        return [
+            'name'                       => $extracted['name'] ?? null,
+            'social_security_number'     => $extracted['social_security_number'] ?? null,
+            'id_number'                  => $extracted['id_number'] ?? null,
+            'statement_date'             => $extracted['statement_date'] ?? null,
+            'join_date'                  => $extracted['join_date'] ?? null,
+            'subjection_salary'          => isset($extracted['subjection_salary'])
+                                            ? (float)$extracted['subjection_salary'] : null,
+            'current_employer'           => $extracted['current_employer'] ?? null,
+            'subjection_employer'        => $extracted['subjection_employer'] ?? null,
+            'latest_salary_year'         => isset($extracted['latest_salary_year'])
+                                            ? (int)$extracted['latest_salary_year'] : null,
+            'latest_monthly_salary'      => isset($extracted['latest_monthly_salary'])
+                                            ? (float)$extracted['latest_monthly_salary'] : null,
+            'total_subscription_months'  => isset($extracted['total_subscription_months'])
+                                            ? (float)$extracted['total_subscription_months'] : null,
+            'active_subscription'        => !empty($extracted['active_subscription']),
+            'subscription_periods'       => $periods,
+            'salary_history'             => $salaries,
+        ];
+    }
+
+    /**
+     * Persist a successfully-scanned SS statement into the Media store with
+     * groupName = '5' (كتاب ضمان اجتماعي). Mirror of persistScanImage()
+     * but without side / issuing-body / document_number.
+     */
+    protected function persistIncomeScanImage($tmpPath, $uploadedFile)
+    {
+        try {
+            if (!is_file($tmpPath)) return null;
+
+            $fileHash = Yii::$app->security->generateRandomString(32);
+            $origName = $uploadedFile->name ?: ('income_kashf.pdf');
+            $origName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($origName));
+            if ($origName === '' || $origName === '.' || $origName === '..') {
+                $ext = strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'pdf';
+                $origName = 'income_kashf.' . $ext;
+            }
+
+            $media = new Media([
+                'fileName'    => $origName,
+                'fileHash'    => $fileHash,
+                'customer_id' => null, // adopted by linkScanImagesToCustomer()
+                'contractId'  => null,
+                'groupName'   => '5', // كتاب ضمان اجتماعي
+                'created'     => date('Y-m-d H:i:s'),
+                'modified'    => date('Y-m-d H:i:s'),
+                'createdBy'   => Yii::$app->user->id ?? null,
+                'modifiedBy'  => Yii::$app->user->id ?? null,
+            ]);
+            if (!$media->save(false)) {
+                Yii::warning('Wizard income scan: failed to persist Media row', __METHOD__);
+                return null;
+            }
+
+            $destPath = MediaHelper::filePath((int)$media->id, $fileHash, $origName);
+            $destDir  = dirname($destPath);
+            if (!is_dir($destDir)) @mkdir($destDir, 0755, true);
+
+            if (!@rename($tmpPath, $destPath)) {
+                if (!@copy($tmpPath, $destPath)) {
+                    $media->delete();
+                    Yii::warning('Wizard income scan: failed to move file to Media store', __METHOD__);
+                    return null;
+                }
+                @unlink($tmpPath);
+            }
+            @chmod($destPath, 0644);
+
+            // Best-effort thumbnail (image only — we don't rasterize PDFs here).
+            try {
+                $isImage = strpos((string)$uploadedFile->type, 'image/') === 0;
+                if ($isImage && method_exists(VisionService::class, 'createThumbnail')) {
+                    $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
+                    if (!is_dir($thumbDir)) @mkdir($thumbDir, 0755, true);
+                    $thumbPath = $thumbDir . '/thumb_' . basename($destPath);
+                    VisionService::createThumbnail($destPath, $thumbPath);
+                }
+            } catch (\Throwable $te) {
+                Yii::warning('Wizard income scan: thumbnail generation failed: ' . $te->getMessage(), __METHOD__);
+            }
+
+            return [
+                'image_id'   => (int)$media->id,
+                'url'        => $media->getUrl(),
+                'group_name' => '5',
+                'file_name'  => $origName,
+            ];
+        } catch (\Throwable $e) {
+            Yii::error('Wizard income scan persistence failed: ' . $e->getMessage(), __METHOD__);
+            return null;
+        }
+    }
+
+    /**
+     * Track the SS scan in the wizard's auto-draft so:
+     *   • finish() adopts the Media row for the new customer.
+     *   • the review screen can show the kashf as a known document.
+     *   • re-uploading replaces the previous summary cleanly.
+     */
+    protected function rememberIncomeScanInDraft($imageId, array $extracted)
+    {
+        try {
+            $draft   = $this->getOrCreateAutoDraft();
+            $payload = $this->decodePayload($draft);
+
+            if (!isset($payload['_scan']) || !is_array($payload['_scan'])) {
+                $payload['_scan'] = [];
+            }
+            if (!isset($payload['_scan']['images']) || !is_array($payload['_scan']['images'])) {
+                $payload['_scan']['images'] = [];
+            }
+            if ($imageId) {
+                $payload['_scan']['images']['income'] = (int)$imageId;
+            }
+            $payload['_scan']['income_summary'] = $this->buildIncomeSummary($extracted);
+            $payload['_scan']['updated'] = time();
+
+            $payload['_updated'] = time();
+            $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
+            if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard income scan: failed to remember in draft: ' . $e->getMessage(), __METHOD__);
+        }
+    }
+
     /**
      * Map (issuing_body, side) → groupName values used by the rest of the
      * platform (`os_ImageManager.groupName`). Keeps a single, documented
@@ -1302,6 +1689,24 @@ class WizardController extends Controller
     }
 
     /**
+     * Strict variant of resolveLookupId — exact (normalized) match only,
+     * no substring fallback. Used for free-form fields where a wrong-but-
+     * plausible substring hit would be worse than asking the user.
+     */
+    protected function resolveExactLookupId($text, array $rows)
+    {
+        $needle = trim((string)$text);
+        if ($needle === '' || empty($rows)) return null;
+        $needleNorm = self::normalizeArabic($needle);
+        foreach ($rows as $row) {
+            if (self::normalizeArabic($row['name'] ?? '') === $needleNorm) {
+                return $row['id'];
+            }
+        }
+        return null;
+    }
+
+    /**
      * Normalize Arabic text for fuzzy matching:
      *   • Collapse alef variants  أإآ → ا
      *   • Strip taa marbouta noise ة/ه equivalence
@@ -1424,6 +1829,12 @@ class WizardController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         $name = trim((string)Yii::$app->request->post('name', ''));
+
+        // os_jobs has job_type INT NOT NULL with no default — addLookupRow's
+        // generic insert would die without it. Default to 2 = "قطاع خاص"
+        // (private sector) which is the most common bucket for free-form
+        // employer additions. The user can refine the type later from the
+        // jobs admin module.
         return $this->addLookupRow([
             'name'        => $name,
             'table'       => '{{%jobs}}',
@@ -1432,6 +1843,7 @@ class WizardController extends Controller
             'tooLongError'=> 'اسم جهة العمل طويل جداً.',
             'failError'   => 'تعذّر حفظ جهة العمل. حاول مرة أخرى.',
             'logLabel'    => 'job',
+            'extra'       => ['job_type' => 2, 'status' => 1],
         ]);
     }
 
@@ -1452,6 +1864,86 @@ class WizardController extends Controller
             'failError'   => 'تعذّر حفظ البنك. حاول مرة أخرى.',
             'logLabel'    => 'bank',
         ]);
+    }
+
+    /**
+     * Return enrichment metadata for a single employer (os_jobs row) so the
+     * Step-2 combobox can warn the user when the chosen employer is missing
+     * data the loan officer relies on later (address for visits, phones for
+     * income verification, working hours for follow-ups).
+     *
+     * Response shape (JSON):
+     *   { ok, id, name, has_address, has_phones, has_hours, missing:[…] }
+     *
+     * The endpoint is intentionally read-only and small — it is hit on every
+     * combobox change so latency matters more than completeness.
+     */
+    public function actionJobMeta($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $id = (int)$id;
+        if ($id <= 0) {
+            return ['ok' => false, 'error' => 'invalid id'];
+        }
+
+        $db = Yii::$app->db;
+
+        try {
+            $row = $db->createCommand(
+                "SELECT id, name, address_city, address_area, address_street, address_building,
+                        latitude, longitude
+                 FROM {{%jobs}}
+                 WHERE id = :id AND (is_deleted IS NULL OR is_deleted = 0)
+                 LIMIT 1",
+                [':id' => $id]
+            )->queryOne();
+
+            if (!$row) {
+                return ['ok' => false, 'error' => 'not found'];
+            }
+
+            $hasAddress = trim((string)($row['address_city']     ?? '')) !== ''
+                       || trim((string)($row['address_area']     ?? '')) !== ''
+                       || trim((string)($row['address_street']   ?? '')) !== ''
+                       || trim((string)($row['address_building'] ?? '')) !== ''
+                       || ((float)($row['latitude'] ?? 0) !== 0.0
+                           && (float)($row['longitude'] ?? 0) !== 0.0);
+
+            $hasPhones = false;
+            try {
+                $hasPhones = (int)$db->createCommand(
+                    'SELECT COUNT(*) FROM {{%jobs_phones}}
+                     WHERE job_id = :id AND (is_deleted IS NULL OR is_deleted = 0)',
+                    [':id' => $id]
+                )->queryScalar() > 0;
+            } catch (\Throwable $e) { /* table missing on legacy installs */ }
+
+            $hasHours = false;
+            try {
+                $hasHours = (int)$db->createCommand(
+                    'SELECT COUNT(*) FROM {{%jobs_working_hours}} WHERE job_id = :id',
+                    [':id' => $id]
+                )->queryScalar() > 0;
+            } catch (\Throwable $e) { /* table missing on legacy installs */ }
+
+            $missing = [];
+            if (!$hasAddress) $missing[] = 'address';
+            if (!$hasPhones)  $missing[] = 'phones';
+            if (!$hasHours)   $missing[] = 'hours';
+
+            return [
+                'ok'          => true,
+                'id'          => (int)$row['id'],
+                'name'        => $row['name'],
+                'has_address' => $hasAddress,
+                'has_phones'  => $hasPhones,
+                'has_hours'   => $hasHours,
+                'missing'     => $missing,
+            ];
+        } catch (\Throwable $e) {
+            Yii::error('actionJobMeta failed: ' . $e->getMessage(), __METHOD__);
+            return ['ok' => false, 'error' => 'server error'];
+        }
     }
 
     /**
@@ -1476,12 +1968,19 @@ class WizardController extends Controller
      *     @var string $tooLongError message when name exceeds 100 chars
      *     @var string $failError    message on unexpected DB failure
      *     @var string $logLabel     short tag for log messages ('city', 'citizen')
+     *     @var array  $extra        OPTIONAL — additional column values to
+     *                               include in the INSERT (and the existing-
+     *                               row UPDATE if the row was soft-deleted).
+     *                               Useful when the target table has NOT NULL
+     *                               columns without a DB default (e.g. jobs
+     *                               needs job_type).
      * }
      * @return array JSON-shaped response (always with `ok` + either id/name/… or error)
      */
     protected function addLookupRow(array $opts)
     {
-        $name = (string)$opts['name'];
+        $name  = (string)$opts['name'];
+        $extra = isset($opts['extra']) && is_array($opts['extra']) ? $opts['extra'] : [];
         if ($name === '') return ['ok' => false, 'error' => $opts['emptyError']];
         if (mb_strlen($name) > 100) return ['ok' => false, 'error' => $opts['tooLongError']];
 
@@ -1490,14 +1989,22 @@ class WizardController extends Controller
         $tq = $db->quoteTableName($tableName);
 
         $hasIsDeleted = false; $hasCreatedAt = false; $hasCreatedBy = false;
+        $tableCols = [];
         try {
             $cols = $db->createCommand("SHOW COLUMNS FROM {$tq}")->queryAll();
             foreach ($cols as $c) {
+                $tableCols[$c['Field']] = true;
                 if ($c['Field'] === 'is_deleted') $hasIsDeleted = true;
                 if ($c['Field'] === 'created_at') $hasCreatedAt = true;
                 if ($c['Field'] === 'created_by') $hasCreatedBy = true;
             }
         } catch (\Throwable $e) { /* schema introspection is best-effort */ }
+
+        // Drop any extras that the target table doesn't actually have so a
+        // shared helper can be called with optimistic column lists.
+        foreach ($extra as $col => $_) {
+            if ($tableCols && !isset($tableCols[$col])) unset($extra[$col]);
+        }
 
         try {
             $normalized = self::normalizeArabic($name);
@@ -1544,7 +2051,16 @@ class WizardController extends Controller
             }
             if ($hasCreatedBy) {
                 $insert['created_by'] = (int)Yii::$app->user->id;
-                $insert['last_updated_by'] = (int)Yii::$app->user->id;
+                if (isset($tableCols['last_updated_by'])) {
+                    $insert['last_updated_by'] = (int)Yii::$app->user->id;
+                }
+                if (isset($tableCols['updated_by'])) {
+                    $insert['updated_by'] = (int)Yii::$app->user->id;
+                }
+            }
+            // Caller-supplied required columns (e.g. jobs.job_type).
+            foreach ($extra as $col => $val) {
+                $insert[$col] = $val;
             }
             $db->createCommand()->insert($tableName, $insert)->execute();
             $newId = (int)$db->getLastInsertID();

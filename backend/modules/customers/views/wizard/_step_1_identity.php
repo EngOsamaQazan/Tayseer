@@ -232,6 +232,7 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                             aria-required="true"
                             data-cw-combo="citizen"
                             data-cw-combo-placeholder="ابحث عن الجنسية أو اكتب اسماً جديداً…"
+                            data-cw-combo-add-as="كجنسية جديدة"
                             data-cw-combo-add-url="<?= Html::encode(\yii\helpers\Url::to(['/customers/wizard/add-citizen'])) ?>">
                         <option value="">— اختر الجنسية —</option>
                         <?php foreach ($citizens as $cid => $cname): ?>
@@ -241,6 +242,9 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                             </option>
                         <?php endforeach ?>
                     </select>
+                    <p class="cw-field__hint">
+                        لا تجد الجنسية؟ اكتب اسمها وستظهر «إضافة» في القائمة فوراً.
+                    </p>
                 </div>
 
                 <!-- How heard about us. -->

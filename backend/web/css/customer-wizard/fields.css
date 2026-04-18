@@ -543,6 +543,254 @@ input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
     color: var(--cw-text-muted);
 }
 
+/* ─────────────── Smart document scan widget (SS kashf, etc.) ─────────────── */
+
+.cw-scan-doc {
+    border: 1px dashed var(--cw-border);
+    border-radius: var(--cw-radius-md);
+    background:
+        linear-gradient(135deg, rgba(59,130,246,.04), rgba(99,102,241,.06));
+    padding: 16px;
+    margin: 0 0 16px;
+}
+
+.cw-scan-doc__head {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 14px;
+}
+
+.cw-scan-doc__icon {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--cw-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ef4444; /* PDF red — recognizable affordance */
+    font-size: 20px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+.cw-scan-doc__title {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--cw-text, #0f172a);
+}
+
+.cw-scan-doc__hint {
+    margin: 0;
+    font-size: 13px;
+    color: var(--cw-text-muted, #64748b);
+    line-height: 1.55;
+}
+
+.cw-scan-doc__actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Status pill — slots in below the head, full-width. */
+.cw-scan-doc__status {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid transparent;
+}
+.cw-scan-doc__status .fa { font-size: 15px; }
+
+.cw-scan-doc__status--uploading {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1e40af;
+}
+.cw-scan-doc__status--success {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+.cw-scan-doc__status--error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+.cw-scan-doc__status--info {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #334155;
+}
+
+/* Summary block (key/value cards + collapsible tables). */
+.cw-scan-doc__summary {
+    margin-top: 14px;
+    padding: 14px;
+    background: #fff;
+    border: 1px solid var(--cw-border);
+    border-radius: 10px;
+}
+
+.cw-scan-doc__summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.cw-scan-doc__cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin: 0; /* override <dl> defaults */
+}
+.cw-scan-doc__cell dt {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cw-text-muted, #64748b);
+    letter-spacing: .02em;
+    margin: 0;
+}
+.cw-scan-doc__cell dd {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--cw-text, #0f172a);
+    word-break: break-word;
+}
+
+.cw-scan-doc__cell--highlight {
+    background: linear-gradient(135deg, #ecfdf5, #f0fdf4);
+    border-color: #a7f3d0;
+}
+.cw-scan-doc__cell--highlight dd {
+    color: #065f46;
+    font-size: 16px;
+}
+
+.cw-scan-doc__cell--success {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+.cw-scan-doc__cell--success dd { color: #065f46; }
+
+.cw-scan-doc__cell--warn {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.cw-scan-doc__cell--warn dd { color: #92400e; }
+
+.cw-scan-doc__details {
+    margin-top: 12px;
+    border-top: 1px dashed var(--cw-border);
+    padding-top: 10px;
+}
+.cw-scan-doc__details > summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cw-primary, #2563eb);
+    padding: 6px 4px;
+    list-style: none;
+}
+.cw-scan-doc__details > summary::-webkit-details-marker { display: none; }
+.cw-scan-doc__details > summary::before {
+    content: '\f0da';
+    font-family: 'FontAwesome';
+    margin-inline-end: 6px;
+    transition: transform .15s ease;
+    display: inline-block;
+}
+.cw-scan-doc__details[open] > summary::before { transform: rotate(90deg); }
+
+.cw-scan-doc__tbl-title {
+    margin: 12px 0 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--cw-text, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.cw-scan-doc__tbl-title .fa { color: var(--cw-text-muted, #64748b); }
+
+.cw-scan-doc__tbl-wrap {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+.cw-scan-doc__tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    background: #fff;
+}
+.cw-scan-doc__tbl th,
+.cw-scan-doc__tbl td {
+    padding: 8px 10px;
+    text-align: start;
+    border-bottom: 1px solid #f1f5f9;
+    white-space: nowrap;
+}
+.cw-scan-doc__tbl th {
+    background: #f8fafc;
+    color: var(--cw-text-muted, #64748b);
+    font-weight: 600;
+    font-size: 11.5px;
+    letter-spacing: .02em;
+}
+.cw-scan-doc__tbl tbody tr:last-child td { border-bottom: 0; }
+.cw-scan-doc__tbl tbody tr:hover { background: #f8fafc; }
+
+.cw-scan-doc__row--active td {
+    background: rgba(16, 185, 129, .06);
+    font-weight: 600;
+}
+.cw-scan-doc__row--latest td {
+    background: rgba(59, 130, 246, .06);
+    font-weight: 600;
+}
+
+.cw-scan-doc__chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.6;
+}
+.cw-scan-doc__chip--success {
+    background: #dcfce7;
+    color: #166534;
+}
+
+/* Mobile / small viewport — head stacks. */
+@media (max-width: 600px) {
+    .cw-scan-doc__head {
+        grid-template-columns: auto 1fr;
+        grid-template-areas:
+            "icon text"
+            "btn  btn";
+        row-gap: 10px;
+    }
+    .cw-scan-doc__icon    { grid-area: icon; }
+    .cw-scan-doc__text    { grid-area: text; }
+    .cw-scan-doc__actions { grid-area: btn; justify-content: stretch; }
+    .cw-scan-doc__actions .cw-btn { width: 100%; justify-content: center; }
+}
+
 /* ─────────────── Reduced-motion ─────────────── */
 
 @media (prefers-reduced-motion: reduce) {
