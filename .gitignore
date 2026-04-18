@@ -115,3 +115,24 @@ fix-configs.py
 
 # ─── Internal notes ───────────────────────────
 /notes.md
+
+# ─── Agent / Playwright session artifacts ─────
+/.playwright-mcp/
+
+# ─── UX/QA audit screenshots ──────────────────
+# Screenshots used for one-off design reviews; the source of truth lives
+# in design docs / tickets, not the repo.
+/ux-audit/
+/*.png
+/*.jpeg
+/*.jpg
+!/social-preview.png
+
+# ─── Throwaway diagnostic / migration scripts ─
+# By convention every ad-hoc helper added during a debug session is
+# prefixed with an underscore. They contain hard-coded local paths and
+# DB credentials, so we keep them out of the repo.
+/scripts/_*
+/scripts/deploy/_*
+/scripts/inspect_*
+/scripts/migrate_*
