@@ -147,6 +147,7 @@ $urls = [
     // Step 3 — address-map widget. Both endpoints proxy to LocationResolverService.
     'resolveLocation' => Url::to(['/customers/wizard/resolve-location']),
     'searchPlaces'    => Url::to(['/customers/wizard/search-places']),
+    'reverseGeocode'  => Url::to(['/customers/wizard/reverse-geocode']),
 ];
 
 // ── Google Maps JS API (Places library) — loaded only when an API key is

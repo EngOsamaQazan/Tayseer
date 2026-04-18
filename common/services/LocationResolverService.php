@@ -224,8 +224,13 @@ class LocationResolverService extends Component
             }
             if (!isset($out['suburb'])) {
                 if (in_array('sublocality_level_1', $types, true)
+                    || in_array('sublocality_level_2', $types, true)
                     || in_array('sublocality', $types, true)
                     || in_array('neighborhood', $types, true)
+                    // Some Jordanian neighborhoods only get tagged at
+                    // admin level 3 (district/qaḍāʾ) — accept it as the
+                    // last-resort area when no finer label exists.
+                    || in_array('administrative_area_level_3', $types, true)
                 ) {
                     $out['suburb'] = $text;
                 }
@@ -457,6 +462,78 @@ class LocationResolverService extends Component
                 'lng'          => $lng,
                 'display_name' => (string)($r['formatted_address'] ?? ''),
             ];
+        }
+        return null;
+    }
+
+    /**
+     * Reverse-geocode a coordinate via Google's Geocoding API and return
+     * the result *normalized to Nominatim's address shape* — so the same
+     * client-side `fillAddressFields()` mapping works without branching.
+     *
+     * Why we sometimes need this on top of Nominatim's /reverse:
+     *   Nominatim's coverage of Jordanian neighbourhoods/sub-localities is
+     *   patchy — especially in Mafraq, Ma'an and parts of Zarqa it returns
+     *   no `suburb`/`neighbourhood` for a clicked coordinate, leaving the
+     *   "المنطقة / الحي" field blank. Google's `address_components` almost
+     *   always carries a usable `sublocality_*` or `admin_area_level_3`
+     *   even when Nominatim has nothing.
+     *
+     * Returns null when no API key is configured or Google has nothing
+     * useful — caller should keep whatever Nominatim already gave.
+     *
+     * @return array|null  Nominatim-shaped address ({city, suburb, road,
+     *                     house_number, postcode, …}) or null on failure.
+     */
+    public function googleReverseGeocode(float $lat, float $lng): ?array
+    {
+        $apiKey = SystemSettings::get('google_maps', 'api_key', null)
+            ?? Yii::$app->params['googleMapsApiKey']
+            ?? null;
+        if (!$apiKey) return null;
+
+        $url = 'https://maps.googleapis.com/maps/api/geocode/json?'
+             . http_build_query([
+                   'latlng'   => $lat . ',' . $lng,
+                   'language' => 'ar',
+                   'region'   => 'jo',
+                   'key'      => $apiKey,
+               ]);
+
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => self::HTTP_TIMEOUT_SECONDS,
+            CURLOPT_SSL_VERIFYPEER => false,
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        if ($httpCode !== 200 || !$response) return null;
+        $data = json_decode($response, true);
+        if (empty($data['results'])) return null;
+
+        // Pick the most specific result that still carries
+        // address_components — Google sorts by specificity descending,
+        // so the first hit is usually a street_address / premise.
+        foreach ($data['results'] as $r) {
+            $components = $r['address_components'] ?? null;
+            if (!is_array($components) || !$components) continue;
+            // Normalize Google's snake_case keys to the longText/shortText
+            // shape mapGoogleAddressComponents() expects.
+            $normalized = [];
+            foreach ($components as $c) {
+                $normalized[] = [
+                    'longText'  => $c['long_name']  ?? '',
+                    'shortText' => $c['short_name'] ?? '',
+                    'types'     => $c['types']      ?? [],
+                ];
+            }
+            $addr = $this->mapGoogleAddressComponents($normalized);
+            if ($addr) {
+                $addr['_formatted'] = (string)($r['formatted_address'] ?? '');
+                return $addr;
+            }
         }
         return null;
     }

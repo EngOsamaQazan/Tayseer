@@ -275,7 +275,14 @@
         var includeBuilding = opts.includeBuilding !== false;
 
         var city   = addr.city || addr.town || addr.village || addr.county || addr.state || '';
-        var area   = addr.suburb || addr.neighbourhood || addr.quarter || addr.hamlet || '';
+        // Nominatim's "area"-shaped fields vary wildly by region — some
+        // Jordanian governorates only tag `city_district`, others use
+        // `residential`, etc. Walk a wider fallback chain so we surface
+        // whichever the source actually populated.
+        var area   = addr.suburb         || addr.neighbourhood || addr.quarter
+                  || addr.city_district  || addr.district      || addr.borough
+                  || addr.residential    || addr.allotments    || addr.hamlet
+                  || addr.locality       || '';
         var street = addr.road   || addr.pedestrian    || addr.footway || '';
 
         var mapping = {
@@ -328,8 +335,9 @@
             function has(t) { return types.indexOf(t) !== -1; }
             if (!out.house_number && has('street_number'))                                  out.house_number = text;
             if (!out.road         && has('route'))                                          out.road = text;
-            if (!out.suburb       && (has('sublocality_level_1') || has('sublocality')
-                                      || has('neighborhood')))                              out.suburb = text;
+            if (!out.suburb       && (has('sublocality_level_1') || has('sublocality_level_2')
+                                      || has('sublocality')      || has('neighborhood')
+                                      || has('administrative_area_level_3')))               out.suburb = text;
             if (!out.city         && (has('locality') || has('postal_town')))               out.city = text;
             if (!out.postcode     && has('postal_code'))                                    out.postcode = text;
         }
@@ -377,6 +385,14 @@
             hasInit ? [initLat, initLng] : [DEFAULT_CENTER.lat, DEFAULT_CENTER.lng],
             hasInit ? 16 : DEFAULT_CENTER.zoom
         );
+
+        // Drop Leaflet's default "🇺🇦 Leaflet | …" prefix — the Ukrainian
+        // flag was added upstream as a solidarity gesture, but it confuses
+        // Tayseer users who think it's part of their government UI.
+        // We still show "© Google Maps" (the tile-license attribution).
+        if (map.attributionControl) {
+            map.attributionControl.setPrefix(false);
+        }
 
         // Use Google Maps street tiles (no API key required for the
         // unauthenticated tile endpoint, which Tayseer has historically
@@ -451,6 +467,21 @@
         /* ════════════════════════════════════════════════════════════
            Reverse geocoding — coordinates → address fields
            ════════════════════════════════════════════════════════════ */
+
+        /* Google reverse-geocode fallback. We hit it only when Nominatim
+           came back without a suburb/neighbourhood (Jordan coverage gap).
+           The server normalizes Google's components into Nominatim's
+           shape so fillAddressFields() doesn't need to special-case it. */
+        function googleReverseFill(lat, lng) {
+            var url = (CW && CW._urls && CW._urls.reverseGeocode) || '';
+            if (!url) return;
+            $.getJSON(url, { lat: lat, lng: lng }).done(function (resp) {
+                if (resp && resp.ok && resp.address) {
+                    fillAddressFields($fieldsRoot, resp.address, { includeBuilding: false });
+                }
+            });
+        }
+
         var rgTimer = null;
         function reverseGeocode(lat, lng) {
             clearTimeout(rgTimer);
@@ -466,6 +497,20 @@
                         // not the building the user actually picked. The
                         // user will type their building/floor by hand.
                         fillAddressFields($fieldsRoot, data.address, { includeBuilding: false });
+
+                        // Nominatim's coverage of Jordanian sub-localities
+                        // is patchy — when no area-shaped field came back,
+                        // ask Google. Its `address_components` almost
+                        // always carries a usable suburb/neighbourhood.
+                        var hasArea = !!(data.address.suburb || data.address.neighbourhood
+                            || data.address.quarter        || data.address.city_district
+                            || data.address.district       || data.address.borough
+                            || data.address.residential    || data.address.allotments
+                            || data.address.hamlet         || data.address.locality);
+                        if (!hasArea) {
+                            googleReverseFill(lat, lng);
+                        }
+
                         if (marker && marker.getPopup()) {
                             // Enrich the popup with the resolved street/area.
                             var a = data.address;
@@ -480,7 +525,14 @@
                                 );
                             }
                         }
+                    } else {
+                        // Nominatim returned nothing usable — try Google
+                        // directly so the user still gets autofill.
+                        googleReverseFill(lat, lng);
                     }
+                }).fail(function () {
+                    // Network/Nominatim failure — fall back to Google.
+                    googleReverseFill(lat, lng);
                 });
             }, 350);
         }
@@ -1011,9 +1063,20 @@
      *                and force Leaflet to recompute tile sizes after the
      *                browser has painted the now-visible container.
      *   • On close — refresh the summary chip so the next render reflects
-     *                whatever the user just typed. */
-    $(document).on('toggle', 'details[data-cw-addr-collapsible]', function () {
-        var $d = $(this);
+     *                whatever the user just typed.
+     *
+     *   IMPORTANT: the native `toggle` event does NOT bubble, so we can't
+     *   use jQuery's delegated $(document).on('toggle', …). We have to
+     *   listen during the capture phase instead — that way one document-
+     *   level handler still catches every <details> on the page without
+     *   needing per-element wiring (matters when the wizard re-renders a
+     *   step). */
+    document.addEventListener('toggle', function (ev) {
+        var el = ev.target;
+        if (!el || el.tagName !== 'DETAILS') return;
+        if (!el.hasAttribute('data-cw-addr-collapsible')) return;
+
+        var $d = $(el);
         if ($d.prop('open')) {
             $d.find('[data-cw-addr-map]').each(function () {
                 var widget = this;
@@ -1030,7 +1093,7 @@
         } else {
             refreshChip($d);
         }
-    });
+    }, true);
 
     /* Keep the chip live-accurate while the block is OPEN too — without
      * this, a user who fills city/area then closes the block via the
@@ -1045,6 +1108,31 @@
             if ($d.length) refreshChip($d);
         }
     );
+
+    /* ── Address-type dropdown → live-update the summary title + icon ──
+     *   Mirrors the legacy wizard's "type badge" behaviour. The user can
+     *   re-classify a block at any time and the collapsed header reflects
+     *   the choice immediately, so they can tell at a glance which slot
+     *   holds which kind of address.
+     *
+     *   Vocabulary stays in lock-step with `_step_3_address_block.php`. */
+    var ADDR_TYPE_LABELS = { 1: 'عنوان العمل', 2: 'عنوان السكن' };
+    var ADDR_TYPE_ICONS  = { 1: 'fa-briefcase', 2: 'fa-home' };
+
+    $(document).on('change', '[data-cw-addr-type]', function () {
+        var $sel   = $(this);
+        var $block = $sel.closest('details[data-cw-addr-collapsible]');
+        if (!$block.length) return;
+
+        var v     = parseInt($sel.val(), 10);
+        var label = ADDR_TYPE_LABELS[v] || 'عنوان';
+        var icon  = ADDR_TYPE_ICONS[v]  || 'fa-map-marker';
+
+        $block.find('[data-cw-addr-title-text]').first().text(label);
+        // Replace ALL fa-* modifiers atomically (the icon element only
+        // ever carries `fa <type-icon>` so a hard reset is safe).
+        $block.find('[data-cw-addr-title-icon]').first().attr('class', 'fa ' + icon);
+    });
 
     $(function () { enhanceAll(); });
     $(document).on('cw:step:changed', function () {

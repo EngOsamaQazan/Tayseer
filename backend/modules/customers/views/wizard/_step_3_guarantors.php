@@ -244,28 +244,28 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
         </div>
 
         <!-- ── Section B: Addresses (home + work). ── -->
+        <!-- Both address blocks are always-collapsible and start CLOSED.
+             The user picks which one to expand. The summary chip keeps
+             saved data scannable at a glance ("غير مُعبَّأ" or
+             "city · area · lat,lng") so nothing is hidden by surprise.
+             The address-type dropdown inside each block lets the user
+             re-classify on the fly — the title/icon update live. -->
         <?= $this->render('_step_3_address_block', [
-            'key'         => 'home',
-            'title'       => 'عنوان السكن',
-            'iconCss'     => 'fa-home',
-            'typeCode'    => 2,           // 2 = residential, per Address.address_type
-            'required'    => true,
-            'values'      => $homeValues,
-            'cities'      => $cities,
-            'note'        => 'مكان إقامة العميل الحالي. ابحث على الخريطة أو الصق رابط/إحداثيات لتعبئة الحقول تلقائياً.',
-            'collapsible' => false,       // Required block — always expanded.
+            'key'      => 'home',
+            'typeCode' => 2,           // 2 = residential, per Address.address_type
+            'required' => true,
+            'values'   => $homeValues,
+            'cities'   => $cities,
+            'note'     => 'مكان إقامة العميل الحالي. ابحث على الخريطة أو الصق رابط/إحداثيات لتعبئة الحقول تلقائياً.',
         ]) ?>
 
         <?= $this->render('_step_3_address_block', [
-            'key'         => 'work',
-            'title'       => 'عنوان العمل',
-            'iconCss'     => 'fa-briefcase',
-            'typeCode'    => 1,           // 1 = work
-            'required'    => false,
-            'values'      => $workValues,
-            'cities'      => $cities,
-            'note'        => 'مقر عمل العميل (شركة، فرع، مكتب…). يساعد على تحديد ساعات الوصول الأنسب.',
-            'collapsible' => true,        // Optional block — starts collapsed unless draft has data.
+            'key'      => 'work',
+            'typeCode' => 1,           // 1 = work
+            'required' => false,
+            'values'   => $workValues,
+            'cities'   => $cities,
+            'note'     => 'مقر عمل العميل (شركة، فرع، مكتب…). يساعد على تحديد ساعات الوصول الأنسب.',
         ]) ?>
 
     </div>

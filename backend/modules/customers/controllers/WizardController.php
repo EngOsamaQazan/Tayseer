@@ -2084,6 +2084,31 @@ class WizardController extends Controller
     }
 
     /**
+     * Reverse-geocode lat/lng via Google's Geocoding API. Used as a
+     * fallback by the address-map widget when Nominatim's `/reverse`
+     * doesn't return a `suburb`/`neighbourhood` for a clicked point —
+     * Google's `address_components` almost always carries one.
+     *
+     * GET params: ?lat=<float>&lng=<float>
+     * Response  : { ok, address?: {city, suburb, road, …}, source: 'google'|'none' }
+     */
+    public function actionReverseGeocode()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $lat = (float)Yii::$app->request->get('lat', 0);
+        $lng = (float)Yii::$app->request->get('lng', 0);
+        if (!is_finite($lat) || !is_finite($lng) || ($lat == 0 && $lng == 0)) {
+            return ['ok' => false, 'address' => null, 'source' => 'none'];
+        }
+        $addr = (new LocationResolverService())->googleReverseGeocode($lat, $lng);
+        return [
+            'ok'      => $addr !== null,
+            'address' => $addr,
+            'source'  => $addr !== null ? 'google' : 'none',
+        ];
+    }
+
+    /**
      * Generic "insert (or restore) a row in a {id, name, is_deleted?} lookup
      * table" helper. Used by actionAddCity / actionAddCitizen and any future
      * lookup endpoints with the same shape.
