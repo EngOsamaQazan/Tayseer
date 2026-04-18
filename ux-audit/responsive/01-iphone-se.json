@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "01-iphone-se",
+    "w": 320,
+    "h": 568,
+    "label": "iPhone SE (smallest)"
+  },
+  "metrics": {
+    "vw": 320,
+    "vh": 568,
+    "docScrollW": 320,
+    "hOverflow": 0,
+    "shell": {
+      "w": 304,
+      "h": 1022
+    },
+    "stepper": {
+      "scrollW": 254,
+      "clientW": 254,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 55,
+        "h": 44,
+        "isCurrent": false,
+        "labelVisible": false
+      },
+      {
+        "n": "2",
+        "w": 55,
+        "h": 83,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 55,
+        "h": 44,
+        "isCurrent": false,
+        "labelVisible": false
+      },
+      {
+        "n": "4",
+        "w": 55,
+        "h": 44,
+        "isCurrent": false,
+        "labelVisible": false
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 47,
+      "lineHeight": 23.4,
+      "estimatedLines": 2
+    },
+    "navStuck": {
+      "bottom": 12,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

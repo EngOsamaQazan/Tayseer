@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "07-ipad-landscape",
+    "w": 1024,
+    "h": 768,
+    "label": "iPad landscape"
+  },
+  "metrics": {
+    "vw": 1024,
+    "vh": 768,
+    "docScrollW": 1024,
+    "hOverflow": 0,
+    "shell": {
+      "w": 976,
+      "h": 672
+    },
+    "stepper": {
+      "scrollW": 898,
+      "clientW": 898,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 219,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "2",
+        "w": 219,
+        "h": 80,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 219,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "4",
+        "w": 219,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 26,
+      "lineHeight": 26.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 12,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

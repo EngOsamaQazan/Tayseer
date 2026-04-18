@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "09-desktop-fhd",
+    "w": 1920,
+    "h": 1080,
+    "label": "Desktop Full HD"
+  },
+  "metrics": {
+    "vw": 1920,
+    "vh": 1080,
+    "docScrollW": 1920,
+    "hOverflow": 0,
+    "shell": {
+      "w": 1580,
+      "h": 648
+    },
+    "stepper": {
+      "scrollW": 1502,
+      "clientW": 1502,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 370,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "2",
+        "w": 370,
+        "h": 80,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 370,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "4",
+        "w": 370,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 26,
+      "lineHeight": 26.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 268,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

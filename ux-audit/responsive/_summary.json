@@ -1,0 +1,662 @@
+[
+  {
+    "viewport": {
+      "name": "01-iphone-se",
+      "w": 320,
+      "h": 568,
+      "label": "iPhone SE (smallest)"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 320,
+      "vh": 568,
+      "docScrollW": 320,
+      "hOverflow": 0,
+      "shell": {
+        "w": 304,
+        "h": 1022
+      },
+      "stepper": {
+        "scrollW": 254,
+        "clientW": 254,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 55,
+          "h": 44,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "2",
+          "w": 55,
+          "h": 83,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 55,
+          "h": 44,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "4",
+          "w": 55,
+          "h": 44,
+          "isCurrent": false,
+          "labelVisible": false
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 47,
+        "lineHeight": 23.4,
+        "estimatedLines": 2
+      },
+      "navStuck": {
+        "bottom": 12,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "02-fold-closed",
+      "w": 280,
+      "h": 653,
+      "label": "Galaxy Z Fold5 (cover)"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 280,
+      "vh": 653,
+      "docScrollW": 280,
+      "hOverflow": 0,
+      "shell": {
+        "w": 264,
+        "h": 1144
+      },
+      "stepper": {
+        "scrollW": 214,
+        "clientW": 214,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 45,
+          "h": 44,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "2",
+          "w": 45,
+          "h": 83,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 45,
+          "h": 44,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "4",
+          "w": 45,
+          "h": 44,
+          "isCurrent": false,
+          "labelVisible": false
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 47,
+        "lineHeight": 23.4,
+        "estimatedLines": 2
+      },
+      "navStuck": {
+        "bottom": 12,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "03-iphone-13-mini",
+      "w": 375,
+      "h": 812,
+      "label": "iPhone 13 mini"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 375,
+      "vh": 812,
+      "docScrollW": 375,
+      "hOverflow": 0,
+      "shell": {
+        "w": 359,
+        "h": 915
+      },
+      "stepper": {
+        "scrollW": 297,
+        "clientW": 297,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 65,
+          "h": 52,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "2",
+          "w": 65,
+          "h": 91,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 65,
+          "h": 52,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "4",
+          "w": 65,
+          "h": 52,
+          "isCurrent": false,
+          "labelVisible": false
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 24,
+        "lineHeight": 23.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 12,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "04-iphone-pro-max",
+      "w": 414,
+      "h": 896,
+      "label": "iPhone Pro Max"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 414,
+      "vh": 896,
+      "docScrollW": 414,
+      "hOverflow": 0,
+      "shell": {
+        "w": 390,
+        "h": 881
+      },
+      "stepper": {
+        "scrollW": 328,
+        "clientW": 328,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 73,
+          "h": 52,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "2",
+          "w": 73,
+          "h": 91,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 73,
+          "h": 52,
+          "isCurrent": false,
+          "labelVisible": false
+        },
+        {
+          "n": "4",
+          "w": 73,
+          "h": 52,
+          "isCurrent": false,
+          "labelVisible": false
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 24,
+        "lineHeight": 23.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 12,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "05-fold-open",
+      "w": 884,
+      "h": 1104,
+      "label": "Galaxy Z Fold5 (open)"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 884,
+      "vh": 1104,
+      "docScrollW": 884,
+      "hOverflow": 0,
+      "shell": {
+        "w": 836,
+        "h": 724
+      },
+      "stepper": {
+        "scrollW": 758,
+        "clientW": 758,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 184,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "2",
+          "w": 184,
+          "h": 80,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 184,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "4",
+          "w": 184,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 26,
+        "lineHeight": 26.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 216,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "06-ipad-portrait",
+      "w": 768,
+      "h": 1024,
+      "label": "iPad portrait"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 768,
+      "vh": 1024,
+      "docScrollW": 768,
+      "hOverflow": 0,
+      "shell": {
+        "w": 720,
+        "h": 724
+      },
+      "stepper": {
+        "scrollW": 642,
+        "clientW": 642,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 155,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "2",
+          "w": 155,
+          "h": 80,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 155,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "4",
+          "w": 155,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 26,
+        "lineHeight": 26.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 136,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "07-ipad-landscape",
+      "w": 1024,
+      "h": 768,
+      "label": "iPad landscape"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 1024,
+      "vh": 768,
+      "docScrollW": 1024,
+      "hOverflow": 0,
+      "shell": {
+        "w": 976,
+        "h": 672
+      },
+      "stepper": {
+        "scrollW": 898,
+        "clientW": 898,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 219,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "2",
+          "w": 219,
+          "h": 80,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 219,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "4",
+          "w": 219,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 26,
+        "lineHeight": 26.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 12,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "08-laptop",
+      "w": 1366,
+      "h": 768,
+      "label": "Standard laptop"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 1366,
+      "vh": 768,
+      "docScrollW": 1366,
+      "hOverflow": 0,
+      "shell": {
+        "w": 1042,
+        "h": 648
+      },
+      "stepper": {
+        "scrollW": 964,
+        "clientW": 964,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 235,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "2",
+          "w": 235,
+          "h": 80,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 235,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "4",
+          "w": 235,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 26,
+        "lineHeight": 26.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 12,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "09-desktop-fhd",
+      "w": 1920,
+      "h": 1080,
+      "label": "Desktop Full HD"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 1920,
+      "vh": 1080,
+      "docScrollW": 1920,
+      "hOverflow": 0,
+      "shell": {
+        "w": 1580,
+        "h": 648
+      },
+      "stepper": {
+        "scrollW": 1502,
+        "clientW": 1502,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 370,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "2",
+          "w": 370,
+          "h": 80,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 370,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "4",
+          "w": 370,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 26,
+        "lineHeight": 26.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 268,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  },
+  {
+    "viewport": {
+      "name": "10-desktop-2k",
+      "w": 2560,
+      "h": 1440,
+      "label": "Desktop 2K"
+    },
+    "verdict": "OK",
+    "issues": [],
+    "metrics": {
+      "vw": 2560,
+      "vh": 1440,
+      "docScrollW": 2560,
+      "hOverflow": 0,
+      "shell": {
+        "w": 1824,
+        "h": 648
+      },
+      "stepper": {
+        "scrollW": 1746,
+        "clientW": 1746,
+        "overflow": false
+      },
+      "steps": [
+        {
+          "n": "1",
+          "w": 431,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "2",
+          "w": 431,
+          "h": 80,
+          "isCurrent": true,
+          "labelVisible": true
+        },
+        {
+          "n": "3",
+          "w": 431,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        },
+        {
+          "n": "4",
+          "w": 431,
+          "h": 80,
+          "isCurrent": false,
+          "labelVisible": true
+        }
+      ],
+      "touchTargets": [],
+      "titleWrap": {
+        "h": 26,
+        "lineHeight": 26.4,
+        "estimatedLines": 1
+      },
+      "navStuck": {
+        "bottom": 628,
+        "inViewport": true
+      },
+      "overflowingChildren": []
+    }
+  }
+]

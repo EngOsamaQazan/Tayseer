@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "05-fold-open",
+    "w": 884,
+    "h": 1104,
+    "label": "Galaxy Z Fold5 (open)"
+  },
+  "metrics": {
+    "vw": 884,
+    "vh": 1104,
+    "docScrollW": 884,
+    "hOverflow": 0,
+    "shell": {
+      "w": 836,
+      "h": 724
+    },
+    "stepper": {
+      "scrollW": 758,
+      "clientW": 758,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 184,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "2",
+        "w": 184,
+        "h": 80,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 184,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "4",
+        "w": 184,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 26,
+      "lineHeight": 26.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 216,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

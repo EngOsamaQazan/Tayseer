@@ -254,6 +254,16 @@
     .cw-step__circle { width: 40px; height: 40px; font-size: 15px; }
 }
 
+/* ── Ultra-narrow ≤ 320px (e.g. Galaxy Z Fold5 cover at 280px): tighten
+       padding and gaps so the four-circle grid fits without horizontal
+       scroll. Also shrink the circles slightly. ── */
+@media (max-width: 320px) {
+    .cw-stepper       { padding: 10px 8px; }
+    .cw-stepper__list { gap: 6px; }
+    .cw-step          { padding: 6px 2px; }
+    .cw-step__circle  { width: 32px; height: 32px; font-size: 13px; }
+}
+
 /* ── Mobile ≤ 480px: show only the current step's label. The other three
       steps remain visible as numbered circles only — keeps the wizard
       orientation cue without crowding the row. ── */

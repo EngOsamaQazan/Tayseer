@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "10-desktop-2k",
+    "w": 2560,
+    "h": 1440,
+    "label": "Desktop 2K"
+  },
+  "metrics": {
+    "vw": 2560,
+    "vh": 1440,
+    "docScrollW": 2560,
+    "hOverflow": 0,
+    "shell": {
+      "w": 1824,
+      "h": 648
+    },
+    "stepper": {
+      "scrollW": 1746,
+      "clientW": 1746,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 431,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "2",
+        "w": 431,
+        "h": 80,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 431,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "4",
+        "w": 431,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 26,
+      "lineHeight": 26.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 628,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

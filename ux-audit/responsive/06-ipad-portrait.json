@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "06-ipad-portrait",
+    "w": 768,
+    "h": 1024,
+    "label": "iPad portrait"
+  },
+  "metrics": {
+    "vw": 768,
+    "vh": 1024,
+    "docScrollW": 768,
+    "hOverflow": 0,
+    "shell": {
+      "w": 720,
+      "h": 724
+    },
+    "stepper": {
+      "scrollW": 642,
+      "clientW": 642,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 155,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "2",
+        "w": 155,
+        "h": 80,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 155,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      },
+      {
+        "n": "4",
+        "w": 155,
+        "h": 80,
+        "isCurrent": false,
+        "labelVisible": true
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 26,
+      "lineHeight": 26.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 136,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

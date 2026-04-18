@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "04-iphone-pro-max",
+    "w": 414,
+    "h": 896,
+    "label": "iPhone Pro Max"
+  },
+  "metrics": {
+    "vw": 414,
+    "vh": 896,
+    "docScrollW": 414,
+    "hOverflow": 0,
+    "shell": {
+      "w": 390,
+      "h": 881
+    },
+    "stepper": {
+      "scrollW": 328,
+      "clientW": 328,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 73,
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
+      },
+      {
+        "n": "2",
+        "w": 73,
+        "h": 91,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 73,
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
+      },
+      {
+        "n": "4",
+        "w": 73,
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 24,
+      "lineHeight": 23.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 12,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "viewport": {
+    "name": "03-iphone-13-mini",
+    "w": 375,
+    "h": 812,
+    "label": "iPhone 13 mini"
+  },
+  "metrics": {
+    "vw": 375,
+    "vh": 812,
+    "docScrollW": 375,
+    "hOverflow": 0,
+    "shell": {
+      "w": 359,
+      "h": 915
+    },
+    "stepper": {
+      "scrollW": 297,
+      "clientW": 297,
+      "overflow": false
+    },
+    "steps": [
+      {
+        "n": "1",
+        "w": 65,
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
+      },
+      {
+        "n": "2",
+        "w": 65,
+        "h": 91,
+        "isCurrent": true,
+        "labelVisible": true
+      },
+      {
+        "n": "3",
+        "w": 65,
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
+      },
+      {
+        "n": "4",
+        "w": 65,
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
+      }
+    ],
+    "touchTargets": [],
+    "titleWrap": {
+      "h": 24,
+      "lineHeight": 23.4,
+      "estimatedLines": 1
+    },
+    "navStuck": {
+      "bottom": 12,
+      "inViewport": true
+    },
+    "overflowingChildren": []
+  }
+}
