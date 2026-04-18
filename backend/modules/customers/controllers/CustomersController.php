@@ -381,6 +381,13 @@ class CustomersController extends Controller
 
             if ($valid) {
                 $transaction = \Yii::$app->db->beginTransaction();
+                // Initialize all flags to true so empty sub-arrays don't trip the
+                // commit check (caused production 500 — see issue from 2026-04-18).
+                $flag = false;
+                $addressFlag = true;
+                $phoneNumberflag = true;
+                $modelRealEstateFlag = true;
+                $customersDocumentflag = true;
                 try {
 
                     if ($flag = $model->save(false)) {
@@ -429,12 +436,12 @@ class CustomersController extends Controller
                             $modelCustomerDocument->customer_id = $model->id;
                             if (!($customersDocumentflag = ($modelCustomerDocument->save(false)))) {
                                 $transaction->rollBack();
-                                var_dump($modelCustomerDocument->getErrors());
+                                Yii::error('Customer document save failed: ' . print_r($modelCustomerDocument->getErrors(), true), __METHOD__);
                                 break;
                             }
                         }
                     }
-                    if ($flag && $addressFlag && $phoneNumberflag && $modelRealEstateFlag ) {
+                    if ($flag && $addressFlag && $phoneNumberflag && $modelRealEstateFlag && $customersDocumentflag) {
                         $transaction->commit();
 
                         // ═══ Link Smart Media uploads to the customer ═══

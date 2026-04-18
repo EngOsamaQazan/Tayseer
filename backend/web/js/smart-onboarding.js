@@ -694,14 +694,40 @@
 
         function matchDropdownByText(selector, text) {
             var $sel = $(selector);
-            var textLower = text.trim();
+            if (!$sel.length || text === undefined || text === null) return false;
+            var needle = String(text).trim();
+            // Empty needle would falsely match every option (because ''.indexOf('') === 0).
+            // Bail out so we don't overwrite a real selection with the empty prompt option.
+            if (needle === '') return false;
+
+            var matched = null;
+            // Pass 1 — exact match (case-insensitive, trimmed).
             $sel.find('option').each(function() {
+                var optVal = $(this).val();
+                if (optVal === '' || optVal === undefined) return; // skip prompt
                 var optText = $(this).text().trim();
-                if (optText === textLower || optText.indexOf(textLower) !== -1 || textLower.indexOf(optText) !== -1) {
-                    $sel.val($(this).val()).trigger('change');
+                if (optText && optText.localeCompare(needle, 'ar', { sensitivity: 'base' }) === 0) {
+                    matched = this;
                     return false;
                 }
             });
+            // Pass 2 — substring match (only if no exact match).
+            if (!matched) {
+                $sel.find('option').each(function() {
+                    var optVal = $(this).val();
+                    if (optVal === '' || optVal === undefined) return;
+                    var optText = $(this).text().trim();
+                    if (optText && (optText.indexOf(needle) !== -1 || needle.indexOf(optText) !== -1)) {
+                        matched = this;
+                        return false;
+                    }
+                });
+            }
+            if (matched) {
+                $sel.val($(matched).val()).trigger('change');
+                return true;
+            }
+            return false;
         }
 
         function matchJobByName(name) {
@@ -1384,20 +1410,56 @@
         {id: 'customers-do_have_any_property',  label: 'يملك عقارات'},
     ];
 
+    /**
+     * Read the *effective* value of a form field, resilient to:
+     *   • Select2 widgets (where original <select> is hidden but val() is still authoritative)
+     *   • Native <select> with prompt option (value === '')
+     *   • <input type="hidden"> companions (e.g. DepDrop hidden value field)
+     *   • Checkbox / radio groups
+     */
+    function readFieldValue(id) {
+        var $el = $('#' + id);
+        if (!$el.length) return '';
+        var el = $el[0];
+
+        if (el.type === 'checkbox') return el.checked ? (el.value || '1') : '';
+        if (el.type === 'radio') {
+            var name = el.name;
+            var checked = $('input[type="radio"][name="' + (name || '').replace(/"/g, '\\"') + '"]:checked');
+            return checked.length ? checked.val() : '';
+        }
+
+        var raw = $el.val();
+
+        // Select2 sometimes leaves stale display while underlying <select> has no
+        // matching <option>. Read selectedOptions to confirm.
+        if (el.tagName === 'SELECT') {
+            var sel = el.selectedOptions && el.selectedOptions[0];
+            if (sel && sel.value !== '') return sel.value;
+            // Fallback: trust raw if it's truthy and not the empty prompt
+            return (raw === null || raw === undefined) ? '' : String(raw);
+        }
+
+        return (raw === null || raw === undefined) ? String(raw || '') : String(raw);
+    }
+
     function validateBeforeSubmit() {
         var missing = [];
         var firstErrorStep = -1;
         REQUIRED_FIELDS.forEach(function(f) {
-            var el = document.getElementById(f.id);
-            if (!el) return;
-            var val = $(el).val();
-            if (val === null || val === undefined || val === '') {
+            var $el = $('#' + f.id);
+            if (!$el.length) return;
+            var val = readFieldValue(f.id).trim();
+            if (val === '') {
                 missing.push(f.label);
                 if (firstErrorStep < 0) {
-                    var $section = $(el).closest('.so-section');
+                    var $section = $el.closest('.so-section');
                     if ($section.length) firstErrorStep = parseInt($section.attr('data-step')) || 0;
                 }
-                $(el).closest('.form-group').addClass('has-error');
+                $el.closest('.form-group').addClass('has-error');
+            } else {
+                // Clear stale error styling if the field is now actually filled.
+                $el.closest('.form-group').removeClass('has-error');
             }
         });
         if (missing.length > 0) {
@@ -1649,6 +1711,12 @@
                 } else {
                     if (String(val) !== String(currentVal)) {
                         $(el).val(val);
+                        // Trigger change immediately so Select2 / dependent dropdowns
+                        // see the value before the user can interact (was 300ms later
+                        // → race that left fields visually filled but value-empty).
+                        if (el.tagName === 'SELECT') {
+                            $(el).trigger('change');
+                        }
                         restored++;
                     }
                 }
