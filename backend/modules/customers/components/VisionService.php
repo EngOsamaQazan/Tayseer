@@ -593,7 +593,7 @@ class VisionService
      * @param string $imagePath  Absolute path to image file
      * @return array|null  Extracted fields or null on failure
      */
-    public static function extractFromImage(string $imagePath): ?array
+    public static function extractFromImage(string $imagePath, ?string $sideHint = null): ?array
     {
         $startTime = microtime(true);
 
@@ -608,7 +608,7 @@ class VisionService
             $mimeType = $mimeMap[$ext] ?? 'image/jpeg';
 
             $token = self::getTokenForScope(self::SCOPE_GEMINI);
-            $prompt = self::buildImageExtractionPrompt();
+            $prompt = self::buildImageExtractionPrompt($sideHint);
 
             $requestParts = [
                 ['inline_data' => ['mime_type' => $mimeType, 'data' => $imageData]],
@@ -767,23 +767,57 @@ class VisionService
     /**
      * Build prompt for direct image reading (primary method).
      */
-    private static function buildImageExtractionPrompt(): string
+    private static function buildImageExtractionPrompt(?string $sideHint = null): string
     {
-        return <<<'PROMPT'
-أنت محلل وثائق متخصص في الوثائق الأردنية والعربية. اقرأ هذه الصورة واستخرج جميع البيانات الشخصية الظاهرة.
+        // ─── Side-specific guidance prepended to the base prompt ───
+        // The back of a Jordanian/Saudi/Egyptian ID has very different content
+        // (MRZ, card serial, sometimes address) than the front. Without an
+        // explicit hint Gemini occasionally returns an empty {} for back
+        // captures because it expects "personal data" and sees only an MRZ.
+        $sideBlock = '';
+        if ($sideHint === 'back') {
+            $sideBlock = <<<'BACK'
+═══ ملاحظة: الصورة هي **الوجه الخلفي** لبطاقة هوية ═══
+- الوجه الخلفي عادةً يحتوي على:
+  • MRZ (سطور بأحرف لاتينية كبيرة وأقواس < في أسفل البطاقة) — اقرأها واستخرج منها id_number و birth_date و sex إن أمكن
+  • رقم تسلسلي للبطاقة (document_number) — عادةً مطبوع كحروف وأرقام لاتينية
+  • أحياناً العنوان أو اسم الأم
+- ⚠️ المطلوب الأهم هنا هو **document_number** (الرقم التسلسلي للبطاقة)
+- إذا لم تجد نصاً واضحاً، **حاول قراءة الباركود/QR إن ظهر** واستخرج أي رقم تسلسلي منه
+- أرجع كل ما تجده ولو حقلاً واحداً — لا ترفض الاستجابة
+
+═══════════════════════════════════════════════════════
+
+
+BACK;
+        } elseif ($sideHint === 'front') {
+            $sideBlock = <<<'FRONT'
+═══ ملاحظة: الصورة هي **الوجه الأمامي** لبطاقة هوية ═══
+- الوجه الأمامي يحتوي على: الاسم الرباعي، الرقم الوطني، تاريخ الميلاد، الجنس، الجنسية، صورة شخصية
+- ركّز على استخراج هذه الحقول بدقة عالية
+
+═══════════════════════════════════════════════════════
+
+
+FRONT;
+        }
+
+        $base = <<<'PROMPT'
+أنت محلل وثائق متخصص في الوثائق الأردنية والعربية. اقرأ هذه الصورة واستخرج جميع البيانات الظاهرة.
 
 القواعد المهمة:
 - اقرأ النص العربي بدقة عالية — انتبه للأسماء جيداً (مثلاً "إسلام" وليس "السلام"، "حسنا" وليس "حسبنا")
 - أرجع فقط الحقول الموجودة فعلاً في الصورة — لا تخترع بيانات أبداً
-- إذا ظهرت MRZ (سطور بأحرف لاتينية كبيرة و < في أسفل الوثيقة)، استخدمها أيضاً لتأكيد البيانات
+- إذا ظهرت MRZ (سطور بأحرف لاتينية كبيرة و < في أسفل الوثيقة)، استخدمها أيضاً لتأكيد/استخراج البيانات
 - التواريخ بصيغة YYYY-MM-DD
 - الجنس: 0 = ذكر، 1 = أنثى
 - نوع الوثيقة: 0=هوية/بطاقة شخصية، 1=جواز سفر، 2=رخصة قيادة، 3=شهادة ميلاد، 4=شهادة تعيين عسكرية
 - الجهة المصدرة (للوثائق العسكرية فقط): army=القوات المسلحة، security=الأمن العام، intelligence=المخابرات العامة
 - الرقم الوطني الأردني = 10 أرقام بالضبط
 - رقم الوثيقة (بطاقة/جواز) = عادة حروف لاتينية وأرقام
+- ⚠️ مهم: حتى لو وجدت حقلاً واحداً فقط (مثل رقم تسلسلي على ظهر البطاقة) — أرجعه. لا ترفض الاستجابة بسبب نقص الحقول.
 
-أرجع JSON فقط بالحقول المتوفرة:
+أرجع JSON فقط بالحقول المتوفرة (يمكن أن يكون JSON واحد فقط من الحقول):
 {
   "name": "الاسم الرباعي الكامل بالعربي كما هو مكتوب",
   "name_en": "Full name in English if visible",
@@ -794,14 +828,18 @@ class VisionService
   "mother_name": "اسم الأم الكامل",
   "nationality_text": "الجنسية",
   "document_type": "0",
-  "document_number": "رقم البطاقة/الوثيقة",
+  "document_number": "رقم البطاقة/الوثيقة (الرقم التسلسلي)",
   "military_number": "الرقم العسكري أو الوظيفي",
   "rank": "الرتبة العسكرية",
   "issuing_body": "army أو security أو intelligence",
   "certificate_number": "رقم الشهادة",
-  "address": "العنوان الكامل"
+  "address": "العنوان الكامل",
+  "issue_date": "YYYY-MM-DD",
+  "expiry_date": "YYYY-MM-DD"
 }
 PROMPT;
+
+        return $sideBlock . $base;
     }
 
     /**

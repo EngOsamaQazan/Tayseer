@@ -415,6 +415,38 @@ html.cwcam-locked body {
 }
 .cwcam__btn--ghost:hover  { background: rgba(255, 255, 255, 0.22); }
 
+.cwcam__btn--success {
+    background: #16a34a;
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
+}
+.cwcam__btn--success:hover { background: #15803d; }
+
+/* Pulse effect to draw attention to the "skip" button after repeated
+   back-side capture failures — fades after a few seconds so it doesn't
+   become annoying. */
+.cwcam__btn--pulse {
+    animation: cwcam-skip-pulse 1.6s ease-out 4;
+}
+@keyframes cwcam-skip-pulse {
+    0%, 100% { box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35); }
+    50%      { box-shadow: 0 4px 20px rgba(22, 163, 74, 0.85), 0 0 0 6px rgba(22, 163, 74, 0.2); }
+}
+
+/* ── Success overlay ─────────────────────────────────────────────────── */
+.cwcam__success-icon {
+    font-size: 64px;
+    color: #22c55e;
+    animation: cwcam-success-pop 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes cwcam-success-pop {
+    0%   { transform: scale(0);   opacity: 0; }
+    100% { transform: scale(1);   opacity: 1; }
+}
+.cwcam__overlay--success {
+    background: rgba(0, 0, 0, 0.92);
+}
+
 /* ─── Hidden analysis canvas ───────────────────────────────────────────── */
 .cwcam__hidden-canvas {
     position: absolute;
@@ -463,6 +495,8 @@ html.cwcam-locked body {
     }
     .cwcam__corner { transition: none; }
     .cwcam__progress-fill { transition: none; }
+    .cwcam__success-icon  { animation: none; }
+    .cwcam__btn--pulse    { animation: none; }
 }
 
 /* ─── Forced-colors mode ───────────────────────────────────────────────── */

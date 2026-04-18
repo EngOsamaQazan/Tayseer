@@ -398,6 +398,12 @@
             + '      <p class="cwcam__overlay-title">جارٍ تحليل الهوية…</p>'
             + '    </div>'
 
+            + '    <div class="cwcam__overlay cwcam__overlay--success" hidden'
+            + '         data-cwcam-success aria-live="polite">'
+            + '      <i class="fa fa-check-circle cwcam__success-icon" aria-hidden="true"></i>'
+            + '      <p class="cwcam__overlay-title" data-cwcam-success-msg>تمّ بنجاح</p>'
+            + '    </div>'
+
             + '    <div class="cwcam__overlay cwcam__overlay--error" hidden'
             + '         data-cwcam-error role="alert">'
             + '      <i class="fa fa-exclamation-triangle cwcam__error-icon" aria-hidden="true"></i>'
@@ -434,6 +440,12 @@
             + '              data-cwcam-fallback>'
             + '        <i class="fa fa-upload" aria-hidden="true"></i>'
             + '        ارفع ملفاً بدلاً'
+            + '      </button>'
+            + '      <button type="button" class="cwcam__btn cwcam__btn--success"'
+            + '              hidden data-cwcam-skip-back'
+            + '              title="إنهاء بدون تصوير الوجه الخلفي">'
+            + '        <i class="fa fa-check" aria-hidden="true"></i>'
+            + '        تخطّي وإنهاء'
             + '      </button>'
             + '    </div>'
             + '  </div>'
@@ -480,6 +492,18 @@
         state.$root.on('click', '[data-cwcam-retry]', function () {
             hideOverlay('error');
             startQualityLoop();
+        });
+
+        // ── "Skip back" — graceful escape on the back-side step. ──
+        // The back of the ID is OPTIONAL (front already provided everything
+        // we need). If the user can't get a clean capture (camera glare,
+        // mirror finish, etc.) we let them finish the wizard without it.
+        state.$root.on('click', '[data-cwcam-skip-back]', function () {
+            announce('تمّ تخطّي الوجه الخلفي.');
+            if (state.opts.onComplete) {
+                try { state.opts.onComplete(state.collectedFields); } catch (_) {}
+            }
+            CWCamera.close();
         });
     }
 
@@ -807,25 +831,52 @@
         if (nextAction === 'capture_back') {
             // Front done; transition to back.
             state.currentSide = 'back';
+            state.backFailures = 0;
             state.$root.find('[data-cwcam-title-text]').text('مسح الهوية — الوجه الخلفي');
             state.$root.find('[data-cwcam-side-pill]').text('2 / 2');
+            // Reveal the "skip back" button — back side is optional, so we
+            // give the user an immediate escape hatch from the moment they
+            // arrive (no need to wait for failures).
+            state.$root.find('[data-cwcam-skip-back]').prop('hidden', false);
             announce('تم التقاط الوجه الأمامي. اقلب الهوية الآن.');
             showFlipPrompt();
         } else {
-            // All done.
-            announce('تمّ مسح الهوية بنجاح.');
+            // All done — show a brief success overlay so the user sees the
+            // green checkmark instead of a confusing dark frame for ~500ms.
+            // If the backend included a `note` (e.g. "back returned no extra
+            // data, that's fine"), surface it here instead of generic text.
+            var successMsg = resp.note || 'تمّ المسح بنجاح';
+            announce(successMsg);
+            showSuccess(successMsg);
             if (state.opts.onComplete) {
                 try { state.opts.onComplete(state.collectedFields); } catch (_) {}
             }
-            // Brief success delay before closing so the user sees the green check.
-            setTimeout(CWCamera.close, 500);
+            // Slightly longer when there's a note so the user can read it.
+            setTimeout(CWCamera.close, resp.note ? 1800 : 900);
         }
     }
 
     function handleUploadFailure(msg) {
+        // Track back-side failures so we can surface the "skip" hint more
+        // prominently after repeated retries (matches the user's pain
+        // signal: "tried 10 times and couldn't capture the back").
+        if (state.currentSide === 'back') {
+            state.backFailures = (state.backFailures || 0) + 1;
+            if (state.backFailures >= 2) {
+                msg += '\n\nالوجه الخلفي اختياري — يمكنك "تخطّي وإنهاء" أدناه.';
+                state.$root.find('[data-cwcam-skip-back]')
+                    .prop('hidden', false)
+                    .addClass('cwcam__btn--pulse');
+            }
+        }
         showError(msg);
         state.captureLocked = false;
         // Don't auto-resume; require user confirmation via Retry button.
+    }
+
+    function showSuccess(msg) {
+        state.$root.find('[data-cwcam-success-msg]').text(msg || 'تمّ بنجاح');
+        showOverlay('success');
     }
 
     function showFlipPrompt() {

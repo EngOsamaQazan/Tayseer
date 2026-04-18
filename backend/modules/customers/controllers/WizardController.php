@@ -338,19 +338,20 @@ class WizardController extends Controller
         Yii::$app->session->close();
 
         try {
-            $extracted = VisionService::extractFromImage($tmpPath);
-            if (!is_array($extracted) || empty($extracted)) {
-                return [
-                    'ok'    => false,
-                    'error' => 'لم يتمكّن النظام من قراءة الوثيقة — جرّب صورة أوضح.',
-                ];
-            }
+            // Pass the side hint to Gemini so it tunes the prompt accordingly
+            // (back-of-ID gets explicit MRZ + document_number guidance).
+            $sideHint = ($side === 'auto') ? null : $side;
+            $extracted = VisionService::extractFromImage($tmpPath, $sideHint);
+            $extracted = is_array($extracted) ? $extracted : [];
 
             // ── Detect which side this actually is (front vs back). ──
-            // We trust three signals from the Gemini extraction:
-            //   • presence of `name` + `id_number`        → strong "front" signal
-            //   • presence of `document_number` only      → strong "back" signal
-            //   • complete absence of any usable fields   → likely a bad image
+            // Signals:
+            //   • presence of `name` + `id_number`        → strong "front"
+            //   • presence of `document_number` only      → strong "back"
+            //   • completely empty                         → likely a back side
+            //                                                that Gemini saw as
+            //                                                "no personal data"
+            //                                                or a blurry image
             $hasName     = !empty($extracted['name']);
             $hasIdNumber = !empty($extracted['id_number']);
             $hasDocNum   = !empty($extracted['document_number']);
@@ -359,7 +360,44 @@ class WizardController extends Controller
             elseif ($hasDocNum && !$hasName)   $detectedSide = 'back';
             else                                $detectedSide = 'unknown';
 
-            // Reject mismatches with a friendly hint so the camera can re-prompt.
+            // ── Empty-extraction handling ──
+            // Behavior diverges by what the user was asked to capture:
+            //
+            //   • Asking for FRONT but got nothing → it's almost certainly a
+            //     bad photo (blurry, wrong angle, glare). Tell the user to
+            //     retry — we can't proceed without front-side data.
+            //
+            //   • Asking for BACK but got nothing → this is fine! The front
+            //     already provided everything required. The back is mostly
+            //     for record-keeping (document_number) and is OPTIONAL.
+            //     We accept the capture as "done" so the user isn't stuck
+            //     in a 10-retry loop like the support report described.
+            if (empty($extracted)) {
+                if ($side === 'back') {
+                    return [
+                        'ok'             => true,
+                        'side'           => 'back',
+                        'side_detected'  => 'unknown',
+                        'next_action'    => 'done',
+                        'fields'         => [],
+                        'unmapped'       => [],
+                        'raw'            => [],
+                        'note'           => 'تم تسجيل الوجه الخلفي. لم تُستخرج بيانات إضافية — البيانات من الوجه الأمامي كافية.',
+                        'meta'           => [
+                            'source'     => 'gemini-vision',
+                            'elapsed_ms' => (int)((microtime(true) - $startedAt) * 1000),
+                        ],
+                    ];
+                }
+                return [
+                    'ok'    => false,
+                    'error' => 'لم يتمكّن النظام من قراءة الوثيقة — جرّب صورة أوضح بإضاءة جيدة وبدون انعكاسات.',
+                ];
+            }
+
+            // Reject obvious mismatches with a friendly hint so the camera can re-prompt.
+            // (We only do this when extraction is non-empty AND the detection is
+            // strongly the wrong side — not for "unknown" which can be either.)
             if ($side === 'front' && $detectedSide === 'back') {
                 return [
                     'ok'             => false,
@@ -380,16 +418,10 @@ class WizardController extends Controller
             $lookups = $this->loadLookups();
 
             // ── Filter the extraction by the side we're actually saving. ──
-            // Back-of-ID has limited useful info: only the card/document number
-            // and possibly a re-validation of id_number from the MRZ. We strip
-            // personal fields so we never overwrite values the user/front-side
-            // already established.
             $filtered = $this->filterScanBySide($extracted, $side, $detectedSide);
             $mapped   = $this->mapScanToWizardFields($filtered, $lookups);
 
-            // Tell the client what to do next:
-            //   • front captured → ask for back
-            //   • back captured (or auto/unknown) → done
+            // Tell the client what to do next.
             $nextAction = ($side === 'front' || ($side === 'auto' && $detectedSide === 'front'))
                 ? 'capture_back'
                 : 'done';
