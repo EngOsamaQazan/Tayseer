@@ -291,13 +291,23 @@
                   || addr.locality       || '';
         var street = addr.road   || addr.pedestrian    || addr.footway || '';
 
+        // Validate the source postcode before trusting it. Google's
+        // geocoder occasionally returns the country dialing code
+        // ("00962" / "962") in `postal_code` for points that have no
+        // real Jordanian post code — that ends up displayed as the
+        // postcode, which confuses staff. Jordanian postal codes are
+        // strictly 5 digits in the 11000-77999 band.
+        var rawPostal = (addr.postcode || '') + '';
+        var srcPostal = /^\d{5}$/.test(rawPostal) ? rawPostal : '';
+
         var mapping = {
             city:   city,
             area:   area,
             street: street,
             // Nominatim is unreliable on Jordanian postcodes — fall back
-            // to our local table when the source provided neither.
-            postal: addr.postcode || lookupPostal(city, area),
+            // to our local table when the source provided neither (or
+            // the source provided junk like "00962").
+            postal: srcPostal || lookupPostal(city, area),
         };
         if (includeBuilding) {
             mapping.building = addr.house_number || '';
@@ -620,12 +630,13 @@
                     // directly and skip the reverse-geocode round-trip —
                     // otherwise let setMarker() trigger reverseGeocode as a
                     // fallback for sources like Photon that don't.
-                    if (r.address) {
-                        setMarker(lat, lng, { geocode: false });
-                        fillAddressFields($fieldsRoot, r.address, { force: true });
-                    } else {
-                        setMarker(lat, lng);
-                    }
+                    // Always trigger Nominatim reverseGeocode (default
+                    // setMarker behaviour) — legacy wizard parity. Google's
+                    // address_components are often less detailed than
+                    // Nominatim for Jordanian sub-localities (no suburb,
+                    // wrong postcode, etc.), so we ignore r.address even
+                    // when present and let Nominatim be the source of truth.
+                    setMarker(lat, lng);
                     $resultsBox.empty();
                     $searchInput.val(r.name || r.addr || '');
                 });
@@ -895,24 +906,17 @@
 
                     pac.addEventListener('gmp-select', function (e) {
                         var place = e.placePrediction.toPlace();
+                        // Don't fetch addressComponents — legacy wizard
+                        // parity. We always let Nominatim reverseGeocode
+                        // populate the address grid because Google's
+                        // components are often less detailed than Nominatim
+                        // for Jordanian sub-localities (no suburb, wrong
+                        // postcode like "00962", side-street routing).
                         place.fetchFields({
-                            fields: ['displayName', 'formattedAddress', 'location', 'addressComponents']
+                            fields: ['displayName', 'formattedAddress', 'location']
                         }).then(function () {
                             if (!place.location) return;
-                            // setMarker(geocode:false) — we already have the
-                            // structured address from Google, no need to
-                            // re-resolve via Nominatim and risk overwriting
-                            // user-typed fields with stale data.
-                            setMarker(place.location.lat(), place.location.lng(), { fly: true, geocode: false });
-                            var addr = googleComponentsToAddress(place.addressComponents || []);
-                            if (addr) fillAddressFields($fieldsRoot, addr, { force: true });
-                            // Fall back to Nominatim only if Google didn't
-                            // give us a usable city/area pair (rare but
-                            // happens for points-of-interest in unmapped
-                            // sublocalities).
-                            if (!addr || (!addr.city && !addr.suburb)) {
-                                reverseGeocode(place.location.lat(), place.location.lng());
-                            }
+                            setMarker(place.location.lat(), place.location.lng(), { fly: true });
                         });
                     });
 
@@ -924,8 +928,12 @@
             }
 
             if (google.maps.places.Autocomplete && $searchInput.length) {
+                // Same legacy-parity rule as the modern PlaceAutocompleteElement
+                // path above: we don't ask for address_components — Nominatim
+                // reverse-geocode (triggered by setMarker's default) is the
+                // single source of truth for the grid fields.
                 var ac = new google.maps.places.Autocomplete($searchInput[0], {
-                    fields: ['geometry', 'name', 'formatted_address', 'address_components']
+                    fields: ['geometry', 'name', 'formatted_address']
                 });
                 ac.setBounds(new google.maps.LatLngBounds(
                     new google.maps.LatLng(JORDAN_BOUNDS.south, JORDAN_BOUNDS.west),
@@ -934,16 +942,9 @@
                 ac.addListener('place_changed', function () {
                     var place = ac.getPlace();
                     if (!place || !place.geometry) return;
-                    setMarker(place.geometry.location.lat(), place.geometry.location.lng(), { fly: true, geocode: false });
+                    setMarker(place.geometry.location.lat(), place.geometry.location.lng(), { fly: true });
                     $searchInput.val(place.name || place.formatted_address || '');
                     $resultsBox.empty();
-                    // Legacy API uses snake_case `address_components`; our
-                    // helper handles both shapes.
-                    var addr = googleComponentsToAddress(place.address_components || []);
-                    if (addr) fillAddressFields($fieldsRoot, addr, { force: true });
-                    if (!addr || (!addr.city && !addr.suburb)) {
-                        reverseGeocode(place.geometry.location.lat(), place.geometry.location.lng());
-                    }
                 });
                 googleAutocompleteActive = true;
                 return true;
