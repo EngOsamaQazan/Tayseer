@@ -1,22 +1,436 @@
 <?php
-/** @var array $payload @var int $step */
+
+use yii\helpers\Html;
+use yii\helpers\ArrayHelper;
+use yii\helpers\Url;
+use backend\models\Media;
+
+/**
+ * Step 4 — Review & finalize.
+ *
+ * Mental model:
+ *   "Show the user EVERYTHING they entered in one scannable page, surface
+ *    risk-relevant data they should sanity-check, then offer one big
+ *    primary CTA to commit the customer."
+ *
+ * Sections:
+ *   • Hero                — name, ID number, status pill
+ *   • Identity recap      — Step 1 fields, with edit-jump buttons
+ *   • Employment recap    — Step 2 fields
+ *   • Guarantors recap    — Step 3 dynamic rows
+ *   • Address recap       — Step 3 address
+ *   • Real-estate recap   — Step 3 (only if customer owns property)
+ *   • Documents hub       — scan thumbnails + missing-docs hint
+ *   • Risk assessment     — quick badge based on data completeness + signals
+ *   • Final CTA           — "اعتماد العميل" button
+ *
+ * @var array $payload
+ * @var int   $step
+ * @var array $lookups   ['cities','citizens','hearAboutUs','jobs','banks','cousins']
+ */
+
+$cust1 = $payload['step1']['Customers'] ?? [];
+$cust2 = $payload['step2']['Customers'] ?? [];
+$cust3 = $payload['step3']['Customers'] ?? [];
+$cust  = array_merge((array)$cust1, (array)$cust2, (array)$cust3);
+
+$address    = $payload['step3']['address']    ?? [];
+$guarantors = $payload['step3']['guarantors'] ?? [];
+if (!is_array($address))    $address = [];
+if (!is_array($guarantors)) $guarantors = [];
+
+$scanInfo = $payload['_scan'] ?? [];
+
+// ── Lookup name helpers (id → display label). ──
+$cityMap   = ArrayHelper::map($lookups['cities']   ?? [], 'id', 'name');
+$citizenMap= ArrayHelper::map($lookups['citizens'] ?? [], 'id', 'name');
+$hearMap   = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
+$jobMap    = ArrayHelper::map($lookups['jobs']     ?? [], 'id', 'name');
+$bankMap   = ArrayHelper::map($lookups['banks']    ?? [], 'id', 'name');
+
+$lookupName = function ($id, array $map) {
+    if ($id === null || $id === '' || $id === 0 || $id === '0') return null;
+    return $map[$id] ?? null;
+};
+
+// Normalize a value for display: returns either the string or a
+// "—" placeholder so empty cells are still readable.
+$display = function ($v) {
+    $v = is_scalar($v) ? trim((string)$v) : '';
+    return $v === '' ? '—' : $v;
+};
+
+$displayBool = function ($v) {
+    if ($v === '' || $v === null) return '—';
+    return ((string)$v === '1') ? 'نعم' : 'لا';
+};
+
+$sexLabels = ['1' => 'ذكر', '2' => 'أنثى'];
+$sexLabel  = $cust['sex'] !== '' && isset($sexLabels[(string)($cust['sex'] ?? '')])
+    ? $sexLabels[(string)$cust['sex']]
+    : '—';
+
+// ── Resolve scan media (front/back). ──
+$scanFront = null;
+$scanBack  = null;
+$scanImageIds = $scanInfo['images'] ?? [];
+if (is_array($scanImageIds)) {
+    if (!empty($scanImageIds['front'])) {
+        try { $scanFront = Media::findOne((int)$scanImageIds['front']); } catch (\Throwable $e) {}
+    }
+    if (!empty($scanImageIds['back'])) {
+        try { $scanBack = Media::findOne((int)$scanImageIds['back']); } catch (\Throwable $e) {}
+    }
+}
+
+// ── Risk assessment (lightweight client-visible signal). ──
+// Score components — each "miss" adds risk weight. Capped at 100.
+$riskScore = 0;
+$riskReasons = [];
+if (empty($cust['id_number']))          { $riskScore += 25; $riskReasons[] = 'رقم الهوية ناقص'; }
+if (empty($cust['phone_number']))       { $riskScore += 15; $riskReasons[] = 'رقم الهاتف ناقص'; }
+if (empty($cust['total_salary']))       { $riskScore += 20; $riskReasons[] = 'الراتب غير محدد'; }
+if (empty($cust['job_title']))          { $riskScore += 15; $riskReasons[] = 'جهة العمل غير محددة'; }
+if (count(array_filter($guarantors, function ($g) {
+        return is_array($g) && trim((string)($g['owner_name'] ?? '')) !== '';
+    })) < 2) {
+    $riskScore += 15; $riskReasons[] = 'يُفضّل وجود معرّفَين على الأقل';
+}
+if (!$scanFront && !$scanBack) {
+    $riskScore += 10; $riskReasons[] = 'لم تُرفع صورة الهوية';
+}
+$riskScore = min(100, $riskScore);
+
+if ($riskScore <= 20)      { $riskBand = ['label' => 'منخفض', 'class' => 'cw-risk--low',    'icon' => 'fa-shield', 'tone' => 'success']; }
+elseif ($riskScore <= 50)  { $riskBand = ['label' => 'متوسط', 'class' => 'cw-risk--medium', 'icon' => 'fa-exclamation-circle', 'tone' => 'warning']; }
+else                       { $riskBand = ['label' => 'مرتفع', 'class' => 'cw-risk--high',   'icon' => 'fa-exclamation-triangle', 'tone' => 'error']; }
+
+// ── Counts for the hero pills. ──
+$guarantorCount = count(array_filter($guarantors, function ($g) {
+    return is_array($g) && trim((string)($g['owner_name'] ?? '')) !== '';
+}));
+$docCount = ($scanFront ? 1 : 0) + ($scanBack ? 1 : 0);
+
+$ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
 ?>
-<div class="cw-card">
-    <div class="cw-card__header">
-        <h3 class="cw-card__title">
-            <i class="fa fa-check-circle" aria-hidden="true"></i>
-            المراجعة والاعتماد
-        </h3>
-        <span class="cw-pill cw-pill--info">
-            <i class="fa fa-info-circle" aria-hidden="true"></i>
-            <span>الخطوة الأخيرة</span>
-        </span>
-    </div>
-    <div class="cw-card__body">
-        <div class="cw-placeholder">
-            <div class="cw-placeholder__icon"><i class="fa fa-clipboard" aria-hidden="true"></i></div>
-            <div class="cw-placeholder__title">قيد البناء — المراجعة النهائية والاعتماد</div>
-            <div>سيشمل هذا القسم: ملخص بصري لكل البيانات السابقة، مركز رفع المستندات (الهوية، إثبات الراتب، إلخ)، نتيجة تقييم المخاطر، وزر "اعتماد العميل".</div>
+
+<div class="cw-card cw-review">
+
+    <!-- ═══════════════ HERO ═══════════════ -->
+    <div class="cw-review__hero">
+        <div class="cw-review__hero-main">
+            <div class="cw-review__avatar" aria-hidden="true">
+                <i class="fa fa-user-circle-o"></i>
+            </div>
+            <div class="cw-review__hero-text">
+                <div class="cw-review__hero-name"><?= Html::encode($display($cust['name'] ?? '')) ?></div>
+                <div class="cw-review__hero-meta">
+                    <?php if (!empty($cust['id_number'])): ?>
+                        <span class="cw-review__chip">
+                            <i class="fa fa-id-card-o" aria-hidden="true"></i>
+                            <span>هوية: <?= Html::encode($cust['id_number']) ?></span>
+                        </span>
+                    <?php endif ?>
+                    <?php if (!empty($cust['phone_number'])): ?>
+                        <span class="cw-review__chip">
+                            <i class="fa fa-phone" aria-hidden="true"></i>
+                            <span dir="ltr"><?= Html::encode($cust['phone_number']) ?></span>
+                        </span>
+                    <?php endif ?>
+                    <?php if (!empty($cust['birth_date'])): ?>
+                        <span class="cw-review__chip">
+                            <i class="fa fa-birthday-cake" aria-hidden="true"></i>
+                            <span><?= Html::encode($cust['birth_date']) ?></span>
+                        </span>
+                    <?php endif ?>
+                </div>
+            </div>
         </div>
+        <div class="cw-review__hero-stats">
+            <div class="cw-review__stat">
+                <div class="cw-review__stat-num"><?= $guarantorCount ?></div>
+                <div class="cw-review__stat-lbl">معرّفون</div>
+            </div>
+            <div class="cw-review__stat">
+                <div class="cw-review__stat-num"><?= $docCount ?></div>
+                <div class="cw-review__stat-lbl">مستند</div>
+            </div>
+            <div class="cw-review__stat cw-review__stat--risk <?= $riskBand['class'] ?>">
+                <div class="cw-review__stat-num"><?= $riskScore ?>%</div>
+                <div class="cw-review__stat-lbl"><i class="fa <?= $riskBand['icon'] ?>" aria-hidden="true"></i> <?= $riskBand['label'] ?></div>
+            </div>
+        </div>
+    </div>
+
+    <p class="cw-card__hint cw-card__hint--success">
+        <i class="fa fa-info-circle" aria-hidden="true"></i>
+        راجع البيانات أدناه. يمكنك العودة إلى أي خطوة بالنقر على عنوانها أو زر "تعديل" بجانبها، ثم العودة هنا والضغط على "اعتماد العميل" للحفظ النهائي.
+    </p>
+
+    <div class="cw-card__body">
+
+        <!-- ═══════════════ Identity recap ═══════════════ -->
+        <div class="cw-review-section">
+            <div class="cw-review-section__head">
+                <h4 class="cw-review-section__title">
+                    <i class="fa fa-user" aria-hidden="true"></i>
+                    التعريف بالعميل
+                </h4>
+                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="1">
+                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                    <span>تعديل</span>
+                </button>
+            </div>
+            <dl class="cw-review-list">
+                <div class="cw-review-list__row"><dt>الاسم الكامل</dt><dd><?= Html::encode($display($cust['name'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الرقم الوطني</dt><dd dir="ltr"><?= Html::encode($display($cust['id_number'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الجنسية</dt><dd><?= Html::encode($display($lookupName($cust['citizen_id'] ?? null, $citizenMap))) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الجنس</dt><dd><?= Html::encode($sexLabel) ?></dd></div>
+                <div class="cw-review-list__row"><dt>تاريخ الميلاد</dt><dd dir="ltr"><?= Html::encode($display($cust['birth_date'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>مكان الولادة</dt><dd><?= Html::encode($display($lookupName($cust['birth_place'] ?? null, $cityMap))) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الحالة الاجتماعية</dt><dd><?= Html::encode($display($cust['social_status'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>عدد الأبناء</dt><dd><?= Html::encode($display($cust['children_count'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>هاتف</dt><dd dir="ltr"><?= Html::encode($display($cust['phone_number'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>هاتف بديل</dt><dd dir="ltr"><?= Html::encode($display($cust['secondary_phone'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>كيف تعرّفت علينا</dt><dd><?= Html::encode($display($lookupName($cust['hear_about_us'] ?? null, $hearMap))) ?></dd></div>
+            </dl>
+        </div>
+
+        <!-- ═══════════════ Employment recap ═══════════════ -->
+        <div class="cw-review-section">
+            <div class="cw-review-section__head">
+                <h4 class="cw-review-section__title">
+                    <i class="fa fa-briefcase" aria-hidden="true"></i>
+                    العمل والدخل
+                </h4>
+                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="2">
+                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                    <span>تعديل</span>
+                </button>
+            </div>
+            <dl class="cw-review-list">
+                <div class="cw-review-list__row"><dt>جهة العمل</dt><dd><?= Html::encode($display($lookupName($cust['job_title'] ?? null, $jobMap))) ?></dd></div>
+                <div class="cw-review-list__row"><dt>المسمى الوظيفي / الرقم</dt><dd dir="ltr"><?= Html::encode($display($cust['job_number'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>إجمالي الراتب</dt><dd><?= Html::encode($display($cust['total_salary'] ?? '')) ?> <small class="cw-review-list__unit">د.أ</small></dd></div>
+                <div class="cw-review-list__row"><dt>تاريخ بدء العمل</dt><dd dir="ltr"><?= Html::encode($display($cust['date_of_query'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>مشترك بالضمان</dt><dd><?= Html::encode($displayBool($cust['is_social_security'] ?? '')) ?></dd></div>
+                <?php if ((string)($cust['is_social_security'] ?? '') === '1'): ?>
+                    <div class="cw-review-list__row"><dt>رقم اشتراك الضمان</dt><dd dir="ltr"><?= Html::encode($display($cust['social_security_number'] ?? '')) ?></dd></div>
+                <?php endif ?>
+                <div class="cw-review-list__row"><dt>يستلم راتب تقاعد/ضمان</dt><dd><?= Html::encode($displayBool($cust['has_social_security_salary'] ?? '')) ?></dd></div>
+                <?php if ((string)($cust['has_social_security_salary'] ?? '') === '1'): ?>
+                    <div class="cw-review-list__row"><dt>إجمالي دخل التقاعد</dt><dd><?= Html::encode($display($cust['total_retirement_income'] ?? '')) ?> <small class="cw-review-list__unit">د.أ</small></dd></div>
+                <?php endif ?>
+                <div class="cw-review-list__row"><dt>البنك</dt><dd><?= Html::encode($display($lookupName($cust['bank_name'] ?? null, $bankMap))) ?></dd></div>
+                <div class="cw-review-list__row"><dt>رقم الحساب البنكي</dt><dd dir="ltr"><?= Html::encode($display($cust['bank_account_number'] ?? '')) ?></dd></div>
+                <?php if (!empty($cust['iban_number'])): ?>
+                    <div class="cw-review-list__row"><dt>IBAN</dt><dd dir="ltr"><?= Html::encode($cust['iban_number']) ?></dd></div>
+                <?php endif ?>
+            </dl>
+        </div>
+
+        <!-- ═══════════════ Guarantors recap ═══════════════ -->
+        <div class="cw-review-section">
+            <div class="cw-review-section__head">
+                <h4 class="cw-review-section__title">
+                    <i class="fa fa-address-book" aria-hidden="true"></i>
+                    المعرّفون <span class="cw-review-section__count">(<?= $guarantorCount ?>)</span>
+                </h4>
+                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="3">
+                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                    <span>تعديل</span>
+                </button>
+            </div>
+
+            <?php if ($guarantorCount === 0): ?>
+                <div class="cw-empty">
+                    <i class="fa fa-info-circle" aria-hidden="true"></i>
+                    لم تتم إضافة أي معرّف. عُد إلى الخطوة 3 لإضافة معرّف واحد على الأقل.
+                </div>
+            <?php else: ?>
+                <div class="cw-review-cards">
+                    <?php foreach ($guarantors as $g): ?>
+                        <?php if (!is_array($g) || trim((string)($g['owner_name'] ?? '')) === '') continue; ?>
+                        <div class="cw-review-card">
+                            <div class="cw-review-card__head">
+                                <div class="cw-review-card__title"><?= Html::encode($g['owner_name'] ?? '') ?></div>
+                                <?php if (!empty($g['phone_number_owner'])): ?>
+                                    <span class="cw-review-card__chip"><?= Html::encode($g['phone_number_owner']) ?></span>
+                                <?php endif ?>
+                            </div>
+                            <?php if (!empty($g['phone_number'])): ?>
+                                <div class="cw-review-card__row" dir="ltr">
+                                    <i class="fa fa-phone" aria-hidden="true"></i>
+                                    <span><?= Html::encode($g['phone_number']) ?></span>
+                                </div>
+                            <?php endif ?>
+                            <?php if (!empty($g['fb_account'])): ?>
+                                <div class="cw-review-card__row" dir="ltr">
+                                    <i class="fa fa-facebook-square" aria-hidden="true"></i>
+                                    <span><?= Html::encode($g['fb_account']) ?></span>
+                                </div>
+                            <?php endif ?>
+                        </div>
+                    <?php endforeach ?>
+                </div>
+            <?php endif ?>
+        </div>
+
+        <!-- ═══════════════ Address recap ═══════════════ -->
+        <div class="cw-review-section">
+            <div class="cw-review-section__head">
+                <h4 class="cw-review-section__title">
+                    <i class="fa fa-map-marker" aria-hidden="true"></i>
+                    العنوان الأساسي
+                </h4>
+                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="3">
+                    <i class="fa fa-pencil" aria-hidden="true"></i>
+                    <span>تعديل</span>
+                </button>
+            </div>
+            <dl class="cw-review-list">
+                <div class="cw-review-list__row"><dt>المدينة</dt><dd><?= Html::encode($display($address['address_city'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>المنطقة</dt><dd><?= Html::encode($display($address['address_area'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>الشارع</dt><dd><?= Html::encode($display($address['address_street'] ?? '')) ?></dd></div>
+                <div class="cw-review-list__row"><dt>المبنى / الطابق</dt><dd><?= Html::encode($display($address['address_building'] ?? '')) ?></dd></div>
+                <?php if (!empty($address['postal_code'])): ?>
+                    <div class="cw-review-list__row"><dt>الرمز البريدي</dt><dd dir="ltr"><?= Html::encode($address['postal_code']) ?></dd></div>
+                <?php endif ?>
+                <?php if (!empty($address['address'])): ?>
+                    <div class="cw-review-list__row"><dt>ملاحظات</dt><dd><?= Html::encode($address['address']) ?></dd></div>
+                <?php endif ?>
+            </dl>
+        </div>
+
+        <!-- ═══════════════ Real-estate recap (only if owns) ═══════════════ -->
+        <?php if ($ownsProp): ?>
+            <div class="cw-review-section">
+                <div class="cw-review-section__head">
+                    <h4 class="cw-review-section__title">
+                        <i class="fa fa-home" aria-hidden="true"></i>
+                        العقارات
+                    </h4>
+                    <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="3">
+                        <i class="fa fa-pencil" aria-hidden="true"></i>
+                        <span>تعديل</span>
+                    </button>
+                </div>
+                <dl class="cw-review-list">
+                    <div class="cw-review-list__row"><dt>اسم/نوع العقار</dt><dd><?= Html::encode($display($cust['property_name'] ?? '')) ?></dd></div>
+                    <div class="cw-review-list__row"><dt>رقم العقار</dt><dd dir="ltr"><?= Html::encode($display($cust['property_number'] ?? '')) ?></dd></div>
+                </dl>
+            </div>
+        <?php endif ?>
+
+        <!-- ═══════════════ Documents hub ═══════════════ -->
+        <div class="cw-review-section">
+            <div class="cw-review-section__head">
+                <h4 class="cw-review-section__title">
+                    <i class="fa fa-folder-open" aria-hidden="true"></i>
+                    مستندات العميل
+                </h4>
+                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-step="1">
+                    <i class="fa fa-upload" aria-hidden="true"></i>
+                    <span>إضافة/تعديل</span>
+                </button>
+            </div>
+
+            <div class="cw-review-docs">
+                <?php
+                $docTiles = [
+                    ['key' => 'front', 'media' => $scanFront, 'label' => 'وجه الهوية'],
+                    ['key' => 'back',  'media' => $scanBack,  'label' => 'ظهر الهوية'],
+                ];
+                foreach ($docTiles as $tile):
+                    $media = $tile['media'];
+                    if ($media):
+                        $imgUrl = method_exists($media, 'getUrl') ? $media->getUrl() : '';
+                ?>
+                    <a href="<?= Html::encode($imgUrl) ?>" target="_blank" rel="noopener" class="cw-review-doc cw-review-doc--filled">
+                        <div class="cw-review-doc__thumb">
+                            <?php if ($imgUrl): ?>
+                                <img src="<?= Html::encode($imgUrl) ?>" alt="<?= Html::encode($tile['label']) ?>" loading="lazy">
+                            <?php else: ?>
+                                <i class="fa fa-file-image-o" aria-hidden="true"></i>
+                            <?php endif ?>
+                        </div>
+                        <div class="cw-review-doc__label">
+                            <i class="fa fa-check-circle" aria-hidden="true"></i>
+                            <?= Html::encode($tile['label']) ?>
+                        </div>
+                    </a>
+                <?php else: ?>
+                    <div class="cw-review-doc cw-review-doc--missing">
+                        <div class="cw-review-doc__thumb">
+                            <i class="fa fa-camera" aria-hidden="true"></i>
+                        </div>
+                        <div class="cw-review-doc__label">
+                            <i class="fa fa-info-circle" aria-hidden="true"></i>
+                            <?= Html::encode($tile['label']) ?> — لم تُرفع
+                        </div>
+                    </div>
+                <?php endif; endforeach ?>
+            </div>
+
+            <p class="cw-review-section__hint">
+                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                المستندات الإضافية (إثبات راتب، عقود، …) يمكن رفعها من صفحة العميل بعد الاعتماد.
+            </p>
+        </div>
+
+        <!-- ═══════════════ Risk assessment widget ═══════════════ -->
+        <div class="cw-review-section">
+            <div class="cw-review-section__head">
+                <h4 class="cw-review-section__title">
+                    <i class="fa fa-shield" aria-hidden="true"></i>
+                    تقييم المخاطر
+                </h4>
+            </div>
+
+            <div class="cw-risk <?= $riskBand['class'] ?>">
+                <div class="cw-risk__gauge" role="img" aria-label="درجة المخاطر <?= $riskScore ?> من 100">
+                    <div class="cw-risk__gauge-bar">
+                        <div class="cw-risk__gauge-fill" style="width: <?= (int)$riskScore ?>%"></div>
+                    </div>
+                    <div class="cw-risk__gauge-num"><?= $riskScore ?>%</div>
+                </div>
+                <div class="cw-risk__body">
+                    <div class="cw-risk__band">
+                        <i class="fa <?= $riskBand['icon'] ?>" aria-hidden="true"></i>
+                        <span>درجة المخاطر: <?= $riskBand['label'] ?></span>
+                    </div>
+                    <?php if (!empty($riskReasons)): ?>
+                        <ul class="cw-risk__reasons">
+                            <?php foreach ($riskReasons as $r): ?>
+                                <li><i class="fa fa-circle-o" aria-hidden="true"></i> <?= Html::encode($r) ?></li>
+                            <?php endforeach ?>
+                        </ul>
+                    <?php else: ?>
+                        <div class="cw-risk__ok">
+                            <i class="fa fa-check-circle" aria-hidden="true"></i>
+                            البيانات مكتملة — لا توجد ملاحظات.
+                        </div>
+                    <?php endif ?>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════ Final CTA ═══════════════ -->
+        <div class="cw-review-final">
+            <div class="cw-review-final__text">
+                <h4 class="cw-review-final__title">
+                    <i class="fa fa-flag-checkered" aria-hidden="true"></i>
+                    جاهز لاعتماد العميل؟
+                </h4>
+                <p>سيتم حفظ السجل بشكل دائم في قاعدة بيانات العملاء، وربط أي مستندات تم مسحها ضوئياً تلقائياً.</p>
+            </div>
+            <div class="cw-review-final__actions">
+                <button type="button" class="cw-btn cw-btn--lg cw-btn--success" data-cw-action="finish">
+                    <i class="fa fa-check-circle" aria-hidden="true"></i>
+                    <span>اعتماد العميل وحفظه</span>
+                </button>
+            </div>
+        </div>
+
     </div>
 </div>

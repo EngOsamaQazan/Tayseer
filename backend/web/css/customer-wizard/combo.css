@@ -1,0 +1,159 @@
+/* ================================================================== *
+ *  CWCombo — searchable combobox UI for the customer wizard.
+ *
+ *  Pairs with combo.js. Replaces a vanilla <select> with a search
+ *  input + popup listbox + inline "add new" affordance. RTL-first.
+ *  ------------------------------------------------------------------ */
+
+.cw-combo__hidden-select {
+    /* Hide visually but keep tabindex/value behaviour for the form.       */
+    position: absolute;
+    width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    pointer-events: none;
+}
+
+.cw-combo {
+    position: relative;
+    display: block;
+    width: 100%;
+}
+
+.cw-combo__inputbox {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+.cw-combo__input {
+    flex: 1 1 auto;
+    /* Reserve room on both ends for the clear and caret buttons.          */
+    padding-inline-end: 64px;
+}
+
+.cw-combo__clear,
+.cw-combo__caret {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 0;
+    color: var(--cw-color-text-muted, #64748b);
+    cursor: pointer;
+    padding: 6px 8px;
+    line-height: 1;
+    transition: color 120ms ease;
+}
+.cw-combo__clear   { inset-inline-end: 36px; display: none; font-size: 0.85em; }
+.cw-combo__caret   { inset-inline-end: 8px;  pointer-events: none; }
+/* re-enable interaction on the caret span via the hit area on the box  */
+.cw-combo__inputbox > .cw-combo__caret { pointer-events: auto; }
+
+.cw-combo__clear:hover,
+.cw-combo__caret:hover { color: var(--cw-color-primary, #2563eb); }
+.cw-combo__clear:focus-visible {
+    outline: 2px solid var(--cw-color-primary, #2563eb);
+    outline-offset: 2px;
+}
+
+/* When the popup is open, rotate the caret arrow.                        */
+.cw-combo[aria-expanded="true"] .cw-combo__caret i { transform: rotate(180deg); transition: transform 160ms; }
+.cw-combo .cw-combo__caret i { transition: transform 160ms; }
+
+/* ── Listbox popup ───────────────────────────────────────────────────── */
+/*
+ * The listbox is portaled to <body> at runtime (combo.js → openList) so it
+ * can escape any ancestor that has `overflow: hidden` (the .cw-card around
+ * each step uses it for its rounded-corner mask). Position is recomputed
+ * via JS from the input's bounding rect on open + scroll + resize.
+ *
+ * z-index 10050 sits above the wizard shell (10) and any sticky header /
+ * sidebar in the AdminLTE layout (which top out around 1050).
+ */
+.cw-combo__listbox {
+    position: fixed;
+    z-index: 10050;
+    margin: 0;
+    padding: 4px 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid var(--cw-color-border, #cbd5e1);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.16), 0 2px 6px rgba(15, 23, 42, 0.08);
+    max-height: 280px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    /* Default off-screen until openList() snaps it onto the input. */
+    top: -9999px; inset-inline-start: 0;
+}
+.cw-combo__listbox[hidden] { display: none; }
+/* When portaled the listbox is direct child of <body>; force LTR-aware
+   positioning by always using `start`-relative offsets the JS sets
+   explicitly. */
+body > .cw-combo__listbox { inset-inline-start: auto; }
+
+.cw-combo__option {
+    padding: 9px 12px;
+    cursor: pointer;
+    color: var(--cw-color-text, #1e293b);
+    font: inherit;
+    line-height: 1.4;
+    user-select: none;
+    transition: background-color 80ms ease;
+}
+.cw-combo__option mark {
+    background: transparent;
+    color: var(--cw-color-primary, #2563eb);
+    font-weight: 700;
+    padding: 0;
+}
+.cw-combo__option--active,
+.cw-combo__option:hover {
+    background: var(--cw-color-primary-soft, #eff6ff);
+    color: var(--cw-color-primary, #1d4ed8);
+}
+.cw-combo__option[aria-selected="true"] {
+    background: var(--cw-color-primary, #2563eb);
+    color: #fff;
+}
+.cw-combo__option[aria-selected="true"] mark {
+    color: #fff;
+    font-weight: 700;
+}
+
+/* "Add new" pseudo-option sits at top with a subtle separator + accent. */
+.cw-combo__option--add {
+    border-bottom: 1px dashed var(--cw-color-border, #cbd5e1);
+    color: var(--cw-color-success, #15803d);
+    font-weight: 600;
+}
+.cw-combo__option--add .fa { margin-inline-end: 6px; }
+.cw-combo__option--add strong {
+    color: var(--cw-color-text-strong, #0f172a);
+    font-weight: 700;
+}
+.cw-combo__option--add.cw-combo__option--active,
+.cw-combo__option--add:hover {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--cw-color-success, #15803d);
+}
+
+.cw-combo__empty {
+    padding: 12px;
+    text-align: center;
+    color: var(--cw-color-text-muted, #64748b);
+    font-style: italic;
+    cursor: default;
+}
+
+/* Mobile: take more vertical space for big-thumb tapping.                */
+@media (max-width: 640px) {
+    .cw-combo__listbox  { max-height: 60vh; }
+    .cw-combo__option   { padding: 12px 14px; font-size: 1.02rem; }
+    .cw-combo__input    { font-size: 16px; /* prevent iOS zoom */ }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cw-combo .cw-combo__caret i,
+    .cw-combo__option { transition: none; }
+}

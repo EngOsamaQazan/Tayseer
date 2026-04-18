@@ -74,6 +74,7 @@
         bindBeforeUnload();
 
         renderStepper();
+        renderNavMode(state.current);
         showSection(state.current, false);
 
         state.initialized = true;
@@ -205,7 +206,15 @@
             var n = parseInt($(this).attr('data-cw-step'), 10);
             CW.goTo(n);
         });
-        // Native <button> handles Enter/Space; no extra bindings needed.
+        // Also honor [data-cw-step] anywhere inside the shell — Step 4's
+        // "Edit" buttons use this to jump back to a specific step.
+        state.$shell.on('click' + EVT_NS, 'button[data-cw-step], a[data-cw-step]', function (e) {
+            // Skip if it lives inside the stepper (already handled above).
+            if ($(this).closest('[data-cw-stepper]').length) return;
+            e.preventDefault();
+            var n = parseInt($(this).attr('data-cw-step'), 10);
+            CW.goTo(n);
+        });
     }
 
     function bindNavButtons() {
@@ -228,7 +237,88 @@
                 window.location.href = state.urls.start;
             });
         });
+        state.$shell.on('click' + EVT_NS, '[data-cw-action="finish"]', function (e) {
+            e.preventDefault();
+            var $btn = $(this);
+            CW.finalize($btn);
+        });
     }
+
+    /**
+     * Final commit — POST the draft to the server, which validates ALL
+     * steps once more, creates the Customer + sub-rows in a transaction,
+     * adopts orphan scan-Media rows, and clears the draft.
+     *
+     * On success: navigate to the redirect URL the server returned (the
+     * legacy "create-summary" page so the user can immediately start a
+     * contract for the brand-new customer).
+     *
+     * On validation failure: jump to the first step that has errors so the
+     * user can fix them in context — never bury an error on a step that's
+     * not currently visible.
+     */
+    CW.finalize = function ($btn) {
+        $btn = $btn || state.$shell.find('[data-cw-action="finish"]').first();
+
+        // First, save current step data (Step 4 has no inputs but we still
+        // honor the contract — and doing so flushes any in-flight edit).
+        CW.savePartial().always(function () {
+            // Disable button + spinner while we wait for the server.
+            var origHtml = $btn.html();
+            $btn.prop('disabled', true)
+                .html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> <span>جاري الاعتماد…</span>');
+
+            $.ajax({
+                url: state.urls.finish,
+                method: 'POST',
+                data: csrfPayload(),
+                dataType: 'json',
+                timeout: 30000,
+            }).done(function (res) {
+                if (res && res.ok) {
+                    state.dirty = false;
+                    // Disarm the beforeunload guard — we're navigating intentionally.
+                    $(window).off('beforeunload' + EVT_NS);
+                    CW.toast(res.message || 'تم اعتماد العميل بنجاح.', 'success', 2500);
+                    setTimeout(function () {
+                        window.location.href = res.redirect || state.urls.start;
+                    }, 600);
+                    return;
+                }
+
+                // Validation failures — jump to the first step that complains.
+                if (res && res.errors) {
+                    var firstStep = null;
+                    Object.keys(res.errors).some(function (k) {
+                        var m = /^step(\d+)$/.exec(k);
+                        if (m) { firstStep = parseInt(m[1], 10); return true; }
+                        return false;
+                    });
+                    if (firstStep && firstStep !== state.current) {
+                        CW.toast(
+                            (res.error || 'يرجى تصحيح بعض الحقول') +
+                            ' — انتقلنا إلى الخطوة ' + firstStep + '.',
+                            'error', 6000
+                        );
+                        switchTo(firstStep);
+                        // Render the per-step errors after the section is visible.
+                        setTimeout(function () {
+                            renderServerErrors(res.errors['step' + firstStep] || {});
+                        }, 80);
+                    } else {
+                        renderServerErrors(res.errors['step' + state.current] || {});
+                        CW.toast(res.error || 'تعذّر اعتماد العميل.', 'error');
+                    }
+                } else {
+                    CW.toast((res && res.error) || 'تعذّر اعتماد العميل — حاول مجدداً.', 'error');
+                }
+                $btn.prop('disabled', false).html(origHtml);
+            }).fail(function () {
+                CW.toast('تعذّر الاتصال بالخادم — تحقّق من الإنترنت وأعد المحاولة.', 'error');
+                $btn.prop('disabled', false).html(origHtml);
+            });
+        });
+    };
 
     function bindAutoSave() {
         state.$shell.on('input' + EVT_NS + ' change' + EVT_NS, '[data-cw-section] :input', function () {
@@ -274,6 +364,7 @@
         state.current = n;
         showSection(n, true);
         renderStepper();
+        renderNavMode(n);
         announce('انتقلت إلى الخطوة ' + n + ' من ' + state.totalSteps + '.');
 
         var $target = state.$sections.filter('[data-cw-section="' + n + '"]');
@@ -313,6 +404,21 @@
                 void $target[0].offsetWidth; // force reflow
                 $target.css('animation', '');
             }
+        }
+    }
+
+    /**
+     * Toggle the toolbar's "Next" button vs the in-page Finish flow.
+     * On the last step the Next button is hidden — the user commits via
+     * the big "اعتماد العميل" CTA inside the review partial.
+     */
+    function renderNavMode(n) {
+        var isLast = (n >= state.totalSteps);
+        var $next  = state.$shell.find('[data-cw-action="next"]');
+        if (isLast) {
+            $next.attr('hidden', '').prop('disabled', true);
+        } else {
+            $next.removeAttr('hidden').prop('disabled', false);
         }
     }
 
@@ -372,27 +478,109 @@
             var name = $el.attr('name');
             if (!name) return;
             var type = ((this.type || '') + '').toLowerCase();
+            var value;
 
             if (type === 'checkbox') {
                 if (/\[\]$/.test(name)) {
-                    if (this.checked) (data[name] = data[name] || []).push($el.val());
+                    if (!this.checked) return;
+                    value = $el.val();
                 } else {
-                    data[name] = this.checked ? ($el.val() || '1') : '';
+                    value = this.checked ? ($el.val() || '1') : '';
                 }
             } else if (type === 'radio') {
-                if (this.checked) data[name] = $el.val();
-                else if (!(name in data)) data[name] = '';
+                if (this.checked) {
+                    value = $el.val();
+                } else {
+                    // Initialize the slot to '' so an empty group still
+                    // shows up in validation, but only if no sibling has
+                    // already filled it.
+                    if (!hasNestedKey(data, name)) {
+                        setNestedValue(data, name, '');
+                    }
+                    return;
+                }
             } else if (type === 'file') {
                 /* file inputs uploaded out-of-band */
+                return;
             } else if (this.tagName === 'SELECT' && this.multiple) {
-                data[name] = $el.val() || [];
-            } else if (/\[\]$/.test(name)) {
-                (data[name] = data[name] || []).push($el.val());
+                value = $el.val() || [];
             } else {
-                data[name] = $el.val();
+                value = $el.val();
             }
+
+            setNestedValue(data, name, value);
         });
         return data;
+    }
+
+    /**
+     * Convert a Yii-style field name like "Customers[name]" or
+     * "Customers[addresses][0][street]" into a nested write on the
+     * destination object — so jQuery's $.param produces the bracket
+     * notation that PHP's $_POST parser reconstructs to the same
+     * nested arrays the controller expects.
+     *
+     * Names ending with "[]" become array pushes.
+     */
+    function setNestedValue(target, fieldName, value) {
+        var parts = parseBrackets(fieldName);
+        if (!parts.length) return;
+
+        // Trailing "[]" → push to array at the parent.
+        var pushToArray = false;
+        if (parts[parts.length - 1] === '') {
+            pushToArray = true;
+            parts.pop();
+        }
+
+        var node = target;
+        for (var i = 0; i < parts.length - 1; i++) {
+            var key = parts[i];
+            if (node[key] === undefined || node[key] === null ||
+                typeof node[key] !== 'object') {
+                node[key] = {};
+            }
+            node = node[key];
+        }
+        var last = parts[parts.length - 1];
+        if (pushToArray) {
+            if (!Array.isArray(node[last])) node[last] = [];
+            node[last].push(value);
+        } else {
+            node[last] = value;
+        }
+    }
+
+    /** Same traversal as setNestedValue but read-only; returns true if path set. */
+    function hasNestedKey(target, fieldName) {
+        var parts = parseBrackets(fieldName);
+        if (!parts.length) return false;
+        if (parts[parts.length - 1] === '') parts.pop();
+        var node = target;
+        for (var i = 0; i < parts.length; i++) {
+            if (!node || typeof node !== 'object') return false;
+            if (!Object.prototype.hasOwnProperty.call(node, parts[i])) return false;
+            node = node[parts[i]];
+        }
+        return true;
+    }
+
+    /** "Customers[name]"      → ["Customers", "name"]
+     *  "Customers[addr][0][s]" → ["Customers", "addr", "0", "s"]
+     *  "tags[]"               → ["tags", ""]                                  */
+    function parseBrackets(fieldName) {
+        var out = [];
+        var firstBracket = fieldName.indexOf('[');
+        if (firstBracket === -1) return [fieldName];
+
+        out.push(fieldName.slice(0, firstBracket));
+        var rest = fieldName.slice(firstBracket);
+        // Match every [...] segment, including [] (empty for array push).
+        var re = /\[([^\]]*)\]/g, m;
+        while ((m = re.exec(rest)) !== null) {
+            out.push(m[1]);
+        }
+        return out;
     }
 
     function renderServerErrors(errors) {

@@ -399,6 +399,150 @@ input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
     margin-inline-end: 6px;
 }
 
+/* ─────────────── Unmapped lookup banner ─────────────── *
+ * Surfaces an OCR-extracted value that didn't match any dropdown option,
+ * with an inline "add to database" action for cities. Sits inside the
+ * field wrapper so it's visually anchored to the affected control.
+ */
+.cw-unmapped {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--cw-color-info-bg, #eff6ff);
+    border: 1px solid var(--cw-color-info-border, #bfdbfe);
+    border-inline-start: 3px solid var(--cw-color-info, #3b82f6);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--cw-color-text, #1e293b);
+}
+.cw-unmapped__text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+.cw-unmapped__text .fa { color: var(--cw-color-info, #3b82f6); margin-inline-end: 4px; }
+.cw-unmapped__text strong {
+    font-weight: 700;
+    color: var(--cw-color-text-strong, #0f172a);
+}
+.cw-unmapped__btn {
+    flex: 0 0 auto;
+    appearance: none;
+    border: 1px solid var(--cw-color-primary, #2563eb);
+    background: var(--cw-color-primary, #2563eb);
+    color: #fff;
+    padding: 7px 14px;
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 160ms ease, transform 120ms ease;
+}
+.cw-unmapped__btn:hover  { background: var(--cw-color-primary-hover, #1d4ed8); }
+.cw-unmapped__btn:active { transform: translateY(1px); }
+.cw-unmapped__btn:disabled {
+    opacity: 0.7;
+    cursor: progress;
+}
+.cw-unmapped__btn:focus-visible {
+    outline: 3px solid var(--cw-color-primary-soft, rgba(37, 99, 235, 0.35));
+    outline-offset: 2px;
+}
+
+/* ─────────────── Conditional disclosure ─────────────── */
+
+/* A region that the JS shows/hides based on a controlling input.
+   Animation is short + opacity-based to stay calm; the [hidden]
+   attribute does the actual layout collapse.                      */
+.cw-conditional {
+    opacity: 1;
+    transition: opacity 180ms ease;
+}
+.cw-conditional--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+.cw-conditional[hidden] {
+    display: none !important;
+}
+
+/* ─────────────── Field suffix (units like د.أ) ─────────────── */
+
+.cw-field__suffix {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--cw-text-muted);
+    background: var(--cw-surface);
+    border: 1px solid var(--cw-border);
+    border-radius: 999px;
+    padding: 1px 8px;
+    margin-inline-start: 6px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* ─────────────── Dynamic row groups (CWDynamic) ─────────────── */
+
+.cw-dynamic {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cw-dynamic__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cw-dynamic__row {
+    background: var(--cw-surface, #f8fafc);
+    border: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-md, 10px);
+    padding: 12px 14px 14px;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.cw-dynamic__row:focus-within {
+    border-color: var(--cw-color-primary, #2563eb);
+    box-shadow: var(--cw-ring);
+}
+
+.cw-dynamic__row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.cw-dynamic__row-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cw-text-muted);
+    background: #fff;
+    border: 1px solid var(--cw-border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    line-height: 1.4;
+}
+
+.cw-dynamic__actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cw-dynamic__counter {
+    font-size: 12px;
+    color: var(--cw-text-muted);
+}
+
 /* ─────────────── Reduced-motion ─────────────── */
 
 @media (prefers-reduced-motion: reduce) {

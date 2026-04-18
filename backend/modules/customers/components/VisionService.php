@@ -680,7 +680,12 @@ class VisionService
                 'generationConfig' => [
                     'temperature' => 0.1,
                     'topP' => 0.8,
-                    'maxOutputTokens' => 1024,
+                    // 1024 was truncating responses mid-JSON when the prompt
+                    // expanded to cover four document families (civilian +
+                    // army + security + intelligence). Gemini 2.5 also
+                    // consumes "thinking" tokens internally before producing
+                    // visible output, so we need plenty of headroom.
+                    'maxOutputTokens' => 8192,
                     'responseMimeType' => 'application/json',
                 ],
             ], JSON_UNESCAPED_UNICODE);
@@ -735,89 +740,322 @@ class VisionService
      */
     private static function parseGeminiResponse(string $rawResponse): array
     {
-        $data = json_decode($rawResponse, true);
+        $data  = json_decode($rawResponse, true);
         $parts = $data['candidates'][0]['content']['parts'] ?? [];
 
-        // Find the last non-thought text part
-        $textPart = null;
+        // Concatenate ALL non-thought text parts. Some Gemini responses split
+        // a single JSON object across multiple parts; taking only the last
+        // one (as before) would silently truncate the JSON.
+        $textPart = '';
         foreach ($parts as $part) {
             if (!empty($part['thought'])) continue;
             if (isset($part['text'])) {
-                $textPart = $part['text'];
+                $textPart .= $part['text'];
             }
         }
 
-        if (!$textPart) {
-            throw new \Exception('Gemini returned no content (parts: ' . count($parts) . ')');
+        $finishReason = $data['candidates'][0]['finishReason'] ?? null;
+
+        if ($textPart === '') {
+            throw new \Exception(
+                'Gemini returned no content (parts=' . count($parts)
+                . ', finish=' . ($finishReason ?? 'n/a') . ')'
+            );
         }
 
-        $fields = json_decode($textPart, true);
-        if (!is_array($fields)) {
-            if (preg_match('/```(?:json)?\s*(\{[\s\S]*?\})\s*```/', $textPart, $jm)) {
-                $fields = json_decode($jm[1], true);
-            }
-            if (!is_array($fields)) {
-                throw new \Exception('Gemini response is not valid JSON: ' . mb_substr($textPart, 0, 200));
-            }
+        $fields = self::extractJsonObject($textPart);
+        if ($fields === null) {
+            // Log the raw response (truncated to a sane size) so we can
+            // diagnose the next failure quickly. The previous 200-char
+            // window was hiding the actual cause (JSON cut at maxTokens).
+            Yii::warning(
+                'Gemini parse fail (finish=' . ($finishReason ?? 'n/a')
+                . ', len=' . strlen($textPart) . '): '
+                . mb_substr($textPart, 0, 800),
+                'vision'
+            );
+            throw new \Exception(
+                'Gemini response is not valid JSON (finish='
+                . ($finishReason ?? 'n/a') . ', len=' . strlen($textPart) . ')'
+            );
         }
 
         return $fields;
     }
 
     /**
+     * Extract a JSON object from a free-form Gemini response. Tolerates:
+     *   • Pure JSON (the happy path)
+     *   • JSON wrapped in ```json ... ``` fences
+     *   • Leading/trailing prose (rare with responseMimeType=application/json
+     *     but happens when the model decides to "explain itself")
+     *   • Truncated JSON cut mid-stream by maxOutputTokens — we close the
+     *     dangling braces/brackets and try one more decode.
+     *
+     * @return array|null  decoded array on success, null when irrecoverable
+     */
+    private static function extractJsonObject(string $text)
+    {
+        $text = trim($text);
+        if ($text === '') return null;
+
+        // Fast path — straight JSON.
+        $direct = json_decode($text, true);
+        if (is_array($direct)) return $direct;
+
+        // Strip ```json fences (greedy this time so we keep the entire body).
+        if (preg_match('/```(?:json)?\s*([\s\S]+?)\s*```/i', $text, $m)) {
+            $inner = json_decode(trim($m[1]), true);
+            if (is_array($inner)) return $inner;
+            $text = trim($m[1]);
+        }
+
+        // Locate the first { and slice from there.
+        $start = strpos($text, '{');
+        if ($start === false) return null;
+        $body = substr($text, $start);
+
+        // First try: take everything up to the LAST }. (responseMimeType
+        // means the model usually returns just JSON, even if maxTokens
+        // truncates the trailing fluff.)
+        $lastBrace = strrpos($body, '}');
+        if ($lastBrace !== false) {
+            $candidate = substr($body, 0, $lastBrace + 1);
+            $decoded = json_decode($candidate, true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        // Last resort: walk character-by-character, tracking string-vs-code
+        // context, and rebuild a minimal valid JSON by closing whatever
+        // braces / brackets are still open at the cut-off point. Useful
+        // when maxOutputTokens chops the response mid-array.
+        $repaired = self::repairTruncatedJson($body);
+        if ($repaired !== null) {
+            $decoded = json_decode($repaired, true);
+            if (is_array($decoded)) return $decoded;
+        }
+
+        return null;
+    }
+
+    /**
+     * Best-effort repair of a JSON string that was cut off by a token limit.
+     * Counts unmatched braces/brackets, drops any trailing partial token
+     * (incomplete string, dangling comma), then closes the structure.
+     */
+    private static function repairTruncatedJson(string $s)
+    {
+        $len = strlen($s);
+        $stack = [];      // stack of open '{' or '['
+        $inString = false;
+        $escape = false;
+        $lastValidEnd = 0; // byte offset just after the last fully-closed value
+
+        for ($i = 0; $i < $len; $i++) {
+            $c = $s[$i];
+
+            if ($inString) {
+                if ($escape)            { $escape = false; continue; }
+                if ($c === '\\')        { $escape = true;  continue; }
+                if ($c === '"')         { $inString = false; }
+                continue;
+            }
+
+            if ($c === '"')             { $inString = true;  continue; }
+            if ($c === '{' || $c === '[') { $stack[] = $c; continue; }
+            if ($c === '}' || $c === ']') {
+                if (empty($stack)) return null; // malformed before truncation
+                array_pop($stack);
+                if (empty($stack)) {
+                    $lastValidEnd = $i + 1; // a complete top-level object
+                }
+                continue;
+            }
+        }
+
+        // If we already saw a fully-closed top-level object, just return that.
+        if ($lastValidEnd > 0) {
+            return substr($s, 0, $lastValidEnd);
+        }
+
+        // Otherwise we're mid-structure. Trim back to the last comma or
+        // colon to drop the dangling partial key/value, then close the
+        // open braces/brackets.
+        $trimmed = $s;
+        if ($inString) {
+            // Drop the unterminated string entirely.
+            $lastQuote = strrpos($trimmed, '"');
+            if ($lastQuote === false) return null;
+            $trimmed = substr($trimmed, 0, $lastQuote);
+        }
+        // Strip trailing whitespace + a possible trailing comma + a partial
+        // "key": value pair that was cut.
+        $trimmed = rtrim($trimmed);
+        $trimmed = rtrim($trimmed, ',');
+
+        // If the cut happened after a key like  "promotion_date":  with no
+        // value yet, we need to drop the key too.
+        if (preg_match('/,\s*"[^"]*"\s*:\s*$/u', $trimmed)) {
+            $trimmed = preg_replace('/,\s*"[^"]*"\s*:\s*$/u', '', $trimmed);
+        } elseif (preg_match('/\{\s*"[^"]*"\s*:\s*$/u', $trimmed)) {
+            $trimmed = preg_replace('/"[^"]*"\s*:\s*$/u', '', $trimmed);
+        }
+        $trimmed = rtrim($trimmed);
+        $trimmed = rtrim($trimmed, ',');
+
+        // Close anything still open, in reverse order.
+        while (!empty($stack)) {
+            $open = array_pop($stack);
+            $trimmed .= ($open === '{') ? '}' : ']';
+        }
+        return $trimmed;
+    }
+
+    /**
      * Build prompt for direct image reading (primary method).
+     *
+     * Recognizes four major Jordanian document families:
+     *   1. Civilian ID (Civil Status & Passport Dept)        — front + back (MRZ "IDJOR")
+     *   2. Armed Forces Mil-ID (الجيش العربي)               — front + back (MRZ "IDJAF")
+     *   3. Public Security Directorate (الأمن العام)        — front + back (MRZ "IDPSD")
+     *   4. General Intelligence (المخابرات العامة)          — front only (back blank)
+     *
+     * The back side is the primary source of `document_number` (card serial,
+     * e.g. FBY86966, A212449, B097368) which is REQUIRED by downstream
+     * processes — never absent from a real card.
      */
     private static function buildImageExtractionPrompt(?string $sideHint = null): string
     {
         // ─── Side-specific guidance prepended to the base prompt ───
-        // The back of a Jordanian/Saudi/Egyptian ID has very different content
-        // (MRZ, card serial, sometimes address) than the front. Without an
-        // explicit hint Gemini occasionally returns an empty {} for back
-        // captures because it expects "personal data" and sees only an MRZ.
         $sideBlock = '';
         if ($sideHint === 'back') {
             $sideBlock = <<<'BACK'
-═══ ملاحظة: الصورة هي **الوجه الخلفي** لبطاقة هوية ═══
-- الوجه الخلفي عادةً يحتوي على:
-  • MRZ (سطور بأحرف لاتينية كبيرة وأقواس < في أسفل البطاقة) — اقرأها واستخرج منها id_number و birth_date و sex إن أمكن
-  • رقم تسلسلي للبطاقة (document_number) — عادةً مطبوع كحروف وأرقام لاتينية
-  • أحياناً العنوان أو اسم الأم
-- ⚠️ المطلوب الأهم هنا هو **document_number** (الرقم التسلسلي للبطاقة)
-- إذا لم تجد نصاً واضحاً، **حاول قراءة الباركود/QR إن ظهر** واستخرج أي رقم تسلسلي منه
-- أرجع كل ما تجده ولو حقلاً واحداً — لا ترفض الاستجابة
+═══ ملاحظة: الصورة هي **الوجه الخلفي** لوثيقة هوية ═══
 
-═══════════════════════════════════════════════════════
+⚠️  المطلوب الأساسي والإلزامي من الظهر هو **document_number** (الرقم التسلسلي للبطاقة).
+    لا يمكن إكمال العملية بدونه — اقرأه وأرجعه دائماً.
+
+أين يقع document_number؟
+  • الهوية المدنية الأردنية (Civil Status): مطبوع تحت ترويسة "ID no:" أو
+    داخل الـ MRZ بعد "IDJOR" مباشرة. مثال: FBY86966 (3 أحرف لاتينية + 5–6 أرقام).
+  • بطاقة القوات المسلحة (JORDAN ARMED FORCES): مطبوع داخل مربع أزرق أعلى
+    البطاقة، أو في MRZ بعد "IDJAF". مثال: A212449 (حرف + 6 أرقام).
+  • بطاقة الأمن العام (PUBLIC SECURITY DIRECTORATE): داخل مربع وردي أعلى
+    البطاقة، أو في MRZ بعد "IDPSD". مثال: B097368.
+  • المخابرات العامة: ظهرها غالباً يحوي تحذيراً فقط — في هذه الحالة أرجع
+    issuing_body=intelligence و document_type=4 ولا تُرجع document_number.
+
+طرق الاستخراج (بالأولوية):
+  1. اقرأ سطور MRZ (سطور لاتينية وأقواس < في أسفل البطاقة).
+     • السطر الأول يبدأ بـ ID متبوعاً بـ JOR/JAF/PSD ثم document_number مباشرة.
+     • السطر الثاني فيه: تاريخ ميلاد (YYMMDD) + جنس (M/F) + تاريخ انتهاء (YYMMDD) + JOR.
+     • السطر الثالث فيه الاسم الكامل بالأحرف اللاتينية مفصول بـ <.
+  2. إذا لم تستطع قراءة MRZ، ابحث عن "ID no:" أو "MIL-NO" أو الرقم المطبوع.
+  3. إذا فشل ذلك، اقرأ الباركود/QR/أي رقم تسلسلي مرئي.
+
+استخرج أيضاً (إن وُجدت):
+  • id_number (الرقم الوطني — 10 أرقام داخل MRZ) للتحقق من المطابقة مع الوجه الأمامي.
+  • birth_date و sex و expiry_date من MRZ.
+  • مكان الإصدار، مكان الإقامة، فصيلة الدم (للهوية المدنية).
+  • military_number (للظهر العسكري — يظهر في MRZ بعد JOR<<<<).
+
+═══════════════════════════════════════════════════════════════════════════
 
 
 BACK;
         } elseif ($sideHint === 'front') {
             $sideBlock = <<<'FRONT'
-═══ ملاحظة: الصورة هي **الوجه الأمامي** لبطاقة هوية ═══
-- الوجه الأمامي يحتوي على: الاسم الرباعي، الرقم الوطني، تاريخ الميلاد، الجنس، الجنسية، صورة شخصية
-- ركّز على استخراج هذه الحقول بدقة عالية
+═══ ملاحظة: الصورة هي **الوجه الأمامي** لوثيقة هوية ═══
 
-═══════════════════════════════════════════════════════
+تعرّف أولاً على نوع الوثيقة من الترويسة العلوية:
+
+  ▸ "المملكة الأردنية الهاشمية + بطاقة شخصية + Civil Status & Passport"
+      → وثيقة مدنية. document_type=0
+      الحقول: name, id_number (10 أرقام), sex, birth_date, birth_place,
+              mother_name, nationality_text
+
+  ▸ "القوات المسلحة الأردنية / الجيش العربي / مديرية شؤون الأفراد / شهادة تعيين"
+      → بطاقة عسكرية. document_type=4, issuing_body=army
+      الحقول الإضافية: military_number (الرقم العسكري — رقم محض),
+                       rank (الرتبة — مثلاً: رقيب أول، جندي أول، ضابط…),
+                       recruitment_date (تاريخ التجنيد — YYYY-MM-DD),
+                       promotion_date (تاريخ الترفيع — YYYY-MM-DD),
+                       issue_date, expiry_date
+
+  ▸ "مديرية الأمن العام / شهادة تعيين للرتب الأخرى" أو "PUBLIC SECURITY DIRECTORATE"
+      → بطاقة أمن عام. document_type=4, issuing_body=security
+      نفس حقول العسكري.
+
+  ▸ "المخابرات العامة الأردنية / دائرة المخابرات العامة" (قد تذكر "القوات المسلحة" تحتها)
+      → بطاقة مخابرات. document_type=4, issuing_body=intelligence
+      الحقول الإضافية: military_number, rank, certificate_number (رقم الشهادة),
+                       promotion_date, issue_date
+
+تذكير: الاسم العربي يحوي 4 مقاطع غالباً — اقرأه بدقة (مثل "إسلام" وليس "السلام"،
+"عبد المهدي" وليس "عبدالمهدي" المنفصل خطأً).
+
+═══════════════════════════════════════════════════════════════════════════
 
 
 FRONT;
         }
 
         $base = <<<'PROMPT'
-أنت محلل وثائق متخصص في الوثائق الأردنية والعربية. اقرأ هذه الصورة واستخرج جميع البيانات الظاهرة.
+أنت محلل وثائق متخصص في الوثائق الرسمية الأردنية. اقرأ هذه الصورة واستخرج كل البيانات الظاهرة.
 
-القواعد المهمة:
-- اقرأ النص العربي بدقة عالية — انتبه للأسماء جيداً (مثلاً "إسلام" وليس "السلام"، "حسنا" وليس "حسبنا")
-- أرجع فقط الحقول الموجودة فعلاً في الصورة — لا تخترع بيانات أبداً
-- إذا ظهرت MRZ (سطور بأحرف لاتينية كبيرة و < في أسفل الوثيقة)، استخدمها أيضاً لتأكيد/استخراج البيانات
-- التواريخ بصيغة YYYY-MM-DD
-- الجنس: 0 = ذكر، 1 = أنثى
-- نوع الوثيقة: 0=هوية/بطاقة شخصية، 1=جواز سفر، 2=رخصة قيادة، 3=شهادة ميلاد، 4=شهادة تعيين عسكرية
-- الجهة المصدرة (للوثائق العسكرية فقط): army=القوات المسلحة، security=الأمن العام، intelligence=المخابرات العامة
-- الرقم الوطني الأردني = 10 أرقام بالضبط
-- رقم الوثيقة (بطاقة/جواز) = عادة حروف لاتينية وأرقام
-- ⚠️ مهم: حتى لو وجدت حقلاً واحداً فقط (مثل رقم تسلسلي على ظهر البطاقة) — أرجعه. لا ترفض الاستجابة بسبب نقص الحقول.
+قواعد إلزامية:
+═══ قاعدة الاسم — حرفية مطلقة ═══
+- اكتب الاسم حرفاً بحرف **تماماً** كما يظهر في الصورة، بدون أي تعديل أو توحيد:
+    • لا تُضِف همزة لم تكن مكتوبة. مثال: إذا كان مكتوباً "اسامه" فاكتبها "اسامه" — وليس "أسامة".
+    • لا تحذف أو تُضِف مسافات بين كلمات الاسم. مثال: "عبد المهدي" تبقى "عبد المهدي" — لا تجمعها "عبدالمهدي".
+    • لا تُحوِّل "ه" آخر الكلمة إلى "ة" ولا العكس. كل ما هو مكتوب يبقى كما هو.
+    • لا تُصحّح أي إملاء "غير قياسي" — السجل الرسمي قد يستعمل هجاء معيناً ويجب نقله مطابقاً.
+    • القاعدة: إذا قارنّا حرف بحرف بين ما يظهر بالصورة وما تُرجعه، يجب أن تكون النسبة 100%.
+- لكن: لا تخلط الحروف (مثلاً "إسلام" قد تبدو كـ "السلام" بسبب التشكيل أو الخط — هنا اعتمد القراءة الصحيحة).
+- أرجع فقط الحقول الموجودة فعلاً في الصورة — لا تخترع بيانات أبداً.
+- إذا ظهرت MRZ، استخدمها لتأكيد/استكمال البيانات. الـ MRZ هي مصدر الحقيقة الأكثر موثوقية.
+- جميع التواريخ بصيغة ISO: YYYY-MM-DD (إذا كانت السنة هجرية أو غامضة، اتركها فارغة).
+- الجنس (sex): 0 = ذكر، 1 = أنثى — أرجع رقماً فقط (لا تكتب "ذكر" أو "M").
+  • للهوية المدنية: مكتوب صراحةً "ذكر/أنثى".
+  • للبطاقات العسكرية/الأمن العام/المخابرات: غالباً مكتوب الرتبة بصيغة المذكر — اعتبره ذكر إلا إن ظهر اسم أنثوي صراحةً.
+  • في MRZ: M = 0، F = 1.
+- الجنسية (nationality_text): إذا ظهر في الوثيقة أي من هذه الإشارات أرجع الجنسية الأردنية تلقائياً:
+  • "المملكة الأردنية الهاشمية" أو "الأردن" أو "الأردنية" في الترويسة.
+  • "JORDAN" أو "JOR" في النص الإنجليزي أو في MRZ.
+  • document_number يبدأ بـ FBY/A/B (مدنية/جيش/أمن عام).
+  أرجعها بصيغة "أردني" للذكر و"أردنية" للأنثى.
+- نوع الوثيقة (document_type):
+    "0" = هوية مدنية / بطاقة شخصية
+    "1" = جواز سفر
+    "2" = رخصة قيادة
+    "3" = شهادة ميلاد
+    "4" = شهادة تعيين / بطاقة عسكرية أو أمنية
+- الجهة المصدرة (issuing_body — إلزامية فقط عند document_type=4):
+    "army"         = القوات المسلحة / الجيش العربي
+    "security"     = مديرية الأمن العام / Public Security
+    "intelligence" = المخابرات العامة / دائرة المخابرات
+═══ قاعدة الرقم الوطني الأردني (id_number) — انتباه شديد ═══
+- الرقم الوطني الأردني = **10 أرقام بالضبط** ويبدأ دائماً بـ **9** (مواطن مولود بعد 2000)
+  أو **2** (قبل 2000) أو **1**/**0** (حالات خاصة). **لا يبدأ أبداً بـ 3 أو 4 أو 5 أو 6 أو 7 أو 8**.
+- المصدر **الأفضل** للرقم الوطني هو الجهة الأمامية للبطاقة، تحت ترويسة:
+  "الرقم الوطني" أو "National Number/National ID" — يُطبع بخط كبير وواضح.
+  اقرأه من هناك أولاً.
+- **خطر شائع**: في MRZ على الظهر يظهر الرقم الوطني داخل "optional data field"
+  متبوعاً بـ **check digit واحد** ثم محارف `<` للحشو. مثال:
+      السطر الثاني: `9209204M3009205JOR9891028911<<3<`
+                                          ^^^^^^^^^^^^  ^
+                                          الرقم الوطني  check digit (لا تأخذه!)
+  • الرقم الصحيح هنا: `9891028911` (10 أرقام تبدأ بـ 9).
+  • الرقم الخطأ الذي قد ينتج إذا قرأت من النهاية: `3989102891` (يبدأ بـ 3 — مرفوض).
+- إذا الرقم الذي ستُرجِعه يبدأ بـ 3-8، فأنت قرأت الـ check digit بالخطأ — أعد القراءة
+  من البداية وتجاهل أي check digit أو `<`.
+- لا تخلط الرقم الوطني (10 أرقام محضة) مع document_number (حروف لاتينية + أرقام مثل FBY86966).
+- document_number = الرقم التسلسلي للبطاقة نفسها — حروف لاتينية كبيرة وأرقام
+  (مثل FBY86966 للمدنية، A212449 للعسكرية، B097368 للأمن العام).
+- military_number = رقم محض (5–7 أرقام) — مختلف تماماً عن الرقم الوطني وعن document_number.
 
-أرجع JSON فقط بالحقول المتوفرة (يمكن أن يكون JSON واحد فقط من الحقول):
+أرجع JSON فقط — كائن واحد. أدرج فقط الحقول التي قرأتها فعلاً:
+
 {
   "name": "الاسم الرباعي الكامل بالعربي كما هو مكتوب",
   "name_en": "Full name in English if visible",
@@ -828,14 +1066,17 @@ FRONT;
   "mother_name": "اسم الأم الكامل",
   "nationality_text": "الجنسية",
   "document_type": "0",
-  "document_number": "رقم البطاقة/الوثيقة (الرقم التسلسلي)",
-  "military_number": "الرقم العسكري أو الوظيفي",
-  "rank": "الرتبة العسكرية",
-  "issuing_body": "army أو security أو intelligence",
-  "certificate_number": "رقم الشهادة",
+  "document_number": "رقم البطاقة التسلسلي (مثل FBY86966 / A212449)",
+  "military_number": "الرقم العسكري المحض",
+  "rank": "الرتبة (مثل: رقيب أول، جندي، ضابط)",
+  "issuing_body": "army | security | intelligence",
+  "certificate_number": "رقم الشهادة (للمخابرات)",
+  "recruitment_date": "YYYY-MM-DD",
+  "promotion_date": "YYYY-MM-DD",
   "address": "العنوان الكامل",
   "issue_date": "YYYY-MM-DD",
-  "expiry_date": "YYYY-MM-DD"
+  "expiry_date": "YYYY-MM-DD",
+  "mrz": "نسخة طبق الأصل من سطور الـ MRZ كما تظهر بالضبط (3 سطور للبطاقات، أو 2 لجوازات السفر) — لا تترجم ولا تنظف، انسخ الأقواس < كما هي. هذا الحقل مهم للتحقق التلقائي."
 }
 PROMPT;
 

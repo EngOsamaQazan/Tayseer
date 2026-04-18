@@ -48,6 +48,23 @@
         return '/customers/wizard/scan';
     }
 
+    /**
+     * Resolve the "add lookup row" endpoint URL for a given kind ('city' or
+     * 'citizen'). Falls back to the conventional path if CW._urls is missing.
+     */
+    function lookupAddUrl(kind) {
+        var key = kind === 'citizen' ? 'addCitizen' : 'addCity';
+        var fallback = kind === 'citizen'
+            ? '/customers/wizard/add-citizen'
+            : '/customers/wizard/add-city';
+        try {
+            if (window.CW && window.CW._urls && window.CW._urls[key]) {
+                return window.CW._urls[key];
+            }
+        } catch (e) { /* noop */ }
+        return fallback;
+    }
+
     /** Fire CW.toast safely if core.js loaded; otherwise silent fallback. */
     function toast(msg, type, ttl) {
         if (window.CW && typeof window.CW.toast === 'function') {
@@ -65,8 +82,17 @@
         var snap = {};
         for (var key in fieldMap) {
             if (!Object.prototype.hasOwnProperty.call(fieldMap, key)) continue;
-            var $el = $('[name="' + cssEscape(key) + '"]').first();
-            if ($el.length) snap[key] = $el.val();
+            var $all = $('[name="' + cssEscape(key) + '"]');
+            if (!$all.length) continue;
+            var first = $all.first();
+            var type  = (first.attr('type') || '').toLowerCase();
+            // Radio group: capture which value was checked (or empty).
+            if (type === 'radio' || type === 'checkbox') {
+                var $checked = $all.filter(':checked').first();
+                snap[key] = $checked.length ? String($checked.val()) : '';
+            } else {
+                snap[key] = first.val();
+            }
         }
         return snap;
     }
@@ -90,17 +116,38 @@
             var value = fieldMap[name];
             if (value === null || value === undefined) continue;
 
-            var $el = $('[name="' + cssEscape(name) + '"]').first();
-            if (!$el.length) continue;
+            // Match ALL elements with this name — radio groups have many.
+            var $all = $('[name="' + cssEscape(name) + '"]');
+            if (!$all.length) continue;
 
-            var current = String($el.val() || '').trim();
-            var next = String(value).trim();
-            if (current === next) continue;
+            var next  = String(value).trim();
+            var first = $all.first();
+            var type  = (first.attr('type') || '').toLowerCase();
+            var didChange = false;
 
-            $el.val(next).trigger('change').trigger('input');
+            // ── Radio / checkbox group: find the input whose value matches
+            //    and check it. .val() doesn't do this; jQuery's setter only
+            //    sets .value on the element, it doesn't tick the radio.
+            if (type === 'radio' || type === 'checkbox') {
+                var $target = $all.filter('[value="' + cssEscape(next) + '"]').first();
+                if (!$target.length) continue;     // unknown value
+                if ($target.is(':checked')) continue;     // already set
+                // Clear siblings (radios), then check the matched input.
+                if (type === 'radio') $all.prop('checked', false);
+                $target.prop('checked', true).trigger('change');
+                didChange = true;
+                first = $target;     // for the highlight wrap below
+            } else {
+                var current = String(first.val() || '').trim();
+                if (current === next) continue;
+                first.val(next).trigger('change').trigger('input');
+                didChange = true;
+            }
+
+            if (!didChange) continue;
 
             // Visual cue: brief highlight on the field's wrapper.
-            var $wrap = $el.closest('[data-cw-field]');
+            var $wrap = first.closest('[data-cw-field]');
             if ($wrap.length) {
                 $wrap.addClass('cw-field--auto-filled');
                 window.setTimeout(function ($w) {
@@ -118,11 +165,21 @@
         var restored = 0;
         for (var name in snap) {
             if (!Object.prototype.hasOwnProperty.call(snap, name)) continue;
-            var $el = $('[name="' + cssEscape(name) + '"]').first();
-            if ($el.length) {
-                $el.val(snap[name] || '').trigger('change').trigger('input');
-                restored++;
+            var $all = $('[name="' + cssEscape(name) + '"]');
+            if (!$all.length) continue;
+            var first = $all.first();
+            var type  = (first.attr('type') || '').toLowerCase();
+            var v = snap[name] || '';
+            if (type === 'radio' || type === 'checkbox') {
+                if (type === 'radio') $all.prop('checked', false);
+                if (v !== '') {
+                    $all.filter('[value="' + cssEscape(String(v)) + '"]')
+                        .prop('checked', true).trigger('change');
+                }
+            } else {
+                first.val(v).trigger('change').trigger('input');
             }
+            restored++;
         }
         return restored;
     }
@@ -148,10 +205,13 @@
      * Rejects on transport errors only — application-level {ok:false} is
      * passed through and handled by the caller.
      */
-    function uploadScan(file) {
+    function uploadScan(file, sideHint) {
         var fd = new FormData();
         fd.append('file', file, file.name);
         fd.append('_csrf-backend', csrfToken());
+        if (sideHint === 'front' || sideHint === 'back') {
+            fd.append('side', sideHint);
+        }
 
         return $.ajax({
             url: scanUrl(),
@@ -189,17 +249,47 @@
      */
     function applyServerFields(fields, unmapped, opts) {
         opts = opts || {};
-        if (!fields || !Object.keys(fields).length) {
-            if (opts.silentEmpty !== true) {
+        var hasFields   = !!(fields && Object.keys(fields).length);
+        var hasUnmapped = !!(unmapped && (unmapped.city || unmapped.citizen));
+
+        // ── Always render unmapped-lookup banners FIRST. They must fire
+        //    even when no field was changed (e.g. OCR returned only a
+        //    city name that didn't match any DB row), otherwise the
+        //    inline "add to database" CTA never reaches the user.
+        if (hasUnmapped) {
+            if (unmapped.city) {
+                renderUnmappedBanner('Customers[city]', unmapped.city, {
+                    kind: 'city',
+                    label: 'مدينة الولادة',
+                    addLabel: 'إضافة «' + unmapped.city + '» إلى قائمة المدن',
+                });
+            }
+            if (unmapped.citizen) {
+                renderUnmappedBanner('Customers[citizen]', unmapped.citizen, {
+                    kind: 'citizen',
+                    label: 'الجنسية',
+                    addLabel: 'إضافة «' + unmapped.citizen + '» إلى قائمة الجنسيات',
+                });
+            }
+        }
+        // Don't auto-clear banners on an empty-fields call: the camera
+        // pipeline calls applyServerFields once per side, and the second
+        // call (back side) might legitimately have no city while the
+        // first call's city banner should remain visible. Banners are
+        // cleared explicitly when the user resolves them.
+
+        if (!hasFields) {
+            if (opts.silentEmpty !== true && !hasUnmapped) {
                 toast('لم يتمكّن النظام من استخراج بيانات قابلة للاستخدام.', 'warning', 5000);
             }
             return 0;
         }
+
         if (!lastSnapshot) lastSnapshot = snapshot(fields);
         var changed = applyFields(fields);
 
         if (!changed) {
-            if (opts.silentEmpty !== true) {
+            if (opts.silentEmpty !== true && !hasUnmapped) {
                 toast('البيانات المُستخرَجة مطابقة للحقول الحالية.', 'info', 4000);
             }
             return 0;
@@ -207,15 +297,136 @@
 
         if (opts.silentSuccess === true) return changed;
 
-        var msg = 'تمّ ملء ' + changed + ' حقلاً تلقائياً.';
-        var hints = [];
-        if (unmapped && unmapped.city)    hints.push('مدينة الولادة: «' + unmapped.city + '»');
-        if (unmapped && unmapped.citizen) hints.push('الجنسية: «' + unmapped.citizen + '»');
-        if (hints.length) {
-            msg += ' — يرجى اختيار يدوياً: ' + hints.join('، ') + '.';
-        }
-        toast(msg, 'success', 7000);
+        toast('تمّ ملء ' + changed + ' حقلاً تلقائياً.', 'success', 5000);
         return changed;
+    }
+
+    /**
+     * Render (or replace) an inline banner inside a field wrapper that tells
+     * the user a value was extracted but didn't match any option in the
+     * dropdown — and offers a one-tap action to fix it.
+     *
+     * For cities we offer "إضافة إلى قائمة المدن" which POSTs to the new
+     * add-city endpoint and refreshes the <select> in place. For other
+     * lookups we just show the extracted text as a hint.
+     */
+    function renderUnmappedBanner(fieldName, rawValue, cfg) {
+        var $wrap = $('[data-cw-field="' + fieldName + '"]').first();
+        if (!$wrap.length) return;
+
+        $wrap.find('.cw-unmapped').remove();
+
+        var $banner = $('<div/>', {
+            'class': 'cw-unmapped',
+            role:    'note',
+            'aria-live': 'polite',
+        });
+
+        $('<span/>', { 'class': 'cw-unmapped__text' })
+            .html(
+                '<i class="fa fa-info-circle" aria-hidden="true"></i> ' +
+                cfg.label + ' المُستخرَجة: ' +
+                '<strong></strong>'
+            )
+            .find('strong').text(rawValue).end()
+            .appendTo($banner);
+
+        if (cfg.kind === 'city' || cfg.kind === 'citizen') {
+            var $btn = $('<button/>', {
+                type: 'button',
+                'class': 'cw-unmapped__btn',
+                text: cfg.addLabel || ('إضافة «' + rawValue + '»'),
+            });
+            $btn.on('click', function (e) {
+                e.preventDefault();
+                handleAddLookup(cfg.kind, fieldName, rawValue, $banner, $btn);
+            });
+            $banner.append($btn);
+        }
+
+        $wrap.append($banner);
+    }
+
+    function removeUnmappedBanner(fieldName) {
+        $('[data-cw-field="' + fieldName + '"] .cw-unmapped').remove();
+    }
+
+    /**
+     * POST an unresolved lookup value (city/citizen name extracted by OCR)
+     * to the matching wizard endpoint, then inject the resulting option into
+     * the <select> and select it. Idempotent: handles existed/restored/new
+     * cases identically from the user's perspective.
+     *
+     * @param {'city'|'citizen'} kind  which lookup we're updating
+     * @param {string}  fieldName     bracketed name, e.g. 'Customers[city]'
+     * @param {string}  rawValue      the OCR-extracted text
+     * @param {jQuery}  $banner       the banner element to remove on success
+     * @param {jQuery}  $btn          the action button (for disable/restore)
+     */
+    function handleAddLookup(kind, fieldName, rawValue, $banner, $btn) {
+        var labels = kind === 'citizen'
+            ? { missing: 'لم يتم العثور على حقل الجنسية في النموذج.',
+                fail:    'تعذّر إضافة الجنسية.',
+                added:   'تمّت إضافة «{n}» إلى قائمة الجنسيات.' }
+            : { missing: 'لم يتم العثور على حقل المدينة في النموذج.',
+                fail:    'تعذّر إضافة المدينة.',
+                added:   'تمّت إضافة «{n}» إلى قائمة المدن.' };
+
+        var $select = $('select[name="' + cssEscape(fieldName) + '"]').first();
+        if (!$select.length) {
+            toast(labels.missing, 'error');
+            return;
+        }
+        var origText = $btn.text();
+        $btn.prop('disabled', true)
+            .html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i> جارٍ الحفظ…');
+
+        $.ajax({
+            url: lookupAddUrl(kind),
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                name: rawValue,
+                _csrf: csrfToken(),
+            },
+        }).done(function (resp) {
+            if (!resp || !resp.ok || !resp.id) {
+                toast((resp && resp.error) || labels.fail, 'error', 6000);
+                $btn.prop('disabled', false).text(origText);
+                return;
+            }
+
+            var idStr = String(resp.id);
+            var name  = resp.name || rawValue;
+
+            var $existing = $select.find('option[value="' + cssEscape(idStr) + '"]');
+            if (!$existing.length) {
+                $('<option/>', { value: idStr, text: name })
+                    .insertAfter($select.find('option').first());
+            }
+
+            $select.val(idStr).trigger('change');
+
+            var $wrap = $select.closest('[data-cw-field]');
+            $wrap.addClass('cw-field--auto-filled');
+            window.setTimeout(function () {
+                $wrap.removeClass('cw-field--auto-filled');
+            }, 3000);
+
+            $banner.remove();
+            var msg;
+            if (resp.restored) {
+                msg = 'تمّت استعادة «' + name + '» (كانت محذوفة سابقاً) واختيارها.';
+            } else if (resp.existed) {
+                msg = 'تم اختيار «' + name + '» (موجودة مسبقاً).';
+            } else {
+                msg = labels.added.replace('{n}', name);
+            }
+            toast(msg, 'success', 5500);
+        }).fail(function () {
+            toast('فشل الاتصال بالخادم. حاول مرة أخرى.', 'error', 6000);
+            $btn.prop('disabled', false).text(origText);
+        });
     }
 
     /**
@@ -265,7 +476,7 @@
         window.CWCamera.open({
             scanUrl:   scanUrl(),
             csrfToken: csrfToken(),
-            onFields:  function (fields, side, unmapped) {
+            onFields:  function (fields, side, unmapped, meta) {
                 // Apply incrementally so the user sees the form fill in real-time
                 // — but stay quiet about success toasts; the camera UI itself
                 // already shows "تم التقاط الوجه...".
@@ -273,15 +484,24 @@
                     silentEmpty:   true,
                     silentSuccess: true,
                 });
+                // Stash the per-side Media id in a hidden input so the
+                // wizard's draft autosave includes it. Server-side
+                // rememberScanInDraft() already persists this to _scan.images,
+                // but having it in the form too means a manual "Save draft"
+                // button click also carries the link.
+                if (meta && meta.image_id) {
+                    setScanImageRef(side, meta.image_id);
+                }
             },
-            onComplete: function (allFields) {
+            onComplete: function (allFields, allImages) {
                 // Final toast once both sides processed.
                 var changedTotal = Object.keys(allFields || {}).length;
-                if (changedTotal) {
-                    toast('✓ تم استخراج بيانات الهوية ومسحها بالكامل.', 'success', 6000);
-                } else {
-                    toast('انتهى المسح ولم يتم استخراج بيانات.', 'warning', 5000);
-                }
+                var imagesSaved  = allImages ? Object.keys(allImages).length : 0;
+                var bits = [];
+                if (changedTotal) bits.push('تم ملء ' + changedTotal + ' حقلاً تلقائياً');
+                if (imagesSaved)  bits.push('تم حفظ ' + imagesSaved + ' صورة في ملف العميل');
+                if (bits.length)  toast('✓ ' + bits.join(' — ') + '.', 'success', 6500);
+                else              toast('انتهى المسح ولم يتم استخراج بيانات.', 'warning', 5000);
             },
             onCancel:   function () { /* no toast — user closed deliberately */ },
             onFallback: function () { openFilePicker($btn); },
@@ -295,84 +515,143 @@
     }
 
     /**
-     * File-input change handler — fires once a file is picked.
+     * Stash a Media row id in a hidden input so it survives the wizard's
+     * autosave cycle (the controller's rememberScanInDraft() also persists
+     * it server-side; the hidden field is a belt-and-suspenders backup).
+     */
+    function setScanImageRef(side, imageId) {
+        var name = 'WizardScan[' + (side === 'back' ? 'back' : 'front') + '_image_id]';
+        var $hidden = $('input[name="' + cssEscape(name) + '"]').first();
+        if (!$hidden.length) {
+            $hidden = $('<input type="hidden">').attr('name', name).appendTo('body');
+        }
+        $hidden.val(String(imageId));
+    }
+
+    /**
+     * File-input change handler — accepts one OR two files (front + back).
+     * Each file is uploaded in sequence so the server can persist a Media
+     * row per side and so that side-aware extraction (front vs back)
+     * works correctly. The user can pick a single file (treated as front)
+     * or two files (treated as front, then back).
      */
     function onFileChange(e) {
         var input = e.target;
         if (!input.files || !input.files.length) return;
 
-        var file = input.files[0];
         var $btn = $(this).closest('.cw-card__header').find('[data-cw-action="scan-identity"]')
                      .add($(this).siblings('[data-cw-action="scan-identity"]'))
                      .first();
-
         if (!$btn.length) {
             $btn = $(this).closest('[data-cw-section]').find('[data-cw-action="scan-identity"]').first();
         }
 
-        // Light client-side guard rails (server is authoritative).
         var maxBytes = 10 * 1024 * 1024;
         var allowed  = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-        if (file.size > maxBytes) {
-            toast('حجم الملف أكبر من 10 ميجابايت.', 'error');
-            input.value = '';
-            return;
-        }
-        if (file.type && allowed.indexOf(file.type) === -1) {
-            toast('نوع الملف غير مدعوم — استخدم JPG / PNG / WEBP / PDF.', 'error');
-            input.value = '';
-            return;
+
+        // Cap to two files — anything beyond is probably a misclick.
+        var files = Array.prototype.slice.call(input.files, 0, 2);
+        for (var i = 0; i < files.length; i++) {
+            var f = files[i];
+            if (f.size > maxBytes) {
+                toast('الملف #' + (i + 1) + ': الحجم أكبر من 10 ميجابايت.', 'error', 6000);
+                input.value = '';
+                return;
+            }
+            if (f.type && allowed.indexOf(f.type) === -1) {
+                toast('الملف #' + (i + 1) + ': نوع غير مدعوم — استخدم JPG / PNG / WEBP / PDF.', 'error', 6000);
+                input.value = '';
+                return;
+            }
         }
 
         setBusy($btn, true);
-        toast('جارٍ تحليل الوثيقة بالذكاء الاصطناعي…', 'info', 2000);
+        if (files.length === 2) {
+            toast('جارٍ تحليل الوجه الأمامي ثم الخلفي…', 'info', 2500);
+        } else {
+            toast('جارٍ تحليل الوثيقة بالذكاء الاصطناعي…', 'info', 2000);
+        }
 
-        uploadScan(file)
-            .done(function (resp) {
-                if (!resp || !resp.ok) {
-                    var msg = (resp && resp.error) ? resp.error
-                            : 'تعذّر تحليل الوثيقة — جرّب صورة أوضح.';
-                    toast(msg, 'error', 6000);
-                    return;
-                }
+        var totalChanged   = 0;
+        var totalImagesAdded = 0;
+        var lastUnmapped   = {};
+        var hadAnyError    = false;
+        // Reset snapshot so the first file builds a fresh undo state.
+        lastSnapshot = null;
 
-                var fields = resp.fields || {};
-                if (!Object.keys(fields).length) {
-                    toast('لم يتمكّن النظام من استخراج بيانات قابلة للاستخدام.', 'warning', 5000);
-                    return;
-                }
+        // Run uploads sequentially so the back-side request gets the
+        // already-detected issuing_body for context-aware extraction.
+        // Each response is rendered IMMEDIATELY (fields + unmapped banner)
+        // so the user never wonders whether extraction worked while the
+        // second upload is still in flight.
+        var seq = $.Deferred().resolve();
+        files.forEach(function (file, idx) {
+            // First file → front, second → back. The server will re-detect
+            // and override if its OCR disagrees, but this hint helps.
+            var sideHint = (idx === 0) ? 'front' : 'back';
+            seq = seq.then(function () {
+                return uploadScan(file, sideHint).done(function (resp) {
+                    if (!resp || !resp.ok) {
+                        hadAnyError = true;
+                        var msg = (resp && resp.error) ? resp.error
+                                : 'تعذّر تحليل الملف #' + (idx + 1) + ' — جرّب صورة أوضح.';
+                        toast(msg, 'error', 6000);
+                        return;
+                    }
 
-                lastSnapshot = snapshot(fields);
-                var changedCount = applyFields(fields);
+                    if (resp.image_id) {
+                        var fileSide = (resp.side_detected === 'back') ? 'back'
+                                     : (resp.side_detected === 'front') ? 'front'
+                                     : sideHint;
+                        setScanImageRef(fileSide, resp.image_id);
+                        totalImagesAdded++;
+                    }
 
-                if (!changedCount) {
-                    toast('البيانات المُستخرَجة مطابقة للحقول الحالية.', 'info', 4000);
-                    return;
-                }
+                    if (resp.unmapped) lastUnmapped = $.extend(lastUnmapped, resp.unmapped);
 
-                // Build success message + surface any unmapped lookups.
-                var msg = 'تمّ ملء ' + changedCount + ' حقلاً تلقائياً.';
-                var unmapped = resp.unmapped || {};
-                var hints = [];
-                if (unmapped.city)    hints.push('مدينة الولادة: «' + unmapped.city + '»');
-                if (unmapped.citizen) hints.push('الجنسية: «' + unmapped.citizen + '»');
-                if (hints.length) {
-                    msg += ' — يرجى اختيار يدوياً: ' + hints.join('، ') + '.';
-                }
-                toast(msg, 'success', 7000);
-            })
-            .fail(function (xhr) {
-                var serverMsg = '';
-                try {
-                    var j = xhr && xhr.responseJSON;
-                    if (j && j.error) serverMsg = j.error;
-                } catch (_) { /* noop */ }
-                toast(serverMsg || 'فشل الاتصال بخدمة المسح — تحقّق من الإنترنت.', 'error', 6000);
-            })
-            .always(function () {
-                setBusy($btn, false);
-                input.value = '';     // allow re-selecting the same file
+                    // ── Apply this response's payload IMMEDIATELY: fields
+                    //    are filled and any unmapped lookup banner (e.g.
+                    //    "إضافة كفرنجه إلى المدن") shows up right away,
+                    //    not after the 2nd upload finishes 10-15s later.
+                    var beforeChanged = totalChanged;
+                    var thisChanged = applyServerFields(resp.fields || {}, resp.unmapped || {}, {
+                        silentEmpty:   true,
+                        silentSuccess: true,
+                    });
+                    totalChanged = beforeChanged + thisChanged;
+
+                    // Quick per-file ack so the user sees movement between
+                    // the front and back analyses.
+                    if (files.length === 2 && idx === 0 && (thisChanged || resp.image_id)) {
+                        toast('تم تحليل الوجه الأمامي — جارٍ تحليل الخلفي…', 'info', 2500);
+                    }
+                });
             });
+        });
+
+        seq.always(function () {
+            setBusy($btn, false);
+            input.value = '';
+
+            // Final summary toast (banners + fields are already on screen).
+            if (hadAnyError && totalChanged === 0 && totalImagesAdded === 0) return;
+
+            var bits = [];
+            if (totalChanged)      bits.push('تم ملء ' + totalChanged + ' حقلاً تلقائياً');
+            if (totalImagesAdded)  bits.push('تم حفظ ' + totalImagesAdded + ' صورة في ملف العميل');
+            if (bits.length) {
+                toast('✓ ' + bits.join(' — ') + '.', 'success', 6500);
+            } else if (!hadAnyError) {
+                toast('انتهى التحليل ولم تُستخرج بيانات قابلة للاستخدام.', 'warning', 5000);
+            }
+        }).fail(function (xhr) {
+            var serverMsg = '';
+            try {
+                var j = xhr && xhr.responseJSON;
+                if (j && j.error) serverMsg = j.error;
+            } catch (_) { /* noop */ }
+            toast(serverMsg || 'فشل الاتصال بخدمة المسح — تحقّق من الإنترنت.', 'error', 6000);
+        });
     }
 
     /**

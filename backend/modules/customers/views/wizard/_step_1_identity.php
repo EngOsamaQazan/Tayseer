@@ -49,6 +49,7 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                data-cw-role="scan-input"
                accept="image/jpeg,image/png,image/webp,application/pdf"
                capture="environment"
+               multiple
                aria-hidden="true"
                tabindex="-1">
     </div>
@@ -56,7 +57,7 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
     <p id="cw-scan-hint" class="cw-card__hint">
         <i class="fa fa-info-circle" aria-hidden="true"></i>
         سنفتح الكاميرا ونلتقط الوجهين تلقائياً عندما تكون الصورة واضحة (مثل تطبيقات البنوك)،
-        أو ارفع ملفاً (JPG/PNG/PDF حتى 10MB) — وسنُعبّئ الحقول لك.
+        أو ارفع <strong>صورتين</strong> (وجه الهوية ثم ظهرها — JPG/PNG/PDF حتى 10MB لكلٍّ منهما) وسنُعبّئ الحقول لك.
     </p>
 
     <div class="cw-card__body">
@@ -196,7 +197,7 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                     </p>
                 </div>
 
-                <!-- City of birth. -->
+                <!-- City of birth — searchable combobox with inline "add new". -->
                 <div class="cw-field" data-cw-field="Customers[city]">
                     <label class="cw-field__label" for="cw-city">
                         مدينة الولادة <span class="cw-field__req" aria-hidden="true">*</span>
@@ -205,7 +206,10 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                             name="Customers[city]"
                             class="cw-input cw-select"
                             required
-                            aria-required="true">
+                            aria-required="true"
+                            data-cw-combo="city"
+                            data-cw-combo-placeholder="ابحث عن المدينة أو اكتب اسماً جديداً…"
+                            data-cw-combo-add-url="<?= Html::encode(\yii\helpers\Url::to(['/customers/wizard/add-city'])) ?>">
                         <option value="">— اختر المدينة —</option>
                         <?php foreach ($cities as $cid => $cname): ?>
                             <option value="<?= Html::encode((string)$cid) ?>"
@@ -225,7 +229,10 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                             name="Customers[citizen]"
                             class="cw-input cw-select"
                             required
-                            aria-required="true">
+                            aria-required="true"
+                            data-cw-combo="citizen"
+                            data-cw-combo-placeholder="ابحث عن الجنسية أو اكتب اسماً جديداً…"
+                            data-cw-combo-add-url="<?= Html::encode(\yii\helpers\Url::to(['/customers/wizard/add-citizen'])) ?>">
                         <option value="">— اختر الجنسية —</option>
                         <?php foreach ($citizens as $cid => $cname): ?>
                             <option value="<?= Html::encode((string)$cid) ?>"

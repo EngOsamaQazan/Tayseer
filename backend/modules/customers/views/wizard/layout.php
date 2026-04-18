@@ -31,31 +31,52 @@ $this->params['breadcrumbs'] = [
 ];
 
 $baseUrl = Yii::$app->request->baseUrl;
-$this->registerCssFile($baseUrl . '/css/customer-wizard/core.css', [
+
+// Cache-busting helper: appends ?v=<filemtime> so browsers reload the
+// asset whenever we deploy a new version. This prevents the silent
+// "I deployed a fix but users still see old behaviour" failure mode.
+$webRoot = Yii::getAlias('@webroot');
+$ver = static function ($relPath) use ($webRoot, $baseUrl) {
+    $absolute = $webRoot . $relPath;
+    $stamp = @filemtime($absolute) ?: 1;
+    return $baseUrl . $relPath . '?v=' . $stamp;
+};
+
+$this->registerCssFile($ver('/css/customer-wizard/core.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
-$this->registerCssFile($baseUrl . '/css/customer-wizard/fields.css', [
+$this->registerCssFile($ver('/css/customer-wizard/fields.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
-$this->registerCssFile($baseUrl . '/css/customer-wizard/scan-camera.css', [
+$this->registerCssFile($ver('/css/customer-wizard/scan-camera.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
-$this->registerJsFile($baseUrl . '/js/customer-wizard/core.js', [
+$this->registerCssFile($ver('/css/customer-wizard/combo.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
+$this->registerCssFile($ver('/css/customer-wizard/review.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
+$this->registerJsFile($ver('/js/customer-wizard/core.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
-$this->registerJsFile($baseUrl . '/js/customer-wizard/fields.js', [
+$this->registerJsFile($ver('/js/customer-wizard/fields.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+$this->registerJsFile($ver('/js/customer-wizard/combo.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
 // scan-camera.js MUST load before scan.js — the latter feature-detects
 // `window.CWCamera` synchronously at click time, so the camera module
 // has to be present in the global scope first.
-$this->registerJsFile($baseUrl . '/js/customer-wizard/scan-camera.js', [
+$this->registerJsFile($ver('/js/customer-wizard/scan-camera.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
-$this->registerJsFile($baseUrl . '/js/customer-wizard/scan.js', [
+$this->registerJsFile($ver('/js/customer-wizard/scan.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
@@ -69,6 +90,10 @@ $urls = [
     'discard'  => Url::to(['/customers/wizard/discard']),
     'drafts'   => Url::to(['/customers/wizard/drafts']),
     'scan'     => Url::to(['/customers/wizard/scan']),
+    'addCity'    => Url::to(['/customers/wizard/add-city']),
+    'addCitizen' => Url::to(['/customers/wizard/add-citizen']),
+    'addJob'     => Url::to(['/customers/wizard/add-job']),
+    'addBank'    => Url::to(['/customers/wizard/add-bank']),
 ];
 
 $steps = [

@@ -46,6 +46,16 @@
 
     // ─── Tunables ───────────────────────────────────────────────────────────
     var QUALITY_THRESHOLD   = 75;     // 0-100; auto-capture once score >= this
+    var DOC_THRESHOLD       = 70;     // 0-100; minimum document-likelihood to auto-fire
+    // ID-1 cards have an aspect ratio of 1.586:1. The detector below finds
+    // the actual card rectangle anywhere in the frame (we no longer rely
+    // on the user perfectly aligning to a fixed inset).
+    var DOC_ASPECT_MIN      = 1.30;   // min width/height (ID-1 = 1.586)
+    var DOC_ASPECT_MAX      = 2.10;   // max width/height (passport = ~1.42)
+    var DOC_MIN_W_RATIO     = 0.35;   // card width must be >= 35% of frame width
+    var DOC_MIN_H_RATIO     = 0.25;   // card height must be >= 25% of frame height
+    var DOC_EDGE_MIN_GRAD   = 14;     // min gradient magnitude for an edge peak
+    var DOC_MIN_TEXT_LINES  = 4;      // min horizontal text-like stripes inside
     var STABILITY_NEEDED_MS = 1200;   // milliseconds the score must stay above
     var SAMPLE_INTERVAL_MS  = 200;    // analyze 5fps (saves CPU/battery)
     var ANALYSIS_W          = 320;    // downscale width for analysis
@@ -441,11 +451,11 @@
             + '        <i class="fa fa-upload" aria-hidden="true"></i>'
             + '        ارفع ملفاً بدلاً'
             + '      </button>'
-            + '      <button type="button" class="cwcam__btn cwcam__btn--success"'
+            + '      <button type="button" class="cwcam__btn cwcam__btn--ghost"'
             + '              hidden data-cwcam-skip-back'
-            + '              title="إنهاء بدون تصوير الوجه الخلفي">'
-            + '        <i class="fa fa-check" aria-hidden="true"></i>'
-            + '        تخطّي وإنهاء'
+            + '              title="استخدمه فقط إذا تعذّر تصوير الظهر تماماً (سيُحفظ السجل بدون رقم البطاقة)">'
+            + '        <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>'
+            + '        تخطّي رغم عدم اكتمال البيانات'
             + '      </button>'
             + '    </div>'
             + '  </div>'
@@ -494,14 +504,21 @@
             startQualityLoop();
         });
 
-        // ── "Skip back" — graceful escape on the back-side step. ──
-        // The back of the ID is OPTIONAL (front already provided everything
-        // we need). If the user can't get a clean capture (camera glare,
-        // mirror finish, etc.) we let them finish the wizard without it.
+        // ── "Skip back" — last-resort escape on the back-side step. ──
+        // The back of the ID is REQUIRED (it carries document_number which
+        // doesn't appear on the front). We hide this button by default and
+        // only reveal it after several failed attempts so the user has an
+        // out when their card is genuinely unreadable (e.g. damaged surface,
+        // mirror finish on top of glare). Skipping here means the customer
+        // record will be created WITHOUT a document_number — flagged for
+        // manual entry later.
         state.$root.on('click', '[data-cwcam-skip-back]', function () {
+            if (!confirm('سيُكمل النظام بدون رقم البطاقة (Document No). يجب إدخاله يدوياً لاحقاً. هل تريد المتابعة؟')) {
+                return;
+            }
             announce('تمّ تخطّي الوجه الخلفي.');
             if (state.opts.onComplete) {
-                try { state.opts.onComplete(state.collectedFields); } catch (_) {}
+                try { state.opts.onComplete(state.collectedFields, state.collectedImages); } catch (_) {}
             }
             CWCamera.close();
         });
@@ -571,7 +588,15 @@
 
         renderQuality(score, metrics);
 
-        if (score >= QUALITY_THRESHOLD) {
+        // Auto-capture demands BOTH: image is technically usable (score ≥
+        // QUALITY_THRESHOLD) AND we're confident a document is in frame
+        // (docScore ≥ DOC_THRESHOLD). The doc gate prevents firing on a
+        // washing machine, hand, ceiling, etc. that happens to be sharp
+        // and well-lit. Manual capture still works regardless.
+        var qualityOk = score >= QUALITY_THRESHOLD;
+        var docOk     = (metrics.docScore || 0) >= DOC_THRESHOLD;
+
+        if (qualityOk && docOk) {
             if (!state.stableSinceTs) state.stableSinceTs = Date.now();
             var elapsed = Date.now() - state.stableSinceTs;
             if (elapsed >= STABILITY_NEEDED_MS) {
@@ -595,29 +620,28 @@
      */
     function analyzeFrame(data) {
         var len = data.length;
-        var lumaSum = 0;
-        var lumaCount = 0;
-        var lumaArr = new Float32Array(ANALYSIS_W * ANALYSIS_H);
+        var W = ANALYSIS_W, H = ANALYSIS_H;
+        var lumaArr = new Float32Array(W * H);
 
-        // Pass 1: luma.
+        // Pass 1: per-pixel luma.
+        var lumaSum = 0;
         for (var i = 0, p = 0; i < len; i += 4, p++) {
             var L = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
             lumaArr[p] = L;
             lumaSum += L;
-            lumaCount++;
         }
-        var meanLuma = lumaSum / lumaCount;
+        var meanLuma = lumaSum / (W * H);
 
-        // Pass 2: Laplacian variance (sampled stride 2 to stay cheap).
+        // Pass 2: global Laplacian variance (sharpness).
         var lap = 0, lap2 = 0, lapCount = 0;
-        for (var y = 1; y < ANALYSIS_H - 1; y += 2) {
-            for (var x = 1; x < ANALYSIS_W - 1; x += 2) {
-                var idx = y * ANALYSIS_W + x;
+        for (var y = 1; y < H - 1; y += 2) {
+            for (var x = 1; x < W - 1; x += 2) {
+                var idx = y * W + x;
                 var v = -4 * lumaArr[idx]
                       + lumaArr[idx - 1]
                       + lumaArr[idx + 1]
-                      + lumaArr[idx - ANALYSIS_W]
-                      + lumaArr[idx + ANALYSIS_W];
+                      + lumaArr[idx - W]
+                      + lumaArr[idx + W];
                 lap  += v;
                 lap2 += v * v;
                 lapCount++;
@@ -638,15 +662,256 @@
             var meanDiff = diff / diffCount;          // 0-255
             stabilityScore = Math.max(0, 100 - meanDiff * 4);
         } else {
-            stabilityScore = 50;     // unknown until we have history
+            stabilityScore = 50;
         }
         state.lastFrameData = lumaArr;
+
+        // ── Document detection: find the actual card rectangle. ──
+        var docInfo = detectCardRectangle(lumaArr, W, H);
+        var docScore = scoreDocument(docInfo, lumaArr, W, H);
 
         return {
             brightness: meanLuma,
             sharpness:  Math.min(100, lapVar / 10),
             stability:  stabilityScore,
+            docScore:   docScore,
+            _doc:       docInfo,    // {found, top, bot, left, right, aspect, textLines, contrast}
         };
+    }
+
+    /**
+     * Detect a card-shaped rectangle anywhere in the frame.
+     *
+     * Algorithm:
+     *   1. Project luma gradients onto rows (vertical-gradient sum per row)
+     *      and columns (horizontal-gradient sum per col). These projections
+     *      have sharp peaks at the actual edges of any rectangular object.
+     *   2. Scan inward from each side looking for the first row/column
+     *      whose projection exceeds a noise-tolerant threshold.
+     *   3. The four peak positions form a candidate rectangle. We validate
+     *      its aspect ratio (ID-1 ≈ 1.586) and minimum size.
+     *
+     * Returns:
+     *   { found: false }                       on no detection
+     *   { found: true, top, bot, left, right, width, height, aspect,
+     *     edgeStrength }                       on success
+     */
+    function detectCardRectangle(luma, W, H) {
+        // Build row & column gradient projections.
+        var rowG = new Float32Array(H);
+        var colG = new Float32Array(W);
+
+        for (var y = 1; y < H - 1; y++) {
+            var rs = 0;
+            for (var x = 0; x < W; x++) {
+                rs += Math.abs(luma[(y + 1) * W + x] - luma[(y - 1) * W + x]);
+            }
+            rowG[y] = rs / W;
+        }
+        for (var x2 = 1; x2 < W - 1; x2++) {
+            var cs = 0;
+            for (var y2 = 0; y2 < H; y2++) {
+                cs += Math.abs(luma[y2 * W + (x2 + 1)] - luma[y2 * W + (x2 - 1)]);
+            }
+            colG[x2] = cs / H;
+        }
+
+        // Find the strongest peak in a range, scanning inward from `start`
+        // toward `end`. Returns the index, or -1 if no peak passes threshold.
+        function findEdge(arr, start, end, thresh) {
+            var step = (end > start) ? 1 : -1;
+            var bestI = -1, bestV = thresh;
+            for (var i = start; i !== end; i += step) {
+                if (arr[i] > bestV) {
+                    bestV = arr[i];
+                    bestI = i;
+                    // Early exit: once we found a peak, stop after the next
+                    // local maximum window passes (to avoid jumping past the
+                    // real edge to inner text).
+                    if (bestV > thresh * 2) break;
+                }
+            }
+            return { idx: bestI, val: bestV };
+        }
+
+        var thresh = DOC_EDGE_MIN_GRAD;
+        // Top edge: scan from y=2 → H/2.
+        var top   = findEdge(rowG, 2,           Math.floor(H / 2),     thresh);
+        // Bottom edge: scan from y=H-3 → H/2.
+        var bot   = findEdge(rowG, H - 3,       Math.floor(H / 2),     thresh);
+        // Left edge: scan from x=2 → W/2.
+        var left  = findEdge(colG, 2,           Math.floor(W / 2),     thresh);
+        // Right edge: scan from x=W-3 → W/2.
+        var right = findEdge(colG, W - 3,       Math.floor(W / 2),     thresh);
+
+        if (top.idx === -1 || bot.idx === -1 || left.idx === -1 || right.idx === -1) {
+            return { found: false, reason: 'no_edges' };
+        }
+
+        var rectW = right.idx - left.idx;
+        var rectH = bot.idx - top.idx;
+
+        if (rectW < W * DOC_MIN_W_RATIO) return { found: false, reason: 'too_narrow' };
+        if (rectH < H * DOC_MIN_H_RATIO) return { found: false, reason: 'too_short' };
+
+        var aspect = rectW / rectH;
+        if (aspect < DOC_ASPECT_MIN || aspect > DOC_ASPECT_MAX) {
+            return { found: false, reason: 'wrong_aspect', aspect: aspect };
+        }
+
+        // Edge strength = average of the 4 detected peak values.
+        var edgeStrength = (top.val + bot.val + left.val + right.val) / 4;
+
+        return {
+            found: true,
+            top: top.idx, bot: bot.idx, left: left.idx, right: right.idx,
+            width: rectW, height: rectH,
+            aspect: aspect,
+            edgeStrength: edgeStrength,
+        };
+    }
+
+    /**
+     * Score the detected rectangle 0-100 based on:
+     *   1. Aspect ratio fit — closer to 1.586 is better
+     *   2. Edge strength — stronger peaks = real cardstock
+     *   3. Text-line count inside — real IDs have ≥ 4 horizontal text stripes
+     *   4. Brightness contrast inside vs outside — card stands out
+     */
+    function scoreDocument(doc, luma, W, H) {
+        if (!doc || !doc.found) return 0;
+
+        // 1. Aspect ratio score (Gaussian around 1.586).
+        var aspectErr = Math.abs(doc.aspect - 1.586);
+        var aspectScore = Math.max(0, 100 - aspectErr * 250);  // 1.586±0.4 → 0
+
+        // 2. Edge strength score.
+        var edgeScore;
+        var es = doc.edgeStrength;
+        if (es >= 35)      edgeScore = 100;
+        else if (es >= 18) edgeScore = 50 + (es - 18) / 17 * 50;
+        else if (es >= 10) edgeScore = (es - 10) / 8 * 50;
+        else               edgeScore = 0;
+
+        // 3. Text-line count inside the detected rectangle.
+        var textLines = countTextLines(luma, W, doc.left, doc.top, doc.right, doc.bot);
+        doc.textLines = textLines;
+
+        var textScore;
+        if (textLines >= 8)      textScore = 100;
+        else if (textLines >= 5) textScore = 60 + (textLines - 5) / 3 * 40;
+        else if (textLines >= 2) textScore = (textLines - 2) / 3 * 60;
+        else                     textScore = 0;
+
+        // 4. Inside vs outside contrast.
+        var contrast = computeInsideOutsideContrast(luma, W, H, doc);
+        doc.contrast = contrast;
+        var contrastScore;
+        var ac = Math.abs(contrast);
+        if (ac >= 25)      contrastScore = 100;
+        else if (ac >= 10) contrastScore = 50 + (ac - 10) / 15 * 50;
+        else               contrastScore = ac / 10 * 50;
+
+        // ── HARD GATES — any single failure vetoes the doc detection. ──
+        // These prevent a washing-machine + "kind of rectangular" false
+        // positive from passing on accumulated weak scores alone.
+        if (textLines < DOC_MIN_TEXT_LINES) {
+            doc._gate = 'no_text';
+            return Math.min(40, Math.round(
+                aspectScore * 0.3 + edgeScore * 0.4 + contrastScore * 0.3
+            ));
+        }
+        if (es < DOC_EDGE_MIN_GRAD) {
+            doc._gate = 'weak_edges';
+            return Math.min(40, Math.round(aspectScore * 0.5 + textScore * 0.5));
+        }
+
+        // Final score — weighted geometric mean so a single weak signal
+        // pulls the overall score down hard.
+        var s = Math.pow(Math.max(5, aspectScore)   * 0.01, 0.20)
+              * Math.pow(Math.max(5, edgeScore)     * 0.01, 0.30)
+              * Math.pow(Math.max(5, textScore)     * 0.01, 0.35)
+              * Math.pow(Math.max(5, contrastScore) * 0.01, 0.15);
+        return Math.round(s * 100);
+    }
+
+    /**
+     * Count horizontal text-like stripes inside a rectangle. A "text stripe"
+     * is a row whose horizontal-gradient activity exceeds a threshold AND
+     * sits within a band where activity drops below threshold above and
+     * below it (i.e. it's a discrete line, not part of a uniform texture).
+     */
+    function countTextLines(luma, W, x0, y0, x1, y1) {
+        var rectW = x1 - x0;
+        var rectH = y1 - y0;
+        if (rectW <= 0 || rectH <= 0) return 0;
+
+        // Horizontal-gradient activity per row, restricted to the rectangle.
+        var rowAct = new Float32Array(rectH);
+        for (var ry = 0; ry < rectH; ry++) {
+            var s = 0;
+            var y = y0 + ry;
+            for (var x = x0 + 1; x < x1 - 1; x++) {
+                s += Math.abs(luma[y * W + (x + 1)] - luma[y * W + (x - 1)]);
+            }
+            rowAct[ry] = s / Math.max(1, rectW);
+        }
+
+        // Smooth (3-tap moving average) to suppress single-pixel noise.
+        var smoothed = new Float32Array(rectH);
+        for (var i = 1; i < rectH - 1; i++) {
+            smoothed[i] = (rowAct[i - 1] + rowAct[i] + rowAct[i + 1]) / 3;
+        }
+        smoothed[0] = rowAct[0];
+        smoothed[rectH - 1] = rowAct[rectH - 1];
+
+        // Compute mean + dynamic threshold = mean * 1.4.
+        var mean = 0;
+        for (var j = 0; j < rectH; j++) mean += smoothed[j];
+        mean /= rectH;
+        if (mean < 4) return 0;     // empty / uniform interior
+        var thr = Math.max(8, mean * 1.4);
+
+        // Walk and count "high → low" transitions = end of a text stripe.
+        var lines = 0;
+        var inStripe = false;
+        var stripeStart = 0;
+        for (var k = 0; k < rectH; k++) {
+            if (smoothed[k] >= thr) {
+                if (!inStripe) { inStripe = true; stripeStart = k; }
+            } else if (inStripe) {
+                inStripe = false;
+                var thickness = k - stripeStart;
+                // A real text stripe is 1-6 rows thick at this resolution.
+                // A washing-machine logo "stripe" is usually 0-1 (thin
+                // accent line) or 10+ (a big colored band). Both rejected.
+                if (thickness >= 1 && thickness <= 8) lines++;
+            }
+        }
+        return lines;
+    }
+
+    /**
+     * Brightness contrast: mean luma inside the rectangle vs outside.
+     * Positive = inside brighter (typical white card on darker surface).
+     */
+    function computeInsideOutsideContrast(luma, W, H, doc) {
+        var inSum = 0, inN = 0, outSum = 0, outN = 0;
+        // Sample stride 2 for speed.
+        for (var y = 0; y < H; y += 2) {
+            var inside = (y >= doc.top && y < doc.bot);
+            for (var x = 0; x < W; x += 2) {
+                var L = luma[y * W + x];
+                if (inside && x >= doc.left && x < doc.right) {
+                    inSum += L; inN++;
+                } else {
+                    outSum += L; outN++;
+                }
+            }
+        }
+        var meanIn  = inN  ? inSum  / inN  : 0;
+        var meanOut = outN ? outSum / outN : 0;
+        return meanIn - meanOut;
     }
 
     /**
@@ -673,9 +938,18 @@
 
     function renderQuality(score, m) {
         var $frame = state.$root.find('[data-cwcam-frame]');
+        var docOk      = (m.docScore || 0) >= DOC_THRESHOLD;
+        var qualityOk  = score >= QUALITY_THRESHOLD;
+
+        // Frame border colors:
+        //   good  → green ring + auto-fire countdown active (only when both
+        //           technical quality AND document presence pass)
+        //   fair  → yellow (acceptable lighting/sharpness but no doc detected,
+        //           OR doc detected but a bit blurry)
+        //   poor  → red (nothing usable in frame)
         var quality;
-        if (score >= QUALITY_THRESHOLD)        quality = 'good';
-        else if (score >= 50)                  quality = 'fair';
+        if (qualityOk && docOk)                quality = 'good';
+        else if (score >= 50 || (m.docScore || 0) >= 30) quality = 'fair';
         else                                   quality = 'poor';
 
         if ($frame.attr('data-quality') !== quality) {
@@ -684,21 +958,53 @@
 
         // Update ring fill (only fills while we're in "good" stable streak).
         var ringPct = 0;
-        if (score >= QUALITY_THRESHOLD && state.stableSinceTs) {
+        if (quality === 'good' && state.stableSinceTs) {
             ringPct = Math.min(1, (Date.now() - state.stableSinceTs) / STABILITY_NEEDED_MS);
         }
         var $ring = state.$root.find('[data-cwcam-ring]');
         var offset = state._ringCirc * (1 - ringPct);
         $ring.css('stroke-dashoffset', offset);
 
-        // Hint text (subtle priority order — most actionable first).
+        // ── Hint priority (most actionable first). ──
+        // Doc-presence hints come BEFORE technical hints so the user is
+        // told "place a card in the frame" before being asked to fix
+        // brightness on an empty surface.
+        var doc = m._doc || {};
         var hint;
-        if (m.brightness < 50)       hint = 'الإضاءة منخفضة — اقترب من النور';
-        else if (m.brightness > 220) hint = 'الإضاءة قوية جداً — قلّل السطوع';
-        else if (m.sharpness < 30)   hint = 'الصورة غير واضحة — ثبّت يدك';
-        else if (m.stability < 60)   hint = 'ثبّت الكاميرا قليلاً';
-        else if (score < QUALITY_THRESHOLD) hint = 'اقترب أو ابتعد قليلاً للتوضيح';
-        else                          hint = 'ممتاز — لا تحرّك يدك';
+        if (!doc.found) {
+            // No card-shaped rectangle detected at all.
+            switch (doc.reason) {
+                case 'no_edges':
+                    hint = 'وجّه الكاميرا نحو الوثيقة — لم يُكشَف إطار بطاقة';
+                    break;
+                case 'too_narrow':
+                case 'too_short':
+                    hint = 'اقترب أكثر حتى تملأ الوثيقة الإطار';
+                    break;
+                case 'wrong_aspect':
+                    hint = 'هذه ليست بطاقة هوية — وجّه الكاميرا نحو الوثيقة الصحيحة';
+                    break;
+                default:
+                    hint = 'ضع وثيقة هوية أو شهادة تعيين أمام الكاميرا';
+            }
+        } else if ((doc.textLines || 0) < DOC_MIN_TEXT_LINES) {
+            // We see a rectangle, but no text inside — likely not a document.
+            hint = 'لم يُكشَف نص داخل الإطار — هل الوثيقة بالاتجاه الصحيح؟';
+        } else if (m.brightness < 50) {
+            hint = 'الإضاءة منخفضة — اقترب من النور';
+        } else if (m.brightness > 220) {
+            hint = 'الإضاءة قوية جداً — قلّل السطوع';
+        } else if (m.sharpness < 30) {
+            hint = 'الصورة غير واضحة — ثبّت يدك';
+        } else if (m.stability < 60) {
+            hint = 'ثبّت الكاميرا قليلاً';
+        } else if (!docOk) {
+            hint = 'اقترب قليلاً وثبّت الوثيقة في وسط الإطار';
+        } else if (!qualityOk) {
+            hint = 'اقترب أو ابتعد قليلاً للتوضيح';
+        } else {
+            hint = 'ممتاز — لا تحرّك يدك';
+        }
         state.$root.find('[data-cwcam-hint]').text(hint);
     }
 
@@ -818,12 +1124,26 @@
             $.extend(state.collectedFields, resp.fields);
         }
 
+        // Track the persisted Media row id per side, so the caller (scan.js)
+        // can stash it in a hidden form field — actionFinish() then adopts
+        // these orphan rows for the new customer.
+        if (!state.collectedImages) state.collectedImages = {};
+        if (resp.image_id) {
+            state.collectedImages[state.currentSide] = resp.image_id;
+        }
+
         // Hand the side's fields to the caller immediately so the form starts
         // populating — this gives faster perceived feedback than waiting for
         // both sides.
         if (state.opts.onFields) {
-            try { state.opts.onFields(resp.fields || {}, state.currentSide, resp.unmapped || {}); }
-            catch (_) {}
+            try {
+                state.opts.onFields(
+                    resp.fields || {},
+                    state.currentSide,
+                    resp.unmapped || {},
+                    { image_id: resp.image_id || null, issuing_body: resp.issuing_body || null }
+                );
+            } catch (_) {}
         }
 
         var nextAction = resp.next_action || (state.currentSide === 'front' ? 'capture_back' : 'done');
@@ -834,22 +1154,24 @@
             state.backFailures = 0;
             state.$root.find('[data-cwcam-title-text]').text('مسح الهوية — الوجه الخلفي');
             state.$root.find('[data-cwcam-side-pill]').text('2 / 2');
-            // Reveal the "skip back" button — back side is optional, so we
-            // give the user an immediate escape hatch from the moment they
-            // arrive (no need to wait for failures).
-            state.$root.find('[data-cwcam-skip-back]').prop('hidden', false);
+            // The back is REQUIRED (we need document_number from MRZ/serial).
+            // Hide the skip button initially and only show it as a last-resort
+            // after multiple failures (handleUploadFailure does that).
+            state.$root.find('[data-cwcam-skip-back]')
+                .prop('hidden', true)
+                .removeClass('cwcam__btn--pulse');
             announce('تم التقاط الوجه الأمامي. اقلب الهوية الآن.');
             showFlipPrompt();
         } else {
             // All done — show a brief success overlay so the user sees the
             // green checkmark instead of a confusing dark frame for ~500ms.
-            // If the backend included a `note` (e.g. "back returned no extra
-            // data, that's fine"), surface it here instead of generic text.
+            // If the backend included a `note` (e.g. "intelligence card back
+            // is blank — that's expected"), surface it here.
             var successMsg = resp.note || 'تمّ المسح بنجاح';
             announce(successMsg);
             showSuccess(successMsg);
             if (state.opts.onComplete) {
-                try { state.opts.onComplete(state.collectedFields); } catch (_) {}
+                try { state.opts.onComplete(state.collectedFields, state.collectedImages); } catch (_) {}
             }
             // Slightly longer when there's a note so the user can read it.
             setTimeout(CWCamera.close, resp.note ? 1800 : 900);
@@ -857,13 +1179,20 @@
     }
 
     function handleUploadFailure(msg) {
-        // Track back-side failures so we can surface the "skip" hint more
-        // prominently after repeated retries (matches the user's pain
-        // signal: "tried 10 times and couldn't capture the back").
+        // Track back-side failures so we can surface the last-resort "skip"
+        // option after repeated retries. The back is REQUIRED for a complete
+        // record (it carries document_number) so we make the user try at
+        // least three times before exposing the bypass — and even then it's
+        // marked as "incomplete" not "done".
         if (state.currentSide === 'back') {
             state.backFailures = (state.backFailures || 0) + 1;
-            if (state.backFailures >= 2) {
-                msg += '\n\nالوجه الخلفي اختياري — يمكنك "تخطّي وإنهاء" أدناه.';
+
+            if (state.backFailures === 1) {
+                msg += '\n\nنصيحة: قرّب الكاميرا حتى تملأ البطاقة الإطار، وثبّتها على سطح مظلم لقراءة سطور MRZ.';
+            } else if (state.backFailures === 2) {
+                msg += '\n\nجرّب إضاءة جانبية (لا تواجه الكاميرا مباشرة) لتقليل الانعكاس.';
+            } else if (state.backFailures >= 3) {
+                msg += '\n\nإذا تعذّر الالتقاط: يمكنك "تخطّي رغم عدم اكتمال البيانات" أدناه — لكن سيلزمك إدخال رقم البطاقة يدوياً لاحقاً.';
                 state.$root.find('[data-cwcam-skip-back]')
                     .prop('hidden', false)
                     .addClass('cwcam__btn--pulse');
