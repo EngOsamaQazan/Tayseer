@@ -20,7 +20,9 @@ use yii\helpers\Url;
  * @var array                           $payload
  * @var int                             $currentStep
  * @var int                             $totalSteps
+ * @var array                           $lookups   ['cities'=>[], 'citizens'=>[], 'hearAboutUs'=>[]]
  */
+$lookups = $lookups ?? ['cities' => [], 'citizens' => [], 'hearAboutUs' => []];
 
 $this->title = 'إضافة عميل جديد';
 $this->params['breadcrumbs'] = [
@@ -32,7 +34,14 @@ $baseUrl = Yii::$app->request->baseUrl;
 $this->registerCssFile($baseUrl . '/css/customer-wizard/core.css', [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
+$this->registerCssFile($baseUrl . '/css/customer-wizard/fields.css', [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
 $this->registerJsFile($baseUrl . '/js/customer-wizard/core.js', [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+$this->registerJsFile($baseUrl . '/js/customer-wizard/fields.js', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
@@ -139,6 +148,7 @@ $steps = [
                     echo $this->render($partial, [
                         'payload' => $payload,
                         'step'    => $i,
+                        'lookups' => $lookups,
                     ]);
                     ?>
                 </section>

@@ -98,6 +98,7 @@ class WizardController extends Controller
             'payload'     => $payload,
             'currentStep' => $currentStep,
             'totalSteps'  => self::TOTAL_STEPS,
+            'lookups'     => $this->loadLookups(),
         ]);
     }
 
@@ -121,6 +122,7 @@ class WizardController extends Controller
             'draft'   => $draft,
             'payload' => $payload,
             'step'    => $n,
+            'lookups' => $this->loadLookups(),
         ]);
     }
 
@@ -327,18 +329,57 @@ class WizardController extends Controller
         return 'مسودة عميل جديدة';
     }
 
-    /* ── Per-step server-side validators (skeletons — fleshed out in Phase 2-4) ── */
+    /**
+     * Load shared dropdown lookups (cities, nationalities, "how heard about us")
+     * from the same cached params used by the legacy form. Returns empty arrays
+     * on any failure so views never crash.
+     */
+    protected function loadLookups()
+    {
+        $cache  = Yii::$app->cache;
+        $params = Yii::$app->params;
+        $duration = $params['time_duration'] ?? 3600;
+        $db = Yii::$app->db;
 
+        $fetch = function ($keyName, $queryName) use ($cache, $params, $duration, $db) {
+            try {
+                $key = $params[$keyName] ?? null;
+                $sql = $params[$queryName] ?? null;
+                if (!$key || !$sql) return [];
+                return $cache->getOrSet($key, function () use ($db, $sql) {
+                    return $db->createCommand($sql)->queryAll();
+                }, $duration);
+            } catch (\Throwable $e) {
+                Yii::warning("Wizard lookup '$keyName' failed: " . $e->getMessage(), __METHOD__);
+                return [];
+            }
+        };
+
+        return [
+            'cities'        => $fetch('key_city', 'city_query'),
+            'citizens'      => $fetch('key_citizen', 'citizen_query'),
+            'hearAboutUs'   => $fetch('key_hear_about_us', 'hear_about_us_query'),
+        ];
+    }
+
+    /* ── Per-step server-side validators ── */
+
+    /**
+     * Validate identity step. Server-side rules mirror the eventual
+     * Customers model rules but are applied here so we can fail fast on
+     * the wizard's per-step "Next" without instantiating the full model.
+     */
     protected function validateStep1($data)
     {
         $errors = [];
+
         $required = [
-            'Customers[name]'      => 'اسم العميل',
-            'Customers[id_number]' => 'الرقم الوطني',
-            'Customers[sex]'       => 'الجنس',
-            'Customers[birth_date]'=> 'تاريخ الميلاد',
-            'Customers[city]'      => 'مدينة الولادة',
-            'Customers[citizen]'   => 'الجنسية',
+            'Customers[name]'                 => 'الاسم الرباعي',
+            'Customers[id_number]'            => 'الرقم الوطني',
+            'Customers[sex]'                  => 'الجنس',
+            'Customers[birth_date]'           => 'تاريخ الميلاد',
+            'Customers[city]'                 => 'مدينة الولادة',
+            'Customers[citizen]'              => 'الجنسية',
             'Customers[primary_phone_number]' => 'الهاتف الرئيسي',
             'Customers[hear_about_us]'        => 'كيف سمعت عنا',
         ];
@@ -348,6 +389,70 @@ class WizardController extends Controller
                 $errors[$key] = "حقل «{$label}» مطلوب.";
             }
         }
+
+        // Name must contain at least 2 words (first + last as bare minimum).
+        $name = trim((string)$this->dotGet($data, 'Customers[name]'));
+        if ($name !== '') {
+            $wordCount = preg_match_all('/\S+/u', $name);
+            if ($wordCount < 2) {
+                $errors['Customers[name]'] = 'الرجاء إدخال الاسم الرباعي (4 كلمات يفضّل، 2 كحد أدنى).';
+            }
+            if (mb_strlen($name) > 250) {
+                $errors['Customers[name]'] = 'الاسم طويل جداً (الحد الأقصى 250 حرفاً).';
+            }
+        }
+
+        // Jordanian national ID = 10 digits. Accept 9–12 to cover legacy/foreign IDs.
+        $id = trim((string)$this->dotGet($data, 'Customers[id_number]'));
+        if ($id !== '' && !preg_match('/^\d{9,12}$/', $id)) {
+            $errors['Customers[id_number]'] = 'الرقم الوطني يجب أن يكون أرقاماً (9–12 خانة).';
+        }
+
+        // Birth date must be a real date AND user must be ≥ 18 years old AND ≤ 110.
+        $birth = trim((string)$this->dotGet($data, 'Customers[birth_date]'));
+        if ($birth !== '') {
+            $ts = strtotime($birth);
+            if ($ts === false) {
+                $errors['Customers[birth_date]'] = 'صيغة التاريخ غير صحيحة.';
+            } else {
+                $age = (int)((time() - $ts) / (365.25 * 24 * 3600));
+                if ($age < 18) {
+                    $errors['Customers[birth_date]'] = 'يجب ألا يقل عمر العميل عن 18 سنة.';
+                } elseif ($age > 110) {
+                    $errors['Customers[birth_date]'] = 'تاريخ الميلاد يبدو غير منطقي (العمر > 110 سنة).';
+                }
+            }
+        }
+
+        // Phone — accept JO mobile patterns: 07XXXXXXXX | +9627XXXXXXXX | 009627XXXXXXXX.
+        $phone = trim((string)$this->dotGet($data, 'Customers[primary_phone_number]'));
+        if ($phone !== '') {
+            $digits = preg_replace('/\D+/', '', $phone);
+            $okJO   = (bool)preg_match('/^(?:00962|962|0)?7[789]\d{7}$/', $digits);
+            $okIntl = strlen($digits) >= 8 && strlen($digits) <= 15; // E.164 floor/ceiling
+            if (!$okJO && !$okIntl) {
+                $errors['Customers[primary_phone_number]'] = 'رقم الهاتف غير صالح.';
+            }
+        }
+
+        // Email is optional, but if present must be syntactically valid.
+        $email = trim((string)$this->dotGet($data, 'Customers[email]'));
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors['Customers[email]'] = 'البريد الإلكتروني غير صالح.';
+        }
+
+        // Sex must be one of the accepted enum values (1 = male, 2 = female).
+        $sex = $this->dotGet($data, 'Customers[sex]');
+        if ($sex !== null && $sex !== '' && !in_array((string)$sex, ['1', '2'], true)) {
+            $errors['Customers[sex]'] = 'قيمة الجنس غير صالحة.';
+        }
+
+        // Notes — soft cap 500 chars.
+        $notes = (string)$this->dotGet($data, 'Customers[notes]');
+        if (mb_strlen($notes) > 500) {
+            $errors['Customers[notes]'] = 'الملاحظات تتجاوز 500 حرف.';
+        }
+
         return $errors;
     }
 

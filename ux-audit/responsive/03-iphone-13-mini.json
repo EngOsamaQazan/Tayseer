@@ -12,7 +12,7 @@
     "hOverflow": 0,
     "shell": {
       "w": 359,
-      "h": 915
+      "h": 1750
     },
     "stepper": {
       "scrollW": 297,
@@ -23,16 +23,16 @@
       {
         "n": "1",
         "w": 65,
-        "h": 52,
-        "isCurrent": false,
-        "labelVisible": false
+        "h": 91,
+        "isCurrent": true,
+        "labelVisible": true
       },
       {
         "n": "2",
         "w": 65,
-        "h": 91,
-        "isCurrent": true,
-        "labelVisible": true
+        "h": 52,
+        "isCurrent": false,
+        "labelVisible": false
       },
       {
         "n": "3",

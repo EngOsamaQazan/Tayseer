@@ -61,6 +61,26 @@ const VIEWPORTS = [
 
     const results = [];
 
+    // Discard any pre-existing auto-draft so we always land on Step 1
+    // with a clean slate (matters for the new identity form audit).
+    await page.setViewportSize({ width: 1366, height: 768 });
+    try {
+        await page.goto(BASE_URL + WIZARD_PATH, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    } catch (e) {
+        await page.waitForTimeout(800);
+        await page.goto(BASE_URL + WIZARD_PATH, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    }
+    await page.waitForSelector('#cw-shell', { timeout: 15000 });
+    await page.evaluate(async () => {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const param = document.querySelector('meta[name="csrf-param"]')?.getAttribute('content') || '_csrf-backend';
+        const fd = new FormData();
+        if (csrf) fd.append(param, csrf);
+        try {
+            await fetch('/customers/wizard/discard', { method: 'POST', body: fd, credentials: 'include' });
+        } catch (e) { /* ignore */ }
+    });
+
     for (const vp of VIEWPORTS) {
         await page.setViewportSize({ width: vp.w, height: vp.h });
         try {
@@ -171,6 +191,35 @@ const VIEWPORTS = [
             return r;
         });
 
+        // ── Step-1 specific assertions: ensure the form renders. ──
+        const formCheck = await page.evaluate(() => {
+            const required = [
+                'Customers[name]',
+                'Customers[id_number]',
+                'Customers[primary_phone_number]',
+                'Customers[sex]',
+                'Customers[birth_date]',
+                'Customers[city]',
+                'Customers[citizen]',
+                'Customers[hear_about_us]',
+            ];
+            const missing = [];
+            required.forEach(n => {
+                if (!document.querySelector('[name="' + CSS.escape(n) + '"]')) missing.push(n);
+            });
+            const inputsBelowTouch = [];
+            document.querySelectorAll('.cw-input, .cw-radio').forEach(el => {
+                if (el.offsetParent === null) return;
+                const r = el.getBoundingClientRect();
+                if (Math.min(r.width, r.height) < 40) {
+                    inputsBelowTouch.push({ tag: el.tagName, h: Math.round(r.height) });
+                }
+            });
+            return { missing, inputsBelowTouch };
+        });
+        if (formCheck.missing.length > 0) metrics.formMissing = formCheck.missing;
+        if (formCheck.inputsBelowTouch.length > 0) metrics.formSmallInputs = formCheck.inputsBelowTouch;
+
         // ── 3. Capture full-page screenshot at the actual viewport. ──
         const png = path.join(OUT_DIR, vp.name + '.png');
         await page.screenshot({ path: png, fullPage: true });
@@ -185,6 +234,8 @@ const VIEWPORTS = [
         if (metrics.touchTargets.length > 0) issues.push(`${metrics.touchTargets.length} small-target(s)`);
         if (metrics.overflowingChildren.length > 0) issues.push(`${metrics.overflowingChildren.length} overflowing element(s)`);
         if (metrics.titleWrap && metrics.titleWrap.estimatedLines > 3) issues.push(`title wraps ${metrics.titleWrap.estimatedLines} lines`);
+        if (metrics.formMissing) issues.push(`missing fields: ${metrics.formMissing.length}`);
+        if (metrics.formSmallInputs) issues.push(`${metrics.formSmallInputs.length} small input(s)`);
 
         const verdict = issues.length === 0 ? 'OK' : ('ISSUES: ' + issues.join(', '));
         console.log(

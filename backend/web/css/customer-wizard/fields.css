@@ -1,0 +1,365 @@
+/* ============================================================
+   Customer Wizard V2 — Form fields stylesheet
+   -----------------------------------------------------------
+   Kept separate from core.css so the field-system can evolve
+   without touching shell/stepper styles.
+
+   Visual contract:
+     • All required fields show a red asterisk + aria-required.
+     • Hint text sits *below* the input (NN/g & Baymard).
+     • Error messages replace the hint slot on validation fail.
+     • Inputs always have a 44px touch target (var(--cw-touch)).
+     • Focus ring is a high-contrast box-shadow (no outline-none).
+     • Radio/checkbox use a custom mark for consistent RTL render.
+     • Collapsible sections use native <details>/<summary>.
+   ============================================================ */
+
+/* ─────────────── Fieldset (logical grouping inside a card) ─────────────── */
+
+.cw-fieldset {
+    padding: 16px;
+    border: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-md);
+    background: var(--cw-surface-2);
+    margin-bottom: 16px;
+}
+
+.cw-fieldset:last-child { margin-bottom: 0; }
+
+.cw-fieldset__head {
+    margin-bottom: 12px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cw-fieldset__title {
+    font-family: var(--cw-font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--cw-text);
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cw-fieldset__title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 16px;
+    background: var(--cw-primary);
+    border-radius: 2px;
+}
+
+.cw-fieldset__hint {
+    margin: 0;
+    color: var(--cw-text-muted);
+    font-size: 13px;
+}
+
+/* ── Collapsible variant (uses native <details>/<summary>). ── */
+
+.cw-fieldset--collapsible { padding: 0; }
+
+.cw-fieldset--collapsible > .cw-fieldset__summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-weight: 600;
+    color: var(--cw-text);
+    user-select: none;
+}
+
+.cw-fieldset--collapsible > .cw-fieldset__summary::-webkit-details-marker { display: none; }
+
+.cw-fieldset--collapsible > .cw-fieldset__summary::before {
+    content: '\f078';                   /* fa-chevron-down */
+    font-family: FontAwesome, 'Font Awesome 5 Free';
+    font-weight: 900;
+    font-size: 12px;
+    color: var(--cw-text-muted);
+    transition: transform 200ms var(--cw-step-easing);
+}
+
+.cw-fieldset--collapsible[open] > .cw-fieldset__summary::before {
+    transform: rotate(180deg);
+}
+
+.cw-fieldset--collapsible > .cw-grid {
+    padding: 0 16px 16px;
+}
+
+.cw-fieldset--collapsible > .cw-fieldset__summary:focus-visible {
+    outline: none;
+    box-shadow: var(--cw-ring);
+    border-radius: var(--cw-radius-md);
+}
+
+.cw-fieldset__chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--cw-surface);
+    color: var(--cw-text-muted);
+    border: 1px solid var(--cw-border);
+}
+
+/* ─────────────── Field wrapper ─────────────── */
+
+.cw-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;                       /* allows children to shrink in grid */
+}
+
+.cw-field__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cw-text);
+    line-height: 1.3;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cw-field__req {
+    color: var(--cw-danger);
+    font-weight: 700;
+    margin-inline-start: 2px;
+}
+
+.cw-field__hint {
+    font-size: 12px;
+    color: var(--cw-text-muted);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.cw-field__counter {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--cw-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Span helpers (work inside .cw-grid--3). ── */
+
+@media (min-width: 600px) {
+    .cw-field--span-2 { grid-column: span 2; }
+}
+@media (min-width: 900px) {
+    .cw-field--span-3 { grid-column: span 3; }
+}
+
+/* ─────────────── Inputs (text, email, tel, date, select, textarea) ─────────────── */
+
+.cw-input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    min-height: var(--cw-touch);
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--cw-text);
+    background: #fff;
+    border: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-sm);
+    transition:
+        border-color 150ms var(--cw-step-easing),
+        box-shadow   150ms var(--cw-step-easing),
+        background-color 150ms var(--cw-step-easing);
+    line-height: 1.4;
+}
+
+.cw-input::placeholder { color: var(--cw-text-muted); opacity: 0.75; }
+
+.cw-input:hover:not(:disabled):not(:focus) {
+    border-color: var(--cw-border-strong);
+}
+
+.cw-input:focus,
+.cw-input:focus-visible {
+    outline: none;
+    border-color: var(--cw-primary);
+    box-shadow: var(--cw-ring);
+}
+
+.cw-input:disabled,
+.cw-input[readonly] {
+    background: var(--cw-surface-2);
+    color: var(--cw-text-muted);
+    cursor: not-allowed;
+}
+
+.cw-input--mono {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                 "Liberation Mono", monospace;
+    letter-spacing: 0.02em;
+}
+
+.cw-textarea {
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+/* ── Select (preserve native chevron via background SVG so RTL works). ── */
+
+.cw-select {
+    padding-inline-end: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%2364748b' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 12px center;
+    background-size: 12px 8px;
+}
+
+[dir="ltr"] .cw-select {
+    background-position: right 12px center;
+}
+
+/* Browser-specific: kill default IE/Edge select arrow. */
+.cw-select::-ms-expand { display: none; }
+
+/* ─────────────── Date input — RTL-friendly calendar icon ─────────────── */
+
+input.cw-input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.65;
+    margin-inline-start: 0;
+}
+
+input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
+    opacity: 1;
+}
+
+/* ─────────────── Radio group (custom marker) ─────────────── */
+
+.cw-radio-group {
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+}
+
+.cw-radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.cw-radio {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    min-height: var(--cw-touch);
+    background: #fff;
+    border: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-sm);
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--cw-text);
+    transition:
+        border-color 150ms var(--cw-step-easing),
+        background-color 150ms var(--cw-step-easing);
+    -webkit-tap-highlight-color: transparent;
+    flex: 1 1 100px;
+    justify-content: center;
+}
+
+.cw-radio:hover { border-color: var(--cw-border-strong); }
+
+.cw-radio input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cw-radio__mark {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--cw-border-strong);
+    position: relative;
+    flex-shrink: 0;
+    transition: border-color 150ms var(--cw-step-easing);
+}
+
+.cw-radio__mark::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    background: var(--cw-primary);
+    transform: scale(0);
+    transition: transform 150ms var(--cw-step-easing);
+}
+
+.cw-radio input[type="radio"]:checked + .cw-radio__mark {
+    border-color: var(--cw-primary);
+}
+
+.cw-radio input[type="radio"]:checked + .cw-radio__mark::after {
+    transform: scale(1);
+}
+
+.cw-radio:has(input[type="radio"]:checked) {
+    border-color: var(--cw-primary);
+    background: color-mix(in srgb, var(--cw-primary) 6%, white);
+}
+
+.cw-radio input[type="radio"]:focus-visible + .cw-radio__mark {
+    box-shadow: var(--cw-ring);
+    border-radius: 50%;
+}
+
+.cw-radio:has(input[type="radio"]:focus-visible) {
+    border-color: var(--cw-primary);
+    box-shadow: var(--cw-ring);
+}
+
+/* ─────────────── High-contrast / forced-colors mode tweaks ─────────────── */
+
+@media (prefers-contrast: more) {
+    .cw-input,
+    .cw-radio { border-width: 2px; }
+}
+
+@media (forced-colors: active) {
+    .cw-input,
+    .cw-radio { border: 1px solid CanvasText; }
+    .cw-input:focus,
+    .cw-input:focus-visible {
+        outline: 2px solid Highlight;
+        outline-offset: 1px;
+    }
+    .cw-radio input[type="radio"]:checked + .cw-radio__mark {
+        background: Highlight;
+    }
+}
+
+/* ─────────────── Reduced-motion ─────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+    .cw-input,
+    .cw-radio,
+    .cw-radio__mark,
+    .cw-radio__mark::after,
+    .cw-fieldset--collapsible > .cw-fieldset__summary::before {
+        transition: none;
+    }
+}

@@ -279,6 +279,10 @@
         if ($target.length) {
             $target.focus();
         }
+
+        // Notify other modules (CWFields, future widgets) that a new partial
+        // is now visible so they can re-bind their per-field enhancements.
+        $(document).trigger('cw:step:changed', [{ n: n, $section: $target }]);
         // Smooth scroll to top of shell.
         var prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var top = state.$shell.offset().top - 80;

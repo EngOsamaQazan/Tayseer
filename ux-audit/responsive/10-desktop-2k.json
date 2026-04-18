@@ -12,7 +12,7 @@
     "hOverflow": 0,
     "shell": {
       "w": 1824,
-      "h": 648
+      "h": 1103
     },
     "stepper": {
       "scrollW": 1746,
@@ -24,14 +24,14 @@
         "n": "1",
         "w": 431,
         "h": 80,
-        "isCurrent": false,
+        "isCurrent": true,
         "labelVisible": true
       },
       {
         "n": "2",
         "w": 431,
         "h": 80,
-        "isCurrent": true,
+        "isCurrent": false,
         "labelVisible": true
       },
       {
@@ -56,7 +56,7 @@
       "estimatedLines": 1
     },
     "navStuck": {
-      "bottom": 628,
+      "bottom": 173,
       "inViewport": true
     },
     "overflowingChildren": []
