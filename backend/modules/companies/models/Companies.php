@@ -99,7 +99,7 @@ class Companies extends \yii\db\ActiveRecord
             'updated_at' => 'تاريخ التحديث',
             'is_deleted' => 'محذوف',
             'is_primary_company' => 'شركة رئيسية',
-            'company_social_security_number' => 'رقم الضمان الاجتماعي',
+            'company_social_security_number' => 'الرقم الوطني للمنشأة',
             'company_tax_number' => 'الرقم الضريبي',
             'company_email' => 'البريد الإلكتروني',
             'company_address' => 'العنوان',

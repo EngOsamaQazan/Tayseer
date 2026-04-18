@@ -197,8 +197,6 @@ class LawyersController extends Controller
             if ($model->load($request->post()) && $model->save()) {
                 $this->handleSignatureUpload($model);
 
-                $connection = Yii::$app->getDb();
-                $connection->createCommand("DELETE FROM `os_lawyers_image` WHERE `lawyer_id`= " . (int)$model->id)->execute();
                 $model->uploadeMultipleImag($model);
 
                 Yii::$app->cache->set(

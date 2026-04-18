@@ -171,28 +171,43 @@ class Lawyers extends \yii\db\ActiveRecord {
         $query->attachBehavior('softDelete', SoftDeleteQueryBehavior::className());
         return $query->notDeleted();
     }
-    public function uploadeMultipleImag($model){
-        if (!file_exists('images')) {
-            mkdir('images', 0777, true);
+    public function uploadeMultipleImag($model)
+    {
+        $instances = UploadedFile::getInstances($model, 'image');
+        if (empty($instances)) {
+            return 0;
         }
-        if (!file_exists('images/lawar_images')) {
-            mkdir('images/lawar_images', 0777, true);
+
+        $relDir = 'uploads/lawyers/photos';
+        $absDir = Yii::getAlias('@backend/web/' . $relDir);
+        if (!is_dir($absDir)) {
+            FileHelper::createDirectory($absDir, 0775, true);
         }
-        if (!empty($model->image)) {
-            $model->image = UploadedFile::getInstances($model, 'image');
-      
-            foreach ($model->image as $file) {
-           
-                if ($file->saveAs('images/lawar_images/' . $file->baseName . '.' . $file->extension)) {
-                   
-                    $lawyerImageModel = new LawyersImage();
-                    $lawyerImageModel->lawyer_id = $model->id;
-                    $lawyerImageModel->image = 'images/lawar_images/' . $file->baseName . '.' . $file->extension;
-             
-                     $lawyerImageModel->save();
-                 } }
-         
+
+        $saved = 0;
+        foreach ($instances as $file) {
+            $ext = strtolower($file->extension);
+            if (!in_array($ext, ['jpg', 'jpeg', 'png'], true)) {
+                continue;
+            }
+            $fname = 'lw_' . (int) $model->id . '_' . uniqid() . '.' . $ext;
+            $absPath = $absDir . DIRECTORY_SEPARATOR . $fname;
+            if (!$file->saveAs($absPath)) {
+                Yii::error("Failed to save lawyer photo: {$file->name} → {$absPath}", __METHOD__);
+                continue;
+            }
+
+            $row = new LawyersImage();
+            $row->lawyer_id = (int) $model->id;
+            $row->image = $relDir . '/' . $fname;
+            if (!$row->save()) {
+                Yii::error('LawyersImage save failed: ' . json_encode($row->getErrors(), JSON_UNESCAPED_UNICODE), __METHOD__);
+                @unlink($absPath);
+                continue;
+            }
+            $saved++;
         }
+        return $saved;
     }
 
   

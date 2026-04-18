@@ -149,7 +149,7 @@ use common\helper\Permissions;
                         <?= $form->field($model, 'phone_number')->textInput(['maxlength' => true, 'placeholder' => 'أدخل رقم الهاتف']) ?>
                     </div>
                     <div class="inv-form-row">
-                        <?= $form->field($model, 'company_social_security_number')->textInput(['maxlength' => true, 'placeholder' => 'رقم الضمان الاجتماعي']) ?>
+                        <?= $form->field($model, 'company_social_security_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الوطني للمنشأة']) ?>
                         <?= $form->field($model, 'company_tax_number')->textInput(['maxlength' => true, 'placeholder' => 'الرقم الضريبي']) ?>
                     </div>
                     <div class="inv-form-row">

@@ -64,7 +64,7 @@ $this->params['breadcrumbs'][] = $model->name;
                 <div class="inv-view-value"><?= Html::encode($model->company_address ?: '—') ?></div>
             </div>
             <div class="inv-view-item">
-                <div class="inv-view-label">رقم الضمان الاجتماعي</div>
+                <div class="inv-view-label">الرقم الوطني للمنشأة</div>
                 <div class="inv-view-value"><?= Html::encode($model->company_social_security_number ?: '—') ?></div>
             </div>
             <div class="inv-view-item">
