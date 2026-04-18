@@ -175,11 +175,28 @@
                   ? fmtNum(summary.total_subscription_months) + ' شهراً' : null },
             { label: 'جهة العمل الحالية',     value: summary.current_employer },
             { label: 'منشأة الخضوع',          value: summary.subjection_employer },
+            // Smart-picked salary — what actually populates total_salary.
+            // Server's `selected_salary*` fields cross both tables (subscription
+            // periods + salary history) and pick the most recent evidence; we
+            // surface the SAME value here so "آخر راتب شهري" never disagrees
+            // with the input below. Falls back to latest_monthly_salary on
+            // older payloads (resumed drafts that predate the smart picker).
             { label: 'آخر راتب شهري',
-              value: summary.latest_monthly_salary
-                  ? (fmtNum(summary.latest_monthly_salary) + ' د.أ'
-                     + (summary.latest_salary_year ? ' (' + summary.latest_salary_year + ')' : ''))
-                  : null,
+              value: (function () {
+                  var sal = (summary.selected_salary != null && summary.selected_salary > 0)
+                          ? summary.selected_salary
+                          : summary.latest_monthly_salary;
+                  if (!sal) return null;
+                  // Prefer the full as-of date when we have it (e.g.
+                  // "2026-02-01") so the user can see the period the
+                  // wage came from; fall back to the year-only label
+                  // for the legacy salary_history-only case.
+                  var asOf = summary.selected_salary_date
+                          || (summary.latest_salary_year ? String(summary.latest_salary_year) : '');
+                  return fmtNum(sal) + ' د.أ'
+                       + (asOf ? ' (' + asOf + ')' : '')
+                       + (summary.selected_salary_active ? ' — نشط' : '');
+              })(),
               highlight: true },
             { label: 'راتب الخضوع',
               value: summary.subjection_salary ? (fmtNum(summary.subjection_salary) + ' د.أ') : null }

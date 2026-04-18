@@ -959,14 +959,14 @@ class WizardController extends Controller
         // closed one, and on a same-date tie the higher salary wins (a
         // tiny, clearly-residual 0.500 row should not overshadow a real
         // wage stamped on the same day).
-        $smartSalary = $this->pickLatestSalaryByDate(
+        $smartEvidence = $this->pickLatestSalaryEvidence(
             (array)($extracted['subscription_periods'] ?? []),
             (array)($extracted['salary_history']       ?? []),
             isset($extracted['latest_monthly_salary']) ? (float)$extracted['latest_monthly_salary'] : 0.0,
             isset($extracted['latest_salary_year'])    ? (int)$extracted['latest_salary_year']      : 0
         );
-        if ($smartSalary !== null && $smartSalary > 0) {
-            $fields['Customers[total_salary]'] = (string)round($smartSalary, 2);
+        if ($smartEvidence && $smartEvidence['salary'] > 0) {
+            $fields['Customers[total_salary]'] = (string)round((float)$smartEvidence['salary'], 2);
         }
 
         // ── Current employer → job_title.
@@ -1035,18 +1035,42 @@ class WizardController extends Controller
 
     /**
      * Most-recent salary in JOD evidenced anywhere on the SS kashf, or null
-     * if none. See the long block comment above the call site in
-     * mapIncomeScanToWizardFields() for the full rationale.
+     * if none. Thin wrapper around pickLatestSalaryEvidence() that returns
+     * just the dollar amount — kept as a separate method so the auto-fill
+     * call site stays readable.
+     */
+    protected function pickLatestSalaryByDate(array $periods, array $history,
+                                              float $latestMonthly = 0.0,
+                                              int   $latestYear    = 0)
+    {
+        $best = $this->pickLatestSalaryEvidence($periods, $history, $latestMonthly, $latestYear);
+        return $best ? (float)$best['salary'] : ($latestMonthly > 0 ? $latestMonthly : null);
+    }
+
+    /**
+     * Full evidence record for the most-recent salary on the kashf:
+     *   ['salary' => float, 'date' => 'YYYY-MM-DD', 'active' => bool,
+     *    'source' => 'period'|'history'|'fallback']
+     * or null when nothing is parseable.
+     *
+     * Why a separate method from pickLatestSalaryByDate():
+     *   The summary UI needs the as-of date so we can show
+     *   "آخر راتب شهري: 600 د.أ (2026-02-01)" instead of the misleading
+     *   "(2025)" that comes from latest_salary_year — i.e. so the user
+     *   sees WHY the auto-filled wage is what it is.
+     *
+     * See the long comment in mapIncomeScanToWizardFields() for the full
+     * tie-breaker rationale.
      *
      * @param array $periods       subscription_periods rows (from, to, salary, …)
      * @param array $history       salary_history rows (year, salary, …)
      * @param float $latestMonthly server-derived fallback (latest_monthly_salary)
      * @param int   $latestYear    server-derived fallback (latest_salary_year)
-     * @return float|null
+     * @return array{salary:float,date:string,active:bool,source:string}|null
      */
-    protected function pickLatestSalaryByDate(array $periods, array $history,
-                                              float $latestMonthly = 0.0,
-                                              int   $latestYear    = 0)
+    protected function pickLatestSalaryEvidence(array $periods, array $history,
+                                                float $latestMonthly = 0.0,
+                                                int   $latestYear    = 0)
     {
         $candidates = [];
 
@@ -1061,6 +1085,7 @@ class WizardController extends Controller
                 'date'   => $from,
                 'salary' => $sal,
                 'active' => empty($p['to']),
+                'source' => 'period',
             ];
         }
 
@@ -1074,6 +1099,7 @@ class WizardController extends Controller
                 'date'   => sprintf('%04d-12-31', $year),
                 'salary' => $sal,
                 'active' => false,
+                'source' => 'history',
             ];
         }
 
@@ -1083,12 +1109,11 @@ class WizardController extends Controller
                 'date'   => sprintf('%04d-12-31', $latestYear),
                 'salary' => $latestMonthly,
                 'active' => false,
+                'source' => 'fallback',
             ];
         }
 
-        if (!$candidates) {
-            return $latestMonthly > 0 ? $latestMonthly : null;
-        }
+        if (!$candidates) return null;
 
         // Most recent date first; active wins ties; higher salary wins same-date ties.
         usort($candidates, function ($a, $b) {
@@ -1098,7 +1123,7 @@ class WizardController extends Controller
             return $b['salary'] <=> $a['salary'];
         });
 
-        return $candidates[0]['salary'];
+        return $candidates[0];
     }
 
     /**
@@ -1131,6 +1156,15 @@ class WizardController extends Controller
             ];
         }
 
+        // Smart salary pick (same logic that fills total_salary so the
+        // displayed "آخر راتب شهري" never disagrees with the input value).
+        $evidence = $this->pickLatestSalaryEvidence(
+            (array)($extracted['subscription_periods'] ?? []),
+            (array)($extracted['salary_history']       ?? []),
+            isset($extracted['latest_monthly_salary']) ? (float)$extracted['latest_monthly_salary'] : 0.0,
+            isset($extracted['latest_salary_year'])    ? (int)$extracted['latest_salary_year']      : 0
+        );
+
         return [
             'name'                       => $extracted['name'] ?? null,
             'social_security_number'     => $extracted['social_security_number'] ?? null,
@@ -1145,6 +1179,13 @@ class WizardController extends Controller
                                             ? (int)$extracted['latest_salary_year'] : null,
             'latest_monthly_salary'      => isset($extracted['latest_monthly_salary'])
                                             ? (float)$extracted['latest_monthly_salary'] : null,
+            // Authoritative pick — what actually populates total_salary.
+            // The JS summary renderer should display THIS, not the raw
+            // latest_monthly_salary, so the user sees a consistent number.
+            'selected_salary'            => $evidence ? (float)$evidence['salary']  : null,
+            'selected_salary_date'       => $evidence ? (string)$evidence['date']   : null,
+            'selected_salary_active'     => $evidence ? (bool)$evidence['active']   : false,
+            'selected_salary_source'     => $evidence ? (string)$evidence['source'] : null,
             'total_subscription_months'  => isset($extracted['total_subscription_months'])
                                             ? (float)$extracted['total_subscription_months'] : null,
             'active_subscription'        => !empty($extracted['active_subscription']),
