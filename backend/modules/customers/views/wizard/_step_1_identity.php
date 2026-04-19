@@ -53,6 +53,14 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                 <i class="fa fa-upload" aria-hidden="true"></i>
                 <span class="cw-scan__label">رفع من الجهاز</span>
             </button>
+            <button type="button"
+                    class="cw-btn cw-btn--outline cw-btn--sm"
+                    data-cw-action="scan-paste"
+                    aria-describedby="cw-scan-hint"
+                    title="لصق صورة من الحافظة (Ctrl+V)">
+                <i class="fa fa-clipboard" aria-hidden="true"></i>
+                <span class="cw-scan__label">لصق من الحافظة</span>
+            </button>
         </div>
         <input type="file"
                class="cw-sr-only"
@@ -67,7 +75,8 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
     <p id="cw-scan-hint" class="cw-card__hint">
         <i class="fa fa-info-circle" aria-hidden="true"></i>
         افتح <strong>الكاميرا</strong> ليلتقط النظام وجهَي الهوية تلقائياً (مثل تطبيقات البنوك)،
-        أو اختر <strong>رفع من الجهاز</strong> لاختيار صور موجودة لديك (JPG/PNG/PDF حتى 10MB لكلٍّ منهما).
+        أو اختر <strong>رفع من الجهاز</strong> لاختيار صور موجودة لديك (JPG/PNG/PDF حتى 10MB لكلٍّ منهما)،
+        أو ألصق صورة مباشرة من الحافظة بالضغط على <kbd>Ctrl</kbd>+<kbd>V</kbd>.
         ارفع <strong>صورتين</strong> (وجه الهوية ثم ظهرها) وسنُعبّئ الحقول لك.
     </p>
 

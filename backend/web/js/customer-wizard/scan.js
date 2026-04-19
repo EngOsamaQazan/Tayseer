@@ -560,10 +560,8 @@
 
     /**
      * File-input change handler — accepts one OR two files (front + back).
-     * Each file is uploaded in sequence so the server can persist a Media
-     * row per side and so that side-aware extraction (front vs back)
-     * works correctly. The user can pick a single file (treated as front)
-     * or two files (treated as front, then back).
+     * Delegates the heavy lifting to processFiles() so the same pipeline
+     * is shared with the clipboard-paste path (button + Ctrl+V).
      */
     function onFileChange(e) {
         var input = e.target;
@@ -576,21 +574,40 @@
             $btn = $(this).closest('[data-cw-section]').find('[data-cw-action="scan-identity"]').first();
         }
 
+        // Cap to two files — anything beyond is probably a misclick.
+        var files = Array.prototype.slice.call(input.files, 0, 2);
+        processFiles($btn, files, function () { input.value = ''; });
+    }
+
+    /**
+     * Validate + upload + apply for an array of File objects (camera, file
+     * picker, or clipboard). Centralised so every entry-point shares the
+     * same size/type guards, sequential upload semantics, undo snapshot
+     * lifecycle, and final summary toast.
+     *
+     * @param {jQuery}        $btn      Trigger button (for the busy spinner).
+     * @param {File[]}        files     Up to 2 files (front, back).
+     * @param {Function?}     onDone    Optional cleanup (e.g. clear input).
+     */
+    function processFiles($btn, files, onDone) {
+        if (!files || !files.length) {
+            if (typeof onDone === 'function') onDone();
+            return;
+        }
+
         var maxBytes = 10 * 1024 * 1024;
         var allowed  = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
-        // Cap to two files — anything beyond is probably a misclick.
-        var files = Array.prototype.slice.call(input.files, 0, 2);
         for (var i = 0; i < files.length; i++) {
             var f = files[i];
             if (f.size > maxBytes) {
                 toast('الملف #' + (i + 1) + ': الحجم أكبر من 10 ميجابايت.', 'error', 6000);
-                input.value = '';
+                if (typeof onDone === 'function') onDone();
                 return;
             }
             if (f.type && allowed.indexOf(f.type) === -1) {
                 toast('الملف #' + (i + 1) + ': نوع غير مدعوم — استخدم JPG / PNG / WEBP / PDF.', 'error', 6000);
-                input.value = '';
+                if (typeof onDone === 'function') onDone();
                 return;
             }
         }
@@ -602,10 +619,10 @@
             toast('جارٍ تحليل الوثيقة بالذكاء الاصطناعي…', 'info', 2000);
         }
 
-        var totalChanged   = 0;
+        var totalChanged     = 0;
         var totalImagesAdded = 0;
-        var lastUnmapped   = {};
-        var hadAnyError    = false;
+        var lastUnmapped     = {};
+        var hadAnyError      = false;
         // Reset snapshot so the first file builds a fresh undo state.
         lastSnapshot = null;
 
@@ -616,8 +633,6 @@
         // second upload is still in flight.
         var seq = $.Deferred().resolve();
         files.forEach(function (file, idx) {
-            // First file → front, second → back. The server will re-detect
-            // and override if its OCR disagrees, but this hint helps.
             var sideHint = (idx === 0) ? 'front' : 'back';
             seq = seq.then(function () {
                 return uploadScan(file, sideHint).done(function (resp) {
@@ -639,10 +654,6 @@
 
                     if (resp.unmapped) lastUnmapped = $.extend(lastUnmapped, resp.unmapped);
 
-                    // ── Apply this response's payload IMMEDIATELY: fields
-                    //    are filled and any unmapped lookup banner (e.g.
-                    //    "إضافة كفرنجه إلى المدن") shows up right away,
-                    //    not after the 2nd upload finishes 10-15s later.
                     var beforeChanged = totalChanged;
                     var thisChanged = applyServerFields(resp.fields || {}, resp.unmapped || {}, {
                         silentEmpty:   true,
@@ -650,8 +661,6 @@
                     });
                     totalChanged = beforeChanged + thisChanged;
 
-                    // Quick per-file ack so the user sees movement between
-                    // the front and back analyses.
                     if (files.length === 2 && idx === 0 && (thisChanged || resp.image_id)) {
                         toast('تم تحليل الوجه الأمامي — جارٍ تحليل الخلفي…', 'info', 2500);
                     }
@@ -661,9 +670,8 @@
 
         seq.always(function () {
             setBusy($btn, false);
-            input.value = '';
+            if (typeof onDone === 'function') onDone();
 
-            // Final summary toast (banners + fields are already on screen).
             if (hadAnyError && totalChanged === 0 && totalImagesAdded === 0) return;
 
             var bits = [];
@@ -684,6 +692,124 @@
         });
     }
 
+    /* ─────────────────────────────────────────────────────────────────
+     * CLIPBOARD PASTE
+     * Two entry points share the same processFiles() pipeline:
+     *   1. The "لصق من الحافظة" button  → navigator.clipboard.read()
+     *   2. Anywhere on Step 1 via Ctrl+V → ClipboardEvent.clipboardData
+     * Both paths are scoped so they don't fire while the user is pasting
+     * into a normal text input/textarea (we honour native paste there).
+     * ─────────────────────────────────────────────────────────────────*/
+
+    /**
+     * True when the active wizard section actually contains an identity
+     * scan trigger. Keeps the global Ctrl+V listener inert on every other
+     * step (employment, addresses, review) so we never hijack the user's
+     * normal paste behaviour outside step 1.
+     */
+    function pasteSinkAvailable() {
+        return $('section.cw-section--active [data-cw-action="scan-identity"]').length > 0;
+    }
+
+    /**
+     * Resolve the trigger button to use for spinner/aria when paste arrives
+     * from a global Ctrl+V (no source element to bubble from).
+     */
+    function activePasteTrigger() {
+        return $('section.cw-section--active [data-cw-action="scan-identity"]').first();
+    }
+
+    /**
+     * "لصق من الحافظة" button — uses the modern Async Clipboard API.
+     * Falls back to a friendly hint when the browser blocks programmatic
+     * read or the user hasn't granted clipboard permission yet (very
+     * common on http://, where the API is gated to user-gesture only).
+     */
+    function onPasteClick(e) {
+        e.preventDefault();
+        var $btn = $(this);
+
+        if (!navigator.clipboard || typeof navigator.clipboard.read !== 'function') {
+            toast('متصفحك لا يدعم القراءة من الحافظة — اضغط Ctrl+V لإلصاق الصورة مباشرة.', 'info', 6000);
+            return;
+        }
+
+        navigator.clipboard.read().then(function (clipItems) {
+            var pending = [];
+            (clipItems || []).forEach(function (item) {
+                var imgType = (item.types || []).find(function (t) {
+                    return t === 'image/png'
+                        || t === 'image/jpeg'
+                        || t === 'image/webp';
+                });
+                if (!imgType) return;
+                pending.push(item.getType(imgType).then(function (blob) {
+                    var ext = imgType.split('/')[1] || 'png';
+                    return new File([blob],
+                        'clipboard_' + Date.now() + '_' + pending.length + '.' + ext,
+                        { type: imgType });
+                }));
+            });
+
+            if (!pending.length) {
+                toast('لا توجد صورة في الحافظة — انسخ صورة الهوية ثم أعد المحاولة.', 'warning', 5000);
+                return;
+            }
+
+            Promise.all(pending).then(function (files) {
+                processFiles($btn, files.slice(0, 2));
+            });
+        }).catch(function () {
+            toast('تعذّر الوصول إلى الحافظة — اضغط Ctrl+V لإلصاق الصورة، أو امنح الإذن من إعدادات المتصفح.',
+                  'warning', 6500);
+        });
+    }
+
+    /**
+     * Global Ctrl+V handler. Only consumes the event when:
+     *   • The active wizard step actually has a scan trigger (step 1), AND
+     *   • The clipboard payload contains at least one image file, AND
+     *   • The paste did NOT originate from an editable text surface
+     *     (input/textarea/contenteditable) — otherwise the user is
+     *     probably pasting an Arabic name, not a screenshot.
+     */
+    function onGlobalPaste(e) {
+        if (!pasteSinkAvailable()) return;
+
+        var target = e.target || document.activeElement;
+        if (target) {
+            var tag = (target.tagName || '').toLowerCase();
+            var isEditable = tag === 'input' || tag === 'textarea' || target.isContentEditable;
+            if (isEditable) {
+                // Honour native paste into text fields. The exception is
+                // when the clipboard *only* contains files (no text):
+                // pasting a screenshot while focus happens to be in a
+                // field shouldn't be silently swallowed.
+                var cd = e.originalEvent && e.originalEvent.clipboardData;
+                var hasText = cd && (cd.getData('text/plain') || cd.getData('text/html'));
+                if (hasText) return;
+            }
+        }
+
+        var clip = e.originalEvent && e.originalEvent.clipboardData;
+        if (!clip || !clip.items) return;
+
+        var files = [];
+        for (var i = 0; i < clip.items.length; i++) {
+            var it = clip.items[i];
+            if (it.kind === 'file' && /^image\/(png|jpeg|webp)$/.test(it.type || '')) {
+                var f = it.getAsFile();
+                if (f) files.push(f);
+            }
+        }
+
+        if (!files.length) return;
+
+        e.preventDefault();
+        toast('تم لصق ' + files.length + ' صورة من الحافظة — جارٍ التحليل…', 'info', 2500);
+        processFiles(activePasteTrigger(), files.slice(0, 2));
+    }
+
     /**
      * Idempotent binder — safe to call after each step re-render.
      */
@@ -694,6 +820,16 @@
 
         $doc.off('change' + NS, 'input[data-cw-role="scan-input"]')
             .on('change' + NS, 'input[data-cw-role="scan-input"]', onFileChange);
+
+        $doc.off('click' + NS, '[data-cw-action="scan-paste"]')
+            .on('click' + NS, '[data-cw-action="scan-paste"]', onPasteClick);
+
+        // Bind the global paste handler exactly once (rebinding on every
+        // step re-render would multiply firings).
+        if (!bind._pasteBound) {
+            $doc.on('paste' + NS, onGlobalPaste);
+            bind._pasteBound = true;
+        }
     }
 
     /* Init: bind on DOM ready + on every step render so freshly inserted

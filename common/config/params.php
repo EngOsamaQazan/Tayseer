@@ -18,7 +18,7 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-19 — promote Customer Wizard v2 to default
-     *  /customers/create (legacy form moved to /customers/create-legacy). */
+     *  Last bump: 2026-04-19 — clipboard paste for identity scan
+     *  (button + global Ctrl+V) on Step 1 of the wizard. */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 ];
