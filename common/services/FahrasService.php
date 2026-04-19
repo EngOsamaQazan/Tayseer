@@ -254,7 +254,12 @@ class FahrasService extends Component
         $errNo  = curl_errno($ch);
         $errMsg = curl_error($ch);
         $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        // NOTE: do NOT call curl_close() — it has been a no-op since PHP 8.0
+        // (handles are objects freed on scope exit) and PHP 8.5 emits
+        // E_DEPRECATED for it, which corrupts the JSON response on this
+        // very AJAX action. Letting $ch go out of scope is the correct
+        // and forward-compatible way to release the handle.
+        unset($ch);
 
         if ($errNo) {
             // Logged at warning level — token never reaches the log.
