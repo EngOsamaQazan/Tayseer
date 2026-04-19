@@ -80,6 +80,16 @@ $citizenMap= ArrayHelper::map($lookups['citizens'] ?? [], 'id', 'name');
 $hearMap   = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
 $jobMap    = ArrayHelper::map($lookups['jobs']     ?? [], 'id', 'name');
 $bankMap   = ArrayHelper::map($lookups['banks']    ?? [], 'id', 'name');
+// Cousins index is keyed by id so we can resolve guarantors[*].phone_number_owner
+// (an id stored as a string) into a human label for the review chip. We also
+// build a reverse name→name passthrough so any older draft that still holds
+// the Arabic name string survives the lookup unchanged.
+$cousinMap = ArrayHelper::map($lookups['cousins']  ?? [], 'id', 'name');
+$resolveCousinLabel = function ($raw) use ($cousinMap) {
+    $raw = trim((string)$raw);
+    if ($raw === '') return null;
+    return $cousinMap[$raw] ?? $raw; // legacy name string passes through.
+};
 
 $lookupName = function ($id, array $map) {
     if ($id === null || $id === '' || $id === 0 || $id === '0') return null;
@@ -325,8 +335,9 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
                         <div class="cw-review-card">
                             <div class="cw-review-card__head">
                                 <div class="cw-review-card__title"><?= Html::encode($g['owner_name'] ?? '') ?></div>
-                                <?php if (!empty($g['phone_number_owner'])): ?>
-                                    <span class="cw-review-card__chip"><?= Html::encode($g['phone_number_owner']) ?></span>
+                                <?php $relLabel = $resolveCousinLabel($g['phone_number_owner'] ?? ''); ?>
+                                <?php if ($relLabel !== null): ?>
+                                    <span class="cw-review-card__chip"><?= Html::encode($relLabel) ?></span>
                                 <?php endif ?>
                             </div>
                             <?php if (!empty($g['phone_number'])): ?>

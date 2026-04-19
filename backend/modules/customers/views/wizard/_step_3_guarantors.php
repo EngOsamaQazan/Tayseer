@@ -56,7 +56,33 @@ if (!is_array($addresses) || empty($addresses)) {
 $homeValues = is_array($addresses['home'] ?? null) ? $addresses['home'] : [];
 $workValues = is_array($addresses['work'] ?? null) ? $addresses['work'] : [];
 
-$cousins = ArrayHelper::map($lookups['cousins'] ?? [], 'name', 'name');
+// Cousins (relationship lookup) — aligned with the legacy convention used by
+// every other module that touches phone_numbers.phone_number_owner
+// (backend/modules/phoneNumbers/views/phone-numbers/_form.php, the legacy
+// _form.php / _smart_form.php here, etc.): option value = id, label = name.
+// The wizard previously stored the *name* string instead of the id, so this
+// view also builds a reverse `name → id` map and uses it to resolve any
+// legacy / pre-migration draft payloads back onto the correct option.
+$cousins        = ArrayHelper::map($lookups['cousins'] ?? [], 'id',   'name');
+$cousinIdByName = [];
+foreach (($lookups['cousins'] ?? []) as $__c) {
+    $__name = trim((string)($__c['name'] ?? ''));
+    if ($__name !== '' && isset($__c['id'])) {
+        $cousinIdByName[$__name] = (string)$__c['id'];
+    }
+}
+/**
+ * Resolve a stored phone_number_owner cell (could be an id, a name string
+ * from older wizard saves, or empty) into the canonical id used by the
+ * dropdown. Returns '' when nothing matches.
+ */
+$resolveCousinId = function ($raw) use ($cousins, $cousinIdByName) {
+    $raw = trim((string)$raw);
+    if ($raw === '') return '';
+    if (isset($cousins[$raw]))           return (string)$raw;          // already an id
+    if (isset($cousinIdByName[$raw]))    return $cousinIdByName[$raw]; // legacy name → id
+    return '';
+};
 $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
 ?>
 <div class="cw-card">
@@ -136,6 +162,7 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
                                            data-cw-phone>
                                 </div>
 
+                                <?php $relId = $resolveCousinId($g['phone_number_owner'] ?? ''); ?>
                                 <div class="cw-field" data-cw-field="guarantors[<?= (int)$i ?>][phone_number_owner]">
                                     <label class="cw-field__label">
                                         صلة القرابة <span class="cw-field__req" aria-hidden="true">*</span>
@@ -145,7 +172,7 @@ $cities  = ArrayHelper::map($lookups['cities']  ?? [], 'id',   'name');
                                         <option value="">— اختر —</option>
                                         <?php foreach ($cousins as $cVal => $cName): ?>
                                             <option value="<?= Html::encode((string)$cVal) ?>"
-                                                    <?= (string)($g['phone_number_owner'] ?? '') === (string)$cVal ? 'selected' : '' ?>>
+                                                    <?= (string)$relId === (string)$cVal ? 'selected' : '' ?>>
                                                 <?= Html::encode((string)$cName) ?>
                                             </option>
                                         <?php endforeach ?>
