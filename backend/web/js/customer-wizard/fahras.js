@@ -415,6 +415,25 @@
     }
 
     /**
+     * Translate a Fahras remote-source key (used both in the per-source
+     * diagnostic panel and the id-mismatch alert) to its Arabic display
+     * label. Unknown keys fall through to the raw value so anything new
+     * Fahras adds upstream still appears — just untranslated.
+     */
+    function remoteSourceLabelAr(key) {
+        switch (key) {
+            case 'zajal': return 'زجل';
+            case 'jadal': return 'جدل';
+            case 'namaa': return 'نماء';
+            case 'bseel': return 'بسيل';
+            case 'watar': return 'وتر';
+            case 'majd':  return 'عالم المجد';
+            case 'local': return 'القاعدة المحلّية';
+            default:      return key || '—';
+        }
+    }
+
+    /**
      * Render a collapsed «تفاصيل تشخيصية» disclosure carrying the per-source
      * data that produced the verdict — local row counts, per-remote-API row
      * counts, HTTP codes, retry flags, engine input/group counts, and the
@@ -443,21 +462,21 @@
             }
         }
 
-        var sourceLabels = {
-            zajal: 'زجل', jadal: 'جدل', namaa: 'نماء',
-            bseel: 'بسيل', watar: 'وتر', majd: 'عالم المجد'
-        };
-
         var perSource = [];
         if (d.remote && typeof d.remote === 'object') {
             Object.keys(d.remote).forEach(function (k) {
                 var s = d.remote[k] || {};
-                var label = sourceLabels[k] || k;
+                var label = remoteSourceLabelAr(k);
                 var bits = [];
                 if (typeof s.count === 'number') bits.push(s.count + ' صف');
                 if (s.http_code) bits.push('HTTP ' + s.http_code);
                 if (s.error) bits.push('خطأ: ' + s.error);
                 if (s.retried) bits.push('أُعيدت المحاولة');
+                // empty_200_recheck flips on when the source returned 0
+                // rows with HTTP 200 BUT we had corroborating evidence
+                // (local DB or another source) that the customer should
+                // be visible — so we ran an extra verification call.
+                if (s.empty_200_recheck) bits.push('⚠ تحقّق إضافي (رد فارغ مع وجود أدلّة)');
                 perSource.push(
                     '<li><strong>' + escapeHtml(label) + ':</strong> ' +
                     escapeHtml(bits.join(' · ') || '—') + '</li>'
@@ -626,6 +645,7 @@
             '<div class="cw-fahras__message">' +
                 '<p class="cw-fahras__text"><strong>' + escapeHtml(title) + '</strong></p>' +
                 subText +
+                renderIdMismatchAlert(resp) +
                 verdictPanel +
                 (meta.length ? '<p class="cw-fahras__meta">' + meta.join(' · ') + '</p>' : '') +
                 ctaHtml +
@@ -634,6 +654,68 @@
         state.$body.html(html);
 
         renderMatches(resp.matches || []);
+    }
+
+    /**
+     * Render the unmissable yellow alert that fires when Fahras §3.25
+     * detected a name match under a *different* national ID than the one
+     * the rep typed. Strongly implies the rep made a typo entering the
+     * national_id and is about to "create" a customer that already exists
+     * elsewhere in our ecosystem under the correct ID.
+     *
+     * Source of data: `resp.id_mismatch` populated by
+     * WizardController::actionFahrasCheck → FahrasVerdict::idMismatch
+     * → admin/api/check.php §3.25 (Fahras side, name fallback search).
+     *
+     * Render contract:
+     *   • Returns '' when no mismatch was detected (typical case) so the
+     *     caller can concatenate unconditionally.
+     *   • Lists every distinct matched national_id with name, source, and
+     *     status so the rep can immediately tell whether the typed ID
+     *     should be corrected (typo) or whether this is a genuine
+     *     same-name-different-person collision.
+     *   • Includes an explicit override button that simply re-arms the
+     *     wizard's Next button — used only when the rep has verified
+     *     with the customer that the typed ID is correct and the name
+     *     collision is coincidental. A typo correction is the
+     *     overwhelmingly more common path: just re-type the ID and the
+     *     auto-recheck will clear the alert organically.
+     */
+    function renderIdMismatchAlert(resp) {
+        var m = resp && resp.id_mismatch;
+        if (!m || !m.matches || !m.matches.length) return '';
+
+        var rows = m.matches.map(function (row) {
+            var bits = [];
+            if (row.national_id) {
+                bits.push('<span class="cw-fahras__mismatch-nid">'
+                        + escapeHtml(row.national_id) + '</span>');
+            }
+            if (row.name)    bits.push('<span>' + escapeHtml(row.name) + '</span>');
+            if (row.source)  bits.push('<span class="cw-fahras__mismatch-src">'
+                                    + escapeHtml(remoteSourceLabelAr(row.source)) + '</span>');
+            if (row.account) bits.push('<span>' + escapeHtml(row.account) + '</span>');
+            if (row.status)  bits.push('<span class="cw-fahras__mismatch-status">'
+                                    + escapeHtml(row.status) + '</span>');
+            return '<li>' + bits.join(' · ') + '</li>';
+        }).join('');
+
+        var typedId = escapeHtml(m.typed_id || '');
+
+        return (
+            '<div class="cw-fahras__id-mismatch" role="alert">' +
+                '<p class="cw-fahras__id-mismatch-head">' +
+                    '<i class="fa fa-exclamation-triangle" aria-hidden="true"></i> ' +
+                    '<strong>تنبيه: الاسم موجود برقم وطني مختلف!</strong>' +
+                '</p>' +
+                '<p class="cw-fahras__id-mismatch-body">' +
+                    'لا يوجد سجل بالرقم الوطني الذي أدخلته (<code>' + typedId + '</code>)، ' +
+                    'لكن وُجد عميل بنفس الاسم تقريباً برقم وطني <strong>مختلف</strong>. ' +
+                    'تحقّق من رقم هوية العميل قبل المتابعة — في الغالب يوجد خطأ مطبعي:' +
+                '</p>' +
+                '<ul class="cw-fahras__id-mismatch-list">' + rows + '</ul>' +
+            '</div>'
+        );
     }
 
     /**

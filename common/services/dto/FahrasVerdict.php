@@ -55,6 +55,38 @@ final class FahrasVerdict
      */
     public ?array  $diag;
 
+    /**
+     * Soft-warning envelope returned by the secondary name lookup in
+     * Fahras `check.php` §3.25. Populated ONLY when the typed national
+     * ID returned no_record but a customer with the same/similar name
+     * was found in the local clients/remote_clients tables under a
+     * DIFFERENT national ID — strongly implying the rep mistyped the ID.
+     *
+     * Schema:
+     *   [
+     *     'typed_id'   => string,   // the ID the rep entered
+     *     'typed_name' => string,   // the name the rep entered
+     *     'matches'    => [
+     *       [
+     *         'name'             => string,
+     *         'national_id'      => string,
+     *         'phone'            => string,
+     *         'source'           => string, // 'local' | 'jadal' | 'bseel' | …
+     *         'account'          => string,
+     *         'status'           => string,
+     *         'remaining_amount' => float|null,
+     *         'created_on'       => string,
+     *       ], …
+     *     ],
+     *   ]
+     *
+     * Null when no mismatch was detected (or the upstream check.php
+     * predates the §3.25 implementation).
+     *
+     * @var array<string,mixed>|null
+     */
+    public ?array  $idMismatch;
+
     private function __construct() {}
 
     /**
@@ -70,7 +102,8 @@ final class FahrasVerdict
         ?string $requestId = null,
         ?int $httpStatus = 200,
         int $durationMs = 0,
-        ?array $diag = null
+        ?array $diag = null,
+        ?array $idMismatch = null
     ): self {
         $v = new self();
         $v->verdict      = self::normalize($verdict);
@@ -84,6 +117,7 @@ final class FahrasVerdict
         $v->durationMs   = $durationMs;
         $v->rawError     = null;
         $v->diag         = $diag;
+        $v->idMismatch   = $idMismatch;
         return $v;
     }
 
@@ -101,6 +135,7 @@ final class FahrasVerdict
         $v->durationMs   = 0;
         $v->rawError     = $rawError;
         $v->diag         = null;
+        $v->idMismatch   = null;
         return $v;
     }
 
@@ -124,7 +159,8 @@ final class FahrasVerdict
             isset($a['request_id']) ? (string)$a['request_id'] : null,
             isset($a['http_status']) ? (int)$a['http_status'] : 200,
             (int)($a['duration_ms'] ?? 0),
-            isset($a['_diag']) && is_array($a['_diag']) ? $a['_diag'] : null
+            isset($a['_diag']) && is_array($a['_diag']) ? $a['_diag'] : null,
+            isset($a['id_mismatch']) && is_array($a['id_mismatch']) ? $a['id_mismatch'] : null
         );
     }
 
@@ -140,7 +176,8 @@ final class FahrasVerdict
     public function warns(): bool
     {
         return $this->verdict === self::VERDICT_CONTACT_FIRST
-            || $this->verdict === self::VERDICT_ERROR;
+            || $this->verdict === self::VERDICT_ERROR
+            || $this->idMismatch !== null;
     }
 
     /** Safe array form for JSON responses to the browser. */
@@ -157,6 +194,7 @@ final class FahrasVerdict
             'from_cache'    => $this->fromCache,
             'duration_ms'   => $this->durationMs,
             '_diag'         => $this->diag,
+            'id_mismatch'   => $this->idMismatch,
         ];
     }
 

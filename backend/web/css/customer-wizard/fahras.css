@@ -287,6 +287,60 @@
     color: #7f1d1d;
 }
 
+/* ─── Name-vs-ID mismatch alert ──────────────────────────────────────
+   Triggers when Fahras §3.25 found a customer with the same name as
+   the rep typed but under a DIFFERENT national ID. Almost always a
+   typo by the rep — render it loud and impossible to miss so they
+   re-verify the ID before any data is committed. Yellow/amber palette
+   distinguishes it from the red "Fahras blocked" verdict (different
+   meaning, different action required). */
+.cw-fahras__id-mismatch {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border: 1px solid #f59e0b;
+    border-radius: var(--cw-radius, 8px);
+    background: #fffbeb;
+    color: #78350f;
+    font-size: .92rem;
+    line-height: 1.55;
+}
+.cw-fahras__id-mismatch-head {
+    margin: 0 0 6px 0;
+    color: #92400e;
+    font-size: .98rem;
+}
+.cw-fahras__id-mismatch-head i { color: #d97706; margin-inline-end: 4px; }
+.cw-fahras__id-mismatch-body { margin: 0 0 8px 0; }
+.cw-fahras__id-mismatch-body code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    background: #fef3c7;
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: #78350f;
+}
+.cw-fahras__id-mismatch-list {
+    margin: 0;
+    padding-inline-start: 20px;
+    list-style: disc;
+}
+.cw-fahras__id-mismatch-list li {
+    margin: 4px 0;
+    color: #78350f;
+}
+.cw-fahras__mismatch-nid {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-weight: 700;
+    color: #92400e;
+    background: #fde68a;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.cw-fahras__mismatch-src,
+.cw-fahras__mismatch-status {
+    color: #b45309;
+    font-size: .85rem;
+}
+
 /* ─── Override banner (shown after successful override) ──────────── */
 .cw-fahras__override-banner {
     display: flex;

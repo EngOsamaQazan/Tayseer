@@ -1296,6 +1296,12 @@ class WizardController extends Controller
             // which case the wizard simply hides the «تفاصيل تشخيصية»
             // disclosure and degrades gracefully.
             'diag'         => $verdict->diag,
+            // Soft warning when the typed national ID returned no_record
+            // BUT another customer with the same name was found under a
+            // different ID — strongly suggests a typo. Wizard renders
+            // a yellow alert and refuses to advance until the rep either
+            // corrects the ID or explicitly confirms the name collision.
+            'id_mismatch'  => $verdict->idMismatch,
         ];
 
         // ── Existing-customer short-circuit ───────────────────────────────
@@ -1317,6 +1323,18 @@ class WizardController extends Controller
             // Always block the Next button when a local customer exists —
             // even if Fahras returned no_record / can_sell — so the rep is
             // forced to pick one of the CTAs instead of pushing through.
+            $response['blocks'] = true;
+        }
+
+        // ── Name-vs-ID mismatch soft block ────────────────────────────────
+        // If Fahras §3.25 detected that the typed national ID is unknown
+        // BUT a customer with the same name exists under a different ID,
+        // we MUST not let the rep create a "new" customer who is almost
+        // certainly the existing one with a typo'd ID. Force `blocks=true`
+        // and trust the wizard's id-mismatch alert + override flow.
+        // (Skipped when the existing-customer extras already locked the
+        // wizard above — those CTAs are the better UX.)
+        if ($extras === null && $verdict->idMismatch !== null) {
             $response['blocks'] = true;
         }
 
