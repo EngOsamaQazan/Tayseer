@@ -40,11 +40,25 @@ try {
   exit();
 }
 
+// Notes:
+//   • Single-character codes are the legacy convention used by the old
+//     wizard / SmartMediaController (still in active use for some flows).
+//   • The new wizard (WizardController::groupNameForScan) splits ID cards
+//     into front/back to keep the documents tab cleanly labelled, which
+//     produces composite codes like '0_front', '0_back', '4_front',
+//     '4_back'. Any new composite codes from the wizard MUST be added
+//     here too — otherwise they fall through to "أخرى" silently and
+//     the rep can't tell which scan is which.
 $docTypes = [
   '0' => 'هوية وطنية',       '1' => 'جواز سفر',       '2' => 'رخصة قيادة',
   '3' => 'شهادة ميلاد',      '4' => 'شهادة تعيين',     '5' => 'كتاب ضمان اجتماعي',
   '6' => 'كشف راتب',         '7' => 'شهادة تعيين عسكري','8' => 'صورة شخصية',
   '9' => 'غير محدد',
+  // New wizard ID-card subcodes (front/back capture).
+  '0_front' => 'هوية وطنية — الوجه',
+  '0_back'  => 'هوية وطنية — الظهر',
+  '4_front' => 'شهادة تعيين عسكرية — الوجه',
+  '4_back'  => 'شهادة تعيين عسكرية — الظهر',
   'coustmers'  => 'وثيقة عميل',
   'customers'  => 'وثيقة عميل',
   'contracts'  => 'وثيقة عقد',

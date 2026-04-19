@@ -856,6 +856,19 @@ class WizardController extends Controller
                 . $e->getMessage(), __METHOD__);
         }
 
+        // ── 4a-bis. Defensive orphan-recovery sweep. Catches Media rows
+        // this user uploaded during the session but that the explicit
+        // adoption paths missed (most common cause: draft payload exceeded
+        // MAX_DRAFT_BYTES so the image_id was silently dropped from the
+        // draft). Without this, the row stays orphan and never appears in
+        // the customer's Fahras attachments index.
+        try {
+            $adopted += $this->adoptOrphanedScanMedia((int)$customer->id, $payload);
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finish: adoptOrphanedScanMedia failed: '
+                . $e->getMessage(), __METHOD__);
+        }
+
         // ── 4b. Persist the SS statement (header + subscriptions + salaries). ──
         // Best-effort: any failure here should not block customer creation,
         // since the customer + media file are already saved successfully.
@@ -1182,6 +1195,12 @@ class WizardController extends Controller
             $this->linkExtrasToCustomer($customerId, $payload);
         } catch (\Throwable $e) {
             Yii::warning('Wizard finishEdit: linkExtrasToCustomer failed: ' . $e->getMessage(), __METHOD__);
+        }
+        // Defensive sweep — see actionFinish() for rationale.
+        try {
+            $this->adoptOrphanedScanMedia($customerId, $payload);
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finishEdit: adoptOrphanedScanMedia failed: ' . $e->getMessage(), __METHOD__);
         }
 
         // ── 6. Refresh customer caches (best-effort). ──
@@ -2633,7 +2652,16 @@ class WizardController extends Controller
 
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
-            if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
+            if ($finalJson === false) {
+                Yii::error('Wizard income scan: json_encode failed for draft payload — '
+                    . 'image_id ' . (int)$imageId . ' (income/SS) NOT tracked. '
+                    . 'Orphan-recovery in actionFinish() will attempt to adopt it.', __METHOD__);
+            } elseif (strlen($finalJson) > self::MAX_DRAFT_BYTES) {
+                Yii::error('Wizard income scan: draft payload exceeded MAX_DRAFT_BYTES ('
+                    . strlen($finalJson) . ' > ' . self::MAX_DRAFT_BYTES . ') — '
+                    . 'image_id ' . (int)$imageId . ' (income/SS) NOT tracked. '
+                    . 'Orphan-recovery in actionFinish() will attempt to adopt it.', __METHOD__);
+            } else {
                 WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
             }
         } catch (\Throwable $e) {
@@ -2825,7 +2853,16 @@ class WizardController extends Controller
 
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
-            if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
+            if ($finalJson === false) {
+                Yii::error('Wizard scan: json_encode failed for draft payload — '
+                    . 'image_id ' . (int)$imageId . ' (side=' . $side . ') NOT tracked. '
+                    . 'Orphan-recovery in actionFinish() will attempt to adopt it.', __METHOD__);
+            } elseif (strlen($finalJson) > self::MAX_DRAFT_BYTES) {
+                Yii::error('Wizard scan: draft payload exceeded MAX_DRAFT_BYTES ('
+                    . strlen($finalJson) . ' > ' . self::MAX_DRAFT_BYTES . ') — '
+                    . 'image_id ' . (int)$imageId . ' (side=' . $side . ') NOT tracked. '
+                    . 'Orphan-recovery in actionFinish() will attempt to adopt it.', __METHOD__);
+            } else {
                 WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
             }
         } catch (\Throwable $e) {
@@ -3760,7 +3797,16 @@ class WizardController extends Controller
 
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
-            if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
+            if ($finalJson === false) {
+                Yii::error('Wizard upload-extra: json_encode failed for draft payload — '
+                    . 'image_id ' . (int)$imageId . ' (purpose=' . $purpose . ') NOT tracked. '
+                    . 'Orphan-recovery in actionFinish() will attempt to adopt it.', __METHOD__);
+            } elseif (strlen($finalJson) > self::MAX_DRAFT_BYTES) {
+                Yii::error('Wizard upload-extra: draft payload exceeded MAX_DRAFT_BYTES ('
+                    . strlen($finalJson) . ' > ' . self::MAX_DRAFT_BYTES . ') — '
+                    . 'image_id ' . (int)$imageId . ' (purpose=' . $purpose . ') NOT tracked. '
+                    . 'Orphan-recovery in actionFinish() will attempt to adopt it.', __METHOD__);
+            } else {
                 WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
             }
         } catch (\Throwable $e) {
@@ -3898,6 +3944,114 @@ class WizardController extends Controller
         }
 
         return $report;
+    }
+
+    /**
+     * Defensive safety net — adopt any leftover orphan Media rows that this
+     * user uploaded during the current wizard session but that the explicit
+     * `_scan.images` / `_extras` adoption paths missed.
+     *
+     * This compensates for the (rare but real) case where the wizard draft
+     * payload exceeded {@see MAX_DRAFT_BYTES} and a per-side image_id was
+     * silently dropped from the draft, leaving the underlying Media row
+     * stranded with `customer_id = NULL`. Without this sweep those rows
+     * would never appear in the customer's attachments index (Fahras),
+     * giving the impression the upload was lost.
+     *
+     * Scoping rules (deliberately conservative — we never want to grab
+     * a row that belongs to a *different* concurrent customer creation):
+     *   • Only Media rows created by the *current logged-in user*.
+     *   • Only rows created on or after the draft's `_created` timestamp
+     *     (with a 5-min back-buffer for clock skew). Falls back to a
+     *     24-hour window if the draft has no `_created` field.
+     *   • Only rows whose groupName matches a wizard-known bucket
+     *     (ID/passport/license/military/income/photo/extras).
+     *   • Only rows still orphan (`customer_id IS NULL`).
+     *
+     * @param int   $customerId      Newly-created customer id.
+     * @param array $payload         Decoded wizard draft payload.
+     * @return int                   Number of rows adopted.
+     */
+    public function adoptOrphanedScanMedia($customerId, array $payload)
+    {
+        $userId = Yii::$app->user->id ?? null;
+        if (!$userId || (int)$customerId <= 0) return 0;
+
+        // Watermark: rows created at-or-after when the draft started.
+        // Subtract 5 minutes for clock-skew between PHP and DB.
+        $created = (int)($payload['_created'] ?? 0);
+        if ($created <= 0) {
+            $created = time() - 86400; // 24-hour fallback
+        }
+        $watermark = date('Y-m-d H:i:s', max(0, $created - 300));
+
+        // Wizard-known groupName buckets (mirrors the docTypes mapping in
+        // backend/web/fahras/{client-attachments,relations,api}.php so the
+        // adopted rows actually render with the right Arabic label).
+        $buckets = [
+            '0', '0_front', '0_back',                  // National ID
+            '1',                                       // Passport
+            '2',                                       // Driver's license
+            '4', '4_front', '4_back',                  // Military certificate
+            '5',                                       // SS statement (كشف ضمان)
+            '6',                                       // Salary slip
+            '7',                                       // Military appointment
+            '8',                                       // Personal photo
+            '9',                                       // Misc / unknown
+        ];
+
+        $db = Yii::$app->db;
+        try {
+            // Snapshot rows we're about to adopt — for clear logging so
+            // ops can see exactly what the safety net rescued.
+            $orphanRows = (new \yii\db\Query())
+                ->select(['id', 'groupName', 'fileName', 'created'])
+                ->from(Media::tableName())
+                ->where([
+                    'customer_id' => null,
+                    'createdBy'   => (int)$userId,
+                    'groupName'   => $buckets,
+                ])
+                ->andWhere(['>=', 'created', $watermark])
+                ->all($db);
+
+            if (empty($orphanRows)) return 0;
+
+            $ids = array_map(static function ($r) { return (int)$r['id']; }, $orphanRows);
+
+            $affected = $db->createCommand()->update(
+                Media::tableName(),
+                [
+                    'customer_id' => (int)$customerId,
+                    'modified'    => date('Y-m-d H:i:s'),
+                ],
+                ['and',
+                    ['id' => $ids],
+                    ['customer_id' => null], // double-check (race-safe)
+                ]
+            )->execute();
+
+            if ($affected > 0) {
+                $summary = array_map(static function ($r) {
+                    return '#' . (int)$r['id'] . '(' . (string)$r['groupName'] . ')';
+                }, $orphanRows);
+                Yii::warning(
+                    'Wizard finish: orphan-recovery adopted ' . $affected
+                    . ' Media row(s) for customer ' . (int)$customerId
+                    . ' [user=' . (int)$userId . ', since=' . $watermark . ']: '
+                    . implode(', ', $summary)
+                    . ' — these were uploaded during the wizard but missing '
+                    . 'from the draft payload (likely MAX_DRAFT_BYTES overflow).',
+                    __METHOD__
+                );
+            }
+
+            return (int)$affected;
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finish: orphan-recovery sweep failed: '
+                . $e->getMessage(), __METHOD__);
+            return 0;
+        }
     }
 
     /**

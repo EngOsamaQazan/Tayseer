@@ -40,11 +40,19 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
 
 $baseUrl = $baseUrlMap[$requestDb] ?? '';
 
+// Notes: see client-attachments.php for why the composite '<n>_front' /
+// '<n>_back' codes exist. Keep this map in sync with the other fahras
+// files (api.php + client-attachments.php) — otherwise the same image
+// gets a different label depending on which screen it appears on.
 $docTypes = [
   '0' => 'هوية وطنية',       '1' => 'جواز سفر',       '2' => 'رخصة قيادة',
   '3' => 'شهادة ميلاد',      '4' => 'شهادة تعيين',     '5' => 'كتاب ضمان اجتماعي',
   '6' => 'كشف راتب',         '7' => 'شهادة تعيين عسكري','8' => 'صورة شخصية',
   '9' => 'غير محدد',
+  '0_front' => 'هوية وطنية — الوجه',
+  '0_back'  => 'هوية وطنية — الظهر',
+  '4_front' => 'شهادة تعيين عسكرية — الوجه',
+  '4_back'  => 'شهادة تعيين عسكرية — الظهر',
   'coustmers'  => 'وثيقة عميل',
   'customers'  => 'وثيقة عميل',
   'contracts'  => 'وثيقة عقد',
