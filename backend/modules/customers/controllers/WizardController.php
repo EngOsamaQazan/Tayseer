@@ -1687,7 +1687,13 @@ class WizardController extends Controller
             // the wizard must NOT pester the rep for a "back" capture and
             // must NOT reject the upload as a wrong-side photo.
             $docType   = isset($extracted['document_type']) ? (string)$extracted['document_type'] : '';
-            $isSingleFaceDoc = in_array($docType, [
+            // Sanad (سند) is Jordan's official mobile-ID app. Its screenshots
+            // present a complete document on a single mobile screen — no
+            // physical "back" exists to capture. Gemini flags these via
+            // `is_sanad: true` regardless of the underlying document_type
+            // (0 = هوية سند, 1 = جواز سفر سند, 2 = رخصة قيادة سند).
+            $isSanad = !empty($extracted['is_sanad']);
+            $isSingleFaceDoc = $isSanad || in_array($docType, [
                 VisionService::DOC_TYPE_PASSPORT,   // '1'
                 VisionService::DOC_TYPE_LICENSE,    // '2'
             ], true);
@@ -1733,11 +1739,16 @@ class WizardController extends Controller
             // we're done — no second-side capture needed.
             if ($isSingleFaceDoc) {
                 if (empty($extracted)) {
+                    if ($isSanad) {
+                        $errMsg = 'لم نستطع قراءة لقطة سند — تأكد من وضوح الشاشة بكامل بياناتها (الاسم، الرقم الوطني، تاريخ الميلاد) وبدون قص أو انعكاس.';
+                    } elseif ($docType === VisionService::DOC_TYPE_PASSPORT) {
+                        $errMsg = 'لم نستطع قراءة جواز السفر — تأكد من تصوير الصفحة الرئيسية (التي تحوي الصورة والـ MRZ) بإضاءة جيدة وبدون انعكاسات.';
+                    } else {
+                        $errMsg = 'لم نستطع قراءة رخصة القيادة — تأكد من تصوير الوجه الذي يحمل الاسم ورقم الرخصة بإضاءة جيدة.';
+                    }
                     return [
                         'ok'    => false,
-                        'error' => $docType === VisionService::DOC_TYPE_PASSPORT
-                            ? 'لم نستطع قراءة جواز السفر — تأكد من تصوير الصفحة الرئيسية (التي تحوي الصورة والـ MRZ) بإضاءة جيدة وبدون انعكاسات.'
-                            : 'لم نستطع قراءة رخصة القيادة — تأكد من تصوير الوجه الذي يحمل الاسم ورقم الرخصة بإضاءة جيدة.',
+                        'error' => $errMsg,
                     ];
                 }
 
@@ -1758,15 +1769,24 @@ class WizardController extends Controller
 
                 $this->rememberScanInDraft('single', $imageRef['image_id'] ?? null, null, $extracted);
 
-                $docLabel = ($docType === VisionService::DOC_TYPE_PASSPORT)
-                    ? 'جواز السفر'
-                    : 'رخصة القيادة';
+                if ($isSanad) {
+                    $docLabel = ($docType === VisionService::DOC_TYPE_PASSPORT)
+                        ? 'جواز سفر سند'
+                        : (($docType === VisionService::DOC_TYPE_LICENSE)
+                            ? 'رخصة قيادة سند'
+                            : 'هوية سند');
+                } else {
+                    $docLabel = ($docType === VisionService::DOC_TYPE_PASSPORT)
+                        ? 'جواز السفر'
+                        : 'رخصة القيادة';
+                }
 
                 return [
                     'ok'             => true,
                     'side'           => 'single',
                     'side_detected'  => 'single',
                     'document_type'  => $docType,
+                    'is_sanad'       => $isSanad,
                     'next_action'    => 'done',
                     'fields'         => $mapped['fields'],
                     'unmapped'       => $mapped['unmapped'],
