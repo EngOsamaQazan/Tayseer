@@ -227,17 +227,26 @@
     100% { box-shadow: 0 0 0 0   rgba(16,185,129,0); }
 }
 
-/* Secondary action button (تحديث بيانات العميل) — uses the info accent
-   so the rep can visually distinguish it from the primary success CTA
-   (إضافة عقد جديد) at a glance. Both share the same hit-area sizing
-   to keep WCAG 2.5.8 compliance and the row layout balanced. */
+/* Secondary action button (تحديث بيانات العميل) — outline-style with
+   info accent so the rep can visually distinguish it at a glance from
+   the primary success CTA (إضافة عقد جديد). The previous solid-fill
+   variant gave both buttons near-equal visual weight, defeating the
+   hierarchy intent. Outline + matching color keeps the semantic link
+   to the "info" meaning while clearly signalling "secondary action".
+   Both still share the same hit-area sizing for WCAG 2.5.8.        */
 .cw-btn--info {
-    background: var(--cw-info, #0ea5e9);
-    color: #fff;
-    border-color: var(--cw-info, #0ea5e9);
+    background: var(--cw-surface);
+    color: var(--cw-info, #0369a1);
+    border-color: var(--cw-info, #0369a1);
+    font-weight: 600;
 }
-.cw-btn--info:hover:not(:disabled) {
-    filter: brightness(0.94);
+.cw-btn--info:hover:not(:disabled):not([aria-disabled="true"]) {
+    background: var(--cw-info-soft, #e0f2fe);
+    color: var(--cw-info, #0369a1);
+    border-color: var(--cw-info, #0369a1);
+}
+.cw-btn--info:focus-visible {
+    box-shadow: 0 0 0 3px rgba(3, 105, 161, 0.25);
 }
 
 /* ─── Live Fahras verdict panel ──────────────────────────────────────

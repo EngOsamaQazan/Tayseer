@@ -47,6 +47,12 @@ $ver = static function ($relPath) use ($webRoot, $baseUrl) {
     return $baseUrl . $relPath . '?v=' . $stamp;
 };
 
+// Page-level overrides (hide duplicate page header, dim icon strip,
+// tighten content padding). Loads BEFORE core.css so wizard rules can
+// still override anything from this file via specificity if needed.
+$this->registerCssFile($ver('/css/customer-wizard/wizard-page.css'), [
+    'depends' => [\yii\web\YiiAsset::class],
+]);
 $this->registerCssFile($ver('/css/customer-wizard/core.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
@@ -227,6 +233,12 @@ $steps = [
     4 => ['label' => 'المراجعة والاعتماد',   'icon' => 'fa-check-circle'],
 ];
 ?>
+
+<!-- Tag the body so wizard-page.css can scope its layout overrides to
+     wizard pages only. Inline (no DOMContentLoaded wait) so the styles
+     apply BEFORE first paint and prevent a flash of the duplicated
+     page header. -->
+<script>document.body.classList.add('cw-wizard-page');</script>
 
 <div id="cw-shell"
      class="cw-shell <?= $isEdit ? 'cw-shell--edit' : '' ?>"

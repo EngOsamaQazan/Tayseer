@@ -17,17 +17,22 @@
 /* ─────────────── Fieldset (logical grouping inside a card) ─────────────── */
 
 .cw-fieldset {
-    padding: 16px;
+    padding: 18px;
     border: 1px solid var(--cw-border);
     border-radius: var(--cw-radius-md);
     background: var(--cw-surface-2);
-    margin-bottom: 16px;
+    margin-bottom: 18px;
+    /* Subtle shadow gives sub-sections a clear "card-within-card"
+       affordance without competing with the parent .cw-card border.  */
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .cw-fieldset:last-child { margin-bottom: 0; }
 
 .cw-fieldset__head {
-    margin-bottom: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed var(--cw-border);
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -36,29 +41,46 @@
 }
 
 .cw-fieldset__title {
+    /* h4 sub-section title — sized 16px (one notch above body 15px)
+       so users perceive a clear hierarchy step. The accent bar +
+       dashed border below the head provide redundant grouping cues
+       per Gestalt's law of common region.                            */
     font-family: var(--cw-font-heading);
-    font-size: 15px;
+    font-size: 16px;       /* was 15 (= body) → now distinct */
     font-weight: 700;
     color: var(--cw-text);
     margin: 0;
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
 }
 
 .cw-fieldset__title::before {
     content: '';
     display: inline-block;
     width: 4px;
-    height: 16px;
-    background: var(--cw-primary);
+    height: 18px;
+    background: linear-gradient(180deg, var(--cw-primary-light) 0%, var(--cw-primary) 100%);
     border-radius: 2px;
+    flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+    .cw-fieldset__title { font-size: 17px; }
 }
 
 .cw-fieldset__hint {
     margin: 0;
     color: var(--cw-text-muted);
     font-size: 13px;
+    line-height: 1.5;
+    flex: 1 1 100%;
+}
+
+@media (min-width: 600px) {
+    .cw-fieldset__hint { flex: 0 1 auto; max-width: 60%; text-align: end; }
 }
 /* Inline aside that ties the section back to a related affordance higher
  * up the page (e.g. "did you upload the SS kashf above? these fields were
@@ -170,15 +192,19 @@
 }
 
 .cw-field__label {
-    font-size: 13px;
+    /* 14px gives labels a clear weight against the 13px hint and
+       16px body input. NN/g recommends 13–14px label sizes for
+       dense forms; we sit at the upper bound for Arabic legibility. */
+    font-size: 14px;
     font-weight: 600;
     color: var(--cw-text);
-    line-height: 1.3;
+    line-height: 1.4;
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 8px;
     flex-wrap: wrap;
+    margin-bottom: 2px;
 }
 
 .cw-field__req {
@@ -250,6 +276,17 @@
     outline: none;
     border-color: var(--cw-primary);
     box-shadow: var(--cw-ring);
+    background: #fff;     /* defeat any inherited bg from auto-fill state */
+}
+
+/* Browser auto-fill (Chrome / Edge) overrides input bg with a sickly
+   yellow that fights the focus ring. Pin our own bg via inset shadow.  */
+.cw-input:-webkit-autofill,
+.cw-input:-webkit-autofill:hover,
+.cw-input:-webkit-autofill:focus {
+    box-shadow: 0 0 0 1000px #fff inset, var(--cw-ring) !important;
+    -webkit-text-fill-color: var(--cw-text) !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 .cw-input:disabled,
@@ -385,6 +422,33 @@ input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
 .cw-radio:has(input[type="radio"]:focus-visible) {
     border-color: var(--cw-primary);
     box-shadow: var(--cw-ring);
+}
+
+/* ─────────────── Collapsible fieldset polish ─────────────── *
+ * Hover affordance + tighter open-state header so the chevron + chip
+ * feel like a single tappable strip. Solves the perceived "ghost"
+ * region around the summary that made it ambiguous whether to click
+ * the chevron, the title, or the chip.                             */
+.cw-fieldset--collapsible > .cw-fieldset__summary {
+    border-radius: var(--cw-radius-md);
+    transition: background-color 150ms var(--cw-step-easing);
+}
+.cw-fieldset--collapsible > .cw-fieldset__summary:hover {
+    background: rgba(15, 23, 42, 0.03);
+}
+.cw-fieldset--collapsible[open] > .cw-fieldset__summary {
+    border-bottom: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-md) var(--cw-radius-md) 0 0;
+    margin-bottom: 4px;
+}
+
+/* The dashed border-bottom on .cw-fieldset__head is decorative for
+   regular fieldsets but redundant inside a collapsible (the open-state
+   border already provides separation). Remove it for the collapsible
+   variant to avoid double-line clutter.                              */
+.cw-fieldset--collapsible .cw-fieldset__head {
+    border-bottom: 0;
+    padding-bottom: 0;
 }
 
 /* ─────────────── High-contrast / forced-colors mode tweaks ─────────────── */

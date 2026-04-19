@@ -1,0 +1,150 @@
+/* ════════════════════════════════════════════════════════════════════
+   Customer Wizard V2 — Page-level overrides
+   ────────────────────────────────────────────────────────────────────
+   Loaded ONLY on wizard pages (registered in layout.php). Activates via
+   the `body.cw-wizard-page` class set inline by layout.php so the rules
+   are completely scoped — no side-effects on the rest of the system.
+
+   Design intent (research-backed, NN/g + Baymard + Stripe Onboarding):
+     • Wizards are FOCUSED workflows. The user has ONE job: complete the
+       4 steps. Everything else (right-side icon strip with 40 items,
+       global notification center dropdowns, theme switcher, palette,
+       fullscreen toggle) is noise that competes for attention.
+     • Stripe / Linear / Wise / Notion all hide global navigation during
+       any multi-step creation flow. We adopt the same pattern here.
+     • The duplicate page header (`<h1>إضافة عميل جديد</h1>` from the
+       Vuexy layout + `<h2>إنشاء ملف عميل عبر 4 خطوات</h2>` inside the
+       wizard shell) wastes ~80px of vertical real-estate and creates
+       a redundant heading hierarchy. We hide the layout h1 and let the
+       wizard's own header carry the page title.
+   ──────────────────────────────────────────────────────────────────── */
+
+/* ═════════════════ 1. Hide duplicate page header ═════════════════
+   The Vuexy layout (`backend/views/layouts/content.php`) renders a
+   page-title h1 + breadcrumb row above every page. On wizard pages
+   the wizard shell (`.cw-shell .cw-header`) carries its own richer
+   header with the same title + status pill + quick actions. Showing
+   both is redundant and pushes the actual workflow ~80px down.
+
+   We keep the h1 in the DOM (for SEO + a11y crawlers + screen-reader
+   users who navigate by heading) but hide it visually via clip-path —
+   the same technique used by .cw-sr-only. Breadcrumbs collapse with it
+   because they live in the same flex row.                              */
+body.cw-wizard-page main#main-content > .container-xxl > .d-flex.justify-content-between {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* ═════════════════ 2. Reclaim the vertical space ═════════════════
+   With the page header hidden, tighten the top padding on the content
+   wrapper so the wizard's own header sits closer to the top app bar
+   (better visual cadence, less wasted whitespace).                    */
+body.cw-wizard-page main#main-content > .container-xxl {
+    padding-top: 14px !important;
+    padding-bottom: 14px !important;
+}
+
+@media (min-width: 768px) {
+    body.cw-wizard-page main#main-content > .container-xxl {
+        padding-top: 18px !important;
+    }
+}
+
+/* ═════════════════ 3. Hide footer chrome on wizard pages ═════════
+   The footer credit line ("نظام تيسير لإدارة شركات التقسيط") adds
+   visual noise below the sticky toolbar without contributing to the
+   workflow. Hide it on wizard pages — it's still visible everywhere
+   else in the system.                                                */
+body.cw-wizard-page footer.content-footer {
+    display: none !important;
+}
+
+/* ═════════════════ 4. Tighten the top app bar ═════════════════════
+   The Vuexy navbar (56px height) carries 7+ interactive items
+   (fullscreen, theme toggle, palette, notifications, user menu, …).
+   On wizard pages we keep them accessible (compliance) but reduce
+   the navbar's visual weight: lower elevation, no shadow, subtler
+   background — so the wizard card commands the focal point.          */
+body.cw-wizard-page nav.layout-navbar {
+    box-shadow: none !important;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
+}
+
+/* ═════════════════ 5. Optional: dim the right icon strip ═════════
+   We don't *hide* the right vertical menu (40 items in icon-only
+   mode at 70px wide) because the user might still need to escape
+   the wizard via a different module. But we lower its opacity to
+   recede it visually until the user hovers / focuses it.
+
+   Hover/focus restores full opacity instantly — no extra clicks
+   required, no functionality lost.                                  */
+body.cw-wizard-page aside.layout-menu {
+    opacity: 0.65;
+    transition: opacity 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body.cw-wizard-page aside.layout-menu:hover,
+body.cw-wizard-page aside.layout-menu:focus-within {
+    opacity: 1;
+}
+
+/* Respect reduced-motion preference. */
+@media (prefers-reduced-motion: reduce) {
+    body.cw-wizard-page aside.layout-menu {
+        transition: none;
+    }
+}
+
+/* ═════════════════ 6. Mobile (<768px): full focus mode ═════════
+   On phones the right icon strip already collapses behind a
+   hamburger toggle, but we make extra sure the wizard fills the
+   viewport edge-to-edge with comfortable padding.                  */
+@media (max-width: 767.98px) {
+    body.cw-wizard-page main#main-content > .container-xxl {
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    /* The Vuexy footer is already hidden by rule (3); ensure no
+       floating help-buttons or chat widgets steal focus.            */
+    body.cw-wizard-page .buy-now,
+    body.cw-wizard-page .floating-help {
+        display: none !important;
+    }
+}
+
+/* ═════════════════ 7. Print mode ═════════════════════════════════
+   When printing the wizard (e.g. for client signature on paper),
+   strip absolutely everything except the wizard shell. The user
+   doesn't need the navbar, the icon strip, or the footer.            */
+@media print {
+    body.cw-wizard-page nav.layout-navbar,
+    body.cw-wizard-page aside.layout-menu,
+    body.cw-wizard-page footer.content-footer,
+    body.cw-wizard-page .layout-overlay,
+    body.cw-wizard-page .cw-nav,
+    body.cw-wizard-page .cw-header__actions,
+    body.cw-wizard-page .cw-toast-host {
+        display: none !important;
+    }
+
+    body.cw-wizard-page main#main-content > .container-xxl {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+
+    body.cw-wizard-page .cw-card,
+    body.cw-wizard-page .cw-fahras {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        page-break-inside: avoid;
+    }
+}
