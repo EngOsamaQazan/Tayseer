@@ -776,7 +776,7 @@
 
         setBusy($btn, true);
         if (files.length === 2) {
-            toast('جارٍ تحليل الوجه الأمامي ثم الخلفي…', 'info', 2500);
+            toast('جارٍ تحليل الوجهين…', 'info', 2500);
         } else {
             toast('جارٍ تحليل الوثيقة بالذكاء الاصطناعي…', 'info', 2000);
         }
@@ -785,19 +785,27 @@
         var totalImagesAdded = 0;
         var lastUnmapped     = {};
         var hadAnyError      = false;
+        var detectedSidesSeen = {}; // 'front' | 'back' | 'single' → true
         // Reset snapshot so the first file builds a fresh undo state.
         lastSnapshot = null;
 
         // Run uploads sequentially so the back-side request gets the
         // already-detected issuing_body for context-aware extraction.
-        // Each response is rendered IMMEDIATELY (fields + unmapped banner)
-        // so the user never wonders whether extraction worked while the
-        // second upload is still in flight.
+        //
+        // ── side='auto' (no hint) on multi-file uploads ───────────────
+        // The OS file picker (and clipboard) returns files in *its own*
+        // order — usually alphabetical, never necessarily front-then-back
+        // as the user might assume. Sending a hardcoded sideHint based on
+        // array index forced the server's strict mismatch check to reject
+        // the upload whenever the user picked them in the "wrong" order.
+        // Letting the server auto-detect from image content (Gemini is
+        // very reliable at this) eliminates that whole class of bug.
+        // The response carries `side_detected` so we can still slot the
+        // image and message the user appropriately.
         var seq = $.Deferred().resolve();
         files.forEach(function (file, idx) {
-            var sideHint = (idx === 0) ? 'front' : 'back';
             seq = seq.then(function () {
-                return uploadScan(file, sideHint).done(function (resp) {
+                return uploadScan(file, null).done(function (resp) {
                     if (!resp || !resp.ok) {
                         hadAnyError = true;
                         var msg = (resp && resp.error) ? resp.error
@@ -813,9 +821,10 @@
                         var fileSide = (resp.side_detected === 'single')   ? 'single'
                                      : (resp.side_detected === 'back')     ? 'back'
                                      : (resp.side_detected === 'front')    ? 'front'
-                                     : sideHint;
+                                     : 'front'; // unknown → treat as primary slot
                         setScanImageRef(fileSide, resp.image_id);
                         totalImagesAdded++;
+                        detectedSidesSeen[fileSide] = true;
                     }
 
                     if (resp.unmapped) lastUnmapped = $.extend(lastUnmapped, resp.unmapped);
@@ -844,7 +853,17 @@
 
                     if (files.length === 2 && idx === 0 && (thisChanged || resp.image_id)
                         && resp.side_detected !== 'single') {
-                        toast('تم تحليل الوجه الأمامي — جارٍ تحليل الخلفي…', 'info', 2500);
+                        var detectedLabel = (resp.side_detected === 'back')
+                            ? 'الوجه الخلفي'
+                            : (resp.side_detected === 'front')
+                                ? 'الوجه الأمامي'
+                                : 'الوجه الأول';
+                        var nextLabel = (resp.side_detected === 'back')
+                            ? 'الوجه الأمامي'
+                            : (resp.side_detected === 'front')
+                                ? 'الوجه الخلفي'
+                                : 'الوجه الثاني';
+                        toast('تم تحليل ' + detectedLabel + ' — جارٍ تحليل ' + nextLabel + '…', 'info', 2500);
                     }
                 });
             });
