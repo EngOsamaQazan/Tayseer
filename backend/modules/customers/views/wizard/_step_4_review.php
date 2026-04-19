@@ -98,7 +98,9 @@ $displayBool = function ($v) {
     return ((string)$v === '1') ? 'نعم' : 'لا';
 };
 
-$sexLabels = ['1' => 'ذكر', '2' => 'أنثى'];
+// Customers.sex enum aligned with the rest of the app (legacy _form.php,
+// _smart_form.php, view.php and the existing DB rows): 0=ذكر, 1=أنثى.
+$sexLabels = ['0' => 'ذكر', '1' => 'أنثى'];
 $sexRaw    = (string)($cust['sex'] ?? '');
 $sexLabel  = ($sexRaw !== '' && isset($sexLabels[$sexRaw])) ? $sexLabels[$sexRaw] : '—';
 

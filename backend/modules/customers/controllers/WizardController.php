@@ -2104,9 +2104,8 @@ class WizardController extends Controller
             $fields['Customers[birth_date]'] = $extracted['birth_date'];
         }
         if (isset($extracted['sex']) && $extracted['sex'] !== '' && $extracted['sex'] !== null) {
-            // Gemini schema: 0 = ذكر, 1 = أنثى
-            // Customers model:  '1' = male, '2' = female
-            $fields['Customers[sex]'] = ((int)$extracted['sex'] === 1) ? '2' : '1';
+            // Gemini schema and Customers.sex column both use 0 = ذكر, 1 = أنثى.
+            $fields['Customers[sex]'] = ((int)$extracted['sex'] === 1) ? '1' : '0';
         }
 
         return ['fields' => $fields, 'unmapped' => $unmapped];
@@ -2691,7 +2690,8 @@ class WizardController extends Controller
      *
      * We need to:
      *   1. Map keys → 'Customers[name]', 'Customers[id_number]', etc.
-     *   2. Convert `sex` (0=male/1=female from Gemini) → '1'/'2' (model enum).
+     *   2. Normalize `sex` to the Customers.sex enum (0=ذكر, 1=أنثى) which
+     *      matches what Gemini emits AND the legacy app's column convention.
      *   3. Resolve `birth_place` (Arabic string) → city dropdown ID.
      *   4. Resolve `nationality_text` → citizen dropdown ID.
      *
@@ -2752,7 +2752,8 @@ class WizardController extends Controller
         //   • single   M/F
         //   • Arabic   ذكر / أنثى / انثى
         //   • English  male / female
-        // Our model wants '1' (male) or '2' (female).
+        // Customers.sex stores '0' (male) / '1' (female) — same convention as
+        // the legacy _form.php / _smart_form.php / view.php across the app.
         if (isset($extracted['sex']) && $extracted['sex'] !== '' && $extracted['sex'] !== null) {
             $sexResolved = self::normalizeSexValue($extracted['sex']);
             if ($sexResolved !== null) {
@@ -2762,7 +2763,7 @@ class WizardController extends Controller
         // Fallback: read sex from MRZ if we have it raw and Gemini missed it.
         if (!isset($fields['Customers[sex]']) && !empty($extracted['mrz']) && is_string($extracted['mrz'])) {
             if (preg_match('/\b\d{6}([MF])\d{6}\b/', strtoupper($extracted['mrz']), $mm)) {
-                $fields['Customers[sex]'] = ($mm[1] === 'F') ? '2' : '1';
+                $fields['Customers[sex]'] = ($mm[1] === 'F') ? '1' : '0';
             }
         }
 
@@ -2890,28 +2891,34 @@ class WizardController extends Controller
     }
 
     /**
-     * Normalize a raw sex value (anything Gemini may emit) into our model's
-     * '1' (male) / '2' (female) string. Returns null when nothing matches.
+     * Normalize a raw sex value (anything Gemini may emit) into the
+     * Customers.sex enum used app-wide: '0' (male) / '1' (female).
+     * Returns null when nothing matches.
+     *
+     * Tolerates the historical wizard convention ('1'/'2') so any payload
+     * that pre-dates the 2026-04 alignment still resolves correctly.
      */
     protected static function normalizeSexValue($raw)
     {
         if (is_int($raw)) {
-            return ($raw === 1) ? '2' : '1'; // Gemini: 0=male, 1=female
+            // Gemini emits 0=male / 1=female — straight passthrough now
+            // that we've aligned with the legacy column convention.
+            return ($raw === 1) ? '1' : '0';
         }
         $s = trim((string)$raw);
         if ($s === '') return null;
 
         $u = strtoupper($s);
-        if ($u === '0') return '1';
-        if ($u === '1') return '2';
-        if ($u === '2') return '2'; // already-normalized passthrough
-        if ($u === 'M' || $u === 'MALE')   return '1';
-        if ($u === 'F' || $u === 'FEMALE') return '2';
+        if ($u === '0') return '0';
+        if ($u === '1') return '1';
+        if ($u === '2') return '1'; // legacy wizard '2' = أنثى → map to '1'.
+        if ($u === 'M' || $u === 'MALE')   return '0';
+        if ($u === 'F' || $u === 'FEMALE') return '1';
 
         // Arabic — strip diacritics and common variants before comparing.
         $n = self::normalizeArabic($s);
-        if ($n === 'ذكر' || $n === 'ذكور') return '1';
-        if ($n === 'انثي' || $n === 'انثى' || $n === 'اناث') return '2';
+        if ($n === 'ذكر' || $n === 'ذكور') return '0';
+        if ($n === 'انثي' || $n === 'انثى' || $n === 'اناث') return '1';
 
         return null;
     }
@@ -2965,7 +2972,8 @@ class WizardController extends Controller
             // default to masculine when sex unknown (matches typical
             // citizen-lookup default).
             $sexNorm = isset($e['sex']) ? self::normalizeSexValue($e['sex']) : null;
-            return ($sexNorm === '2') ? 'أردنية' : 'أردني';
+            // sex enum: '0' = male → "أردني", '1' = female → "أردنية".
+            return ($sexNorm === '1') ? 'أردنية' : 'أردني';
         }
 
         return null;
@@ -3088,8 +3096,11 @@ class WizardController extends Controller
      *
      * Resolution order (highest → lowest priority):
      *   1. Cached value pinned by an action method (e.g. {@see actionEdit}).
-     *   2. POST/GET body parameters `mode` + `customerId`.
-     *   3. Request-cookie `cw_draft_key` (set by client when entering edit).
+     *   2. POST/GET body parameters `mode` + `customerId` — stamped onto
+     *      every wizard AJAX request by the global ajaxPrefilter in
+     *      backend/web/js/customer-wizard/core.js (`bindEditContextPrefilter`).
+     *   3. Request-cookie `cw_draft_key` — legacy fallback, kept for
+     *      back-compat with any bookmarked URLs / older client builds.
      *   4. Default → {@see DRAFT_KEY}.
      *
      * Why not session: a single user can have multiple browser tabs open
@@ -4124,9 +4135,11 @@ class WizardController extends Controller
             $errors['Customers[email]'] = 'البريد الإلكتروني غير صالح.';
         }
 
-        // Sex must be one of the accepted enum values (1 = male, 2 = female).
+        // Sex must be one of the accepted enum values (0 = male, 1 = female).
+        // Aligned with the legacy app's column convention so the wizard can
+        // edit existing customers without flipping their stored gender.
         $sex = $this->dotGet($data, 'Customers[sex]');
-        if ($sex !== null && $sex !== '' && !in_array((string)$sex, ['1', '2'], true)) {
+        if ($sex !== null && $sex !== '' && !in_array((string)$sex, ['0', '1'], true)) {
             $errors['Customers[sex]'] = 'قيمة الجنس غير صالحة.';
         }
 

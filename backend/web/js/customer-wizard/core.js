@@ -78,6 +78,7 @@
         bindAutoSave();
         bindKeyboard();
         bindBeforeUnload();
+        bindEditContextPrefilter();
 
         // Edit mode: relax HTML5 required gating so reps can save partial
         // edits without re-justifying every required column. The server's
@@ -701,7 +702,94 @@
         var name = $('meta[name="csrf-param"]').attr('content') || '_csrf-backend';
         var tok  = $('meta[name="csrf-token"]').attr('content');
         if (tok) p[name] = tok;
+        // Stamp the wizard mode + customerId so the server's draftKey()
+        // resolves to the per-customer edit slot (instead of falling back
+        // to the default create slot, which silently re-applies create-time
+        // required-field validation in edit flows).
+        if (CW.mode === 'edit' && CW.customerId > 0) {
+            p.mode       = 'edit';
+            p.customerId = CW.customerId;
+        }
         return p;
+    }
+
+    /**
+     * Public helper: returns `{ mode, customerId }` when the wizard is in
+     * edit mode, or `{}` otherwise. Sibling modules that POST to wizard
+     * endpoints with their own payload shape can spread this in to keep
+     * the server's draft-key resolution consistent.
+     */
+    CW.contextPayload = function () {
+        if (CW.mode === 'edit' && CW.customerId > 0) {
+            return { mode: 'edit', customerId: CW.customerId };
+        }
+        return {};
+    };
+
+    /**
+     * Global jQuery prefilter that stamps `mode` + `customerId` onto every
+     * AJAX request the wizard sends to its own controller. Without this,
+     * sibling modules (extras.js upload, scan.js OCR, fahras.js check, …)
+     * would each have to remember to forward the edit context — and any
+     * one that forgets silently breaks edit-mode flows because the server
+     * falls back to the default create draft slot.
+     *
+     * Handles three data shapes:
+     *   • plain object  → adds two keys
+     *   • URL-encoded string → appends `&mode=edit&customerId=N`
+     *   • FormData      → fd.append(...) (file uploads)
+     *
+     * Also injects the pair into GET query strings so action handlers that
+     * read from `$req->get('mode')` work the same way.
+     *
+     * No-op outside edit mode, on cross-origin requests, and on URLs that
+     * don't target the wizard controller.
+     */
+    function bindEditContextPrefilter() {
+        if (!$.ajaxPrefilter) return;
+        $.ajaxPrefilter(function (options /*, originalOptions, jqXHR */) {
+            if (CW.mode !== 'edit' || !(CW.customerId > 0)) return;
+            if (options.crossDomain) return;
+
+            var url = String(options.url || '');
+            // Limit scope to wizard controller endpoints — never leak the
+            // mode/customerId pair into unrelated AJAX calls (e.g. RBAC
+            // checks, third-party autocompletes).
+            if (url.indexOf('/customers/wizard/') === -1) return;
+
+            var method = String(options.type || options.method || 'GET').toUpperCase();
+            var injectQS = function () {
+                if (url.indexOf('mode=') !== -1) return;
+                var sep = url.indexOf('?') === -1 ? '?' : '&';
+                options.url = url + sep + 'mode=edit&customerId=' + encodeURIComponent(CW.customerId);
+            };
+
+            if (method === 'GET' || method === 'HEAD') {
+                injectQS();
+                return;
+            }
+
+            var data = options.data;
+            if (data && typeof FormData !== 'undefined' && data instanceof FormData) {
+                if (!data.has || !data.has('mode')) data.append('mode', 'edit');
+                if (!data.has || !data.has('customerId')) data.append('customerId', String(CW.customerId));
+                return;
+            }
+            if (typeof data === 'string') {
+                if (data.indexOf('mode=') === -1) {
+                    options.data = data + (data.length ? '&' : '') +
+                        'mode=edit&customerId=' + encodeURIComponent(CW.customerId);
+                }
+                return;
+            }
+            if (data && typeof data === 'object') {
+                if (typeof data.mode === 'undefined')       data.mode       = 'edit';
+                if (typeof data.customerId === 'undefined') data.customerId = CW.customerId;
+                return;
+            }
+            // No data on a POST is unusual but possible; attach minimal body.
+            options.data = { mode: 'edit', customerId: CW.customerId };
+        });
     }
 
     /** Minimal CSS.escape polyfill for safe attribute selectors. */

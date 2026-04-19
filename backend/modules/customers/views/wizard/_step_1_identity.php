@@ -196,16 +196,25 @@ $fahrasOverride = $payload['_fahras_override'] ?? null;
                             الجنس <span class="cw-field__req" aria-hidden="true">*</span>
                         </legend>
                         <div class="cw-radio-row">
+                            <?php
+                            // The Customers.sex column is integer 0/1 across the
+                            // legacy app (_form.php, _smart_form.php, view.php) and
+                            // the existing customer database. Anchor the wizard to
+                            // the same convention so editing existing customers
+                            // round-trips correctly without a one-off migration.
+                            //   0 = ذكر, 1 = أنثى
+                            $sexVal = (string)$g('sex');
+                            ?>
                             <label class="cw-radio">
-                                <input type="radio" name="Customers[sex]" value="1"
-                                       <?= (string)$g('sex') === '1' ? 'checked' : '' ?>
+                                <input type="radio" name="Customers[sex]" value="0"
+                                       <?= $sexVal === '0' ? 'checked' : '' ?>
                                        required>
                                 <span class="cw-radio__mark" aria-hidden="true"></span>
                                 <span>ذكر</span>
                             </label>
                             <label class="cw-radio">
-                                <input type="radio" name="Customers[sex]" value="2"
-                                       <?= (string)$g('sex') === '2' ? 'checked' : '' ?>>
+                                <input type="radio" name="Customers[sex]" value="1"
+                                       <?= $sexVal === '1' ? 'checked' : '' ?>>
                                 <span class="cw-radio__mark" aria-hidden="true"></span>
                                 <span>أنثى</span>
                             </label>
