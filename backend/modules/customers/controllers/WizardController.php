@@ -1327,14 +1327,21 @@ class WizardController extends Controller
         }
 
         // ── Name-vs-ID mismatch soft block ────────────────────────────────
-        // If Fahras §3.25 detected that the typed national ID is unknown
-        // BUT a customer with the same name exists under a different ID,
-        // we MUST not let the rep create a "new" customer who is almost
-        // certainly the existing one with a typo'd ID. Force `blocks=true`
-        // and trust the wizard's id-mismatch alert + override flow.
-        // (Skipped when the existing-customer extras already locked the
-        // wizard above — those CTAs are the better UX.)
-        if ($extras === null && $verdict->idMismatch !== null) {
+        // Force blocks=true whenever Fahras §3.25 detected another customer
+        // with the same name under a DIFFERENT national ID — REGARDLESS of
+        // whether the typed ID is also already on file locally.
+        //
+        // Why even in the same-company case: if the typed ID exists locally
+        // AND a different ID at jadal/bseel carries the same name, one of
+        // those rows is almost certainly a typo'd duplicate of the other
+        // (we've seen reps create local customers with transposed digits
+        // that then live alongside the canonical ID's record at remote
+        // sources, with each unaware of the other's blocks). The rep must
+        // see the alert and consciously decide which row is correct before
+        // any further action — adding a contract, updating data, or
+        // creating a fresh customer would all corrupt downstream data
+        // regardless of which CTA fires.
+        if ($verdict->idMismatch !== null) {
             $response['blocks'] = true;
         }
 
