@@ -3,27 +3,36 @@
 use yii\helpers\Html;
 
 /**
- * Customer Wizard V2 — «الصور والمستندات الإضافية» fieldset.
+ * Customer Wizard V2 — «الصورة الشخصية والمستندات الإضافية» partial.
  *
- * Drop-in partial that ships TWO independent uploaders:
- *   1. Personal photo (single file, image only) — becomes the customer's
- *      headshot rendered on the contract print preview.
- *   2. Additional documents (multi-file, images + PDF) — anything the user
- *      wants attached to the customer record that doesn't fit the existing
- *      ID-scan / SSC-kashf slots (utility bills, salary letters, vehicle
- *      registration, …).
+ * Two independent buckets, intentionally rendered with very different
+ * visual weight so the user understands one is mandatory and the other
+ * is not:
  *
- * Both inputs talk to the SAME backend endpoint (POST upload-extra) with
- * a `purpose` discriminator, and both are pre-populated from the wizard's
- * draft payload (`_extras.photo`, `_extras.docs[]`) so a resumed draft
- * shows previously-uploaded files without a re-upload.
+ *   1. Personal photo  — REQUIRED, never collapsed, visually prominent
+ *      with a red "مطلوب" chip and an attention-grabbing accent border.
+ *      Becomes the customer's headshot on the contract print preview.
+ *
+ *   2. Additional documents — OPTIONAL, kept inside <details> so it
+ *      doesn't crowd the form for users who don't need it (utility
+ *      bills, salary letters, vehicle registration, …).
+ *
+ * Why this split (was a single collapsed <details> before): users were
+ * routinely missing the photo because the whole block was tucked behind
+ * a tiny "اختياري" chevron. Promoting the photo to a first-class block
+ * with its own heading + required chip eliminates that miss rate while
+ * keeping the docs bucket out of the way for happy-path data entry.
  *
  * Markup contract consumed by extras.js:
- *   • The whole fieldset:        [data-cw-extras]
- *   • Each uploader:             [data-cw-extras-uploader=<purpose>]
- *   • Hidden file input:         input[type=file][data-cw-extras-input]
- *   • Trigger button:            [data-cw-extras-trigger]
- *   • Render target for thumbs:  [data-cw-extras-list]
+ *   • The whole partial wrapper:    [data-cw-extras]
+ *   • Each uploader:                [data-cw-extras-uploader=<purpose>]
+ *   • Required uploader is also:    [data-cw-extras-required="1"]
+ *   • Hidden file input:            input[type=file][data-cw-extras-input]
+ *   • Hidden form input mirroring photo state (so the wizard's standard
+ *     server-error renderer can attach the "missing photo" error to the
+ *     correct on-screen card):     input[type=hidden][name="Customers[_extras_photo_id]"]
+ *   • Trigger button:               [data-cw-extras-trigger]
+ *   • Render target for thumbs:     [data-cw-extras-list]
  *
  * @var array $payload  Decoded wizard draft (so we can rehydrate previous uploads)
  */
@@ -33,45 +42,48 @@ $photo  = (is_array($extras) && !empty($extras['photo']) && is_array($extras['ph
         ? $extras['photo'] : null;
 $docs   = (is_array($extras) && !empty($extras['docs'])  && is_array($extras['docs']))
         ? array_values($extras['docs']) : [];
+
+$photoId = $photo ? (int)($photo['image_id'] ?? 0) : 0;
 ?>
-<details class="cw-fieldset cw-fieldset--collapsible cw-extras"
-         data-cw-extras
-         <?= ($photo || $docs) ? 'open' : '' ?>>
-    <summary class="cw-fieldset__summary">
-        <span>
-            <i class="fa fa-camera-retro" aria-hidden="true"></i>
-            الصورة الشخصية والمستندات الإضافية
-        </span>
-        <span class="cw-fieldset__chip">اختياري</span>
-    </summary>
+<div class="cw-extras" data-cw-extras>
 
-    <p class="cw-fieldset__hint">
-        ارفع <strong>الصورة الشخصية للعميل</strong> لتظهر على شاشة طباعة العقد،
-        بالإضافة إلى أي <strong>مستندات داعمة</strong> (فواتير، شهادات راتب، رخص…)
-        تودّ إرفاقها بالملف.
-    </p>
+    <!-- ── Block 1 (REQUIRED): personal photo. ──────────────────────────── -->
+    <fieldset class="cw-fieldset cw-extras__photo-block<?= $photo ? ' cw-extras__photo-block--filled' : '' ?>"
+              data-cw-extras-required-block>
+        <legend class="cw-fieldset__title cw-fieldset__title--required">
+            <i class="fa fa-id-card-o" aria-hidden="true"></i>
+            <span>الصورة الشخصية للعميل</span>
+            <span class="cw-fieldset__chip cw-fieldset__chip--required" aria-label="حقل مطلوب">
+                <i class="fa fa-asterisk" aria-hidden="true"></i>
+                مطلوب
+            </span>
+        </legend>
 
-    <div class="cw-grid cw-grid--2 cw-extras__grid">
+        <p class="cw-fieldset__hint">
+            ارفع <strong>صورة العميل الشخصية</strong> — ستظهر على بطاقة طباعة العقد.
+            يمكنك اختيار صورة من جهازك أو
+            <strong>لصقها مباشرة من الحافظة</strong> بضغط
+            <kbd>Ctrl</kbd>+<kbd>V</kbd> داخل المربع.
+        </p>
 
-        <!-- ── Uploader 1: personal photo (single, replaceable). ── -->
-        <div class="cw-field cw-extras__uploader cw-extras__uploader--photo"
+        <div class="cw-field cw-extras__uploader cw-extras__uploader--photo cw-extras__uploader--required"
              data-cw-extras-uploader="photo"
+             data-cw-extras-required="1"
              data-cw-extras-multi="0"
-             data-cw-extras-accept="image/jpeg,image/png,image/webp">
-            <label class="cw-field__label">
-                <i class="fa fa-user-circle-o" aria-hidden="true"></i>
-                الصورة الشخصية للعميل
-                <span class="cw-extras__hint-inline">JPG / PNG / WEBP — حتى 10MB</span>
-            </label>
+             data-cw-extras-accept="image/jpeg,image/png,image/webp"
+             tabindex="0"
+             role="region"
+             aria-label="رفع الصورة الشخصية — حقل مطلوب — اضغط Ctrl+V للصق صورة من الحافظة">
 
-            <div class="cw-extras__dropzone" data-cw-extras-list role="list"
+            <div class="cw-extras__dropzone cw-extras__dropzone--photo"
+                 data-cw-extras-list role="list"
                  aria-label="الصورة الشخصية الحالية">
                 <?php if ($photo): ?>
                     <div class="cw-extras__item cw-extras__item--photo"
                          data-cw-extras-item
                          data-image-id="<?= (int)$photo['image_id'] ?>"
                          role="listitem">
-                        <div class="cw-extras__thumb">
+                        <div class="cw-extras__thumb cw-extras__thumb--portrait">
                             <img src="<?= Html::encode((string)($photo['url'] ?? '')) ?>"
                                  alt="<?= Html::encode((string)($photo['file_name'] ?? 'صورة شخصية')) ?>"
                                  loading="lazy">
@@ -91,11 +103,18 @@ $docs   = (is_array($extras) && !empty($extras['docs'])  && is_array($extras['do
             </div>
 
             <div class="cw-extras__actions">
-                <button type="button" class="cw-btn cw-btn--outline cw-btn--sm"
+                <button type="button" class="cw-btn cw-btn--primary cw-btn--sm"
                         data-cw-extras-trigger>
                     <i class="fa fa-camera" aria-hidden="true"></i>
                     <span><?= $photo ? 'تغيير الصورة' : 'اختيار صورة' ?></span>
                 </button>
+                <button type="button" class="cw-btn cw-btn--outline cw-btn--sm"
+                        data-cw-extras-paste
+                        title="لصق صورة من الحافظة (Ctrl+V)">
+                    <i class="fa fa-clipboard" aria-hidden="true"></i>
+                    <span>لصق من الحافظة</span>
+                </button>
+                <span class="cw-extras__hint-inline">JPG / PNG / WEBP — حتى 10MB</span>
             </div>
 
             <input type="file"
@@ -105,25 +124,46 @@ $docs   = (is_array($extras) && !empty($extras['docs'])  && is_array($extras['do
                    capture="user"
                    tabindex="-1"
                    aria-hidden="true">
-        </div>
 
-        <!-- ── Uploader 2: additional documents (multi). ── -->
+            <!-- Mirrors the uploaded photo's id into form data so the wizard's
+                 standard server-error renderer can attach a "missing photo"
+                 error directly to this card. Kept in sync by extras.js. -->
+            <input type="hidden"
+                   name="Customers[_extras_photo_id]"
+                   data-cw-extras-photo-id
+                   value="<?= $photoId > 0 ? $photoId : '' ?>">
+        </div>
+    </fieldset>
+
+    <!-- ── Block 2 (OPTIONAL): additional supporting documents. ────────── -->
+    <details class="cw-fieldset cw-fieldset--collapsible cw-extras__docs-block"
+             <?= $docs ? 'open' : '' ?>>
+        <summary class="cw-fieldset__summary">
+            <span>
+                <i class="fa fa-paperclip" aria-hidden="true"></i>
+                مستندات داعمة إضافية
+            </span>
+            <span class="cw-fieldset__chip">اختياري</span>
+        </summary>
+
+        <p class="cw-fieldset__hint">
+            ارفع أي <strong>مستندات داعمة</strong> (فواتير، شهادات راتب،
+            رخص…) تودّ إرفاقها بملف العميل. كرر <kbd>Ctrl</kbd>+<kbd>V</kbd>
+            أو <kbd>Win</kbd>+<kbd>V</kbd> لإضافة عدة صور دفعة واحدة.
+        </p>
+
         <div class="cw-field cw-extras__uploader cw-extras__uploader--docs"
              data-cw-extras-uploader="doc"
              data-cw-extras-multi="1"
-             data-cw-extras-accept="image/jpeg,image/png,image/webp,application/pdf">
-            <label class="cw-field__label">
-                <i class="fa fa-file-text-o" aria-hidden="true"></i>
-                مستندات وصور إضافية
-                <span class="cw-extras__hint-inline">JPG / PNG / WEBP / PDF — حتى 10MB لكل ملف</span>
-            </label>
+             data-cw-extras-accept="image/jpeg,image/png,image/webp,application/pdf"
+             tabindex="0"
+             role="region"
+             aria-label="رفع مستندات إضافية — اضغط Ctrl+V أو Win+V للصق صور متعددة">
 
             <div class="cw-extras__dropzone" data-cw-extras-list role="list"
                  aria-label="المستندات المرفقة">
                 <?php foreach ($docs as $doc): ?>
-                    <?php
-                    $isPdf = isset($doc['mime']) && $doc['mime'] === 'application/pdf';
-                    ?>
+                    <?php $isPdf = isset($doc['mime']) && $doc['mime'] === 'application/pdf'; ?>
                     <div class="cw-extras__item"
                          data-cw-extras-item
                          data-image-id="<?= (int)$doc['image_id'] ?>"
@@ -161,6 +201,13 @@ $docs   = (is_array($extras) && !empty($extras['docs'])  && is_array($extras['do
                     <i class="fa fa-cloud-upload" aria-hidden="true"></i>
                     <span>إضافة مستندات</span>
                 </button>
+                <button type="button" class="cw-btn cw-btn--outline cw-btn--sm"
+                        data-cw-extras-paste
+                        title="لصق من الحافظة (Ctrl+V أو Win+V لعدّة صور)">
+                    <i class="fa fa-clipboard" aria-hidden="true"></i>
+                    <span>لصق من الحافظة</span>
+                </button>
+                <span class="cw-extras__hint-inline">JPG / PNG / WEBP / PDF — حتى 10MB لكل ملف</span>
             </div>
 
             <input type="file"
@@ -171,5 +218,6 @@ $docs   = (is_array($extras) && !empty($extras['docs'])  && is_array($extras['do
                    tabindex="-1"
                    aria-hidden="true">
         </div>
-    </div>
-</details>
+    </details>
+
+</div>

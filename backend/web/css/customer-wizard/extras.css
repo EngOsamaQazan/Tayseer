@@ -1,25 +1,154 @@
 /* ============================================================
    Customer Wizard V2 — extras uploader styles.
-   Personal photo + ad-hoc supporting documents fieldset.
+   Personal photo (REQUIRED) + ad-hoc supporting documents (optional).
    -----------------------------------------------------------
    Visual goals:
-     • Two side-by-side cards on tablet+ (1-col on phones).
+     • Photo block sits OUT of any <details>, framed by a colored
+       accent border and a red "مطلوب" chip so users can't miss it.
+     • Docs block stays inside <details> so it doesn't crowd the
+       form for the happy path.
      • Generous, finger-friendly delete buttons (44×44 minimum).
-     • Photo thumbnails are square (1:1), document thumbs are
+     • Photo thumbnail is portrait-oriented (4:5), doc thumbs are
        1:1 with a flat icon for PDFs (no broken-image placeholder).
      • Status:
          - .cw-extras__item--deleting    → 50% opacity + ignore
                                             pointer events while the
                                             delete request is in flight.
-         - .cw-extras__item:hover .__del → reveal soft red highlight on
-                                            the trash button so it's
-                                            obviously the destructive
-                                            affordance.
+         - .cw-extras__uploader--invalid → red border + shake on the
+                                            required photo block when
+                                            the user tries to advance
+                                            without uploading one.
    ============================================================ */
 
-.cw-extras__grid {
-    margin-top: 4px;
-    gap: 16px;
+/* Wrapper around the two blocks (photo + docs). Pure layout container. */
+.cw-extras {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* ── REQUIRED photo block — visually loud so it can't be missed. ──
+ * Uses a left-side accent stripe (start side under RTL) plus a
+ * primary-tinted background so it reads as "this is a real form
+ * section, not an optional accordion". Once a photo is uploaded
+ * the accent fades to green to provide positive completion feedback.
+ */
+.cw-extras__photo-block {
+    position: relative;
+    margin: 0;
+    padding: 16px 18px 14px;
+    background: var(--cw-color-primary-soft, #eff6ff);
+    border: 1px solid var(--cw-color-primary, #2563eb);
+    border-radius: 12px;
+    border-inline-start: 4px solid var(--cw-color-primary, #2563eb);
+    transition: background-color 200ms ease, border-color 200ms ease;
+}
+.cw-extras__photo-block--filled {
+    background: #ecfdf5;                    /* green-50  */
+    border-color: #10b981;                  /* emerald-500 */
+    border-inline-start-color: #10b981;
+}
+.cw-extras__photo-block .cw-fieldset__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 10px;
+    color: var(--cw-color-text-strong, #0f172a);
+    font-weight: 700;
+    font-size: 1rem;
+}
+.cw-extras__photo-block .cw-fieldset__title .fa {
+    color: var(--cw-color-primary, #2563eb);
+}
+.cw-extras__photo-block--filled .cw-fieldset__title .fa {
+    color: #059669;                         /* emerald-600 */
+}
+.cw-extras__photo-block .cw-fieldset__hint {
+    margin: 0 0 12px;
+    font-size: 0.85rem;
+    color: var(--cw-color-text-muted, #475569);
+}
+
+/* "مطلوب" chip — tomato-red so the eye snaps to it. */
+.cw-fieldset__chip--required {
+    margin-inline-start: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    background: var(--cw-danger-soft, #fee2e2);
+    color: var(--cw-danger, #b91c1c);
+    border: 1px solid var(--cw-danger, #b91c1c);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+.cw-fieldset__chip--required .fa {
+    font-size: 8px;
+}
+.cw-extras__photo-block--filled .cw-fieldset__chip--required {
+    background: #d1fae5;                    /* emerald-100 */
+    color: #065f46;                         /* emerald-800 */
+    border-color: #10b981;
+}
+
+/* When the user clicks "Next" without a photo, the server returns a
+ * field error keyed on Customers[_extras_photo_id]. The standard
+ * renderServerErrors() in core.js then adds .cw-field--error to the
+ * hidden-input's nearest .cw-field, which happens to be the uploader
+ * itself. We use that hook to amplify the warning into the surrounding
+ * block (red border, soft red bg, gentle shake). */
+.cw-extras__photo-block:has(.cw-extras__uploader.cw-field--error),
+.cw-extras__photo-block.cw-extras__photo-block--invalid {
+    background: var(--cw-danger-soft, #fef2f2);
+    border-color: var(--cw-danger, #dc2626);
+    border-inline-start-color: var(--cw-danger, #dc2626);
+    animation: cw-extras-shake 360ms cubic-bezier(.36,.07,.19,.97) both;
+}
+.cw-extras__photo-block:has(.cw-extras__uploader.cw-field--error) .cw-fieldset__title .fa,
+.cw-extras__photo-block.cw-extras__photo-block--invalid .cw-fieldset__title .fa {
+    color: var(--cw-danger, #dc2626);
+}
+@keyframes cw-extras-shake {
+    10%, 90% { transform: translateX(-2px); }
+    20%, 80% { transform: translateX(3px); }
+    30%, 50%, 70% { transform: translateX(-5px); }
+    40%, 60% { transform: translateX(5px); }
+}
+
+/* The hidden Customers[_extras_photo_id] input lives inside .cw-field
+ * (the uploader itself). Its .cw-field__error-msg is positioned under
+ * the action buttons — make sure it spans the full width and is easy
+ * to read. */
+.cw-extras__uploader > .cw-field__error-msg {
+    margin-top: 6px;
+    padding: 6px 10px;
+    background: var(--cw-danger-soft, #fef2f2);
+    border: 1px solid var(--cw-danger, #dc2626);
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+/* The portrait-oriented dropzone for the photo bucket — a single
+ * tall slot rather than the wrap-and-grow chips of the docs bucket. */
+.cw-extras__dropzone--photo {
+    min-height: 96px;
+}
+.cw-extras__thumb--portrait {
+    width: 64px;
+    height: 80px;                            /* 4:5 portrait */
+    border-radius: 6px;
+}
+
+/* Optional docs block — keep the existing collapsible chrome from
+ * fields.css. The body children (hint + uploader) need padding so they
+ * don't kiss the <details> edges once the section is expanded. */
+.cw-extras__docs-block[open] > .cw-fieldset__hint {
+    padding: 0 16px;
+}
+.cw-extras__docs-block[open] > .cw-extras__uploader {
+    margin: 8px 16px 16px;
 }
 
 .cw-extras__uploader {
@@ -35,6 +164,22 @@
 .cw-extras__uploader:hover {
     border-color: var(--cw-color-primary, #2563eb);
     background: var(--cw-color-primary-soft, #eff6ff);
+}
+/* The uploader root is tabindex=0 so users can keyboard-focus it and
+ * paste with Ctrl+V / Win+V into a specific bucket. Mirror the hover
+ * affordance on focus so the keyboard target is visually obvious. */
+.cw-extras__uploader:focus-visible,
+.cw-extras__uploader:focus-within {
+    outline: none;
+    border-color: var(--cw-color-primary, #2563eb);
+    background: var(--cw-color-primary-soft, #eff6ff);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+/* While a paste-from-clipboard upload is in flight, dim the dropzone
+ * with a subtle pulse so the user knows the file is being handled. */
+.cw-extras__uploader[data-cw-extras-pasting="1"] .cw-extras__dropzone {
+    background: var(--cw-color-primary-soft, #eff6ff);
+    box-shadow: inset 0 0 0 2px var(--cw-color-primary, #2563eb);
 }
 .cw-extras__uploader .cw-field__label {
     display: flex;
@@ -194,10 +339,13 @@
     to   { transform: rotate(360deg); }
 }
 
-/* Mobile: single column, taller delete buttons for thumb-first interaction. */
+/* Mobile: taller delete buttons for thumb-first interaction. */
 @media (max-width: 640px) {
-    .cw-extras__grid {
-        grid-template-columns: 1fr;
+    .cw-extras__photo-block {
+        padding: 14px 14px 12px;
+    }
+    .cw-extras__photo-block .cw-fieldset__title {
+        font-size: 0.95rem;
     }
     .cw-extras__del {
         width: 44px;
