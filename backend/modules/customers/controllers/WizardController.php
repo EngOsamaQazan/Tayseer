@@ -1293,118 +1293,153 @@ class WizardController extends Controller
             'failure_policy' => $svc->failurePolicy,
         ];
 
-        // ── Same-company short-circuit ────────────────────────────────────
-        // When Fahras blocks because the customer is "ours" (every match is
-        // recorded against this Tayseer instance's own company in Fahras),
-        // we keep the wizard's Next button blocked but expose an alternative
-        // CTA: jump to «إضافة عقد جديد» on the existing local customer
-        // instead of forcing a duplicate customer record.
-        $extras = $this->buildSameCompanyExtras($verdict, $idNumber);
+        // ── Existing-customer short-circuit ───────────────────────────────
+        // The Fahras verdict layer can occasionally flap (Fahras dedup races,
+        // upstream sync lag) — but our LOCAL Customers table is the source
+        // of truth for "this national_id is already ours". Whenever the rep
+        // tries to register a national_id that we already have a record for
+        // — REGARDLESS of what Fahras returned — we replace the wizard's
+        // hard "blocked" message with a productive choice between two
+        // legitimate next actions:
+        //   1. Add a new contract on the existing customer (CONT_CREATE).
+        //   2. Update the existing customer's data (CUST_UPDATE).
+        // The wizard Next button stays locked because creating a *second*
+        // customer row for the same national_id would corrupt referential
+        // integrity downstream.
+        $extras = $this->buildExistingCustomerExtras($verdict, $idNumber);
         if ($extras !== null) {
             $response = array_merge($response, $extras);
+            // Always block the Next button when a local customer exists —
+            // even if Fahras returned no_record / can_sell — so the rep is
+            // forced to pick one of the CTAs instead of pushing through.
+            $response['blocks'] = true;
         }
 
         return $response;
     }
 
     /**
-     * Inspect a Fahras verdict and, when its matches all belong to THIS
-     * Tayseer instance's own company AND it would otherwise be a hard block,
-     * return the metadata the front-end needs to render a green
-     * «إضافة عقد جديد للعميل» CTA in place of the usual "blocked" message.
+     * Look up the rep-supplied national_id in our LOCAL Customers table and,
+     * when it already exists, return the metadata the front-end needs to
+     * render the productive «هذا العميل موجود لديك مسبقاً» CTA strip — two
+     * action links (Add Contract / Update Customer) — in place of the usual
+     * "blocked" or "no restrictions" Fahras message.
      *
-     * Returns null when the optimisation does not apply (most common case),
-     * so the caller can `array_merge` the result safely.
+     * Returns null when no local customer matches the national_id, so the
+     * caller can `array_merge` the result safely.
+     *
+     * Why local DB is the source of truth (not the Fahras verdict):
+     *   • Fahras verdicts can flip between calls (upstream dedup races,
+     *     partial-name vs full-id matching strategies, sync lag with sister
+     *     companies). Production observed: same customer → first call
+     *     `cannot_sell`, second call `no_record`, both within ~30 seconds.
+     *   • A customer row already in our DB is an unambiguous signal that
+     *     creating a *second* row with the same national_id would corrupt
+     *     downstream foreign keys (contracts, payments, vouchers, …).
+     *   • So we ALWAYS surface this CTA whenever the local row exists, even
+     *     if Fahras (incorrectly) reports `no_record`. The rep is given the
+     *     two legitimate paths forward and the wizard's Next button is
+     *     forcibly disabled by the caller (`$response['blocks'] = true`).
      *
      * Fields produced when applicable:
      *   • same_company_only            — bool, always true when present
-     *   • own_company_name             — string, canonical company label
-     *   • existing_customer_id         — int|null, local Customers.id (if any)
-     *   • existing_customer_name       — string|null, local customer name
-     *   • add_contract_url             — string|null, route to /contracts/contracts/create?id=X
+     *                                    (kept for CSS state hook backwards
+     *                                    compatibility — controls the green
+     *                                    «same-company» card styling).
+     *   • own_company_name             — string|null, canonical company label
+     *                                    (null when Fahras integration has no
+     *                                    companyName configured).
+     *   • existing_customer_id         — int, local Customers.id
+     *   • existing_customer_name       — string, local customer name
+     *   • add_contract_url             — string, /contracts/contracts/create?id=X
      *   • add_contract_allowed         — bool, user has CONT_CREATE
-     *   • same_company_message_ar      — string, replacement headline for the card
-     *
-     * Notes:
-     *   • This intentionally does NOT flip blocks=false; the wizard Next stays
-     *     locked because the right action is "stop and add a contract", not
-     *     "create a duplicate customer".
-     *   • Only triggers on cannot_sell / contact_first verdicts — can_sell /
-     *     no_record / error verdicts are pass-through.
+     *   • update_customer_url          — string, /customers/wizard/edit?id=X
+     *   • update_customer_allowed      — bool, user has CUST_UPDATE
+     *   • same_company_message_ar      — string, headline tailored to the
+     *                                    Fahras verdict + permission combo.
      */
-    protected function buildSameCompanyExtras(FahrasVerdict $verdict, string $idNumber): ?array
+    protected function buildExistingCustomerExtras(FahrasVerdict $verdict, string $idNumber): ?array
     {
-        $svc = Yii::$app->fahras ?? null;
-        if (!$svc || $svc->companyName === null) return null;
+        if ($idNumber === '') return null;
 
-        // Only meaningful for verdicts that would otherwise block the rep
-        // from continuing (cannot_sell) or recommend contacting the prior
-        // company (contact_first). Other verdicts already let the rep proceed.
-        if (!in_array($verdict->verdict, [
-            FahrasVerdict::VERDICT_CANNOT_SELL,
-            FahrasVerdict::VERDICT_CONTACT_FIRST,
-        ], true)) {
+        $localCustomer = null;
+        try {
+            $localCustomer = Customers::find()
+                ->where(['id_number' => $idNumber])
+                ->limit(1)
+                ->one();
+        } catch (\Throwable $e) {
+            Yii::warning(
+                'buildExistingCustomerExtras: local customer lookup failed: ' . $e->getMessage(),
+                __METHOD__
+            );
             return null;
         }
+        if ($localCustomer === null) return null;
 
-        if (!$svc->isSameCompanyOnly($verdict)) return null;
+        $svc = Yii::$app->fahras ?? null;
+        $own = $svc->companyName ?? null;
 
-        $own = $svc->companyName;
+        $canAddContract    = Permissions::can(Permissions::CONT_CREATE);
+        $canUpdateCustomer = Permissions::can(Permissions::CUST_UPDATE);
 
-        // Look up the existing local customer so we can hand the rep a
-        // direct link to the create-contract form pre-filled with them.
-        $localCustomer = null;
-        if ($idNumber !== '') {
-            try {
-                $localCustomer = Customers::find()
-                    ->where(['id_number' => $idNumber])
-                    ->limit(1)
-                    ->one();
-            } catch (\Throwable $e) {
-                Yii::warning(
-                    'buildSameCompanyExtras: local customer lookup failed: ' . $e->getMessage(),
-                    __METHOD__
-                );
-            }
-        }
+        $addContractUrl = Url::to([
+            '/contracts/contracts/create',
+            'id' => (int)$localCustomer->id,
+        ]);
+        $updateCustomerUrl = Url::to([
+            '/customers/wizard/edit',
+            'id' => (int)$localCustomer->id,
+        ]);
 
-        $canAddContract = Permissions::can(Permissions::CONT_CREATE);
-        $addContractUrl = null;
-        if ($localCustomer !== null) {
-            $addContractUrl = Url::to(['/contracts/contracts/create', 'id' => (int)$localCustomer->id]);
-        }
+        // Compose a headline that explains WHY the create flow is blocked,
+        // tailored to the actual Fahras verdict + permission combo. The
+        // dominant fact is always "customer exists locally"; the Fahras
+        // bit is supporting context.
+        $sameCompanyOnly = $svc !== null && $svc->isSameCompanyOnly($verdict);
+        $ownLabel        = $own !== null && $own !== '' ? $own : 'شركتنا';
 
-        // Compose a replacement message tailored to the situation:
-        //   • Customer exists locally + user can add contracts → invite them.
-        //   • Customer exists locally + user lacks permission  → explain & ask manager.
-        //   • Customer NOT in local DB (Fahras-cache only)     → explain mismatch.
-        if ($localCustomer === null) {
+        if ($verdict->verdict === FahrasVerdict::VERDICT_CANNOT_SELL && $sameCompanyOnly) {
             $msg = sprintf(
-                'العميل مسجَّل لدى شركتنا (%s) في الفهرس، لكن لا يوجد له سجل محلي '
-                . 'في تيسير. تواصل مع المسؤول لاستيراد العميل قبل إنشاء عقد جديد له.',
-                $own
+                'هذا العميل قائم لدى %s ولا يوجد لديه أي سجل لدى شركات تقسيط أخرى — '
+                . 'يحقّ لك إنشاء عقد جديد على ملفه الحالي أو تحديث بياناته بدلاً من إضافته كعميل جديد.',
+                $ownLabel
             );
-        } elseif (!$canAddContract) {
+        } elseif ($verdict->verdict === FahrasVerdict::VERDICT_CANNOT_SELL) {
             $msg = sprintf(
-                'هذا عميل قائم لدى شركتنا (%s). لا يمكن إعادة إضافته كعميل جديد — '
-                . 'يجب إنشاء عقد جديد على ملفه الحالي، وأنت لا تملك صلاحية «إضافة عقد».',
-                $own
+                'هذا العميل موجود لديك مسبقاً (%s)، والفهرس يمنع البيع بسبب وجود قيود لدى شركات أخرى — '
+                . 'لا يجوز إنشاؤه كعميل جديد. الإجراء الصحيح: إنشاء عقد جديد على ملفه الحالي '
+                . '(إذا كانت سياسة شركتنا تسمح) أو تحديث بياناته.',
+                $localCustomer->name
+            );
+        } elseif ($verdict->verdict === FahrasVerdict::VERDICT_CONTACT_FIRST) {
+            $msg = sprintf(
+                'هذا العميل موجود لديك مسبقاً (%s)، والفهرس ينصح بمراجعة شركة سابقة قبل المتابعة — '
+                . 'تواصل مع تلك الشركة، ثم اختر إضافة عقد جديد على ملف العميل أو تحديث بياناته.',
+                $localCustomer->name
             );
         } else {
+            // no_record / can_sell / error — Fahras would normally allow,
+            // but we still must NOT create a duplicate row. Inform the rep
+            // of the existing record and offer the two right paths.
             $msg = sprintf(
-                'هذا العميل قائم لدى شركتنا (%s) ولا يوجد لديه أي سجل لدى شركات تقسيط أخرى — '
-                . 'لذلك يحقّ لك إنشاء عقد جديد على ملفه الحالي بدلاً من إضافته كعميل جديد.',
-                $own
+                'هذا العميل (%s) موجود لديك مسبقاً برقم وطني %s — لا يمكن إعادة إنشائه. '
+                . 'استخدم «إضافة عقد جديد» إذا كنت تريد بيع جديد، أو «تحديث بيانات العميل» '
+                . 'إذا كنت تريد تعديل بياناته.',
+                $localCustomer->name,
+                $idNumber
             );
         }
 
         return [
             'same_company_only'        => true,
             'own_company_name'         => $own,
-            'existing_customer_id'     => $localCustomer ? (int)$localCustomer->id : null,
-            'existing_customer_name'   => $localCustomer ? (string)$localCustomer->name : null,
+            'existing_customer_id'     => (int)$localCustomer->id,
+            'existing_customer_name'   => (string)$localCustomer->name,
             'add_contract_url'         => $addContractUrl,
             'add_contract_allowed'     => $canAddContract,
+            'update_customer_url'      => $updateCustomerUrl,
+            'update_customer_allowed'  => $canUpdateCustomer,
             'same_company_message_ar'  => $msg,
         ];
     }

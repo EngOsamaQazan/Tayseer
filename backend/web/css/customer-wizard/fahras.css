@@ -227,6 +227,66 @@
     100% { box-shadow: 0 0 0 0   rgba(16,185,129,0); }
 }
 
+/* Secondary action button (تحديث بيانات العميل) — uses the info accent
+   so the rep can visually distinguish it from the primary success CTA
+   (إضافة عقد جديد) at a glance. Both share the same hit-area sizing
+   to keep WCAG 2.5.8 compliance and the row layout balanced. */
+.cw-btn--info {
+    background: var(--cw-info, #0ea5e9);
+    color: #fff;
+    border-color: var(--cw-info, #0ea5e9);
+}
+.cw-btn--info:hover:not(:disabled) {
+    filter: brightness(0.94);
+}
+
+/* ─── Live Fahras verdict panel ──────────────────────────────────────
+   Always visible whenever the existing-customer CTA takes the centre
+   OR Fahras itself returned an error verdict. Goal: never silently
+   hide what Fahras actually said — the rep must always see the live
+   response (and any error must be impossible to miss). The neutral
+   variant (default) uses a soft info accent; the error variant flips
+   to a red outlined banner with role="alert" semantics on the JS side
+   so screen readers announce it immediately. */
+.cw-fahras__verdict-panel {
+    display: block;
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--cw-info-soft, #d6efff);
+    background: var(--cw-info-soft, #ecf7ff);
+    border-radius: var(--cw-radius-sm, 6px);
+    font-size: 13px;
+    line-height: 1.55;
+}
+.cw-fahras__verdict-panel-head {
+    margin: 0;
+    color: var(--cw-info, #0369a1);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.cw-fahras__verdict-panel-head i { color: inherit; }
+.cw-fahras__verdict-panel-label {
+    color: var(--cw-text);
+    font-weight: 500;
+}
+.cw-fahras__verdict-panel-reason {
+    margin: 6px 0 0;
+    color: var(--cw-text-muted);
+}
+
+.cw-fahras__verdict-panel--error {
+    border-color: var(--cw-danger, #dc2626);
+    background: #fff1f1;
+}
+.cw-fahras__verdict-panel--error .cw-fahras__verdict-panel-head {
+    color: var(--cw-danger, #b91c1c);
+}
+.cw-fahras__verdict-panel--error .cw-fahras__verdict-panel-label {
+    color: #7f1d1d;
+}
+
 /* ─── Override banner (shown after successful override) ──────────── */
 .cw-fahras__override-banner {
     display: flex;

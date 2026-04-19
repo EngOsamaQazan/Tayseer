@@ -180,10 +180,13 @@
                 case 'open-override':   e.preventDefault(); openOverrideModal();        break;
                 case 'clear-override':  e.preventDefault(); clearOverride();            break;
                 case 'add-contract':
+                case 'update-customer':
                     // Intentional navigation away from the wizard — silence
                     // the beforeunload "unsaved changes" guard so the rep
                     // doesn't see a confusing browser confirm dialog. The
-                    // <a> handles the actual navigation.
+                    // <a> handles the actual navigation. Both CTAs leave
+                    // the wizard for a different page (contract create /
+                    // customer edit), so the same disarm logic applies.
                     if (window.CW && typeof window.CW.disarmUnloadGuard === 'function') {
                         window.CW.disarmUnloadGuard();
                     } else {
@@ -358,16 +361,31 @@
         state.$card.find('[data-cw-fahras-action="recheck"]').prop('disabled', false);
     }
 
+    /**
+     * Transport-level failure path: AJAX itself failed (network down,
+     * 5xx, JSON parse error, server returned ok:false). The wizard MUST
+     * surface this loudly — silently swallowing a Fahras outage and
+     * letting the rep proceed would let blocked customers slip through
+     * the gate. We render a prominent red banner with the exact error
+     * text so support can diagnose, and we keep the recheck button
+     * enabled so the rep can retry once Fahras is back.
+     */
     function renderError(message, blocks) {
         state.$card.attr('data-cw-fahras-state', 'error');
         var html =
             '<div class="cw-fahras__icon" aria-hidden="true"><i class="fa fa-exclamation-triangle"></i></div>' +
             '<div class="cw-fahras__message">' +
-                '<p class="cw-fahras__text"><strong>تعذّر الاتصال بنظام الفهرس.</strong></p>' +
-                '<p class="cw-fahras__sub">' + escapeHtml(message) + '</p>' +
+                '<p class="cw-fahras__text"><strong>تعذّر الاتصال بنظام الفهرس — لم يصل أي رد.</strong></p>' +
+                '<div class="cw-fahras__verdict-panel cw-fahras__verdict-panel--error" role="alert">' +
+                    '<p class="cw-fahras__verdict-panel-head">' +
+                        '<i class="fa fa-exclamation-triangle" aria-hidden="true"></i> ' +
+                        '<strong>تفاصيل الخطأ:</strong> ' +
+                        '<span class="cw-fahras__verdict-panel-label">' + escapeHtml(message) + '</span>' +
+                    '</p>' +
+                '</div>' +
                 (blocks
                     ? '<p class="cw-fahras__meta"><i class="fa fa-lock"></i> ' +
-                      'لا يمكن إنشاء العميل قبل عودة نظام الفهرس. يرجى المحاولة لاحقاً.</p>'
+                      'لا يمكن إنشاء العميل قبل عودة نظام الفهرس. يرجى المحاولة لاحقاً أو الضغط على «إعادة الفحص».</p>'
                     : '<p class="cw-fahras__meta"><i class="fa fa-exclamation"></i> ' +
                       'تحذير فقط — يمكنك المتابعة على مسؤوليتك.</p>') +
             '</div>';
@@ -376,27 +394,52 @@
         state.$card.find('[data-cw-fahras-action="recheck"]').prop('disabled', false);
     }
 
+    /**
+     * Map a Fahras verdict code to a short Arabic label that we surface
+     * on-screen so the rep can always see — at a glance — exactly what
+     * Fahras said, even when our productive existing-customer CTA takes
+     * the visual centre. "Real and live" Fahras response remains visible
+     * regardless of the path the card otherwise renders.
+     */
+    function fahrasVerdictLabelAr(v) {
+        switch (v) {
+            case 'no_record':    return 'لا يوجد سجل لهذا العميل في الفهرس';
+            case 'can_sell':     return 'مسجَّل في الفهرس بدون قيود — البيع مسموح';
+            case 'contact_first':return 'التواصل مع شركة سابقة مطلوب قبل البيع';
+            case 'cannot_sell':  return 'البيع ممنوع وفقاً للفهرس';
+            case 'error':        return 'تعذّر الحصول على رد من الفهرس (خطأ في الاستجابة)';
+            default:             return v ? ('قرار غير معروف: ' + v) : '—';
+        }
+    }
+
     function renderVerdict(resp) {
         var verdict = resp.verdict || 'no_record';
         var blocks  = !!resp.blocks;
         var warns   = !!resp.warns;
 
-        // Same-company optimisation: when every match in the verdict comes
-        // from THIS Tayseer instance's own company, the customer is already
-        // ours and the right action is to add a new contract on their
-        // existing record — not to recreate them as a customer. Render a
-        // distinct state and a green CTA in place of (or alongside) the
-        // standard block message. The wizard's "Next" button stays locked
-        // either way: the rep should leave the wizard, not push through it.
-        var sameCompany = !!(resp.same_company_only && resp.own_company_name);
+        // Existing-customer short-circuit: when the rep's national_id
+        // matches a row we already have in our LOCAL Customers table,
+        // the controller surfaces `same_company_only=true` (kept as the
+        // CSS state hook for backwards compatibility) plus URLs for the
+        // two productive next-actions: add a new contract on the existing
+        // customer, or update the existing customer's data. This fires
+        // REGARDLESS of the Fahras verdict — even on `no_record` — because
+        // the local row is the source of truth for "we already have them",
+        // and creating a duplicate row would corrupt referential integrity.
+        // The wizard's "Next" button stays locked either way (controller
+        // forces blocks=true): the rep should pick one of the two CTAs.
+        // CRITICAL: we still render the actual Fahras verdict & any error
+        // alongside — never hide what Fahras said (see verdictPanel below).
+        var existingCustomer = !!(resp.same_company_only && resp.existing_customer_id);
+        var fahrasErrored    = (verdict === 'error');
 
         var stateName = 'can';
         var icon      = 'fa-check-circle';
         var title     = 'يمكن إضافة العميل.';
-        if (sameCompany) {
+        if (existingCustomer) {
             stateName = 'same-company';
             icon      = 'fa-handshake-o';
-            title     = 'هذا العميل مسجَّل لدى شركتنا — أنشئ له عقداً جديداً بدلاً من إضافته كعميل.';
+            title     = 'هذا العميل موجود لديك مسبقاً — اختر «إضافة عقد جديد» أو «تحديث بيانات العميل».';
         } else if (verdict === 'no_record') {
             stateName = 'can';
             icon      = 'fa-check-circle';
@@ -430,8 +473,8 @@
         if (resp.request_id) meta.push('<i class="fa fa-hashtag"></i> ' + escapeHtml(resp.request_id));
 
         var ctaHtml = '';
-        if (sameCompany) {
-            ctaHtml = renderSameCompanyCta(resp);
+        if (existingCustomer) {
+            ctaHtml = renderExistingCustomerCta(resp);
         } else if (blocks && state.canOverride) {
             ctaHtml =
                 '<div class="cw-fahras__cta">' +
@@ -443,19 +486,53 @@
         }
 
         // Prefer the controller-supplied tailored message for the
-        // same-company case; otherwise fall back to the raw Fahras reason.
-        var subRaw = sameCompany
+        // existing-customer case; otherwise fall back to the raw Fahras reason.
+        var subRaw = existingCustomer
             ? (resp.same_company_message_ar || resp.reason_ar || '')
             : (resp.reason_ar || '');
         var subText = subRaw
             ? '<p class="cw-fahras__sub">' + escapeHtml(subRaw) + '</p>'
             : '';
 
+        // ── Fahras "real & live" verdict panel ───────────────────────────
+        // Always visible when we're showing the existing-customer CTA or
+        // when Fahras itself errored. This guarantees the rep can never
+        // miss what Fahras actually replied — even when our local-DB CTA
+        // takes the visual centre. For error responses we paint a red
+        // banner so an outage is impossible to ignore.
+        var verdictPanel = '';
+        var showPanel    = existingCustomer || fahrasErrored;
+        if (showPanel) {
+            var panelCls = fahrasErrored
+                ? 'cw-fahras__verdict-panel cw-fahras__verdict-panel--error'
+                : 'cw-fahras__verdict-panel';
+            var panelIcon = fahrasErrored ? 'fa-exclamation-triangle' : 'fa-bullhorn';
+            var panelHeading = fahrasErrored
+                ? 'خطأ في الاتصال بالفهرس'
+                : 'رد الفهرس (لحظي):';
+            var verdictLabel  = escapeHtml(fahrasVerdictLabelAr(verdict));
+            var reasonLine    = '';
+            if (resp.reason_ar && (!existingCustomer || resp.reason_ar !== subRaw)) {
+                reasonLine = '<p class="cw-fahras__verdict-panel-reason">'
+                           + escapeHtml(resp.reason_ar) + '</p>';
+            }
+            verdictPanel =
+                '<div class="' + panelCls + '" role="' + (fahrasErrored ? 'alert' : 'note') + '">' +
+                    '<p class="cw-fahras__verdict-panel-head">' +
+                        '<i class="fa ' + panelIcon + '" aria-hidden="true"></i> ' +
+                        '<strong>' + escapeHtml(panelHeading) + '</strong> ' +
+                        '<span class="cw-fahras__verdict-panel-label">' + verdictLabel + '</span>' +
+                    '</p>' +
+                    reasonLine +
+                '</div>';
+        }
+
         var html =
             '<div class="cw-fahras__icon" aria-hidden="true"><i class="fa ' + icon + '"></i></div>' +
             '<div class="cw-fahras__message">' +
                 '<p class="cw-fahras__text"><strong>' + escapeHtml(title) + '</strong></p>' +
                 subText +
+                verdictPanel +
                 (meta.length ? '<p class="cw-fahras__meta">' + meta.join(' · ') + '</p>' : '') +
                 ctaHtml +
             '</div>';
@@ -465,59 +542,105 @@
     }
 
     /**
-     * Build the green «إضافة عقد جديد للعميل» CTA strip rendered when the
-     * Fahras verdict matches are exclusively from this Tayseer instance's
-     * own company. Three sub-cases handled:
-     *   1. Local customer found + user can add contracts → primary CTA link.
-     *   2. Local customer found + user lacks CONT_CREATE → disabled link
-     *      with explanatory tooltip (so the rep escalates to a manager).
-     *   3. No local customer found (Fahras-cache only)   → no CTA, just an
-     *      info note (the controller already produced a friendly message).
+     * Build the productive CTA strip rendered when the rep's national_id
+     * already matches a customer in our local DB. Two side-by-side actions
+     * are offered, each gated independently by RBAC:
+     *   1. «إضافة عقد جديد» → /contracts/contracts/create?id=N
+     *      (gated by Permissions::CONT_CREATE).
+     *   2. «تحديث بيانات العميل» → /customers/wizard/edit?id=N
+     *      (gated by Permissions::CUST_UPDATE).
+     *
+     * Each button has three render states, handled independently so the
+     * rep always knows what's available, what's missing, and why:
+     *   • URL present + permission granted → live action link (success btn).
+     *   • URL present + permission denied   → disabled link with hint to
+     *                                         escalate to a manager.
+     *   • URL missing (no local row info)  → omitted entirely.
+     *
+     * If neither action is available we return '' and the card just shows
+     * the headline + the always-present "Fahras response" panel — never a
+     * silent dead-end.
      */
-    function renderSameCompanyCta(resp) {
-        var url           = resp.add_contract_url || '';
-        var hasUrl        = !!url;
-        var allowed       = !!resp.add_contract_allowed;
-        var custName      = resp.existing_customer_name || '';
-        var btnLabel      = custName
-            ? 'إضافة عقد جديد لـ ' + custName
-            : 'إضافة عقد جديد للعميل';
+    function renderExistingCustomerCta(resp) {
+        var custName = resp.existing_customer_name || '';
+        var nameLbl  = custName ? ' لـ ' + custName : ' للعميل';
 
-        // Customer is in Fahras under "us" but not yet imported into Tayseer.
-        // Without a local id we have nowhere to link to; bail with no CTA.
-        if (!hasUrl) {
-            return '';
-        }
+        var pieces = [];
 
-        if (!allowed) {
-            return (
-                '<div class="cw-fahras__cta">' +
+        // ── Add Contract action ──
+        var addUrl = resp.add_contract_url || '';
+        if (addUrl) {
+            var addAllowed = !!resp.add_contract_allowed;
+            var addLabel   = 'إضافة عقد جديد' + nameLbl;
+            if (addAllowed) {
+                pieces.push(
+                    '<a href="' + escapeHtml(addUrl) + '" ' +
+                       'class="cw-btn cw-btn--success cw-btn--sm" ' +
+                       'data-cw-fahras-action="add-contract" ' +
+                       'data-pjax="0">' +
+                        '<i class="fa fa-file-text-o" aria-hidden="true"></i> ' +
+                        '<span>' + escapeHtml(addLabel) + '</span>' +
+                    '</a>'
+                );
+            } else {
+                pieces.push(
                     '<button type="button" class="cw-btn cw-btn--outline cw-btn--sm" disabled ' +
                             'aria-disabled="true" ' +
                             'title="لا تملك صلاحية «إضافة عقد».">' +
                         '<i class="fa fa-file-text-o" aria-hidden="true"></i> ' +
-                        '<span>' + escapeHtml(btnLabel) + '</span>' +
-                    '</button>' +
-                    '<span class="cw-fahras__cta-hint">' +
-                        '<i class="fa fa-info-circle" aria-hidden="true"></i> ' +
-                        'تواصل مع المدير لإصدار صلاحية «إضافة عقد».' +
-                    '</span>' +
-                '</div>'
-            );
+                        '<span>' + escapeHtml(addLabel) + '</span>' +
+                    '</button>'
+                );
+            }
+        }
+
+        // ── Update Customer action ──
+        var updUrl = resp.update_customer_url || '';
+        if (updUrl) {
+            var updAllowed = !!resp.update_customer_allowed;
+            var updLabel   = 'تحديث بيانات العميل';
+            if (updAllowed) {
+                pieces.push(
+                    '<a href="' + escapeHtml(updUrl) + '" ' +
+                       'class="cw-btn cw-btn--info cw-btn--sm" ' +
+                       'data-cw-fahras-action="update-customer" ' +
+                       'data-pjax="0">' +
+                        '<i class="fa fa-pencil-square-o" aria-hidden="true"></i> ' +
+                        '<span>' + escapeHtml(updLabel) + '</span>' +
+                    '</a>'
+                );
+            } else {
+                pieces.push(
+                    '<button type="button" class="cw-btn cw-btn--outline cw-btn--sm" disabled ' +
+                            'aria-disabled="true" ' +
+                            'title="لا تملك صلاحية «تعديل العملاء».">' +
+                        '<i class="fa fa-pencil-square-o" aria-hidden="true"></i> ' +
+                        '<span>' + escapeHtml(updLabel) + '</span>' +
+                    '</button>'
+                );
+            }
+        }
+
+        if (!pieces.length) return '';
+
+        // Hint copy adapts to which buttons are actually live.
+        var hint;
+        if (resp.add_contract_allowed && resp.update_customer_allowed) {
+            hint = 'اختر «إضافة عقد جديد» لبيع جديد، أو «تحديث بيانات العميل» لتعديل بياناته.';
+        } else if (resp.add_contract_allowed) {
+            hint = 'سيتم نقلك إلى صفحة إنشاء العقد مع تعبئة بيانات العميل.';
+        } else if (resp.update_customer_allowed) {
+            hint = 'سيتم نقلك إلى صفحة تعديل بيانات العميل.';
+        } else {
+            hint = 'تواصل مع المدير لإصدار صلاحية إضافة عقد أو تعديل العملاء.';
         }
 
         return (
             '<div class="cw-fahras__cta">' +
-                '<a href="' + escapeHtml(url) + '" ' +
-                   'class="cw-btn cw-btn--success cw-btn--sm" ' +
-                   'data-cw-fahras-action="add-contract" ' +
-                   'data-pjax="0">' +
-                    '<i class="fa fa-file-text-o" aria-hidden="true"></i> ' +
-                    '<span>' + escapeHtml(btnLabel) + '</span>' +
-                '</a>' +
+                pieces.join('') +
                 '<span class="cw-fahras__cta-hint">' +
                     '<i class="fa fa-info-circle" aria-hidden="true"></i> ' +
-                    'سيتم نقلك إلى صفحة إنشاء العقد مع تعبئة بيانات العميل.' +
+                    escapeHtml(hint) +
                 '</span>' +
             '</div>'
         );
