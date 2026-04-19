@@ -116,6 +116,7 @@
     'baseUrl'        => 'https://fahras.aqssat.co',
     'token'          => null,
     'clientId'       => 'tayseer',
+    'companyName'    => null, // ← يُحقن من FAHRAS_COMPANY_NAME (انظر أدناه)
     'timeoutSec'     => 8,
     'cacheTtlSec'    => 300,
     'failurePolicy'  => 'closed',
@@ -132,9 +133,15 @@ git. القيمة الفعلية تُحقن في وقت التشغيل عبر Ap
 <VirtualHost *:443>
     ServerName <tenant>.aqssat.co
     SetEnv FAHRAS_TOKEN_TAYSEER tayseer_fahras_2026_<full_secret>
+    SetEnv FAHRAS_COMPANY_NAME جدل
     ...
 </VirtualHost>
 ```
+
+> ملاحظة: `FAHRAS_COMPANY_NAME` يفعّل اختصار **«إضافة عقد جديد»** عندما
+> تكون كل المطابقات في الفهرس تخصّ هذه الشركة فقط (انظر §3.4).
+> القيم القانونية: `جدل`، `نماء`، `وتر`، `بسيل`، `زجل`، `عالم المجد`.
+> إن لم يُضبط، يبقى السلوك الافتراضي (حظر صلب لمنع التكرار) دون عرض الزر.
 
 تُحفظ القيمة الأصلية في `/root/.fahras_tayseer_token` (660، root فقط)
 لإعادة الزرع بعد أي إعادة بناء. السكربت

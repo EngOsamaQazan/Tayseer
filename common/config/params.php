@@ -54,8 +54,20 @@ return [
         // matches are EXCLUSIVELY from this company, we treat the customer
         // as "already ours" and offer a quick link to add a new contract
         // instead of forcing the rep to re-create the customer.
-        // MUST be overridden in params-local.php per environment.
-        'companyName'    => null,
+        //
+        // Resolution order:
+        //   1. Apache vhost env: `SetEnv FAHRAS_COMPANY_NAME <name>` per
+        //      tenant (recommended — mirrors how FAHRAS_TOKEN_TAYSEER is
+        //      provisioned, no per-environment params-local edits needed).
+        //   2. Override in `common/config/params-local.php` for local dev.
+        //   3. null  → optimisation disabled (verdict still blocks
+        //      duplicate creation, but no «إضافة عقد جديد» CTA shown).
+        'companyName'    => (static function () {
+            $env = getenv('FAHRAS_COMPANY_NAME');
+            if ($env === false) return null;
+            $env = trim($env);
+            return $env === '' ? null : $env;
+        })(),
 
         // Hard timeout per HTTP call (seconds).
         'timeoutSec'     => 8,

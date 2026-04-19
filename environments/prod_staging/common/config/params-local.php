@@ -75,6 +75,10 @@ return [
         'baseUrl'        => 'https://fahras.aqssat.co',
         'token'          => getenv('FAHRAS_TOKEN_TAYSEER') ?: '',
         'clientId'       => 'tayseer',
+        // Optional canonical Fahras account name. Staging is generic and
+        // not bound to a single brand, so leave NULL by default unless
+        // FAHRAS_COMPANY_NAME is explicitly provided in the vhost env.
+        'companyName'    => getenv('FAHRAS_COMPANY_NAME') ?: null,
         'timeoutSec'     => 8,
         'cacheTtlSec'    => 300,
         'failurePolicy'  => 'closed',

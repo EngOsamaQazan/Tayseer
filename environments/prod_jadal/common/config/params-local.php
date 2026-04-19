@@ -94,6 +94,13 @@ return [
         'baseUrl'        => 'https://fahras.aqssat.co',
         'token'          => getenv('FAHRAS_TOKEN_TAYSEER') ?: '',
         'clientId'       => 'tayseer',
+        // Canonical Fahras account name for this tenant. Drives the
+        // «إضافة عقد جديد» same-company CTA in the customer wizard so
+        // reps can create a new contract on an existing local customer
+        // instead of being hard-blocked when the only Fahras hits are
+        // from this very company. Mirrored from FAHRAS_COMPANY_NAME env
+        // var when set (matches FAHRAS_TOKEN_TAYSEER pattern).
+        'companyName'    => getenv('FAHRAS_COMPANY_NAME') ?: 'جدل',
         'timeoutSec'     => 8,
         'cacheTtlSec'    => 300,
         'failurePolicy'  => 'closed',
