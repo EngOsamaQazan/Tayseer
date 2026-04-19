@@ -1,0 +1,713 @@
+{
+  "FOLLOWUP": {
+    "columns": [
+      {
+        "name": "المعرف",
+        "type": "COUNTER",
+        "size": 10,
+        "nullable": false
+      },
+      {
+        "name": "num_cus",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "date_followup",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "وعد بالدفع في",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "رفع قضية",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "أرقام مفقودة",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "notes",
+        "type": "LONGCHAR",
+        "size": 1073741823,
+        "nullable": true
+      },
+      {
+        "name": "لم يتم الرد",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "غير مستعمل",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "وعد بابلاغه",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "ابلاغ قضية",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "تأجيل لتاريخ",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "المتابع",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "هدف الاتصال",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "جهة الاتصال",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "وعد بالدفع",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      }
+    ],
+    "row_count": 0,
+    "sample": null
+  },
+  "main_cust": {
+    "columns": [
+      {
+        "name": "المعرف",
+        "type": "COUNTER",
+        "size": 10,
+        "nullable": false
+      },
+      {
+        "name": "name1",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "num1",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "num2",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "job",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "phone1",
+        "type": "CHAR",
+        "size": 4,
+        "nullable": true
+      },
+      {
+        "name": "phone2",
+        "type": "CHAR",
+        "size": 4,
+        "nullable": true
+      },
+      {
+        "name": "phone3",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "phone4",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "phone5",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "phone6",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "phone7",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "court",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "date1",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "date_many",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "the_seller",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "many",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "first_many",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "manthly_many",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_name",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_name2",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_num",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_mun2",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_name3",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_num3",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tax_court",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "Finished",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "court_date",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "Conventions",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "contract_type",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "court_tax",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "اجمالي مع الرسوم",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "address_home",
+        "type": "LONGCHAR",
+        "size": 1073741823,
+        "nullable": true
+      },
+      {
+        "name": "address_work",
+        "type": "LONGCHAR",
+        "size": 1073741823,
+        "nullable": true
+      },
+      {
+        "name": "address_home2",
+        "type": "LONGCHAR",
+        "size": 1073741823,
+        "nullable": true
+      },
+      {
+        "name": "address_home3",
+        "type": "LONGCHAR",
+        "size": 1073741823,
+        "nullable": true
+      },
+      {
+        "name": "name1_court",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "tutor_court",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "tutor2_court",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "repeated",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "name2_repeated",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "name3_repeated",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "tutor1 job",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor2 job",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "address_work2",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "address_work3",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "discount",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "tutor_name4",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "tutor_num4",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      }
+    ],
+    "row_count": 174,
+    "sample": {
+      "المعرف": "10",
+      "name1": "حسان محمد محمود أبو صبيح",
+      "num1": "9801051338",
+      "num2": "253266",
+      "job": "مديرية الامن العام",
+      "phone1": "쫯⸃\u0000\u0000",
+      "phone2": "\u0000\u0000\u0000\u0000",
+      "court": "True",
+      "date1": "2025-02-23 00:00:00",
+      "date_many": "2025-03-26 00:00:00",
+      "the_seller": "فايز المعاني /اربد",
+      "many": "500",
+      "first_many": "0",
+      "manthly_many": "20",
+      "tax_court": "75",
+      "Finished": "False",
+      "court_date": "2025-10-08 00:00:00",
+      "contract_type": "بلا كفيل",
+      "court_tax": "22",
+      "اجمالي مع الرسوم": "597",
+      "address_home": "اربد",
+      "address_work": "مديرية الامن العام",
+      "name1_court": "False",
+      "tutor_court": "False",
+      "tutor2_court": "False",
+      "repeated": "False",
+      "name2_repeated": "False",
+      "name3_repeated": "False",
+      "discount": "0"
+    }
+  },
+  "many": {
+    "columns": [
+      {
+        "name": "المعرف",
+        "type": "COUNTER",
+        "size": 10,
+        "nullable": false
+      },
+      {
+        "name": "many_text",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "date_pay",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "Creditor",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "debtor",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "بيان",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "num1",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "date_merit",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "type_pay",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "part",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "Section",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "not registered",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      }
+    ],
+    "row_count": 3,
+    "sample": {
+      "المعرف": "1",
+      "date_pay": "2025-09-28 00:00:00",
+      "Creditor": "0",
+      "debtor": "0",
+      "num1": "94",
+      "date_merit": "2025-09-28 00:00:00",
+      "type_pay": "فايز محفضه",
+      "Section": "دفعات عملاء ",
+      "not registered": "True"
+    }
+  },
+  "قضايا": {
+    "columns": [
+      {
+        "name": "المعرف",
+        "type": "COUNTER",
+        "size": 10,
+        "nullable": false
+      },
+      {
+        "name": "num",
+        "type": "INTEGER",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "رقم القضية",
+        "type": "VARCHAR",
+        "size": 11,
+        "nullable": true
+      },
+      {
+        "name": "السنة",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "عدد طلبات مدين",
+        "type": "VARCHAR",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "عدد طلبات كفيل1",
+        "type": "VARCHAR",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "عدد طلبات كفيل2",
+        "type": "VARCHAR",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "عدد طلبات كفيل3",
+        "type": "VARCHAR",
+        "size": 10,
+        "nullable": true
+      },
+      {
+        "name": "تاريخ الورود",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "المحكمة",
+        "type": "VARCHAR",
+        "size": 30,
+        "nullable": true
+      },
+      {
+        "name": "المشتكي",
+        "type": "VARCHAR",
+        "size": 50,
+        "nullable": true
+      },
+      {
+        "name": "المحصل",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "الحركة",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "حركة الكفيل",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "حركة الكفيل الثاني",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "حركة الكفيل الثالث",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "تاريخ الحركة",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "موطن مختار",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "ملاحظات",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "موطفن مختار كفيل",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "موطن مختار استئناف",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "مدة المحكومية",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "محبوس سابقا",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "مستأنفة سابقا",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "مصالحة سابقا",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      },
+      {
+        "name": "القاضي",
+        "type": "VARCHAR",
+        "size": 255,
+        "nullable": true
+      },
+      {
+        "name": "اخر تدقيق",
+        "type": "DATETIME",
+        "size": 19,
+        "nullable": true
+      },
+      {
+        "name": "قيد المتابعة",
+        "type": "BIT",
+        "size": 1,
+        "nullable": false
+      }
+    ],
+    "row_count": 175,
+    "sample": {
+      "المعرف": "1",
+      "num": "1",
+      "رقم القضية": "3865",
+      "السنة": "2025",
+      "تاريخ الورود": "2025-12-22 00:00:00",
+      "المحكمة": "الوسطية",
+      "المشتكي": "فايز سعد عبد القادر عباطه ",
+      "المحصل": "فايز سعد عبد القادر عباطه",
+      "الحركة": "طلب حسم",
+      "تاريخ الحركة": "2025-09-16 00:00:00",
+      "موطن مختار": "الوسطيـــة/ خــلف المعصرة",
+      "ملاحظات": "تم طلب حسم على المدين والكفيل",
+      "محبوس سابقا": "False",
+      "مستأنفة سابقا": "False",
+      "مصالحة سابقا": "False",
+      "قيد المتابعة": "True"
+    }
+  }
+}

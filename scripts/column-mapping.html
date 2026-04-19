@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خريطة تحويل البيانات - Fayz → Tayseer</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --surface: #1a1d27;
+  --surface2: #232734;
+  --border: #2d3249;
+  --text: #e4e6f0;
+  --text2: #9498b0;
+  --accent: #6c8cff;
+  --accent2: #4a6bff;
+  --green: #3dd68c;
+  --green-bg: rgba(61,214,140,.08);
+  --orange: #f0a040;
+  --orange-bg: rgba(240,160,64,.08);
+  --red: #f06060;
+  --red-bg: rgba(240,96,96,.08);
+  --purple: #b07cff;
+  --purple-bg: rgba(176,124,255,.08);
+  --yellow: #e8d44d;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ─── Header ─── */
+.header {
+  background: linear-gradient(135deg, #1e2235 0%, #161929 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 20px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header h1 .arrow { color: var(--accent); font-size: 20px; }
+.header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent2); }
+.btn-success {
+  background: var(--green);
+  color: #0a1a12;
+}
+.btn-success:hover { background: #2dc77a; }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.btn-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-danger {
+  background: var(--red);
+  color: #fff;
+}
+.btn-danger:hover { background: #d85050; }
+
+/* ─── Stats Bar ─── */
+.stats-bar {
+  display: flex;
+  gap: 12px;
+  padding: 16px 32px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.stat-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 20px;
+  min-width: 140px;
+  text-align: center;
+}
+.stat-card .num {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.stat-card .label {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+.stat-mapped .num { color: var(--green); }
+.stat-unmapped .num { color: var(--orange); }
+.stat-ignored .num { color: var(--text2); }
+.stat-transform .num { color: var(--purple); }
+.stat-total .num { color: var(--accent); }
+
+/* ─── Filters ─── */
+.filters-bar {
+  display: flex;
+  gap: 12px;
+  padding: 12px 32px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filter-input {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 220px;
+}
+.filter-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.filter-btn {
+  padding: 7px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all .15s;
+}
+.filter-btn:hover, .filter-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(108,140,255,.06);
+}
+
+/* ─── Table Section ─── */
+.table-section {
+  margin: 20px 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.table-section-header {
+  padding: 16px 24px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.table-section-header:hover { background: #292d40; }
+.table-section-header h2 {
+  font-size: 17px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.table-section-header h2 .badge {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+.badge-rows {
+  background: rgba(108,140,255,.12);
+  color: var(--accent);
+}
+.collapse-icon {
+  transition: transform .3s;
+  color: var(--text2);
+  font-size: 18px;
+}
+.table-section.collapsed .collapse-icon {
+  transform: rotate(-90deg);
+}
+.table-section.collapsed .mapping-table-wrap {
+  display: none;
+}
+
+/* ─── Mapping Table ─── */
+.mapping-table-wrap {
+  overflow-x: auto;
+}
+.mapping-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.mapping-table thead th {
+  padding: 12px 16px;
+  text-align: right;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+.mapping-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+}
+.mapping-table tbody tr:hover {
+  background: rgba(108,140,255,.03);
+}
+.mapping-table tbody td {
+  padding: 10px 16px;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+/* Source column cell */
+.col-source {
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.col-source .col-type {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+/* Arrow cell */
+.col-arrow {
+  text-align: center;
+  width: 50px;
+  font-size: 18px;
+}
+.col-arrow.mapped { color: var(--green); }
+.col-arrow.unmapped { color: var(--text2); opacity: .3; }
+
+/* Target select */
+.target-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .15s;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239498b0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  padding-left: 28px;
+}
+.target-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.target-select.has-value {
+  border-color: var(--green);
+  background-color: var(--green-bg);
+}
+
+/* Transform select */
+.transform-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239498b0' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 12px center;
+  padding-left: 28px;
+}
+.transform-select:focus {
+  outline: none;
+  border-color: var(--purple);
+}
+.transform-select.has-value {
+  border-color: var(--purple);
+  background-color: var(--purple-bg);
+}
+
+/* Notes input */
+.notes-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  min-height: 34px;
+  height: 34px;
+}
+.notes-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Status badge */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-block;
+}
+.status-mapped {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid rgba(61,214,140,.2);
+}
+.status-unmapped {
+  background: var(--orange-bg);
+  color: var(--orange);
+  border: 1px solid rgba(240,160,64,.2);
+}
+.status-ignored {
+  background: rgba(148,152,176,.08);
+  color: var(--text2);
+  border: 1px solid rgba(148,152,176,.15);
+}
+
+/* ─── Sample data tooltip ─── */
+.sample-tag {
+  display: inline-block;
+  font-size: 11px;
+  color: var(--yellow);
+  background: rgba(232,212,77,.08);
+  border: 1px solid rgba(232,212,77,.15);
+  padding: 1px 8px;
+  border-radius: 4px;
+  margin-top: 3px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: help;
+}
+
+/* ─── Modal ─── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px;
+  min-width: 500px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.modal h3 {
+  font-size: 18px;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+.modal pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  font-size: 13px;
+  overflow-x: auto;
+  direction: ltr;
+  text-align: left;
+  color: var(--green);
+  max-height: 60vh;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.modal-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ─── Toast ─── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--green);
+  color: #0a1a12;
+  padding: 12px 28px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 300;
+  opacity: 0;
+  transition: all .3s;
+  pointer-events: none;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <h1>
+    <span style="color:var(--orange)">Fayz</span>
+    <span class="arrow">&larr;</span>
+    <span style="color:var(--green)">Tayseer</span>
+    &nbsp; خريطة تحويل البيانات
+  </h1>
+  <div class="header-actions">
+    <button class="btn btn-outline" onclick="autoMap()">تعيين تلقائي</button>
+    <button class="btn btn-outline" onclick="resetAll()">إعادة تعيين</button>
+    <button class="btn btn-primary" onclick="exportJSON()">تصدير JSON</button>
+    <button class="btn btn-outline" onclick="importJSON()">استيراد JSON</button>
+    <button class="btn btn-success" onclick="generateScript()">توليد سكريبت التحويل</button>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats-bar" id="statsBar"></div>
+
+<!-- Filters -->
+<div class="filters-bar">
+  <input type="text" class="filter-input" id="searchInput" placeholder="بحث في الأعمدة..." oninput="applyFilters()">
+  <button class="filter-btn active" data-filter="all" onclick="setStatusFilter('all',this)">الكل</button>
+  <button class="filter-btn" data-filter="mapped" onclick="setStatusFilter('mapped',this)">معيّن</button>
+  <button class="filter-btn" data-filter="unmapped" onclick="setStatusFilter('unmapped',this)">غير معيّن</button>
+  <button class="filter-btn" data-filter="ignored" onclick="setStatusFilter('ignored',this)">متجاهَل</button>
+</div>
+
+<!-- Main content -->
+<div id="mainContent"></div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="exportModal">
+  <div class="modal">
+    <h3 id="modalTitle">تصدير الخريطة</h3>
+    <pre id="modalContent"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">إغلاق</button>
+      <button class="btn btn-primary" onclick="copyModalContent()">نسخ</button>
+      <button class="btn btn-success" id="modalDownloadBtn" onclick="downloadModalContent()">تحميل</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h3>استيراد خريطة</h3>
+    <textarea id="importTextarea" class="notes-input" style="min-height:200px;direction:ltr;text-align:left" placeholder="الصق محتوى JSON هنا..."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeImportModal()">إلغاء</button>
+      <button class="btn btn-primary" onclick="doImport()">استيراد</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<input type="file" id="fileInput" style="display:none" accept=".json">
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// DATA: Access (Fayz) schema
+// ══════════════════════════════════════════════════════════════════
+const ACCESS_SCHEMA = {
+  "main_cust": {
+    label: "العملاء الرئيسيون",
+    row_count: 174,
+    columns: [
+      {name:"المعرف", type:"COUNTER", sample:"10"},
+      {name:"name1", type:"VARCHAR(255)", sample:"حسان محمد محمود أبو صبيح"},
+      {name:"num1", type:"VARCHAR(255)", sample:"9801051338"},
+      {name:"num2", type:"VARCHAR(255)", sample:"253266"},
+      {name:"job", type:"VARCHAR(255)", sample:"مديرية الامن العام"},
+      {name:"phone1", type:"CHAR(4)", sample:"(binary)"},
+      {name:"phone2", type:"CHAR(4)", sample:"(binary)"},
+      {name:"phone3", type:"VARCHAR(255)", sample:""},
+      {name:"phone4", type:"VARCHAR(255)", sample:""},
+      {name:"phone5", type:"VARCHAR(255)", sample:""},
+      {name:"phone6", type:"VARCHAR(255)", sample:""},
+      {name:"phone7", type:"VARCHAR(255)", sample:""},
+      {name:"court", type:"BIT", sample:"True"},
+      {name:"date1", type:"DATETIME", sample:"2025-02-23"},
+      {name:"date_many", type:"DATETIME", sample:"2025-03-26"},
+      {name:"the_seller", type:"VARCHAR(255)", sample:"فايز المعاني /اربد"},
+      {name:"many", type:"INTEGER", sample:"500"},
+      {name:"first_many", type:"VARCHAR(255)", sample:"0"},
+      {name:"manthly_many", type:"VARCHAR(255)", sample:"20"},
+      {name:"tutor_name", type:"VARCHAR(255)", sample:""},
+      {name:"tutor_name2", type:"VARCHAR(255)", sample:""},
+      {name:"tutor_num", type:"VARCHAR(255)", sample:""},
+      {name:"tutor_mun2", type:"VARCHAR(255)", sample:""},
+      {name:"tutor_name3", type:"VARCHAR(255)", sample:""},
+      {name:"tutor_num3", type:"VARCHAR(255)", sample:""},
+      {name:"tax_court", type:"INTEGER", sample:"75"},
+      {name:"Finished", type:"BIT", sample:"False"},
+      {name:"court_date", type:"DATETIME", sample:"2025-10-08"},
+      {name:"Conventions", type:"VARCHAR(255)", sample:""},
+      {name:"contract_type", type:"VARCHAR(255)", sample:"بلا كفيل"},
+      {name:"court_tax", type:"INTEGER", sample:"22"},
+      {name:"اجمالي مع الرسوم", type:"INTEGER", sample:"597"},
+      {name:"address_home", type:"LONGCHAR", sample:"اربد"},
+      {name:"address_work", type:"LONGCHAR", sample:"مديرية الامن العام"},
+      {name:"address_home2", type:"LONGCHAR", sample:""},
+      {name:"address_home3", type:"LONGCHAR", sample:""},
+      {name:"name1_court", type:"BIT", sample:"False"},
+      {name:"tutor_court", type:"BIT", sample:"False"},
+      {name:"tutor2_court", type:"BIT", sample:"False"},
+      {name:"repeated", type:"BIT", sample:"False"},
+      {name:"name2_repeated", type:"BIT", sample:"False"},
+      {name:"name3_repeated", type:"BIT", sample:"False"},
+      {name:"tutor1 job", type:"VARCHAR(255)", sample:""},
+      {name:"tutor2 job", type:"VARCHAR(255)", sample:""},
+      {name:"address_work2", type:"VARCHAR(255)", sample:""},
+      {name:"address_work3", type:"VARCHAR(255)", sample:""},
+      {name:"discount", type:"INTEGER", sample:"0"},
+      {name:"tutor_name4", type:"VARCHAR(255)", sample:""},
+      {name:"tutor_num4", type:"VARCHAR(255)", sample:""},
+    ]
+  },
+  "قضايا": {
+    label: "القضايا",
+    row_count: 175,
+    columns: [
+      {name:"المعرف", type:"COUNTER", sample:"1"},
+      {name:"num", type:"INTEGER", sample:"1"},
+      {name:"رقم القضية", type:"VARCHAR(11)", sample:"3865"},
+      {name:"السنة", type:"VARCHAR(255)", sample:"2025"},
+      {name:"عدد طلبات مدين", type:"VARCHAR(10)", sample:""},
+      {name:"عدد طلبات كفيل1", type:"VARCHAR(10)", sample:""},
+      {name:"عدد طلبات كفيل2", type:"VARCHAR(10)", sample:""},
+      {name:"عدد طلبات كفيل3", type:"VARCHAR(10)", sample:""},
+      {name:"تاريخ الورود", type:"DATETIME", sample:"2025-12-22"},
+      {name:"المحكمة", type:"VARCHAR(30)", sample:"الوسطية"},
+      {name:"المشتكي", type:"VARCHAR(50)", sample:"فايز سعد عبد القادر عباطه"},
+      {name:"المحصل", type:"VARCHAR(255)", sample:"فايز سعد عبد القادر عباطه"},
+      {name:"الحركة", type:"VARCHAR(255)", sample:"طلب حسم"},
+      {name:"حركة الكفيل", type:"VARCHAR(255)", sample:""},
+      {name:"حركة الكفيل الثاني", type:"VARCHAR(255)", sample:""},
+      {name:"حركة الكفيل الثالث", type:"VARCHAR(255)", sample:""},
+      {name:"تاريخ الحركة", type:"DATETIME", sample:"2025-09-16"},
+      {name:"موطن مختار", type:"VARCHAR(255)", sample:"الوسطيـــة/ خــلف المعصرة"},
+      {name:"ملاحظات", type:"VARCHAR(255)", sample:"تم طلب حسم على المدين والكفيل"},
+      {name:"موطفن مختار كفيل", type:"VARCHAR(255)", sample:""},
+      {name:"موطن مختار استئناف", type:"VARCHAR(255)", sample:""},
+      {name:"مدة المحكومية", type:"VARCHAR(255)", sample:""},
+      {name:"محبوس سابقا", type:"BIT", sample:"False"},
+      {name:"مستأنفة سابقا", type:"BIT", sample:"False"},
+      {name:"مصالحة سابقا", type:"BIT", sample:"False"},
+      {name:"القاضي", type:"VARCHAR(255)", sample:""},
+      {name:"اخر تدقيق", type:"DATETIME", sample:""},
+      {name:"قيد المتابعة", type:"BIT", sample:"True"},
+    ]
+  },
+  "many": {
+    label: "الحركات المالية",
+    row_count: 3,
+    columns: [
+      {name:"المعرف", type:"COUNTER", sample:"1"},
+      {name:"many_text", type:"VARCHAR(255)", sample:""},
+      {name:"date_pay", type:"DATETIME", sample:"2025-09-28"},
+      {name:"Creditor", type:"INTEGER", sample:"0"},
+      {name:"debtor", type:"INTEGER", sample:"0"},
+      {name:"بيان", type:"VARCHAR(255)", sample:""},
+      {name:"num1", type:"INTEGER", sample:"94"},
+      {name:"date_merit", type:"DATETIME", sample:"2025-09-28"},
+      {name:"type_pay", type:"VARCHAR(255)", sample:"فايز محفضه"},
+      {name:"part", type:"INTEGER", sample:""},
+      {name:"Section", type:"VARCHAR(255)", sample:"دفعات عملاء"},
+      {name:"not registered", type:"BIT", sample:"True"},
+    ]
+  },
+  "FOLLOWUP": {
+    label: "المتابعات",
+    row_count: 0,
+    columns: [
+      {name:"المعرف", type:"COUNTER", sample:""},
+      {name:"num_cus", type:"INTEGER", sample:""},
+      {name:"date_followup", type:"DATETIME", sample:""},
+      {name:"وعد بالدفع في", type:"DATETIME", sample:""},
+      {name:"رفع قضية", type:"BIT", sample:""},
+      {name:"أرقام مفقودة", type:"BIT", sample:""},
+      {name:"notes", type:"LONGCHAR", sample:""},
+      {name:"لم يتم الرد", type:"VARCHAR(255)", sample:""},
+      {name:"غير مستعمل", type:"VARCHAR(255)", sample:""},
+      {name:"وعد بابلاغه", type:"VARCHAR(255)", sample:""},
+      {name:"ابلاغ قضية", type:"BIT", sample:""},
+      {name:"تأجيل لتاريخ", type:"DATETIME", sample:""},
+      {name:"المتابع", type:"VARCHAR(255)", sample:""},
+      {name:"هدف الاتصال", type:"VARCHAR(255)", sample:""},
+      {name:"جهة الاتصال", type:"VARCHAR(255)", sample:""},
+      {name:"وعد بالدفع", type:"BIT", sample:""},
+    ]
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// DATA: Tayseer schema (target tables + columns)
+// ══════════════════════════════════════════════════════════════════
+const TAYSEER_SCHEMA = {
+  "os_customers": {
+    label: "العملاء",
+    columns: ["id","name","status","city","job_title","id_number","birth_date","job_number","email","sex","citizen","hear_about_us","selected_image","bank_name","bank_branch","account_number","is_social_security","social_security_number","do_have_any_property","property_name","property_number","notes","primary_phone_number","facebook_account","updated_at","is_deleted","created_at","last_updated_by","created_by","has_social_security_salary","social_security_salary_source","retirement_status","total_retirement_income","last_income_query_date","last_job_query_date","total_salary"]
+  },
+  "os_phone_numbers": {
+    label: "أرقام الهواتف",
+    columns: ["id","customers_id","phone_number","fb_account","created_at","updated_at","is_deleted","phone_number_owner","owner_name"]
+  },
+  "os_address": {
+    label: "العناوين",
+    columns: ["id","customers_id","address","created_at","updated_at","is_deleted","address_type","address_city","address_area","address_street","address_building","postal_code","plus_code","latitude","longitude"]
+  },
+  "os_contracts": {
+    label: "العقود",
+    columns: ["id","type","seller_id","Date_of_sale","total_value","first_installment_value","first_installment_date","monthly_installment_value","notes","status","updated_at","is_deleted","selected_image","company_id","commitment_discount","loss_commitment","created_by","updated_by","created_at","follow_up_lock_by","follow_up_lock_at","followed_by","is_can_not_contact","is_legal_department"]
+  },
+  "os_contracts_customers": {
+    label: "ربط العقود بالعملاء",
+    columns: ["id","contract_id","customer_id","customer_type","loan_number"]
+  },
+  "os_companies": {
+    label: "الشركات",
+    columns: ["id","name","phone_number","logo","created_by","created_at","updated_at","is_deleted","is_primary_company","last_updated_by","company_social_security_number","company_tax_number","company_email","company_address","commercial_register","trade_license","total_shares","invested_capital","profit_share_ratio","parent_share_ratio","capital_refundable","portfolio_status","agreement_date","agreement_notes"]
+  },
+  "os_judiciary": {
+    label: "القضايا",
+    columns: ["id","court_id","type_id","case_cost","lawyer_cost","lawyer_id","created_at","updated_at","created_by","last_update_by","is_deleted","contract_id","year","income_date","judiciary_number","judiciary_inform_address_id","company_id","case_status","last_check_date","furthest_stage","bottleneck_stage"]
+  },
+  "os_court": {
+    label: "المحاكم",
+    columns: ["id","name","city","adress","phone_number","created_by","created_at","is_deleted","updated_at","last_updated_by"]
+  },
+  "os_lawyers": {
+    label: "المحامون",
+    columns: ["id","name","address","phone_number","status","notes","created_at","updated_at","created_by","last_update_by","is_deleted","type","representative_type","signature_image"]
+  },
+  "os_judiciary_type": {
+    label: "أنواع القضايا",
+    columns: ["id","name"]
+  },
+  "os_judiciary_inform_address": {
+    label: "عناوين التبليغ",
+    columns: ["id","address","created_at","updated_at","created_by","is_deleted"]
+  },
+  "os_follow_up": {
+    label: "المتابعات",
+    columns: ["id","contract_id","date_time","notes","feeling","created_by","connection_goal","reminder","promise_to_pay_at"]
+  },
+  "os_income": {
+    label: "المقبوضات / الأقساط",
+    columns: ["id","contract_id","date","amount","created_by","payment_type","_by","receipt_bank","payment_purpose","type","notes","document_number","bank_number"]
+  }
+};
+
+// ══════════════════════════════════════════════════════════════════
+// DEFAULT MAPPINGS (from migration script analysis)
+// ══════════════════════════════════════════════════════════════════
+const DEFAULT_MAPPINGS = {
+  "main_cust": {
+    "المعرف": {target_table:"", target_col:"", transform:"", notes:"مفتاح أساسي - يستخدم كمرجع فقط"},
+    "name1": {target_table:"os_customers", target_col:"name", transform:"trim", notes:""},
+    "num1": {target_table:"os_customers", target_col:"id_number", transform:"trim", notes:"رقم وطني"},
+    "num2": {target_table:"os_customers", target_col:"job_number", transform:"trim", notes:"الرقم الوظيفي"},
+    "job": {target_table:"os_customers", target_col:"notes", transform:"prefix:الوظيفة:", notes:"يُدمج في ملاحظات العميل"},
+    "phone1": {target_table:"", target_col:"", transform:"", notes:"بيانات ثنائية تالفة - يُتجاهل"},
+    "phone2": {target_table:"", target_col:"", transform:"", notes:"بيانات ثنائية تالفة - يُتجاهل"},
+    "phone3": {target_table:"os_customers", target_col:"primary_phone_number", transform:"phone_e164", notes:"أول رقم صالح يصبح الرقم الرئيسي"},
+    "phone4": {target_table:"os_phone_numbers", target_col:"phone_number", transform:"phone_e164", notes:"رقم إضافي"},
+    "phone5": {target_table:"os_phone_numbers", target_col:"phone_number", transform:"phone_e164", notes:"رقم إضافي"},
+    "phone6": {target_table:"os_phone_numbers", target_col:"phone_number", transform:"phone_e164", notes:"رقم إضافي"},
+    "phone7": {target_table:"os_phone_numbers", target_col:"phone_number", transform:"phone_e164", notes:"رقم إضافي"},
+    "court": {target_table:"os_contracts", target_col:"status", transform:"bool_to_status:judiciary", notes:"إذا true → حالة العقد = judiciary"},
+    "date1": {target_table:"os_contracts", target_col:"Date_of_sale", transform:"date_format", notes:"تاريخ البيع"},
+    "date_many": {target_table:"os_contracts", target_col:"first_installment_date", transform:"date_format", notes:"تاريخ أول قسط"},
+    "the_seller": {target_table:"os_companies", target_col:"name", transform:"lookup_or_create", notes:"يُنشئ شركة إن لم تكن موجودة"},
+    "many": {target_table:"os_contracts", target_col:"total_value", transform:"to_float", notes:"القيمة الإجمالية"},
+    "first_many": {target_table:"os_contracts", target_col:"first_installment_value", transform:"to_float", notes:"قيمة الدفعة الأولى"},
+    "manthly_many": {target_table:"os_contracts", target_col:"monthly_installment_value", transform:"to_float", notes:"القسط الشهري"},
+    "tutor_name": {target_table:"os_customers", target_col:"name", transform:"create_guarantor", notes:"كفيل 1 - يُنشأ كعميل جديد"},
+    "tutor_name2": {target_table:"os_customers", target_col:"name", transform:"create_guarantor", notes:"كفيل 2"},
+    "tutor_num": {target_table:"os_customers", target_col:"id_number", transform:"trim", notes:"رقم هوية كفيل 1"},
+    "tutor_mun2": {target_table:"os_customers", target_col:"id_number", transform:"trim", notes:"رقم هوية كفيل 2"},
+    "tutor_name3": {target_table:"os_customers", target_col:"name", transform:"create_guarantor", notes:"كفيل 3"},
+    "tutor_num3": {target_table:"os_customers", target_col:"id_number", transform:"trim", notes:"رقم هوية كفيل 3"},
+    "tax_court": {target_table:"os_contracts", target_col:"notes", transform:"prefix:رسوم محكمة:", notes:"يُدمج في ملاحظات العقد"},
+    "Finished": {target_table:"os_contracts", target_col:"status", transform:"bool_to_status:finished", notes:"إذا true → حالة العقد = finished"},
+    "court_date": {target_table:"os_judiciary", target_col:"income_date", transform:"date_format", notes:"تاريخ المحكمة"},
+    "Conventions": {target_table:"os_contracts", target_col:"notes", transform:"prefix:اتفاقيات:", notes:"يُدمج في ملاحظات العقد"},
+    "contract_type": {target_table:"os_contracts", target_col:"type", transform:"map_contract_type", notes:"solidarity أو normal"},
+    "court_tax": {target_table:"os_contracts", target_col:"notes", transform:"prefix:ضريبة محكمة:", notes:"يُدمج في ملاحظات العقد"},
+    "اجمالي مع الرسوم": {target_table:"os_contracts", target_col:"notes", transform:"prefix:إجمالي مع الرسوم:", notes:"يُدمج في ملاحظات العقد"},
+    "address_home": {target_table:"os_address", target_col:"address", transform:"trim", notes:"عنوان المنزل (type=1) + يُنسخ كمدينة العميل"},
+    "address_work": {target_table:"os_address", target_col:"address", transform:"trim", notes:"عنوان العمل (type=2)"},
+    "address_home2": {target_table:"os_address", target_col:"address", transform:"trim", notes:"عنوان منزل 2"},
+    "address_home3": {target_table:"os_address", target_col:"address", transform:"trim", notes:"عنوان منزل 3"},
+    "name1_court": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+    "tutor_court": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+    "tutor2_court": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+    "repeated": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+    "name2_repeated": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+    "name3_repeated": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+    "tutor1 job": {target_table:"os_customers", target_col:"notes", transform:"prefix:وظيفة الكفيل 1:", notes:"يُدمج في ملاحظات الكفيل"},
+    "tutor2 job": {target_table:"os_customers", target_col:"notes", transform:"prefix:وظيفة الكفيل 2:", notes:"يُدمج في ملاحظات الكفيل"},
+    "address_work2": {target_table:"os_address", target_col:"address", transform:"trim", notes:"عنوان عمل 2"},
+    "address_work3": {target_table:"os_address", target_col:"address", transform:"trim", notes:"عنوان عمل 3"},
+    "discount": {target_table:"os_contracts", target_col:"commitment_discount", transform:"to_float", notes:"خصم الالتزام"},
+    "tutor_name4": {target_table:"os_customers", target_col:"name", transform:"create_guarantor", notes:"كفيل 4"},
+    "tutor_num4": {target_table:"os_customers", target_col:"id_number", transform:"trim", notes:"رقم هوية كفيل 4"},
+  },
+  "قضايا": {
+    "المعرف": {target_table:"", target_col:"", transform:"", notes:"مفتاح أساسي - يستخدم كمرجع فقط"},
+    "num": {target_table:"os_judiciary", target_col:"contract_id", transform:"lookup_contract", notes:"مرجع للعميل → عقد"},
+    "رقم القضية": {target_table:"os_judiciary", target_col:"judiciary_number", transform:"to_int", notes:""},
+    "السنة": {target_table:"os_judiciary", target_col:"year", transform:"trim", notes:""},
+    "عدد طلبات مدين": {target_table:"os_judiciary", target_col:"", transform:"", notes:"يُدمج في ملاحظات القضية"},
+    "عدد طلبات كفيل1": {target_table:"os_judiciary", target_col:"", transform:"", notes:"يُدمج في ملاحظات القضية"},
+    "عدد طلبات كفيل2": {target_table:"os_judiciary", target_col:"", transform:"", notes:"يُدمج في ملاحظات القضية"},
+    "عدد طلبات كفيل3": {target_table:"os_judiciary", target_col:"", transform:"", notes:"يُدمج في ملاحظات القضية"},
+    "تاريخ الورود": {target_table:"os_judiciary", target_col:"income_date", transform:"date_format", notes:""},
+    "المحكمة": {target_table:"os_court", target_col:"name", transform:"lookup_or_create", notes:"يُنشئ محكمة إن لم تكن موجودة"},
+    "المشتكي": {target_table:"os_lawyers", target_col:"name", transform:"lookup_or_create", notes:"يُنشئ محامي/مشتكي"},
+    "المحصل": {target_table:"os_lawyers", target_col:"name", transform:"lookup_or_create", notes:"يُنشئ محصّل"},
+    "الحركة": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "حركة الكفيل": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "حركة الكفيل الثاني": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "حركة الكفيل الثالث": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "تاريخ الحركة": {target_table:"os_judiciary", target_col:"last_check_date", transform:"date_format", notes:""},
+    "موطن مختار": {target_table:"os_judiciary_inform_address", target_col:"address", transform:"lookup_or_create", notes:""},
+    "ملاحظات": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "موطفن مختار كفيل": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "موطن مختار استئناف": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "مدة المحكومية": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "محبوس سابقا": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "مستأنفة سابقا": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "مصالحة سابقا": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "القاضي": {target_table:"os_judiciary", target_col:"", transform:"to_notes", notes:"يُدمج في ملاحظات القضية"},
+    "اخر تدقيق": {target_table:"os_judiciary", target_col:"last_check_date", transform:"date_format", notes:""},
+    "قيد المتابعة": {target_table:"os_judiciary", target_col:"case_status", transform:"bool_to_status:open", notes:""},
+  },
+  "many": {
+    "المعرف": {target_table:"", target_col:"", transform:"", notes:"مفتاح أساسي"},
+    "many_text": {target_table:"os_follow_up", target_col:"notes", transform:"trim", notes:""},
+    "date_pay": {target_table:"os_follow_up", target_col:"date_time", transform:"date_format", notes:""},
+    "Creditor": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:دائن:", notes:"يُدمج في ملاحظات المتابعة"},
+    "debtor": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:مدين:", notes:"يُدمج في ملاحظات المتابعة"},
+    "بيان": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:بيان:", notes:"يُدمج في ملاحظات المتابعة"},
+    "num1": {target_table:"os_follow_up", target_col:"contract_id", transform:"lookup_contract", notes:"مرجع للعقد"},
+    "date_merit": {target_table:"os_follow_up", target_col:"reminder", transform:"date_format", notes:"تاريخ الاستحقاق"},
+    "type_pay": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:نوع الدفع:", notes:"يُدمج في ملاحظات المتابعة"},
+    "part": {target_table:"", target_col:"", transform:"", notes:"لا يوجد مقابل مباشر"},
+    "Section": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:القسم:", notes:"يُدمج في ملاحظات المتابعة"},
+    "not registered": {target_table:"", target_col:"", transform:"", notes:"علامة داخلية - يُتجاهل"},
+  },
+  "FOLLOWUP": {
+    "المعرف": {target_table:"", target_col:"", transform:"", notes:"مفتاح أساسي"},
+    "num_cus": {target_table:"os_follow_up", target_col:"contract_id", transform:"lookup_contract", notes:"مرجع للعقد"},
+    "date_followup": {target_table:"os_follow_up", target_col:"date_time", transform:"date_format", notes:""},
+    "وعد بالدفع في": {target_table:"os_follow_up", target_col:"promise_to_pay_at", transform:"date_format", notes:""},
+    "رفع قضية": {target_table:"os_follow_up", target_col:"notes", transform:"bool_to_text:رفع قضية", notes:"يُدمج في ملاحظات"},
+    "أرقام مفقودة": {target_table:"os_follow_up", target_col:"notes", transform:"bool_to_text:أرقام مفقودة", notes:"يُدمج في ملاحظات"},
+    "notes": {target_table:"os_follow_up", target_col:"notes", transform:"trim", notes:""},
+    "لم يتم الرد": {target_table:"os_follow_up", target_col:"feeling", transform:"map_feeling", notes:""},
+    "غير مستعمل": {target_table:"", target_col:"", transform:"", notes:"حقل غير مستعمل"},
+    "وعد بابلاغه": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:وعد بإبلاغه:", notes:""},
+    "ابلاغ قضية": {target_table:"os_follow_up", target_col:"notes", transform:"bool_to_text:إبلاغ قضية", notes:""},
+    "تأجيل لتاريخ": {target_table:"os_follow_up", target_col:"reminder", transform:"date_format", notes:""},
+    "المتابع": {target_table:"os_follow_up", target_col:"created_by", transform:"lookup_user", notes:"يُبحث عن المستخدم"},
+    "هدف الاتصال": {target_table:"os_follow_up", target_col:"connection_goal", transform:"map_goal", notes:""},
+    "جهة الاتصال": {target_table:"os_follow_up", target_col:"notes", transform:"prefix:جهة الاتصال:", notes:""},
+    "وعد بالدفع": {target_table:"os_follow_up", target_col:"promise_to_pay_at", transform:"bool_flag", notes:""},
+  }
+};
+
+const TRANSFORMS = [
+  {value:"", label:"— بدون تحويل —"},
+  {value:"trim", label:"قص المسافات (trim)"},
+  {value:"to_int", label:"تحويل لعدد صحيح"},
+  {value:"to_float", label:"تحويل لعدد عشري"},
+  {value:"date_format", label:"تنسيق التاريخ (Y-m-d)"},
+  {value:"phone_e164", label:"تحويل رقم هاتف (E.164)"},
+  {value:"lookup_or_create", label:"بحث أو إنشاء جديد"},
+  {value:"lookup_contract", label:"ربط بالعقد"},
+  {value:"lookup_user", label:"ربط بالمستخدم"},
+  {value:"create_guarantor", label:"إنشاء كفيل"},
+  {value:"bool_to_status:active", label:"تحويل منطقي → حالة"},
+  {value:"bool_to_status:judiciary", label:"true → judiciary"},
+  {value:"bool_to_status:finished", label:"true → finished"},
+  {value:"bool_to_status:open", label:"true → open"},
+  {value:"bool_to_text:", label:"تحويل منطقي → نص"},
+  {value:"bool_flag", label:"علامة منطقية"},
+  {value:"map_contract_type", label:"خريطة نوع العقد"},
+  {value:"map_feeling", label:"خريطة الشعور"},
+  {value:"map_goal", label:"خريطة هدف الاتصال"},
+  {value:"prefix:", label:"إضافة بادئة (notes)"},
+  {value:"to_notes", label:"دمج في الملاحظات"},
+];
+
+// ══════════════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════════════
+let mappings = JSON.parse(JSON.stringify(DEFAULT_MAPPINGS));
+let statusFilter = 'all';
+
+// ══════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════
+(function init() {
+  const saved = localStorage.getItem('fayz_tayseer_mapping');
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      for (const tbl of Object.keys(parsed)) {
+        if (mappings[tbl]) {
+          for (const col of Object.keys(parsed[tbl])) {
+            if (mappings[tbl][col]) {
+              Object.assign(mappings[tbl][col], parsed[tbl][col]);
+            }
+          }
+        }
+      }
+    } catch(e) {}
+  }
+  render();
+})();
+
+// ══════════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════════
+function render() {
+  renderStats();
+  renderTables();
+}
+
+function getStatus(m) {
+  if (m.target_table && m.target_col) return 'mapped';
+  if (m.notes && !m.target_table) return 'ignored';
+  return 'unmapped';
+}
+
+function renderStats() {
+  let mapped=0, unmapped=0, ignored=0, transforms=0, total=0;
+  for (const tbl of Object.keys(mappings)) {
+    for (const col of Object.keys(mappings[tbl])) {
+      total++;
+      const s = getStatus(mappings[tbl][col]);
+      if (s==='mapped') mapped++;
+      else if (s==='ignored') ignored++;
+      else unmapped++;
+      if (mappings[tbl][col].transform) transforms++;
+    }
+  }
+  const pct = total ? Math.round((mapped/total)*100) : 0;
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card stat-total"><div class="num">${total}</div><div class="label">إجمالي الأعمدة</div></div>
+    <div class="stat-card stat-mapped"><div class="num">${mapped}</div><div class="label">معيّن (${pct}%)</div></div>
+    <div class="stat-card stat-unmapped"><div class="num">${unmapped}</div><div class="label">غير معيّن</div></div>
+    <div class="stat-card stat-ignored"><div class="num">${ignored}</div><div class="label">متجاهَل</div></div>
+    <div class="stat-card stat-transform"><div class="num">${transforms}</div><div class="label">تحويلات</div></div>
+  `;
+}
+
+function buildTargetOptions(currentTable, currentCol) {
+  let html = '<option value="">— غير معيّن —</option>';
+  for (const [tblName, tbl] of Object.entries(TAYSEER_SCHEMA)) {
+    html += `<optgroup label="${tbl.label} (${tblName})">`;
+    for (const col of tbl.columns) {
+      const val = `${tblName}.${col}`;
+      const sel = (currentTable===tblName && currentCol===col) ? 'selected' : '';
+      html += `<option value="${val}" ${sel}>${col}</option>`;
+    }
+    html += '</optgroup>';
+  }
+  return html;
+}
+
+function buildTransformOptions(current) {
+  let html = '';
+  for (const t of TRANSFORMS) {
+    const sel = current===t.value ? 'selected' : '';
+    html += `<option value="${t.value}" ${sel}>${t.label}</option>`;
+  }
+  if (current && !TRANSFORMS.find(t=>t.value===current)) {
+    html += `<option value="${current}" selected>${current}</option>`;
+  }
+  return html;
+}
+
+function renderTables() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  let html = '';
+
+  for (const [accessTable, schema] of Object.entries(ACCESS_SCHEMA)) {
+    const tableMapping = mappings[accessTable];
+    if (!tableMapping) continue;
+
+    let rows = '';
+    let visibleCount = 0;
+
+    for (const col of schema.columns) {
+      const m = tableMapping[col.name] || {target_table:'',target_col:'',transform:'',notes:''};
+      const status = getStatus(m);
+
+      if (statusFilter !== 'all' && status !== statusFilter) continue;
+      if (search && !col.name.toLowerCase().includes(search) &&
+          !(m.target_col||'').toLowerCase().includes(search) &&
+          !(m.notes||'').toLowerCase().includes(search)) continue;
+
+      visibleCount++;
+      const statusBadge = status==='mapped'
+        ? '<span class="status-badge status-mapped">معيّن</span>'
+        : status==='ignored'
+          ? '<span class="status-badge status-ignored">متجاهَل</span>'
+          : '<span class="status-badge status-unmapped">غير معيّن</span>';
+
+      const arrowClass = status==='mapped' ? 'mapped' : 'unmapped';
+      const selectClass = m.target_col ? 'has-value' : '';
+      const transformClass = m.transform ? 'has-value' : '';
+      const sampleHtml = col.sample ? `<span class="sample-tag" title="${col.sample}">${col.sample}</span>` : '';
+
+      rows += `<tr>
+        <td class="col-source">
+          ${col.name}
+          <span class="col-type">${col.type}</span>
+          ${sampleHtml}
+        </td>
+        <td class="col-arrow ${arrowClass}">&larr;</td>
+        <td style="min-width:260px">
+          <select class="target-select ${selectClass}"
+            onchange="onTargetChange('${accessTable}','${col.name}',this.value)">
+            ${buildTargetOptions(m.target_table, m.target_col)}
+          </select>
+        </td>
+        <td style="min-width:200px">
+          <select class="transform-select ${transformClass}"
+            onchange="onTransformChange('${accessTable}','${col.name}',this.value)">
+            ${buildTransformOptions(m.transform)}
+          </select>
+        </td>
+        <td style="min-width:200px">
+          <input class="notes-input" value="${(m.notes||'').replace(/"/g,'&quot;')}"
+            onchange="onNotesChange('${accessTable}','${col.name}',this.value)"
+            placeholder="ملاحظات...">
+        </td>
+        <td>${statusBadge}</td>
+      </tr>`;
+    }
+
+    if (visibleCount === 0 && (search || statusFilter !== 'all')) continue;
+
+    html += `<div class="table-section" id="section-${accessTable}">
+      <div class="table-section-header" onclick="toggleSection('${accessTable}')">
+        <h2>
+          <span>${schema.label}</span>
+          <code style="color:var(--accent);font-size:14px">${accessTable}</code>
+          <span class="badge badge-rows">${schema.row_count} صف</span>
+          <span class="badge badge-rows">${schema.columns.length} عمود</span>
+        </h2>
+        <span class="collapse-icon">&#9660;</span>
+      </div>
+      <div class="mapping-table-wrap">
+        <table class="mapping-table">
+          <thead>
+            <tr>
+              <th style="min-width:180px">عمود Fayz (المصدر)</th>
+              <th style="width:50px"></th>
+              <th>عمود Tayseer (الهدف)</th>
+              <th>التحويل</th>
+              <th>ملاحظات</th>
+              <th style="width:100px">الحالة</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EVENT HANDLERS
+// ══════════════════════════════════════════════════════════════════
+function onTargetChange(table, col, val) {
+  if (!mappings[table][col]) mappings[table][col] = {target_table:'',target_col:'',transform:'',notes:''};
+  if (val) {
+    const [t,c] = val.split('.');
+    mappings[table][col].target_table = t;
+    mappings[table][col].target_col = c;
+  } else {
+    mappings[table][col].target_table = '';
+    mappings[table][col].target_col = '';
+  }
+  save();
+  render();
+}
+
+function onTransformChange(table, col, val) {
+  if (!mappings[table][col]) mappings[table][col] = {target_table:'',target_col:'',transform:'',notes:''};
+  mappings[table][col].transform = val;
+  save();
+  renderStats();
+}
+
+function onNotesChange(table, col, val) {
+  if (!mappings[table][col]) mappings[table][col] = {target_table:'',target_col:'',transform:'',notes:''};
+  mappings[table][col].notes = val;
+  save();
+  renderStats();
+}
+
+function toggleSection(table) {
+  document.getElementById(`section-${table}`).classList.toggle('collapsed');
+}
+
+function setStatusFilter(f, btn) {
+  statusFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTables();
+}
+
+function applyFilters() {
+  renderTables();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PERSISTENCE
+// ══════════════════════════════════════════════════════════════════
+function save() {
+  localStorage.setItem('fayz_tayseer_mapping', JSON.stringify(mappings));
+}
+
+function autoMap() {
+  mappings = JSON.parse(JSON.stringify(DEFAULT_MAPPINGS));
+  save();
+  render();
+  showToast('تم التعيين التلقائي بنجاح');
+}
+
+function resetAll() {
+  if (!confirm('هل أنت متأكد من إعادة التعيين؟ سيتم مسح جميع التعديلات.')) return;
+  const empty = {};
+  for (const tbl of Object.keys(ACCESS_SCHEMA)) {
+    empty[tbl] = {};
+    for (const col of ACCESS_SCHEMA[tbl].columns) {
+      empty[tbl][col.name] = {target_table:'',target_col:'',transform:'',notes:''};
+    }
+  }
+  mappings = empty;
+  save();
+  render();
+  showToast('تم إعادة التعيين');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ══════════════════════════════════════════════════════════════════
+let _modalData = '';
+let _modalFilename = '';
+
+function exportJSON() {
+  const data = JSON.stringify(mappings, null, 2);
+  _modalData = data;
+  _modalFilename = 'fayz_tayseer_mapping.json';
+  document.getElementById('modalTitle').textContent = 'تصدير الخريطة (JSON)';
+  document.getElementById('modalContent').textContent = data;
+  document.getElementById('modalDownloadBtn').style.display = '';
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function generateScript() {
+  let script = '# -*- coding: utf-8 -*-\n';
+  script += '"""\nAuto-generated column mapping from Fayz → Tayseer visual mapper.\n';
+  script += `Generated: ${new Date().toISOString()}\n"""\n\n`;
+  script += 'COLUMN_MAPPING = {\n';
+
+  for (const [accessTable, cols] of Object.entries(mappings)) {
+    script += `    "${accessTable}": {\n`;
+    for (const [colName, m] of Object.entries(cols)) {
+      if (!m.target_table && !m.target_col) continue;
+      script += `        "${colName}": {\n`;
+      script += `            "target_table": "${m.target_table}",\n`;
+      script += `            "target_col": "${m.target_col}",\n`;
+      if (m.transform) script += `            "transform": "${m.transform}",\n`;
+      if (m.notes) script += `            "notes": "${m.notes}",\n`;
+      script += `        },\n`;
+    }
+    script += `    },\n`;
+  }
+  script += '}\n';
+
+  _modalData = script;
+  _modalFilename = 'column_mapping.py';
+  document.getElementById('modalTitle').textContent = 'سكريبت خريطة الأعمدة (Python)';
+  document.getElementById('modalContent').textContent = script;
+  document.getElementById('modalDownloadBtn').style.display = '';
+  document.getElementById('exportModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('exportModal').classList.remove('show');
+}
+
+function copyModalContent() {
+  navigator.clipboard.writeText(_modalData).then(() => showToast('تم النسخ'));
+}
+
+function downloadModalContent() {
+  const blob = new Blob([_modalData], {type: 'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = _modalFilename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('تم التحميل');
+}
+
+function importJSON() {
+  document.getElementById('importTextarea').value = '';
+  document.getElementById('importModal').classList.add('show');
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('show');
+}
+
+function doImport() {
+  try {
+    const data = JSON.parse(document.getElementById('importTextarea').value);
+    mappings = data;
+    save();
+    render();
+    closeImportModal();
+    showToast('تم الاستيراد بنجاح');
+  } catch(e) {
+    alert('خطأ في تنسيق JSON: ' + e.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
