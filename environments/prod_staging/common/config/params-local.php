@@ -67,4 +67,18 @@ return [
 
     /*duration time for cach*/
     'time_duration' => 31536000,
+    /**
+     * Fahras integration. Token comes from Apache `SetEnv FAHRAS_TOKEN_TAYSEER`.
+     */
+    'fahras' => [
+        'enabled'        => true,
+        'baseUrl'        => 'https://fahras.aqssat.co',
+        'token'          => getenv('FAHRAS_TOKEN_TAYSEER') ?: '',
+        'clientId'       => 'tayseer',
+        'timeoutSec'     => 8,
+        'cacheTtlSec'    => 300,
+        'failurePolicy'  => 'closed',
+        'overridePerm'   => 'customer.fahras.override',
+        'logViewPerm'    => 'customer.fahras.log.view',
+    ],
 ];

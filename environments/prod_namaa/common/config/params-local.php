@@ -85,4 +85,21 @@ return [
         'retirement_directorate' => 'مديرية التقاعد المدني والعسكري',
         'both' => 'كلاهما',
     ],
+    /**
+     * Fahras integration. The actual token NEVER lives in git — it is
+     * supplied at runtime by Apache `SetEnv FAHRAS_TOKEN_TAYSEER ...`
+     * configured per-vhost (root-readable only). Empty token disables
+     * the integration on this tenant.
+     */
+    'fahras' => [
+        'enabled'        => true,
+        'baseUrl'        => 'https://fahras.aqssat.co',
+        'token'          => getenv('FAHRAS_TOKEN_TAYSEER') ?: '',
+        'clientId'       => 'tayseer',
+        'timeoutSec'     => 8,
+        'cacheTtlSec'    => 300,
+        'failurePolicy'  => 'closed',
+        'overridePerm'   => 'customer.fahras.override',
+        'logViewPerm'    => 'customer.fahras.log.view',
+    ],
 ];
