@@ -118,7 +118,7 @@
     'clientId'       => 'tayseer',
     'companyName'    => null, // ← يُحقن من FAHRAS_COMPANY_NAME (انظر أدناه)
     'timeoutSec'     => 8,
-    'cacheTtlSec'    => 300,
+    'cacheTtlSec'    => 0,    // ← لا تستخدم — الكاش مُلغى بالكامل في طبقة الخدمة
     'failurePolicy'  => 'closed',
     'overridePerm'   => 'customer.fahras.override',
     'logViewPerm'    => 'customer.fahras.log.view',
@@ -264,7 +264,7 @@ php yii migrate --interactive=0
 | `source` | `step1` / `finish` / `manual` / `search`. |
 | `override_user_id`, `override_reason` | بيانات تجاوز المدير (NULL في الحالات العادية). |
 | `customer_id` | يُملَأ في `actionFinish()` بعد إنشاء العميل. |
-| `from_cache` | true إذا قرأنا من cache بدل الاستدعاء الفعلي. |
+| `from_cache` | يُترَك دائماً `false` — تمّ إلغاء طبقة الكاش بالكامل بحيث يُضرَب الفهرس مباشرةً في كل فحص (سياسة "Live ground truth"). الحقل مُبقىً للتوافق مع المخطط فقط. |
 | `duration_ms`, `http_status`, `request_id` | بيانات تشخيصية. |
 
 شاشة المراجعة: **`/customers/fahras-log`** (تتطلّب صلاحية

@@ -80,7 +80,7 @@ return [
         // FAHRAS_COMPANY_NAME is explicitly provided in the vhost env.
         'companyName'    => getenv('FAHRAS_COMPANY_NAME') ?: null,
         'timeoutSec'     => 8,
-        'cacheTtlSec'    => 300,
+        'cacheTtlSec'    => 0,    // verdict cache disabled — see common/config/params.php
         'failurePolicy'  => 'closed',
         'overridePerm'   => 'customer.fahras.override',
         'logViewPerm'    => 'customer.fahras.log.view',

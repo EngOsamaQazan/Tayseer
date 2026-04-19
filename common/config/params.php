@@ -72,9 +72,12 @@ return [
         // Hard timeout per HTTP call (seconds).
         'timeoutSec'     => 8,
 
-        // Cache verdict for the same (id_number, name-hash) for this many
-        // seconds to avoid hammering Fahras during wizard navigation.
-        'cacheTtlSec'    => 300,
+        // Verdict cache is intentionally OFF — every check hits Fahras live
+        // so the rep sees ground truth at the moment they finish typing.
+        // (The previous 300s TTL caused stale "no_record" verdicts to mask
+        // newly-recorded contracts at sister companies.) Kept here at 0 only
+        // for schema continuity; the service ignores the value anyway.
+        'cacheTtlSec'    => 0,
 
         // Failure policy when Fahras is unreachable / errors out:
         //   'closed' → block customer creation (recommended for production).

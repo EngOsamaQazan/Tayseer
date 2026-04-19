@@ -30,7 +30,16 @@
     if (!$) return;
 
     var NS = '.cwFahras';
-    var DEBOUNCE_MS = 700;
+    // ── Why 200ms (down from 700ms) ──
+    // The product spec is "fire as soon as the rep finishes typing the id +
+    // name". 700ms felt laggy and let the rep tab away to the next field
+    // before the verdict surfaced. 200ms is small enough to feel immediate
+    // (well under the 100-300ms perceptual-instant threshold once you add
+    // network latency to Fahras) yet large enough to coalesce a burst of
+    // keystrokes into a single request — typing a 10-digit id at ~6 chars/sec
+    // still produces ONE call, not ten. Verdict caching is fully disabled
+    // server-side, so every fired request hits Fahras live.
+    var DEBOUNCE_MS = 200;
 
     // ─── State ──────────────────────────────────────────────────────────
     var state = {
@@ -414,7 +423,9 @@
         state.$card.find('[data-cw-fahras-action="recheck"]').prop('disabled', false);
 
         var meta = [];
-        if (resp.from_cache) meta.push('<i class="fa fa-bolt"></i> من الذاكرة المؤقتة');
+        // NOTE: `from_cache` is now structurally always false — the service
+        // layer no longer caches verdicts (every check hits Fahras live so
+        // the rep sees ground truth). The badge is intentionally omitted.
         if (resp.duration_ms != null) meta.push('<i class="fa fa-clock-o"></i> ' + resp.duration_ms + ' ملي/ث');
         if (resp.request_id) meta.push('<i class="fa fa-hashtag"></i> ' + escapeHtml(resp.request_id));
 

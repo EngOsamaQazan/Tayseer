@@ -58,7 +58,7 @@ patch_params_local() {
        . "        'token'          => '" . addslashes(\$token) . "',\n"
        . "        'clientId'       => 'tayseer',\n"
        . "        'timeoutSec'     => 8,\n"
-       . "        'cacheTtlSec'    => 300,\n"
+       . "        'cacheTtlSec'    => 0,\n"
        . "        'failurePolicy'  => 'closed',\n"
        . "        'overridePerm'   => 'customer.fahras.override',\n"
        . "        'logViewPerm'    => 'customer.fahras.log.view',\n"

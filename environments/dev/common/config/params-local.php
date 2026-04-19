@@ -99,7 +99,7 @@ return [
         'token'         => null, // ← set me in real envs (never commit a prod token)
         'clientId'      => 'tayseer',
         'timeoutSec'    => 8,
-        'cacheTtlSec'   => 300,
+        'cacheTtlSec'   => 0,    // verdict cache disabled — see common/config/params.php
         'failurePolicy' => 'closed',
         'overridePerm'  => 'customer.fahras.override',
         'logViewPerm'   => 'customer.fahras.log.view',

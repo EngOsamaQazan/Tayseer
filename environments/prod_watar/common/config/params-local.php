@@ -99,7 +99,7 @@ return [
         // Mirrored from FAHRAS_COMPANY_NAME env var when set.
         'companyName'    => getenv('FAHRAS_COMPANY_NAME') ?: 'وتر',
         'timeoutSec'     => 8,
-        'cacheTtlSec'    => 300,
+        'cacheTtlSec'    => 0,    // verdict cache disabled — see common/config/params.php
         'failurePolicy'  => 'closed',
         'overridePerm'   => 'customer.fahras.override',
         'logViewPerm'    => 'customer.fahras.log.view',

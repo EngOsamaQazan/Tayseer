@@ -50,7 +50,19 @@ class FahrasService extends Component
     public ?string $token         = null;
     public string $clientId       = 'tayseer';
     public int    $timeoutSec     = 8;
-    public int    $cacheTtlSec    = 300;
+    /**
+     * Verdict cache TTL in seconds.
+     *
+     * NOTE — kept as a configuration knob for backward compatibility, but the
+     * `check()` path no longer reads or writes the cache regardless of value.
+     * Verdicts describe a fast-changing fact (whether ANY company has just
+     * recorded a contract for this national ID); a stale "no_record" served
+     * from cache had been bypassing the same-company / blocking logic in
+     * production. We now always go to the wire so the rep sees ground truth.
+     * Set to 0 explicitly via params if you want the legacy behaviour to
+     * remain visibly disabled in your config.
+     */
+    public int    $cacheTtlSec    = 0;
     public string $failurePolicy  = 'closed';
     public string $overridePerm   = 'customer.fahras.override';
     public string $logViewPerm    = 'customer.fahras.log.view';
@@ -69,8 +81,6 @@ class FahrasService extends Component
 
     /** When false, accept http:// (otherwise refuse non-https for safety). */
     public bool   $requireHttps   = true;
-
-    private string $cacheKeyPrefix = 'fahras:v1';
 
     /* ────── Lifecycle ───────────────────────────────────────── */
 
@@ -137,14 +147,18 @@ class FahrasService extends Component
             return FahrasVerdict::failure('الرقم الوطني المُدخل غير صالح.');
         }
 
-        $cacheKey = $this->buildCacheKey($idNumber, $name);
-        if (!$this->bypassCache && Yii::$app->has('cache')) {
-            $cached = Yii::$app->cache->get($cacheKey);
-            if ($cached instanceof FahrasVerdict) {
-                $cached->fromCache = true;
-                return $cached;
-            }
-        }
+        // ── No cache, on purpose ──────────────────────────────────────────
+        // Verdicts express a fast-changing fact: whether ANY company has,
+        // possibly milliseconds ago, just registered a contract for this
+        // national ID. A cached "no_record" served seconds after the customer
+        // was actually inserted on the Fahras side caused the same-company
+        // CTA + hard-block logic to silently no-op in production.
+        // Going to the wire on every call is cheap (Fahras responds in
+        // ~150-400 ms) and gives the rep ground truth at the exact moment
+        // they finish typing the id + name. The previous cache layer
+        // (`Yii::$app->cache->get/set` + `buildCacheKey`) is intentionally
+        // gone; `cacheTtlSec` and `bypassCache` are kept only so external
+        // configs and the test harness keep type-checking.
 
         $verdict = $this->doRequest('/admin/api/check.php', [
             'token'     => $this->token,
@@ -154,13 +168,9 @@ class FahrasService extends Component
             'phone'     => $phone,
         ]);
 
-        // Cache successful verdicts only — never cache transient errors.
-        if (!$this->bypassCache
-            && Yii::$app->has('cache')
-            && $verdict->verdict !== FahrasVerdict::VERDICT_ERROR
-        ) {
-            Yii::$app->cache->set($cacheKey, $verdict, $this->cacheTtlSec);
-        }
+        // `fromCache` is now structurally always false. We still surface the
+        // field in the DTO + log table for schema stability.
+        $verdict->fromCache = false;
 
         return $verdict;
     }
@@ -303,12 +313,6 @@ class FahrasService extends Component
     }
 
     /* ────── Private — input hygiene ─────────────────────────── */
-
-    private function buildCacheKey(string $idNumber, string $name): string
-    {
-        $nameHash = $name === '' ? '' : substr(sha1(self::normalizeName($name)), 0, 12);
-        return $this->cacheKeyPrefix . ':' . $idNumber . ':' . $nameHash;
-    }
 
     private static function cleanId(string $v): string
     {

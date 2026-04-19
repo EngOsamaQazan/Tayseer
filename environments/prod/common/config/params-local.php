@@ -73,7 +73,7 @@ return [
         'token'          => getenv('FAHRAS_TOKEN_TAYSEER') ?: '',
         'clientId'       => 'tayseer',
         'timeoutSec'     => 8,
-        'cacheTtlSec'    => 300,
+        'cacheTtlSec'    => 0,    // verdict cache disabled — see common/config/params.php
         'failurePolicy'  => 'closed',
         'overridePerm'   => 'customer.fahras.override',
         'logViewPerm'    => 'customer.fahras.log.view',

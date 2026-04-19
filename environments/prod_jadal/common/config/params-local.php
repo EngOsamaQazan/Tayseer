@@ -102,7 +102,7 @@ return [
         // var when set (matches FAHRAS_TOKEN_TAYSEER pattern).
         'companyName'    => getenv('FAHRAS_COMPANY_NAME') ?: 'جدل',
         'timeoutSec'     => 8,
-        'cacheTtlSec'    => 300,
+        'cacheTtlSec'    => 0,    // verdict cache disabled — see common/config/params.php
         'failurePolicy'  => 'closed',
         'overridePerm'   => 'customer.fahras.override',
         'logViewPerm'    => 'customer.fahras.log.view',
