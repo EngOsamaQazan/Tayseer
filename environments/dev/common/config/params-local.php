@@ -85,4 +85,23 @@ return [
         'retirement_directorate' => 'مديرية التقاعد المدني والعسكري',
         'both' => 'كلاهما',
     ],
+
+    /*
+     * Fahras integration — dev defaults.
+     *
+     * For real environments override these values in
+     *   environments/<env>/common/config/params-local.php
+     * Token must be provided by the Fahras team and rotated periodically.
+     */
+    'fahras' => [
+        'enabled'       => true,
+        'baseUrl'       => 'https://fahras.aqssat.co',
+        'token'         => null, // ← set me in real envs (never commit a prod token)
+        'clientId'      => 'tayseer',
+        'timeoutSec'    => 8,
+        'cacheTtlSec'   => 300,
+        'failurePolicy' => 'closed',
+        'overridePerm'  => 'customer.fahras.override',
+        'logViewPerm'   => 'customer.fahras.log.view',
+    ],
 ];

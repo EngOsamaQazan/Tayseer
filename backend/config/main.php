@@ -301,6 +301,11 @@ return [
         'notificationService' => [
             'class' => 'common\services\NotificationService',
         ],
+        // Fahras integration — verdict-gated customer creation.
+        // All knobs (baseUrl/token/timeout/...) live in params.fahras.
+        'fahras' => [
+            'class' => 'common\services\FahrasService',
+        ],
         'authManager' => [
             'class' => 'yii\rbac\DbManager',
             'cache' => 'cache',

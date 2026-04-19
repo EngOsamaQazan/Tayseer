@@ -30,6 +30,17 @@ $g = function (string $k, $default = '') use ($d) {
 $cities  = ArrayHelper::map($lookups['cities']      ?? [], 'id', 'name');
 $citizens = ArrayHelper::map($lookups['citizens']    ?? [], 'id', 'name');
 $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
+
+// Fahras integration toggles (driven by Yii::$app->params['fahras']).
+$fahras = Yii::$app->params['fahras'] ?? [];
+$fahrasEnabled = !empty($fahras['enabled']);
+$fahrasCanOverride = $fahrasEnabled
+    && !empty($fahras['overridePerm'])
+    && Yii::$app->user->can($fahras['overridePerm']);
+
+// Was this draft already overridden by a manager? (Used to render the
+// banner pre-filled instead of forcing the user to re-trigger the modal.)
+$fahrasOverride = $payload['_fahras_override'] ?? null;
 ?>
 <div class="cw-card">
     <div class="cw-card__header">
@@ -347,6 +358,138 @@ $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
                 </div>
             </div>
         </details>
+
+        <!-- ── Section C′: Fahras verdict card. ──
+             Displayed ABOVE the extras / next-button so the rep sees the
+             check status before they leave Step 1. The card hydrates
+             itself from /customers/wizard/fahras-check whenever the user
+             stops typing in the national-ID input.
+
+             States rendered by JS: idle | loading | can | warn | block | error.
+        -->
+        <?php if ($fahrasEnabled): ?>
+        <section class="cw-fahras"
+                 data-cw-fahras
+                 data-cw-fahras-state="<?= $fahrasOverride ? 'override' : 'idle' ?>"
+                 data-cw-fahras-can-override="<?= $fahrasCanOverride ? '1' : '0' ?>"
+                 aria-live="polite"
+                 aria-atomic="true"
+                 role="region"
+                 aria-label="فحص الفهرس">
+
+            <header class="cw-fahras__header">
+                <div class="cw-fahras__title">
+                    <i class="fa fa-shield" aria-hidden="true"></i>
+                    <span>فحص نظام الفهرس</span>
+                </div>
+                <div class="cw-fahras__actions">
+                    <button type="button"
+                            class="cw-btn cw-btn--ghost cw-btn--sm"
+                            data-cw-fahras-action="recheck"
+                            disabled>
+                        <i class="fa fa-refresh" aria-hidden="true"></i>
+                        <span>إعادة الفحص</span>
+                    </button>
+                    <button type="button"
+                            class="cw-btn cw-btn--outline cw-btn--sm"
+                            data-cw-fahras-action="search">
+                        <i class="fa fa-search" aria-hidden="true"></i>
+                        <span>بحث بالاسم في الفهرس</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="cw-fahras__body" data-cw-fahras-body>
+                <div class="cw-fahras__icon" aria-hidden="true">
+                    <i class="fa fa-info-circle"></i>
+                </div>
+                <div class="cw-fahras__message">
+                    <p class="cw-fahras__text">
+                        أدخل الرقم الوطني والاسم وسيتم التحقق من العميل تلقائياً قبل الانتقال للخطوة التالية.
+                    </p>
+                </div>
+            </div>
+
+            <?php if ($fahrasOverride): ?>
+            <div class="cw-fahras__override-banner" data-cw-fahras-override-banner>
+                <i class="fa fa-key" aria-hidden="true"></i>
+                <strong>تم تجاوز حظر الفهرس بواسطة المدير.</strong>
+                <span>السبب: <?= Html::encode((string)($fahrasOverride['reason'] ?? '—')) ?></span>
+                <button type="button"
+                        class="cw-btn cw-btn--link cw-btn--sm"
+                        data-cw-fahras-action="clear-override">إلغاء التجاوز</button>
+            </div>
+            <?php endif; ?>
+
+            <details class="cw-fahras__matches" data-cw-fahras-matches hidden>
+                <summary>عرض المطابقات في الفهرس</summary>
+                <div class="cw-fahras__matches-body" data-cw-fahras-matches-body></div>
+            </details>
+        </section>
+
+        <!-- Override modal — only injected for users with the override permission. -->
+        <?php if ($fahrasCanOverride): ?>
+        <div class="cw-fahras-modal" data-cw-fahras-override-modal hidden role="dialog" aria-modal="true" aria-labelledby="cwFahrasOverrideTitle">
+            <div class="cw-fahras-modal__backdrop" data-cw-fahras-action="close-modal"></div>
+            <div class="cw-fahras-modal__dialog" role="document">
+                <header class="cw-fahras-modal__header">
+                    <h3 id="cwFahrasOverrideTitle"><i class="fa fa-key" aria-hidden="true"></i> تجاوز حظر الفهرس</h3>
+                    <button type="button" class="cw-fahras-modal__close" data-cw-fahras-action="close-modal" aria-label="إغلاق">×</button>
+                </header>
+                <div class="cw-fahras-modal__body">
+                    <p class="cw-fahras-modal__warn">
+                        <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                        أنت على وشك تجاوز قرار الفهرس بمنع إضافة هذا العميل. سيتم إشعار الإدارة وتسجيل سبب التجاوز في سجل الفهرس.
+                    </p>
+                    <label class="cw-field__label" for="cwFahrasOverrideReason">سبب التجاوز <span class="cw-field__req" aria-hidden="true">*</span></label>
+                    <textarea id="cwFahrasOverrideReason"
+                              class="cw-input cw-textarea"
+                              rows="4"
+                              minlength="10"
+                              maxlength="1000"
+                              placeholder="اشرح السبب بوضوح (10 أحرف على الأقل)…"></textarea>
+                    <p class="cw-fahras-modal__hint" data-cw-fahras-modal-error hidden></p>
+                </div>
+                <footer class="cw-fahras-modal__footer">
+                    <button type="button" class="cw-btn cw-btn--outline" data-cw-fahras-action="close-modal">إلغاء</button>
+                    <button type="button" class="cw-btn cw-btn--danger" data-cw-fahras-action="confirm-override">
+                        <i class="fa fa-key" aria-hidden="true"></i>
+                        <span>تأكيد التجاوز والمتابعة</span>
+                    </button>
+                </footer>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Search-by-name modal -->
+        <div class="cw-fahras-modal" data-cw-fahras-search-modal hidden role="dialog" aria-modal="true" aria-labelledby="cwFahrasSearchTitle">
+            <div class="cw-fahras-modal__backdrop" data-cw-fahras-action="close-search-modal"></div>
+            <div class="cw-fahras-modal__dialog cw-fahras-modal__dialog--lg" role="document">
+                <header class="cw-fahras-modal__header">
+                    <h3 id="cwFahrasSearchTitle"><i class="fa fa-search" aria-hidden="true"></i> بحث في الفهرس</h3>
+                    <button type="button" class="cw-fahras-modal__close" data-cw-fahras-action="close-search-modal" aria-label="إغلاق">×</button>
+                </header>
+                <div class="cw-fahras-modal__body">
+                    <div class="cw-fahras-search__bar">
+                        <input type="text"
+                               class="cw-input"
+                               data-cw-fahras-search-input
+                               placeholder="ادخل الاسم أو الرقم الوطني (3 أحرف على الأقل)…"
+                               autocomplete="off"
+                               minlength="3"
+                               dir="auto">
+                        <button type="button" class="cw-btn cw-btn--primary" data-cw-fahras-action="run-search">
+                            <i class="fa fa-search" aria-hidden="true"></i>
+                            <span>بحث</span>
+                        </button>
+                    </div>
+                    <div class="cw-fahras-search__results" data-cw-fahras-search-results>
+                        <p class="cw-field__hint">سيتم البحث عبر جميع شركات التقسيط المرتبطة بنظام الفهرس.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
 
         <!-- ── Section D: Customer photo + ad-hoc supporting documents.
              Self-contained partial — handles its own draft hydration,

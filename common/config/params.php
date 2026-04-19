@@ -18,7 +18,49 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-19 — clipboard paste for identity scan
-     *  (button + global Ctrl+V) on Step 1 of the wizard. */
+     *  Last bump: 2026-04-19 — Extras uploaders: clipboard paste
+     *  (button + Ctrl+V / Win+V) for personal photo & documents. */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
+
+    /**
+     * Fahras integration — central client-violation index used to
+     * gate new-customer creation. See docs/fahras-integration.md.
+     *
+     * The `token` and `baseUrl` overrides MUST live in
+     * `common/config/params-local.php` (per environment), NOT here.
+     */
+    'fahras' => [
+        // Master kill-switch. Set to false to bypass the check entirely
+        // (UI hides the verdict card and the wizard accepts any customer).
+        'enabled'        => true,
+
+        // Base URL of the Fahras deployment (HTTPS only in production).
+        // Endpoints: {baseUrl}/admin/api/check.php and /admin/api/search.php
+        'baseUrl'        => 'https://fahras.aqssat.co',
+
+        // Per-tenant API token issued by Fahras for this Tayseer install.
+        // Override in params-local.php; never commit a real token to git.
+        'token'          => null,
+
+        // Tenant slug sent as `client=` to Fahras (must exist in $TOKENS map).
+        'clientId'       => 'tayseer',
+
+        // Hard timeout per HTTP call (seconds).
+        'timeoutSec'     => 8,
+
+        // Cache verdict for the same (id_number, name-hash) for this many
+        // seconds to avoid hammering Fahras during wizard navigation.
+        'cacheTtlSec'    => 300,
+
+        // Failure policy when Fahras is unreachable / errors out:
+        //   'closed' → block customer creation (recommended for production).
+        //   'open'   → warn but allow creation (for staging / dev).
+        'failurePolicy'  => 'closed',
+
+        // RBAC permission name allowed to override a `cannot_sell` verdict.
+        'overridePerm'   => 'customer.fahras.override',
+
+        // RBAC permission name allowed to view the audit log screen.
+        'logViewPerm'    => 'customer.fahras.log.view',
+    ],
 ];

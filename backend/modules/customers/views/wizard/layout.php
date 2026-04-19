@@ -116,6 +116,21 @@ $this->registerJsFile($ver('/js/customer-wizard/extras.js'), [
 $this->registerCssFile($ver('/css/customer-wizard/extras.css'), [
     'depends' => [\yii\web\YiiAsset::class],
 ]);
+// Fahras integration (verdict-gated customer creation). The card lives
+// inside Step 1, but the JS hooks into the global CW.next() guard rail
+// so it must load alongside the other wizard scripts. Both files are
+// no-ops when params.fahras.enabled === false (the partial isn't rendered).
+$fahrasParams = Yii::$app->params['fahras'] ?? [];
+$fahrasEnabled = !empty($fahrasParams['enabled']);
+if ($fahrasEnabled) {
+    $this->registerCssFile($ver('/css/customer-wizard/fahras.css'), [
+        'depends' => [\yii\web\YiiAsset::class],
+    ]);
+    $this->registerJsFile($ver('/js/customer-wizard/fahras.js'), [
+        'depends' => [\yii\web\JqueryAsset::class],
+        'position' => \yii\web\View::POS_END,
+    ]);
+}
 // Step-4 review enhancements (PDF first-page thumbs via PDF.js loaded
 // on demand from CDN). Only the review tile <thumb> elements are
 // touched, so the script is a safe no-op on every other step.
@@ -168,6 +183,11 @@ $urls = [
     'resolveLocation' => Url::to(['/customers/wizard/resolve-location']),
     'searchPlaces'    => Url::to(['/customers/wizard/search-places']),
     'reverseGeocode'  => Url::to(['/customers/wizard/reverse-geocode']),
+    // Fahras integration endpoints. Always emitted (the JS module
+    // defensively bails out if the card isn't in the DOM).
+    'fahrasCheck'    => Url::to(['/customers/wizard/fahras-check']),
+    'fahrasSearch'   => Url::to(['/customers/wizard/fahras-search']),
+    'fahrasOverride' => Url::to(['/customers/wizard/fahras-override']),
 ];
 
 // ── Google Maps JS API (Places library) — loaded only when an API key is
@@ -317,12 +337,23 @@ $steps = [
 $urlsJson = json_encode($urls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 $this->registerJs(<<<JS
 jQuery(function () {
+    var __cwUrls = {$urlsJson};
     if (window.CW && typeof CW.init === 'function') {
         CW.init({
             shellSelector: '#cw-shell',
-            urls: {$urlsJson},
+            urls: __cwUrls,
             totalSteps: {$totalSteps},
             currentStep: {$currentStep}
+        });
+    }
+    // Fahras gate-rail (only initializes if the verdict card is present).
+    if (window.CWFahras && typeof CWFahras.init === 'function') {
+        CWFahras.init({
+            urls: {
+                check:    __cwUrls.fahrasCheck,
+                search:   __cwUrls.fahrasSearch,
+                override: __cwUrls.fahrasOverride
+            }
         });
     }
 });

@@ -34,6 +34,7 @@ class Notification extends \yii\db\ActiveRecord
     const TYPE_CONTRACT_LEGAL = 102;
     const TYPE_CONTRACT_FOLLOWUP = 103;
     const TYPE_CUSTOMER_CREATED = 200;
+    const TYPE_FAHRAS_OVERRIDE  = 201; // Manager bypassed a Fahras "cannot_sell" verdict
     const TYPE_LEAVE_REQUEST = 300;
     const TYPE_ARCHIVE_REQUEST = 400;
     const INVOICE_PENDING_RECEPTION = 1001;

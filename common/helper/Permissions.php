@@ -134,6 +134,14 @@ class Permissions
     const CUST_DELETE = 'العملاء: حذف';
     const CUST_EXPORT = 'العملاء: تصدير';
 
+    /* ═══ Fahras integration ═══
+     * CUST_FAHRAS_OVERRIDE: bypass a `cannot_sell` verdict from Fahras
+     *   when creating a customer (typically granted to branch managers).
+     * CUST_FAHRAS_LOG_VIEW: view the Fahras verdict audit log
+     *   (`os_fahras_check_log`) — granted to compliance/managers only. */
+    const CUST_FAHRAS_OVERRIDE = 'العملاء: تجاوز حظر الفهرس';
+    const CUST_FAHRAS_LOG_VIEW = 'الفهرس: مشاهدة سجل الفحوصات';
+
     /* ═══ CRUD — المستثمرين ═══ */
     const COMP_VIEW   = 'المستثمرين: مشاهدة';
     const COMP_CREATE = 'المستثمرين: إضافة';
@@ -210,7 +218,7 @@ class Permissions
     public static function getPermissionHierarchy()
     {
         return [
-            self::CUSTOMERS => [self::CUST_VIEW, self::CUST_CREATE, self::CUST_UPDATE, self::CUST_DELETE, self::CUST_EXPORT],
+            self::CUSTOMERS => [self::CUST_VIEW, self::CUST_CREATE, self::CUST_UPDATE, self::CUST_DELETE, self::CUST_EXPORT, self::CUST_FAHRAS_OVERRIDE, self::CUST_FAHRAS_LOG_VIEW],
             self::COMPAINES => [self::COMP_VIEW, self::COMP_CREATE, self::COMP_UPDATE, self::COMP_DELETE],
             self::CONTRACTS => [self::CONT_VIEW, self::CONT_CREATE, self::CONT_UPDATE, self::CONT_DELETE],
             'المتابعة'     => [self::FOLLOWUP_VIEW, self::FOLLOWUP_CREATE, self::FOLLOWUP_UPDATE, self::FOLLOWUP_DELETE],
@@ -268,15 +276,23 @@ class Permissions
             ],
             /* معالج إنشاء العميل (الإصدار الجديد) */
             'customers/wizard' => [
-                'start'    => self::CUST_CREATE,
-                'step'     => self::CUST_CREATE,
-                'save'     => self::CUST_CREATE,
-                'finish'   => self::CUST_CREATE,
-                'resume'   => self::CUST_CREATE,
-                'drafts'   => self::CUST_CREATE,
-                'discard'  => self::CUST_CREATE,
-                'scan'     => self::CUST_CREATE,
-                'validate' => self::CUST_CREATE,
+                'start'         => self::CUST_CREATE,
+                'step'          => self::CUST_CREATE,
+                'save'          => self::CUST_CREATE,
+                'finish'        => self::CUST_CREATE,
+                'resume'        => self::CUST_CREATE,
+                'drafts'        => self::CUST_CREATE,
+                'discard'       => self::CUST_CREATE,
+                'scan'          => self::CUST_CREATE,
+                'validate'      => self::CUST_CREATE,
+                /* Fahras integration AJAX endpoints */
+                'fahras-check'  => self::CUST_CREATE,
+                'fahras-search' => self::CUST_CREATE,
+            ],
+            /* سجل فحوصات الفهرس (المدير) */
+            'customers/fahras-log' => [
+                'index' => self::CUST_FAHRAS_LOG_VIEW,
+                'view'  => self::CUST_FAHRAS_LOG_VIEW,
             ],
             /* المستثمرين */
             'companies/companies' => [

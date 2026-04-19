@@ -12,6 +12,7 @@ use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
 use yii\helpers\Url;
 use common\models\WizardDraft;
+use common\models\FahrasCheckLog;
 use common\helper\Permissions;
 use backend\modules\customers\components\VisionService;
 use backend\models\Media;
@@ -19,7 +20,9 @@ use backend\helpers\MediaHelper;
 use backend\modules\customers\models\Customers;
 use backend\modules\address\models\Address;
 use backend\modules\phoneNumbers\models\PhoneNumbers;
+use backend\modules\notification\models\Notification;
 use common\services\LocationResolverService;
+use common\services\dto\FahrasVerdict;
 
 /**
  * Customer Onboarding Wizard — V2.
@@ -93,6 +96,9 @@ class WizardController extends Controller
                     'add-bank'    => ['POST'],
                     'upload-extra' => ['POST'],
                     'delete-extra' => ['POST'],
+                    'fahras-check'   => ['POST'],
+                    'fahras-search'  => ['POST'],
+                    'fahras-override' => ['POST'],
                 ],
             ],
         ];
@@ -332,6 +338,25 @@ class WizardController extends Controller
                 return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العميل.'];
             }
 
+            // ── 3a-pre. Link the recorded Fahras checks to the new customer
+            //          for audit reporting ("show me every Fahras check that
+            //          led to creating customer #N"). Best-effort.
+            try {
+                $idNum = (string)($custAttr['id_number'] ?? '');
+                if ($idNum !== '') {
+                    FahrasCheckLog::updateAll(
+                        ['customer_id' => (int)$customer->id],
+                        ['and',
+                            ['id_number' => $idNum],
+                            ['customer_id' => null],
+                            ['>=', 'created_at', time() - 7200], // last 2h only
+                        ]
+                    );
+                }
+            } catch (\Throwable $e) {
+                Yii::warning('Wizard finish: link FahrasCheckLog failed: ' . $e->getMessage(), __METHOD__);
+            }
+
             // ── 3a. Addresses (residential + work, each saved as its own
             //       row). A block is persisted only when at least one
             //       text field carries content — empty blocks are silently
@@ -485,6 +510,233 @@ class WizardController extends Controller
             'message'      => 'تم اعتماد العميل بنجاح.',
         ];
     }
+
+    /* ════════════════════════════════════════════════════════════════
+       FAHRAS INTEGRATION (Step 1 verdict gate + by-name lookup + override)
+       ════════════════════════════════════════════════════════════════ */
+
+    /**
+     * Live verdict check used by Step 1 of the wizard.
+     *
+     * The browser POSTs `id_number` (+ optional `name`, `phone`); we ask
+     * Fahras for a verdict, persist the attempt to {@see FahrasCheckLog},
+     * and return a JSON envelope the front-end uses to lock/unlock the
+     * "Next" button and render the verdict card.
+     *
+     * Response:
+     *   { ok: true, enabled: true, verdict: 'can_sell|cannot_sell|...',
+     *     reason_code, reason_ar, matches: [...], remote_errors: [...],
+     *     blocks: bool, warns: bool, can_override: bool, request_id }
+     *
+     * Fail-closed: when Fahras is unreachable and `failurePolicy === 'closed'`
+     * the response carries `verdict='error'` and `blocks=true`.
+     */
+    public function actionFahrasCheck()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $svc = Yii::$app->fahras ?? null;
+        if (!$svc || !$svc->enabled) {
+            return [
+                'ok'       => true,
+                'enabled'  => false,
+                'verdict'  => FahrasVerdict::VERDICT_NO_RECORD,
+                'reason_ar'=> '',
+                'blocks'   => false,
+                'warns'    => false,
+            ];
+        }
+
+        $req      = Yii::$app->request;
+        $idNumber = trim((string)$req->post('id_number', ''));
+        $name     = trim((string)$req->post('name', ''));
+        $phone    = trim((string)$req->post('phone', ''));
+
+        if ($idNumber === '' && $name === '') {
+            return [
+                'ok'    => false,
+                'error' => 'يرجى إدخال الرقم الوطني (أو الاسم) قبل الفحص.',
+            ];
+        }
+
+        $verdict = $svc->check($idNumber, $name ?: null, $phone ?: null);
+
+        FahrasCheckLog::record($verdict, [
+            'id_number' => $idNumber,
+            'name'      => $name,
+            'phone'     => $phone,
+            'source'    => FahrasCheckLog::SOURCE_STEP1,
+        ]);
+
+        return [
+            'ok'           => true,
+            'enabled'      => true,
+            'verdict'      => $verdict->verdict,
+            'reason_code'  => $verdict->reasonCode,
+            'reason_ar'    => $verdict->reasonAr,
+            'matches'      => $verdict->matches,
+            'remote_errors'=> $verdict->remoteErrors,
+            'request_id'   => $verdict->requestId,
+            'blocks'       => $verdict->blocks($svc->failurePolicy),
+            'warns'        => $verdict->warns(),
+            'from_cache'   => $verdict->fromCache,
+            'can_override' => Yii::$app->user->can($svc->overridePerm),
+            'failure_policy' => $svc->failurePolicy,
+        ];
+    }
+
+    /**
+     * Candidate search by name — returns the raw rows Fahras knows about
+     * across local + 6 remote sources. Used by the "بحث في الفهرس" modal.
+     */
+    public function actionFahrasSearch()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $svc = Yii::$app->fahras ?? null;
+        if (!$svc || !$svc->enabled) {
+            return ['ok' => true, 'enabled' => false, 'results' => []];
+        }
+
+        $q     = trim((string)Yii::$app->request->post('q', ''));
+        $limit = (int)Yii::$app->request->post('limit', 20);
+
+        if (mb_strlen($q, 'UTF-8') < 3) {
+            return ['ok' => false, 'error' => 'يرجى كتابة 3 أحرف على الأقل للبحث.'];
+        }
+
+        $r = $svc->searchByName($q, $limit);
+        return [
+            'ok'            => $r['ok'] ?? false,
+            'enabled'       => true,
+            'results'       => $r['results'] ?? [],
+            'remote_errors' => $r['remote_errors'] ?? [],
+            'request_id'    => $r['request_id'] ?? null,
+            'error'         => $r['error'] ?? null,
+        ];
+    }
+
+    /**
+     * Manager override — record a privileged bypass of a `cannot_sell`
+     * verdict. The wizard front-end calls this AFTER a manager confirms
+     * the override modal; on success the user is allowed to proceed past
+     * Step 1 (the override is replayed on actionFinish() by checking
+     * `payload['_fahras_override']`).
+     *
+     * Response: { ok: true, override_id: 123 } | { ok: false, error: '...' }
+     */
+    public function actionFahrasOverride()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+
+        $svc = Yii::$app->fahras ?? null;
+        if (!$svc || !$svc->enabled) {
+            return ['ok' => false, 'error' => 'تكامل الفهرس مُعطّل.'];
+        }
+        if (!Yii::$app->user->can($svc->overridePerm)) {
+            return ['ok' => false, 'error' => 'لا تملك صلاحية تجاوز حظر الفهرس.'];
+        }
+
+        $req       = Yii::$app->request;
+        $idNumber  = trim((string)$req->post('id_number', ''));
+        $name      = trim((string)$req->post('name', ''));
+        $phone     = trim((string)$req->post('phone', ''));
+        $reason    = trim((string)$req->post('reason', ''));
+        $requestId = trim((string)$req->post('request_id', ''));
+
+        if ($idNumber === '') {
+            return ['ok' => false, 'error' => 'الرقم الوطني مطلوب.'];
+        }
+        if (mb_strlen($reason, 'UTF-8') < 10) {
+            return ['ok' => false, 'error' => 'يرجى كتابة سبب التجاوز (10 أحرف على الأقل).'];
+        }
+        if (mb_strlen($reason, 'UTF-8') > 1000) {
+            return ['ok' => false, 'error' => 'سبب التجاوز طويل جداً.'];
+        }
+
+        // Re-fetch the verdict so we record the actual matches at override time.
+        $verdict = $svc->check($idNumber, $name ?: null, $phone ?: null);
+        if ($verdict->verdict !== FahrasVerdict::VERDICT_CANNOT_SELL
+            && $verdict->verdict !== FahrasVerdict::VERDICT_ERROR
+        ) {
+            // Verdict changed in the meantime — no override needed.
+            return [
+                'ok'       => true,
+                'no_override_needed' => true,
+                'verdict'  => $verdict->verdict,
+            ];
+        }
+
+        $log = FahrasCheckLog::record($verdict, [
+            'id_number'        => $idNumber,
+            'name'             => $name,
+            'phone'            => $phone,
+            'source'           => FahrasCheckLog::SOURCE_MANUAL,
+            'override_user_id' => Yii::$app->user->id,
+            'override_reason'  => $reason,
+        ]);
+
+        // Record the override into the wizard draft so actionFinish() honours it.
+        try {
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            if ($draft) {
+                $payload = $this->decodePayload($draft);
+                $payload['_fahras_override'] = [
+                    'id_number'  => $idNumber,
+                    'name'       => $name,
+                    'phone'      => $phone,
+                    'reason'     => $reason,
+                    'request_id' => $verdict->requestId,
+                    'log_id'     => $log ? (int)$log->id : null,
+                    'verdict'    => $verdict->verdict,
+                    'at'         => time(),
+                    'by'         => (int)(Yii::$app->user->id ?? 0),
+                ];
+                WizardDraft::saveAutoDraft(
+                    Yii::$app->user->id,
+                    self::DRAFT_KEY,
+                    json_encode($payload, JSON_UNESCAPED_UNICODE)
+                );
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('FahrasOverride: failed to persist override into draft: ' . $e->getMessage(), 'fahras');
+        }
+
+        // Notify managers (best-effort; do not fail override on notification error).
+        try {
+            $notifier = Yii::$app->has('notificationService')
+                ? Yii::$app->notificationService
+                : (Yii::$app->has('notifications') ? Yii::$app->notifications : null);
+            if ($notifier) {
+                $username = (Yii::$app->user->identity->username ?? 'مستخدم');
+                $notifier->sendToRole(
+                    ['مدير', 'manager', 'admin'],
+                    Notification::TYPE_FAHRAS_OVERRIDE,
+                    'تم تجاوز حظر الفهرس — العميل: ' . ($name ?: $idNumber),
+                    '/customers/fahras-log',
+                    sprintf(
+                        'قام «%s» بتجاوز حظر الفهرس للعميل %s (%s). السبب: %s',
+                        $username, $name ?: '—', $idNumber, $reason
+                    ),
+                    null,
+                    'fahras_override',
+                    $log ? (int)$log->id : null
+                );
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('FahrasOverride: notify failed: ' . $e->getMessage(), 'fahras');
+        }
+
+        return [
+            'ok'          => true,
+            'override_id' => $log ? (int)$log->id : null,
+            'request_id'  => $verdict->requestId,
+        ];
+    }
+
+    /* ════════════════════════════════════════════════════════════════
+       END FAHRAS INTEGRATION
+       ════════════════════════════════════════════════════════════════ */
 
     /**
      * Discard the auto-draft entirely (user clicked "ابدأ من جديد").
@@ -2974,7 +3226,80 @@ class WizardController extends Controller
             $errors['Customers[notes]'] = 'الملاحظات تتجاوز 500 حرف.';
         }
 
+        // ── Fahras gate (server-side authoritative) ──
+        // Only run when identity basics are syntactically valid; otherwise
+        // the user is shown the field-level errors first and re-runs the
+        // step. This avoids burning Fahras quota on obviously bad inputs.
+        if (empty($errors['Customers[id_number]']) && empty($errors['Customers[name]'])) {
+            $idNum = trim((string)$this->dotGet($data, 'Customers[id_number]'));
+            $nm    = trim((string)$this->dotGet($data, 'Customers[name]'));
+            $ph    = trim((string)$this->dotGet($data, 'Customers[primary_phone_number]'));
+
+            $fahrasErr = $this->runFahrasGate($idNum, $nm, $ph, FahrasCheckLog::SOURCE_STEP1);
+            if ($fahrasErr !== null) {
+                $errors['Customers[id_number]'] = $fahrasErr;
+            }
+        }
+
         return $errors;
+    }
+
+    /**
+     * Server-side Fahras verdict gate. Returns:
+     *   • null            → allowed to proceed.
+     *   • Arabic string   → block, message to attach to Customers[id_number].
+     *
+     * Honours the manager-recorded override stored in the draft under
+     * `_fahras_override` (matching id_number + recent `at`); if a valid
+     * override exists, the gate returns null.
+     *
+     * Triggered on every wizard step-1 validation AND on actionFinish()
+     * for defense-in-depth.
+     */
+    protected function runFahrasGate(string $idNumber, string $name, string $phone, string $source): ?string
+    {
+        if ($idNumber === '' && $name === '') return null;
+
+        $svc = Yii::$app->fahras ?? null;
+        if (!$svc || !$svc->enabled) return null;
+
+        // Honour an active manager override stored in the current draft.
+        try {
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            if ($draft) {
+                $payload = $this->decodePayload($draft);
+                $ovr = $payload['_fahras_override'] ?? null;
+                if (is_array($ovr)
+                    && (string)($ovr['id_number'] ?? '') === $idNumber
+                    && (int)($ovr['at'] ?? 0) > (time() - 86400) // valid for 24h
+                ) {
+                    return null;
+                }
+            }
+        } catch (\Throwable $e) {
+            // fallthrough: if we cannot read the draft, fall back to enforcing the gate.
+        }
+
+        $verdict = $svc->check($idNumber, $name ?: null, $phone ?: null);
+
+        FahrasCheckLog::record($verdict, [
+            'id_number' => $idNumber,
+            'name'      => $name,
+            'phone'     => $phone,
+            'source'    => $source,
+        ]);
+
+        if (!$verdict->blocks($svc->failurePolicy)) {
+            return null;
+        }
+
+        if ($verdict->verdict === FahrasVerdict::VERDICT_ERROR) {
+            return 'تعذّر التحقق من العميل في نظام الفهرس — حاول لاحقاً (لا يمكن المتابعة دون فحص الفهرس).';
+        }
+        $msg = trim($verdict->reasonAr) !== ''
+            ? $verdict->reasonAr
+            : 'الفهرس يمنع إضافة هذا العميل.';
+        return 'الفهرس: ' . $msg;
     }
 
     /**
