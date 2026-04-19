@@ -1674,6 +1674,24 @@ class WizardController extends Controller
             $extracted = VisionService::extractFromImage($tmpPath, $sideHint);
             $extracted = is_array($extracted) ? $extracted : [];
 
+            // ── Detect document family BEFORE side routing. ──
+            // Gemini's `document_type` enum (see VisionService prompt):
+            //   '0' = هوية وطنية / بطاقة شخصية
+            //   '1' = جواز سفر
+            //   '2' = رخصة قيادة
+            //   '3' = شهادة ميلاد
+            //   '4' = شهادة تعيين / بطاقة عسكرية أو أمنية
+            // ID cards (0/4) keep the strict front+back capture flow because
+            // each side carries non-overlapping data. Single-face documents
+            // (passports/licenses) don't — the bio page IS the document, so
+            // the wizard must NOT pester the rep for a "back" capture and
+            // must NOT reject the upload as a wrong-side photo.
+            $docType   = isset($extracted['document_type']) ? (string)$extracted['document_type'] : '';
+            $isSingleFaceDoc = in_array($docType, [
+                VisionService::DOC_TYPE_PASSPORT,   // '1'
+                VisionService::DOC_TYPE_LICENSE,    // '2'
+            ], true);
+
             // ── Detect which side this actually is (front vs back). ──
             // Strong signals:
             //   • name + id_number                  → front (civilian or military)
@@ -1684,7 +1702,12 @@ class WizardController extends Controller
             $hasDocNum   = !empty($extracted['document_number']);
             $hasMilNum   = !empty($extracted['military_number']);
 
-            if ($hasName && ($hasIdNumber || $hasMilNum)) {
+            if ($isSingleFaceDoc) {
+                // A passport bio-page or license is its own self-contained
+                // "front" — no back exists to capture. Treat it as such so
+                // downstream side checks short-circuit cleanly.
+                $detectedSide = 'single';
+            } elseif ($hasName && ($hasIdNumber || $hasMilNum)) {
                 $detectedSide = 'front';
             } elseif (($hasDocNum || ($hasMilNum && !$hasName))) {
                 $detectedSide = 'back';
@@ -1702,6 +1725,61 @@ class WizardController extends Controller
             // draft, so the back-side request can rely on it too.
             $previousIssuingBody = $this->getDraftIssuingBody();
             $effectiveIssuingBody = $issuingBody ?: $previousIssuingBody;
+
+            // ── SINGLE-FACE DOCS (passport/license): short-circuit the
+            // front/back state machine entirely. We persist the image with
+            // a doc-typed groupName, map any reusable personal fields
+            // (name, sex, birth_date, citizenship), and tell the client
+            // we're done — no second-side capture needed.
+            if ($isSingleFaceDoc) {
+                if (empty($extracted)) {
+                    return [
+                        'ok'    => false,
+                        'error' => $docType === VisionService::DOC_TYPE_PASSPORT
+                            ? 'لم نستطع قراءة جواز السفر — تأكد من تصوير الصفحة الرئيسية (التي تحوي الصورة والـ MRZ) بإضاءة جيدة وبدون انعكاسات.'
+                            : 'لم نستطع قراءة رخصة القيادة — تأكد من تصوير الوجه الذي يحمل الاسم ورقم الرخصة بإضاءة جيدة.',
+                    ];
+                }
+
+                $lookups  = $this->loadLookups();
+                $mapped   = $this->mapScanToWizardFields($extracted, $lookups);
+
+                $imageRef = $this->persistScanImage(
+                    $tmpPath,
+                    $file,
+                    'single',
+                    null, // issuing_body N/A for passport/license
+                    $extracted['document_number'] ?? ($extracted['passport_number'] ?? null),
+                    $docType
+                );
+                if ($imageRef) {
+                    $promoted = true;
+                }
+
+                $this->rememberScanInDraft('single', $imageRef['image_id'] ?? null, null, $extracted);
+
+                $docLabel = ($docType === VisionService::DOC_TYPE_PASSPORT)
+                    ? 'جواز السفر'
+                    : 'رخصة القيادة';
+
+                return [
+                    'ok'             => true,
+                    'side'           => 'single',
+                    'side_detected'  => 'single',
+                    'document_type'  => $docType,
+                    'next_action'    => 'done',
+                    'fields'         => $mapped['fields'],
+                    'unmapped'       => $mapped['unmapped'],
+                    'raw'            => $extracted,
+                    'image_id'       => $imageRef['image_id'] ?? null,
+                    'image_url'      => $imageRef['url']      ?? null,
+                    'note'           => sprintf('تم التعرف على %s وحفظ صورته في ملف العميل.', $docLabel),
+                    'meta'           => [
+                        'source'     => 'gemini-vision',
+                        'elapsed_ms' => (int)((microtime(true) - $startedAt) * 1000),
+                    ],
+                ];
+            }
 
             // ── FRONT-side empty extraction = bad photo, can't proceed.
             if (empty($extracted) && $side === 'front') {
@@ -2413,21 +2491,36 @@ class WizardController extends Controller
     }
 
     /**
-     * Map (issuing_body, side) → groupName values used by the rest of the
-     * platform (`os_ImageManager.groupName`). Keeps a single, documented
-     * mapping in one place so reports/filters stay consistent.
+     * Map (issuing_body, side, doc_type) → groupName values used by the rest
+     * of the platform (`os_ImageManager.groupName`). Keeps a single,
+     * documented mapping in one place so reports/filters stay consistent.
      *
      * Convention used elsewhere in the codebase (SmartMediaController):
      *   '0' = هوية وطنية (national ID)
+     *   '1' = جواز سفر    (passport)
+     *   '2' = رخصة قيادة  (driver's license)
      *   '4' = شهادة تعيين عسكرية (military appointment certificate)
      *
-     * For the wizard we extend this with side-specific subcodes so the
-     * customer's documents tab can show "ID — Front" vs "ID — Back" cleanly:
+     * For ID cards we extend with side-specific subcodes so the customer's
+     * documents tab can show "ID — Front" vs "ID — Back" cleanly:
      *   '0_front', '0_back'   civilian ID
      *   '4_front', '4_back'   military / security / intelligence
+     *
+     * Single-face documents (passport/license) don't have a back, so they
+     * use the bare doc-type code without a side suffix:
+     *   '1'   passport
+     *   '2'   license
+     *
+     * @param string|null $docType  Optional doc-type override (Gemini's
+     *                              `document_type`). When provided AND it
+     *                              maps to a single-face family, takes
+     *                              precedence over (side, issuingBody).
      */
-    protected function groupNameForScan($side, $issuingBody)
+    protected function groupNameForScan($side, $issuingBody, $docType = null)
     {
+        if ($docType === VisionService::DOC_TYPE_PASSPORT) return VisionService::DOC_TYPE_PASSPORT; // '1'
+        if ($docType === VisionService::DOC_TYPE_LICENSE)  return VisionService::DOC_TYPE_LICENSE;  // '2'
+
         $isMilitary = in_array($issuingBody, ['army', 'security', 'intelligence'], true);
         $base = $isMilitary ? '4' : '0';
         $sideKey = ($side === 'back') ? 'back' : 'front';
@@ -2442,7 +2535,7 @@ class WizardController extends Controller
      *
      * @return array{image_id:int,url:string,group_name:string,file_name:string}|null
      */
-    protected function persistScanImage($tmpPath, $uploadedFile, $side, $issuingBody, $documentNumber)
+    protected function persistScanImage($tmpPath, $uploadedFile, $side, $issuingBody, $documentNumber, $docType = null)
     {
         try {
             if (!is_file($tmpPath)) return null;
@@ -2458,7 +2551,7 @@ class WizardController extends Controller
                 $origName = 'scan_' . $side . '.' . (strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'jpg');
             }
 
-            $groupName = $this->groupNameForScan($side, $issuingBody);
+            $groupName = $this->groupNameForScan($side, $issuingBody, $docType);
 
             $media = new Media([
                 'fileName'    => $origName,
@@ -2549,6 +2642,24 @@ class WizardController extends Controller
             if (!empty($extracted['document_type'])) {
                 $payload['_scan']['document_type'] = (string)$extracted['document_type'];
             }
+
+            // Per-side metadata so finishCustomer() can create the correct
+            // customers_document row PER physical document — needed once we
+            // accept passports/licenses alongside ID cards in the same draft.
+            // (The legacy single document_number/document_type fields above
+            // still reflect the LAST scan to keep older code paths intact.)
+            if ($imageId) {
+                if (!isset($payload['_scan']['perSide']) || !is_array($payload['_scan']['perSide'])) {
+                    $payload['_scan']['perSide'] = [];
+                }
+                $payload['_scan']['perSide'][$side] = [
+                    'document_type'   => isset($extracted['document_type']) ? (string)$extracted['document_type'] : '0',
+                    'document_number' => isset($extracted['document_number']) && $extracted['document_number'] !== ''
+                        ? (string)$extracted['document_number']
+                        : (isset($extracted['passport_number']) ? (string)$extracted['passport_number'] : ''),
+                ];
+            }
+
             $payload['_scan']['updated'] = time();
 
             $payload['_updated'] = time();
@@ -2597,8 +2708,13 @@ class WizardController extends Controller
         $images = $payload['_scan']['images'] ?? [];
         if (!is_array($images) || empty($images)) return 0;
 
-        $documentNumber = $payload['_scan']['document_number'] ?? null;
-        $documentType   = $payload['_scan']['document_type']   ?? '0';
+        // Legacy fallback for drafts created before per-side metadata existed.
+        $legacyDocNumber = $payload['_scan']['document_number'] ?? null;
+        $legacyDocType   = $payload['_scan']['document_type']   ?? '0';
+        $perSide         = is_array($payload['_scan']['perSide'] ?? null)
+            ? $payload['_scan']['perSide']
+            : [];
+
         $count = 0;
         $db = Yii::$app->db;
 
@@ -2617,19 +2733,31 @@ class WizardController extends Controller
                     ['id' => $imageId, 'customer_id' => null]
                 )->execute();
 
-                // Best-effort customers_document entry — only on the front
-                // capture (the document_number is the same for both sides;
-                // we don't need two doc rows for the same physical card).
-                if ($side === 'front' && $documentNumber) {
-                    $db->createCommand()->insert('{{%customers_document}}', [
-                        'customer_id'     => $customerId,
-                        'document_type'   => (string)$documentType,
-                        'document_number' => (string)$documentNumber,
-                        'document_image'  => (string)$imageId,
-                        'created_at'      => time(),
-                        'updated_at'      => time(),
-                        'created_by'      => Yii::$app->user->id ?? null,
-                    ])->execute();
+                // Best-effort customers_document entry — one row per physical
+                // document. Skip the back-of-ID (it's the same physical doc
+                // as front; document_number is shared) and the income side
+                // (handled by the income-statement scanner separately).
+                $skipDocRow = in_array($side, ['back', 'income'], true);
+
+                if (!$skipDocRow) {
+                    // Resolve metadata: prefer per-side (accurate when the
+                    // draft mixes ID + passport + license), fall back to the
+                    // legacy single-doc fields for older drafts.
+                    $sideMeta = is_array($perSide[$side] ?? null) ? $perSide[$side] : [];
+                    $docType  = (string)($sideMeta['document_type']   ?? $legacyDocType);
+                    $docNum   = (string)($sideMeta['document_number'] ?? $legacyDocNumber);
+
+                    if ($docNum !== '') {
+                        $db->createCommand()->insert('{{%customers_document}}', [
+                            'customer_id'     => $customerId,
+                            'document_type'   => $docType,
+                            'document_number' => $docNum,
+                            'document_image'  => (string)$imageId,
+                            'created_at'      => time(),
+                            'updated_at'      => time(),
+                            'created_by'      => Yii::$app->user->id ?? null,
+                        ])->execute();
+                    }
                 }
                 $count++;
             } catch (\Throwable $e) {

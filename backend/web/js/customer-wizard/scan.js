@@ -550,7 +550,15 @@
      * it server-side; the hidden field is a belt-and-suspenders backup).
      */
     function setScanImageRef(side, imageId) {
-        var name = 'WizardScan[' + (side === 'back' ? 'back' : 'front') + '_image_id]';
+        // Side bucket → hidden-input slot. ID cards keep front/back; passport
+        // and license live in their own 'single' slot so a passport upload
+        // doesn't clobber a previously captured ID-front image.
+        var slot;
+        if      (side === 'back')   slot = 'back';
+        else if (side === 'single') slot = 'single';
+        else                        slot = 'front';
+
+        var name = 'WizardScan[' + slot + '_image_id]';
         var $hidden = $('input[name="' + cssEscape(name) + '"]').first();
         if (!$hidden.length) {
             $hidden = $('<input type="hidden">').attr('name', name).appendTo('body');
@@ -645,8 +653,12 @@
                     }
 
                     if (resp.image_id) {
-                        var fileSide = (resp.side_detected === 'back') ? 'back'
-                                     : (resp.side_detected === 'front') ? 'front'
+                        // Single-face docs (passport=1, license=2) are stored
+                        // under their own key so they don't fight the
+                        // ID-front/back image slots.
+                        var fileSide = (resp.side_detected === 'single')   ? 'single'
+                                     : (resp.side_detected === 'back')     ? 'back'
+                                     : (resp.side_detected === 'front')    ? 'front'
                                      : sideHint;
                         setScanImageRef(fileSide, resp.image_id);
                         totalImagesAdded++;
@@ -661,7 +673,15 @@
                     });
                     totalChanged = beforeChanged + thisChanged;
 
-                    if (files.length === 2 && idx === 0 && (thisChanged || resp.image_id)) {
+                    // Surface server-supplied confirmation note (e.g. "تم
+                    // التعرف على جواز السفر…") so the rep gets explicit
+                    // feedback that the right document type was matched.
+                    if (resp.note) {
+                        toast(resp.note, 'info', 4000);
+                    }
+
+                    if (files.length === 2 && idx === 0 && (thisChanged || resp.image_id)
+                        && resp.side_detected !== 'single') {
                         toast('تم تحليل الوجه الأمامي — جارٍ تحليل الخلفي…', 'info', 2500);
                     }
                 });
