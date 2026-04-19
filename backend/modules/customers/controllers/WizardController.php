@@ -1291,6 +1291,11 @@ class WizardController extends Controller
             'from_cache'   => $verdict->fromCache,
             'can_override' => Yii::$app->user->can($svc->overridePerm),
             'failure_policy' => $svc->failurePolicy,
+            // Per-source diagnostic envelope from Fahras (commit 80acada+).
+            // Null when the upstream API hasn't been redeployed yet, in
+            // which case the wizard simply hides the «تفاصيل تشخيصية»
+            // disclosure and degrades gracefully.
+            'diag'         => $verdict->diag,
         ];
 
         // ── Existing-customer short-circuit ───────────────────────────────

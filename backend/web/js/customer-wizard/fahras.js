@@ -289,7 +289,7 @@
         }).done(function (resp) {
             if (!resp || !resp.ok) {
                 var msg = (resp && (resp.error || resp.message)) || 'تعذّر الاتصال بنظام الفهرس.';
-                renderError(msg, resp && resp.blocks);
+                renderError(msg, resp && resp.blocks, resp || null);
                 applyVerdictGate({ verdict: 'error', blocks: resp && resp.blocks });
                 return;
             }
@@ -305,11 +305,12 @@
         }).fail(function (xhr, status) {
             if (status === 'abort') return;
             var msg = 'فشل الاتصال بنظام الفهرس.';
-            if (xhr && xhr.responseJSON) {
-                msg = xhr.responseJSON.error || xhr.responseJSON.message || msg;
+            var errResp = (xhr && xhr.responseJSON) || null;
+            if (errResp) {
+                msg = errResp.error || errResp.message || msg;
             }
             // Fail-closed by default — server policy mirrors this.
-            renderError(msg, true);
+            renderError(msg, true, errResp);
             applyVerdictGate({ verdict: 'error', blocks: true });
         });
     }
@@ -370,7 +371,7 @@
      * text so support can diagnose, and we keep the recheck button
      * enabled so the rep can retry once Fahras is back.
      */
-    function renderError(message, blocks) {
+    function renderError(message, blocks, resp) {
         state.$card.attr('data-cw-fahras-state', 'error');
         var html =
             '<div class="cw-fahras__icon" aria-hidden="true"><i class="fa fa-exclamation-triangle"></i></div>' +
@@ -388,6 +389,7 @@
                       'لا يمكن إنشاء العميل قبل عودة نظام الفهرس. يرجى المحاولة لاحقاً أو الضغط على «إعادة الفحص».</p>'
                     : '<p class="cw-fahras__meta"><i class="fa fa-exclamation"></i> ' +
                       'تحذير فقط — يمكنك المتابعة على مسؤوليتك.</p>') +
+                renderDiagPanel(resp || {}) +
             '</div>';
         state.$body.html(html);
         state.$matchesBox.attr('hidden', '').prop('hidden', true);
@@ -410,6 +412,98 @@
             case 'error':        return 'تعذّر الحصول على رد من الفهرس (خطأ في الاستجابة)';
             default:             return v ? ('قرار غير معروف: ' + v) : '—';
         }
+    }
+
+    /**
+     * Render a collapsed «تفاصيل تشخيصية» disclosure carrying the per-source
+     * data that produced the verdict — local row counts, per-remote-API row
+     * counts, HTTP codes, retry flags, engine input/group counts, and the
+     * `promoted` bit. Two consecutive calls returning different verdicts
+     * for the same input become trivially diff-able: open this disclosure
+     * on each call and the differing field jumps out.
+     *
+     * Degrades gracefully:
+     *   • If the Fahras backend hasn't been redeployed with the _diag block
+     *     yet, `resp.diag` is null/missing → returns '' (no panel rendered).
+     *   • If diag is present but partial, only known fields are shown.
+     *
+     * Source map keys are translated to Arabic company labels for legibility.
+     */
+    function renderDiagPanel(resp) {
+        var d = resp && resp.diag;
+        if (!d || typeof d !== 'object') return '';
+
+        var localBits = [];
+        if (d.local) {
+            if (typeof d.local.clients_count === 'number') {
+                localBits.push('عملاء محلّيون: ' + d.local.clients_count);
+            }
+            if (typeof d.local.remote_clients_count === 'number') {
+                localBits.push('عملاء مخزّنون من شركات: ' + d.local.remote_clients_count);
+            }
+        }
+
+        var sourceLabels = {
+            zajal: 'زجل', jadal: 'جدل', namaa: 'نماء',
+            bseel: 'بسيل', watar: 'وتر', majd: 'عالم المجد'
+        };
+
+        var perSource = [];
+        if (d.remote && typeof d.remote === 'object') {
+            Object.keys(d.remote).forEach(function (k) {
+                var s = d.remote[k] || {};
+                var label = sourceLabels[k] || k;
+                var bits = [];
+                if (typeof s.count === 'number') bits.push(s.count + ' صف');
+                if (s.http_code) bits.push('HTTP ' + s.http_code);
+                if (s.error) bits.push('خطأ: ' + s.error);
+                if (s.retried) bits.push('أُعيدت المحاولة');
+                perSource.push(
+                    '<li><strong>' + escapeHtml(label) + ':</strong> ' +
+                    escapeHtml(bits.join(' · ') || '—') + '</li>'
+                );
+            });
+        }
+
+        var engineBits = [];
+        if (d.engine) {
+            if (typeof d.engine.rows_in === 'number') engineBits.push('صفوف للمحرّك: ' + d.engine.rows_in);
+            if (typeof d.engine.groups === 'number') engineBits.push('مجموعات: ' + d.engine.groups);
+        }
+
+        var verdictMeta = [];
+        if (d.verdict) verdictMeta.push('الحكم: ' + fahrasVerdictLabelAr(d.verdict));
+        if (d.reason_code) verdictMeta.push('الكود: ' + d.reason_code);
+        if (typeof d.matches_count === 'number') verdictMeta.push('المطابقات: ' + d.matches_count);
+        if (d.promoted) verdictMeta.push('⚠ تمت ترقية الحكم إلى خطأ بسبب نقص البيانات');
+        if (typeof d.duration_ms === 'number') verdictMeta.push('المدّة: ' + d.duration_ms + ' م/ث');
+
+        return (
+            '<details class="cw-fahras__diag" data-cw-fahras-diag>' +
+                '<summary>' +
+                    '<i class="fa fa-stethoscope" aria-hidden="true"></i> ' +
+                    'تفاصيل تشخيصية (لمشاركتها مع الدعم عند تذبذب الحكم)' +
+                '</summary>' +
+                '<div class="cw-fahras__diag-body">' +
+                    (localBits.length
+                        ? '<p><strong>القاعدة المحلّية:</strong> ' + escapeHtml(localBits.join(' · ')) + '</p>'
+                        : '') +
+                    (perSource.length
+                        ? '<p><strong>المصادر الحيّة:</strong></p><ul>' + perSource.join('') + '</ul>'
+                        : '') +
+                    (engineBits.length
+                        ? '<p><strong>محرّك التحليل:</strong> ' + escapeHtml(engineBits.join(' · ')) + '</p>'
+                        : '') +
+                    (verdictMeta.length
+                        ? '<p><strong>القرار:</strong> ' + escapeHtml(verdictMeta.join(' · ')) + '</p>'
+                        : '') +
+                    (d.request_id
+                        ? '<p class="cw-fahras__diag-id"><strong>Request ID:</strong> <code>' +
+                          escapeHtml(d.request_id) + '</code></p>'
+                        : '') +
+                '</div>' +
+            '</details>'
+        );
     }
 
     function renderVerdict(resp) {
@@ -535,6 +629,7 @@
                 verdictPanel +
                 (meta.length ? '<p class="cw-fahras__meta">' + meta.join(' · ') + '</p>' : '') +
                 ctaHtml +
+                renderDiagPanel(resp) +
             '</div>';
         state.$body.html(html);
 

@@ -41,6 +41,19 @@ final class FahrasVerdict
     public int     $durationMs;
     /** @var array<int,array<string,string>> */
     public array   $remoteErrors;
+    /**
+     * Always-on diagnostic envelope returned by Fahras `check.php` from
+     * commit 80acada onward. Carries per-source row counts, retry flags,
+     * HTTP codes, engine input/group counts, and the `promoted` bit
+     * (true when a partial-data response was fail-closed to `error`).
+     *
+     * Surfaced verbatim in the wizard's "تفاصيل تشخيصية" disclosure so
+     * a rep can compare two consecutive calls' diag blocks at a glance
+     * — pinpointing exactly which source flipped between requests.
+     *
+     * @var array<string,mixed>|null
+     */
+    public ?array  $diag;
 
     private function __construct() {}
 
@@ -56,7 +69,8 @@ final class FahrasVerdict
         array $remoteErrors = [],
         ?string $requestId = null,
         ?int $httpStatus = 200,
-        int $durationMs = 0
+        int $durationMs = 0,
+        ?array $diag = null
     ): self {
         $v = new self();
         $v->verdict      = self::normalize($verdict);
@@ -69,6 +83,7 @@ final class FahrasVerdict
         $v->fromCache    = false;
         $v->durationMs   = $durationMs;
         $v->rawError     = null;
+        $v->diag         = $diag;
         return $v;
     }
 
@@ -85,6 +100,7 @@ final class FahrasVerdict
         $v->fromCache    = false;
         $v->durationMs   = 0;
         $v->rawError     = $rawError;
+        $v->diag         = null;
         return $v;
     }
 
@@ -107,7 +123,8 @@ final class FahrasVerdict
             (array)($a['remote_errors'] ?? []),
             isset($a['request_id']) ? (string)$a['request_id'] : null,
             isset($a['http_status']) ? (int)$a['http_status'] : 200,
-            (int)($a['duration_ms'] ?? 0)
+            (int)($a['duration_ms'] ?? 0),
+            isset($a['_diag']) && is_array($a['_diag']) ? $a['_diag'] : null
         );
     }
 
@@ -139,6 +156,7 @@ final class FahrasVerdict
             'http_status'   => $this->httpStatus,
             'from_cache'    => $this->fromCache,
             'duration_ms'   => $this->durationMs,
+            '_diag'         => $this->diag,
         ];
     }
 

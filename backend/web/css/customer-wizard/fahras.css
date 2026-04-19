@@ -525,6 +525,59 @@
 }
 .cw-fahras-search__error { color: var(--cw-danger); }
 
+/* ─── Diagnostic disclosure ──────────────────────────────────────────
+   Collapsed-by-default panel carrying per-source row counts and
+   verdict metadata. Visible only to support / power users who open
+   it; ordinary reps see it as a discreet line and ignore it. The
+   contents are designed to be one-shot copy-pasteable to a support
+   channel when a verdict needs investigation. */
+.cw-fahras__diag {
+    margin-top: 12px;
+    padding: 0;
+    border: 1px dashed var(--cw-border, #d1d5db);
+    border-radius: 6px;
+    background: var(--cw-surface-muted, #f9fafb);
+    font-size: 12.5px;
+    color: var(--cw-text-muted, #6b7280);
+}
+.cw-fahras__diag > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 8px 12px;
+    user-select: none;
+    color: var(--cw-text, #374151);
+    font-weight: 600;
+}
+.cw-fahras__diag > summary::-webkit-details-marker { display: none; }
+.cw-fahras__diag > summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-inline-end: 6px;
+    transition: transform .15s ease;
+}
+.cw-fahras__diag[open] > summary::before { transform: rotate(90deg); }
+.cw-fahras__diag > summary:hover { background: rgba(0,0,0,0.03); }
+.cw-fahras__diag-body {
+    padding: 4px 14px 12px;
+    border-top: 1px dashed var(--cw-border, #d1d5db);
+    line-height: 1.7;
+}
+.cw-fahras__diag-body p { margin: 6px 0; }
+.cw-fahras__diag-body ul {
+    margin: 4px 0 8px;
+    padding-inline-start: 22px;
+}
+.cw-fahras__diag-body li { margin: 2px 0; }
+.cw-fahras__diag-body code {
+    background: rgba(0,0,0,0.06);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11.5px;
+    direction: ltr;
+    unicode-bidi: embed;
+}
+.cw-fahras__diag-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+
 /* ─── Reduced motion ─────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
     .cw-fahras,
