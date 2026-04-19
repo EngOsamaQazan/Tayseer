@@ -169,14 +169,62 @@
     color: #8a5a00;
 }
 
-/* ─── Override / Block CTA strip ─────────────────────────────────── */
+/* ─── Same-company state ─────────────────────────────────────────────
+   Customer is "ours" — Fahras matches are exclusively from this Tayseer
+   instance's own company. Visually distinct from `block` (red) so the
+   rep immediately sees it's not a hard rejection but a routing hint:
+   leave the wizard, open «إضافة عقد» on the existing record. Uses a
+   green/teal accent to convey "safe path forward". */
+.cw-fahras[data-cw-fahras-state="same-company"] {
+    border-color: var(--cw-success);
+    box-shadow: 0 0 0 1px var(--cw-success-soft);
+    background: linear-gradient(180deg, var(--cw-success-soft) 0%, var(--cw-surface) 70%);
+}
+.cw-fahras[data-cw-fahras-state="same-company"] .cw-fahras__icon {
+    background: var(--cw-success-soft);
+    color: var(--cw-success);
+}
+.cw-fahras[data-cw-fahras-state="same-company"] .cw-fahras__text strong {
+    color: var(--cw-success);
+}
+
+/* ─── Override / Block / Same-company CTA strip ──────────────────── */
 .cw-fahras__cta {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 10px;
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px dashed var(--cw-border);
+}
+
+/* Inline helper text rendered next to the same-company CTA button.
+   Keeps the rationale visible without crowding the headline copy. */
+.cw-fahras__cta-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: var(--cw-text-muted);
+    line-height: 1.5;
+}
+.cw-fahras__cta-hint i {
+    color: var(--cw-info);
+}
+
+/* Make the same-company CTA button feel like the "right path" — slightly
+   larger hit area and a subtle pulse to draw the eye away from the
+   blocked Next button. */
+.cw-fahras[data-cw-fahras-state="same-company"] .cw-fahras__cta .cw-btn--success {
+    padding-inline: 16px;
+    box-shadow: 0 0 0 0 var(--cw-success-soft);
+    animation: cw-fahras-cta-pulse 2.4s ease-out 1;
+}
+@keyframes cw-fahras-cta-pulse {
+    0%   { box-shadow: 0 0 0 0   rgba(16,185,129,.45); }
+    70%  { box-shadow: 0 0 0 10px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0   rgba(16,185,129,0); }
 }
 
 /* ─── Override banner (shown after successful override) ──────────── */

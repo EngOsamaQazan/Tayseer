@@ -170,6 +170,17 @@
                 case 'search':          e.preventDefault(); openSearchModal();          break;
                 case 'open-override':   e.preventDefault(); openOverrideModal();        break;
                 case 'clear-override':  e.preventDefault(); clearOverride();            break;
+                case 'add-contract':
+                    // Intentional navigation away from the wizard — silence
+                    // the beforeunload "unsaved changes" guard so the rep
+                    // doesn't see a confusing browser confirm dialog. The
+                    // <a> handles the actual navigation.
+                    if (window.CW && typeof window.CW.disarmUnloadGuard === 'function') {
+                        window.CW.disarmUnloadGuard();
+                    } else {
+                        try { $(window).off('beforeunload.cw'); } catch (_) {}
+                    }
+                    break;
             }
         });
 
@@ -361,10 +372,23 @@
         var blocks  = !!resp.blocks;
         var warns   = !!resp.warns;
 
+        // Same-company optimisation: when every match in the verdict comes
+        // from THIS Tayseer instance's own company, the customer is already
+        // ours and the right action is to add a new contract on their
+        // existing record — not to recreate them as a customer. Render a
+        // distinct state and a green CTA in place of (or alongside) the
+        // standard block message. The wizard's "Next" button stays locked
+        // either way: the rep should leave the wizard, not push through it.
+        var sameCompany = !!(resp.same_company_only && resp.own_company_name);
+
         var stateName = 'can';
         var icon      = 'fa-check-circle';
         var title     = 'يمكن إضافة العميل.';
-        if (verdict === 'no_record') {
+        if (sameCompany) {
+            stateName = 'same-company';
+            icon      = 'fa-handshake-o';
+            title     = 'هذا العميل مسجَّل لدى شركتنا — أنشئ له عقداً جديداً بدلاً من إضافته كعميل.';
+        } else if (verdict === 'no_record') {
             stateName = 'can';
             icon      = 'fa-check-circle';
             title     = 'لا توجد قيود على هذا العميل في نظام الفهرس.';
@@ -395,7 +419,9 @@
         if (resp.request_id) meta.push('<i class="fa fa-hashtag"></i> ' + escapeHtml(resp.request_id));
 
         var ctaHtml = '';
-        if (blocks && state.canOverride) {
+        if (sameCompany) {
+            ctaHtml = renderSameCompanyCta(resp);
+        } else if (blocks && state.canOverride) {
             ctaHtml =
                 '<div class="cw-fahras__cta">' +
                     '<button type="button" class="cw-btn cw-btn--danger cw-btn--sm" data-cw-fahras-action="open-override">' +
@@ -405,7 +431,14 @@
                 '</div>';
         }
 
-        var subText = resp.reason_ar ? '<p class="cw-fahras__sub">' + escapeHtml(resp.reason_ar) + '</p>' : '';
+        // Prefer the controller-supplied tailored message for the
+        // same-company case; otherwise fall back to the raw Fahras reason.
+        var subRaw = sameCompany
+            ? (resp.same_company_message_ar || resp.reason_ar || '')
+            : (resp.reason_ar || '');
+        var subText = subRaw
+            ? '<p class="cw-fahras__sub">' + escapeHtml(subRaw) + '</p>'
+            : '';
 
         var html =
             '<div class="cw-fahras__icon" aria-hidden="true"><i class="fa ' + icon + '"></i></div>' +
@@ -418,6 +451,65 @@
         state.$body.html(html);
 
         renderMatches(resp.matches || []);
+    }
+
+    /**
+     * Build the green «إضافة عقد جديد للعميل» CTA strip rendered when the
+     * Fahras verdict matches are exclusively from this Tayseer instance's
+     * own company. Three sub-cases handled:
+     *   1. Local customer found + user can add contracts → primary CTA link.
+     *   2. Local customer found + user lacks CONT_CREATE → disabled link
+     *      with explanatory tooltip (so the rep escalates to a manager).
+     *   3. No local customer found (Fahras-cache only)   → no CTA, just an
+     *      info note (the controller already produced a friendly message).
+     */
+    function renderSameCompanyCta(resp) {
+        var url           = resp.add_contract_url || '';
+        var hasUrl        = !!url;
+        var allowed       = !!resp.add_contract_allowed;
+        var custName      = resp.existing_customer_name || '';
+        var btnLabel      = custName
+            ? 'إضافة عقد جديد لـ ' + custName
+            : 'إضافة عقد جديد للعميل';
+
+        // Customer is in Fahras under "us" but not yet imported into Tayseer.
+        // Without a local id we have nowhere to link to; bail with no CTA.
+        if (!hasUrl) {
+            return '';
+        }
+
+        if (!allowed) {
+            return (
+                '<div class="cw-fahras__cta">' +
+                    '<button type="button" class="cw-btn cw-btn--outline cw-btn--sm" disabled ' +
+                            'aria-disabled="true" ' +
+                            'title="لا تملك صلاحية «إضافة عقد».">' +
+                        '<i class="fa fa-file-text-o" aria-hidden="true"></i> ' +
+                        '<span>' + escapeHtml(btnLabel) + '</span>' +
+                    '</button>' +
+                    '<span class="cw-fahras__cta-hint">' +
+                        '<i class="fa fa-info-circle" aria-hidden="true"></i> ' +
+                        'تواصل مع المدير لإصدار صلاحية «إضافة عقد».' +
+                    '</span>' +
+                '</div>'
+            );
+        }
+
+        return (
+            '<div class="cw-fahras__cta">' +
+                '<a href="' + escapeHtml(url) + '" ' +
+                   'class="cw-btn cw-btn--success cw-btn--sm" ' +
+                   'data-cw-fahras-action="add-contract" ' +
+                   'data-pjax="0">' +
+                    '<i class="fa fa-file-text-o" aria-hidden="true"></i> ' +
+                    '<span>' + escapeHtml(btnLabel) + '</span>' +
+                '</a>' +
+                '<span class="cw-fahras__cta-hint">' +
+                    '<i class="fa fa-info-circle" aria-hidden="true"></i> ' +
+                    'سيتم نقلك إلى صفحة إنشاء العقد مع تعبئة بيانات العميل.' +
+                '</span>' +
+            '</div>'
+        );
     }
 
     function renderMatches(matches) {

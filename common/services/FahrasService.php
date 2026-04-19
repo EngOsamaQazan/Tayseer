@@ -55,6 +55,15 @@ class FahrasService extends Component
     public string $overridePerm   = 'customer.fahras.override';
     public string $logViewPerm    = 'customer.fahras.log.view';
 
+    /**
+     * Canonical Fahras account name for THIS Tayseer install (e.g. "جدل",
+     * "نماء", "وتر", "بسيل", "زجل", "عالم المجد"). Configured per-environment
+     * via params/params-local. When set, the wizard's verdict layer uses it
+     * to detect "customer is already ours, suggest adding a contract instead
+     * of re-creating the customer". When null, the optimisation is skipped.
+     */
+    public ?string $companyName  = null;
+
     /** Set true in tests to bypass the cache layer. */
     public bool   $bypassCache    = false;
 
@@ -74,10 +83,18 @@ class FahrasService extends Component
         foreach ([
             'enabled','baseUrl','token','clientId','timeoutSec',
             'cacheTtlSec','failurePolicy','overridePerm','logViewPerm',
+            'companyName',
         ] as $k) {
             if (array_key_exists($k, $params) && $params[$k] !== null) {
                 $this->{$k} = $params[$k];
             }
+        }
+        // Normalise the company name once at boot so callers don't have to
+        // think about whitespace / case folding (Arabic strings are largely
+        // case-insensitive but trimming + collapsing whitespace is safer).
+        if ($this->companyName !== null) {
+            $this->companyName = self::normaliseCompany($this->companyName);
+            if ($this->companyName === '') $this->companyName = null;
         }
 
         $this->baseUrl       = rtrim((string)$this->baseUrl, '/');
@@ -311,5 +328,83 @@ class FahrasService extends Component
         $name = str_replace('ى', 'ي', $name);
         $name = mb_strtolower(trim($name), 'UTF-8');
         return preg_replace('/\s+/u', ' ', $name) ?? $name;
+    }
+
+    /**
+     * Reduce a Fahras `account` string to the same shape used by
+     * Fahras's own canonicalAccountName(). Mirrors the alias map so
+     * verbose forms like "شركة جدل للتقسيط" collapse to "جدل" — without
+     * round-tripping through Fahras itself.
+     *
+     * Used both at boot (to canonicalise the configured companyName) and
+     * by sameCompanyOnly() to compare match.account values regardless of
+     * which data source produced them.
+     */
+    public static function normaliseCompany(string $name): string
+    {
+        $name = trim((string)$name);
+        if ($name === '') return '';
+        $name = preg_replace('/\s+/u', ' ', $name) ?? $name;
+
+        // Canonical short-form aliases mirroring
+        // Fahras's _getAccountAliasMap(). Keep in sync on both sides.
+        static $aliases = [
+            'زجل'                       => 'زجل',
+            'جدل'                       => 'جدل',
+            'شركة جدل'                  => 'جدل',
+            'شركة جدل للتقسيط'          => 'جدل',
+            'نماء'                      => 'نماء',
+            'شركة نماء'                 => 'نماء',
+            'شركة نماء للتقسيط'         => 'نماء',
+            'وتر'                       => 'وتر',
+            'شركة وتر'                  => 'وتر',
+            'شركة وتر للتقسيط'          => 'وتر',
+            'المجد'                     => 'عالم المجد',
+            'عالم المجد'                => 'عالم المجد',
+            'عالم المجد للتقسيط'        => 'عالم المجد',
+            'شركة عالم المجد'           => 'عالم المجد',
+            'شركة عالم المجد للتقسيط'   => 'عالم المجد',
+            'بسيل'                      => 'بسيل',
+            'عمار'                      => 'بسيل',
+            'شركة بسيل'                 => 'بسيل',
+            'شركة بسيل للتقسيط'         => 'بسيل',
+        ];
+        if (isset($aliases[$name])) return $aliases[$name];
+
+        // Defensive regex fallback: «شركة X للتقسيط» / «شركة X» → X.
+        if (preg_match('/^شركة\s+(.+?)\s+للتقسيط$/u', $name, $m)) {
+            $core = trim($m[1]);
+            return $aliases[$core] ?? $core;
+        }
+        if (preg_match('/^شركة\s+(.+)$/u', $name, $m)) {
+            $core = trim($m[1]);
+            return $aliases[$core] ?? $core;
+        }
+        return $name;
+    }
+
+    /**
+     * Inspect a verdict's matches and decide whether they ALL belong
+     * to this Tayseer instance's own company. Used to short-circuit a
+     * `cannot_sell` verdict into a "create new contract for existing
+     * customer" CTA — see WizardController::actionFahrasCheck().
+     *
+     * Returns false when:
+     *   • $companyName is not configured (the optimisation is opt-in).
+     *   • The match list is empty.
+     *   • At least one match.account belongs to a different company.
+     */
+    public function isSameCompanyOnly(FahrasVerdict $verdict): bool
+    {
+        if ($this->companyName === null || $this->companyName === '') return false;
+        if (empty($verdict->matches)) return false;
+
+        foreach ($verdict->matches as $m) {
+            $acc = self::normaliseCompany((string)($m['account'] ?? ''));
+            if ($acc === '' || $acc !== $this->companyName) {
+                return false;
+            }
+        }
+        return true;
     }
 }
