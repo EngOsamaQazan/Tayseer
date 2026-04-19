@@ -1946,6 +1946,64 @@ class WizardController extends Controller
 
             // ── Filter the extraction by the side we're actually saving. ──
             $filtered = $this->filterScanBySide($extracted, $side, $detectedSide);
+
+            // ── Detect front↔back national-ID mismatch BEFORE mapping ──────
+            // Real-world failure mode (production case 9761036619 vs the
+            // MRZ-encoded 99761036619 on the same Jordanian ID): the
+            // printed front number and the MRZ back number disagree,
+            // which usually means either:
+            //   • The card has been physically tampered with (fraud).
+            //   • The MRZ has been damaged/scratched and OCR is misreading.
+            //   • The card was issued in a known era when MRZ had a
+            //     different optional-data layout (rare).
+            // In every case the FRONT printed number is the legal source
+            // of truth (matches the citizen's records at the Civil Status
+            // Department). We:
+            //   1. Drop the back's id_number from `$filtered` so it never
+            //      overwrites the front's correct value already in the form.
+            //   2. Surface a structured warning in `$response['warnings']`
+            //      so the rep sees an unmissable alert and can verify the
+            //      document visually before committing the customer.
+            // We do NOT block the back-scan acceptance — the document_number
+            // (the actual point of the back scan) is still extracted and
+            // valid; only the contradictory id_number is suppressed.
+            $scanWarnings = [];
+            $effectiveSideForCmp = ($side === 'auto') ? $detectedSide : $side;
+            if ($effectiveSideForCmp === 'back' && !empty($filtered['id_number'])) {
+                $frontId = $this->getDraftFrontIdNumber();
+                $backId  = preg_replace('/\D+/', '', (string)$filtered['id_number']);
+                if ($frontId !== null && $backId !== '' && $frontId !== $backId) {
+                    Yii::warning(sprintf(
+                        'Wizard scan: ID mismatch — front=%s back(MRZ)=%s — '
+                        . 'front retained, back suppressed.',
+                        $frontId,
+                        $backId
+                    ), __METHOD__);
+
+                    $scanWarnings[] = [
+                        'level'   => 'warning',
+                        'code'    => 'ID_FRONT_BACK_MISMATCH',
+                        'title'   => 'تناقض في وثيقة الهوية',
+                        'message' => 'الرقم الوطني المطبوع على وجه البطاقة لا يطابق '
+                                   . 'الرقم المُشفّر في الـMRZ على الظهر. تم اعتماد '
+                                   . 'الرقم المطبوع على الوجه باعتباره المرجع الرسمي. '
+                                   . 'يُرجى مراجعة الوثيقة بصرياً للتحقّق من سلامتها '
+                                   . 'قبل المتابعة.',
+                        'data'    => [
+                            'front_id'         => $frontId,
+                            'back_mrz_id'      => $backId,
+                            'adopted_id'       => $frontId,
+                            'adopted_source'   => 'front_printed',
+                            'suppressed_value' => $backId,
+                        ],
+                    ];
+                    // Drop the back's id_number so mapScanToWizardFields()
+                    // doesn't push it back into the form and overwrite the
+                    // front-supplied one.
+                    unset($filtered['id_number']);
+                }
+            }
+
             $mapped   = $this->mapScanToWizardFields($filtered, $lookups);
 
             // ── Persist the captured image to the new Media store (os_ImageManager).
@@ -1990,6 +2048,14 @@ class WizardController extends Controller
                 'raw'            => $extracted,
                 'image_id'       => $imageRef['image_id'] ?? null,
                 'image_url'      => $imageRef['url']      ?? null,
+                // Document integrity alerts — empty array when the scan is
+                // clean. Currently surfaces:
+                //   • ID_FRONT_BACK_MISMATCH — printed front national_id
+                //     differs from MRZ-encoded back national_id.
+                // The wizard renders each entry as a sticky warning toast
+                // AND a persistent banner at the top of Step 1 so the rep
+                // cannot miss the discrepancy. See scan.js → renderScanWarnings().
+                'warnings'       => $scanWarnings,
                 'meta'           => [
                     'source'     => 'gemini-vision',
                     'elapsed_ms' => (int)((microtime(true) - $startedAt) * 1000),
@@ -2727,6 +2793,16 @@ class WizardController extends Controller
             if (!empty($extracted['document_type'])) {
                 $payload['_scan']['document_type'] = (string)$extracted['document_type'];
             }
+            // Capture the FRONT-side id_number so the next back-side scan
+            // can detect MRZ↔printed-ID mismatches (real-world failure
+            // mode: forged or damaged Jordanian ID cards where the MRZ
+            // on the back encodes a different national_id than the one
+            // printed on the front, e.g. extra leading digit). Stored
+            // ONLY for the front side — the back's id_number is the one
+            // we suspect, never the source of truth.
+            if ($side === 'front' && !empty($extracted['id_number'])) {
+                $payload['_scan']['front_id_number'] = (string)$extracted['id_number'];
+            }
 
             // Per-side metadata so finishCustomer() can create the correct
             // customers_document row PER physical document — needed once we
@@ -2771,6 +2847,30 @@ class WizardController extends Controller
             $payload = $this->decodePayload($draft);
             $val = $payload['_scan']['issuing_body'] ?? null;
             return is_string($val) && $val !== '' ? strtolower($val) : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Read the front-side national ID captured by an earlier scan in the
+     * same draft session. Used by the back-side scan flow to detect
+     * forged/damaged IDs whose printed front number disagrees with the
+     * MRZ-encoded back number.
+     *
+     * Returns the digits-only canonical form, or null when the front was
+     * not yet scanned (or scanned without a recoverable id_number).
+     */
+    protected function getDraftFrontIdNumber(): ?string
+    {
+        try {
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $this->draftKey());
+            if (!$draft) return null;
+            $payload = $this->decodePayload($draft);
+            $val = $payload['_scan']['front_id_number'] ?? null;
+            if (!is_string($val) || $val === '') return null;
+            $digits = preg_replace('/\D+/', '', $val);
+            return $digits !== '' ? $digits : null;
         } catch (\Throwable $e) {
             return null;
         }

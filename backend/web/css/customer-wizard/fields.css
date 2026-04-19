@@ -975,6 +975,113 @@ input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
     color: var(--cw-info, #1d4ed8);
 }
 
+/* ─── Document-integrity warnings (front↔back ID mismatch, …) ───────
+   Sticky banner stack rendered by scan.js → renderScanWarnings().
+   Triggered when the scanner detects a discrepancy in the physical
+   document the rep is processing — currently the printed front
+   national_id vs the MRZ-encoded back national_id on Jordanian IDs.
+   Visual treatment is amber (caution, not blocking) and intentionally
+   prominent: this is a fraud / damaged-document signal the rep MUST
+   see before saving the customer. */
+.cw-scan-warnings {
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.cw-scan-warning {
+    position: relative;
+    padding: 14px 40px 14px 16px;
+    border: 1px solid #f59e0b;
+    border-inline-start: 4px solid #d97706;
+    border-radius: var(--cw-radius, 8px);
+    background: #fffbeb;
+    color: #78350f;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, .08);
+    font-size: .94rem;
+    line-height: 1.55;
+}
+.cw-scan-warning__head {
+    margin: 0 0 6px 0;
+    color: #92400e;
+    font-size: 1.02rem;
+    font-weight: 600;
+}
+.cw-scan-warning__head span[aria-hidden] {
+    color: #d97706;
+    margin-inline-end: 4px;
+    font-size: 1.1em;
+}
+.cw-scan-warning__body { margin: 0 0 10px 0; }
+.cw-scan-warning__data {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 12px;
+    margin: 0;
+    padding: 10px 12px;
+    background: #fef3c7;
+    border-radius: 6px;
+    font-size: .9rem;
+}
+.cw-scan-warning__data dt {
+    font-weight: 600;
+    color: #92400e;
+}
+.cw-scan-warning__data dd {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.cw-scan-warning__data code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-weight: 700;
+    background: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #78350f;
+    border: 1px solid #fde68a;
+    letter-spacing: .03em;
+}
+.cw-scan-warning__pill {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    line-height: 1.6;
+}
+.cw-scan-warning__pill--accept {
+    background: #16a34a;
+    color: #fff;
+}
+.cw-scan-warning__pill--reject {
+    background: #e5e7eb;
+    color: #6b7280;
+    text-decoration: line-through;
+}
+.cw-scan-warning__close {
+    position: absolute;
+    top: 8px;
+    inset-inline-end: 8px;
+    width: 28px;
+    height: 28px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #92400e;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s ease;
+}
+.cw-scan-warning__close:hover,
+.cw-scan-warning__close:focus-visible {
+    background: rgba(217, 119, 6, .15);
+    outline: none;
+}
+
 /* ─────────────── Reduced-motion ─────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -992,4 +1099,5 @@ input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
         outline: 2px solid var(--cw-color-success, #22c55e);
         outline-offset: 2px;
     }
+    .cw-scan-warning__close { transition: none; }
 }

@@ -72,6 +72,114 @@
         }
     }
 
+    /** Cheap HTML-escape — never trust server strings inside .html(). */
+    function esc(s) {
+        return $('<div/>').text(s == null ? '' : String(s)).html();
+    }
+
+    /**
+     * Render document-integrity warnings as STICKY banners at the top of
+     * Step 1 — never as transient toasts alone, because the rep MUST see
+     * the discrepancy before saving the customer.
+     *
+     * The currently-emitted code is `ID_FRONT_BACK_MISMATCH` (printed
+     * national ID on the front does not match the MRZ-encoded one on the
+     * back of the same Jordanian civil ID — typically a sign of a
+     * tampered document or a damaged MRZ). The banner stays on screen
+     * until the rep explicitly dismisses it AND a parallel long-lived
+     * warning toast fires for redundancy in case the banner is offscreen.
+     *
+     * Each warning is keyed by `code` so a second scan with the same
+     * mismatch refreshes the existing banner in place rather than
+     * stacking duplicates.
+     *
+     * @param {Array<{level,code,title,message,data}>} warnings
+     */
+    function renderScanWarnings(warnings) {
+        if (!warnings || !warnings.length) return;
+
+        // Banner host — created once on first warning, then reused.
+        var $host = $('#cw-scan-warnings');
+        if (!$host.length) {
+            // Anchor right below the scan-button area so the rep sees the
+            // warning at the exact moment they look for confirmation that
+            // the scan succeeded. Falls back to top of step section if
+            // the scan host isn't found.
+            var $anchor = $('[data-cw-role="scan-input"]').first().closest('.cw-section');
+            if (!$anchor.length) $anchor = $('.cw-section--active').first();
+            if (!$anchor.length) return;
+
+            $host = $('<div/>', {
+                id: 'cw-scan-warnings',
+                'class': 'cw-scan-warnings',
+                role: 'alert',
+                'aria-live': 'assertive'
+            });
+            $anchor.prepend($host);
+        }
+
+        warnings.forEach(function (w) {
+            if (!w || !w.code) return;
+            var code  = w.code;
+            var title = w.title   || 'تنبيه';
+            var msg   = w.message || '';
+            var data  = w.data    || {};
+
+            // Build a concise comparison strip when the warning carries
+            // before/after data — typically for ID mismatches.
+            var dataHtml = '';
+            if (code === 'ID_FRONT_BACK_MISMATCH') {
+                dataHtml =
+                    '<dl class="cw-scan-warning__data">' +
+                        '<dt>الوجه (المطبوع):</dt>' +
+                        '<dd><code>' + esc(data.front_id || '—') + '</code> ' +
+                            '<span class="cw-scan-warning__pill cw-scan-warning__pill--accept">' +
+                            'المعتمد</span>' +
+                        '</dd>' +
+                        '<dt>الظهر (MRZ):</dt>' +
+                        '<dd><code>' + esc(data.back_mrz_id || '—') + '</code> ' +
+                            '<span class="cw-scan-warning__pill cw-scan-warning__pill--reject">' +
+                            'مُهمَل</span>' +
+                        '</dd>' +
+                    '</dl>';
+            }
+
+            var html =
+                '<div class="cw-scan-warning cw-scan-warning--' + esc(w.level || 'warning') + '" ' +
+                     'data-cw-warning-code="' + esc(code) + '">' +
+                    '<button type="button" class="cw-scan-warning__close" ' +
+                            'aria-label="إغلاق التنبيه">&times;</button>' +
+                    '<p class="cw-scan-warning__head">' +
+                        '<span aria-hidden="true">⚠</span> ' +
+                        '<strong>' + esc(title) + '</strong>' +
+                    '</p>' +
+                    '<p class="cw-scan-warning__body">' + esc(msg) + '</p>' +
+                    dataHtml +
+                '</div>';
+
+            // Replace any existing banner for the same code (don't stack).
+            var $existing = $host.find('[data-cw-warning-code="' + code + '"]');
+            if ($existing.length) {
+                $existing.replaceWith(html);
+            } else {
+                $host.append(html);
+            }
+
+            // Long-lived toast for visibility when the banner is scrolled
+            // out of view. 12s is well past the 4s "feedback" budget — the
+            // rep needs time to read the comparison and decide.
+            toast(title + ' — ' + msg, 'warning', 12000);
+        });
+
+        // Wire dismiss once (delegated so dynamic banners are covered).
+        if (!$host.data('cw-bound')) {
+            $host.on('click', '.cw-scan-warning__close', function () {
+                $(this).closest('.cw-scan-warning').remove();
+            });
+            $host.data('cw-bound', true);
+        }
+    }
+
     /** Read the CSRF token Yii embeds in <meta name="csrf-token">. */
     function csrfToken() {
         return $('meta[name="csrf-token"]').attr('content') || '';
@@ -678,6 +786,14 @@
                     // feedback that the right document type was matched.
                     if (resp.note) {
                         toast(resp.note, 'info', 4000);
+                    }
+
+                    // Render any document-integrity warnings (currently:
+                    // ID_FRONT_BACK_MISMATCH). These are never transient —
+                    // they reflect a real discrepancy in the physical
+                    // document the rep is processing and MUST be seen.
+                    if (resp.warnings && resp.warnings.length) {
+                        renderScanWarnings(resp.warnings);
                     }
 
                     if (files.length === 2 && idx === 0 && (thisChanged || resp.image_id)
