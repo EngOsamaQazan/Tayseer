@@ -51,7 +51,17 @@
         // which the new library logs a deprecation warning for; we don't pass
         // it so the console stays clean.)
         countryOrder:          ['jo', 'sa', 'ae', 'sy', 'iq', 'ps', 'lb', 'eg', 'kw', 'qa'],
-        separateDialCode:      true,
+        // ── Why `separateDialCode: false` ──
+        // We deliberately do NOT split the dial code into its own button.
+        // Doing so creates a visual stutter for pre-filled E.164 numbers
+        // (edit mode, smart-scan pre-fill): the button shows "+962" AND
+        // the input still carries "+962797707062" → the country code
+        // appears twice side-by-side. With separateDialCode disabled, the
+        // input always renders the full international number (flag-only
+        // dropdown to its left), so there is exactly one "+962" on screen
+        // and the form-submit value is always canonical E.164 — no hidden
+        // mirror field, no blur-time reconciliation race.
+        separateDialCode:      false,
         nationalMode:          false,
         formatOnDisplay:       true,
         autoPlaceholder:       'aggressive',
@@ -126,6 +136,21 @@
             var $iti = $el.closest('.iti');
             if ($iti.length) {
                 $iti.css('width', '100%').addClass('iti--cw');
+            }
+
+            // ── Normalise pre-filled values on init ──
+            // When the field arrives with an existing E.164 value (edit
+            // mode, or after `actionScan` pre-fills from an ID scan), we
+            // pipe it through setNumber() so libphonenumber can:
+            //   (a) auto-select the matching country flag,
+            //   (b) apply locale-aware visual formatting,
+            //   (c) write the canonical E.164 back into the input.
+            // Because we run with `separateDialCode: false`, the input's
+            // .value always retains the full +<dial><national>, so form
+            // serialization stays correct without a hidden mirror field.
+            var preset = $el.val();
+            if (preset && preset.charAt(0) === '+' && typeof iti.setNumber === 'function') {
+                try { iti.setNumber(preset); } catch (_) { /* keep raw value */ }
             }
 
             // ── Keep input's inline padding-left in sync with the button ──
