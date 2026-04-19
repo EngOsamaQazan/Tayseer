@@ -367,27 +367,45 @@
             // Run once on bind in case the field is pre-filled from a draft.
             refreshMeta();
 
-            // When the user clicks "update" we open the jobs editor in a new
-            // tab; on return to the wizard tab we re-poll the endpoint so the
-            // alert vanishes the moment the missing fields land in the DB —
-            // no manual refresh needed. We register the focus listener once
-            // per combobox instance and mark a "needs refresh" intent only
-            // after the user actually clicked the CTA, so we don't spam
-            // the endpoint on every tab switch.
-            var pendingRefresh = false;
-            $wrap.on('click' + NS, '[data-cw-meta-edit]', function () {
-                pendingRefresh = true;
-            });
-            window.addEventListener('focus', function () {
-                if (!pendingRefresh) return;
-                pendingRefresh = false;
+            // ── Cross-tab self-healing ────────────────────────────────────
+            // When the user updates the employer record in another tab
+            // (whether they reached it via our CTA or any other route —
+            // direct nav, bookmark, opened from a different module) we
+            // want THIS warning to disappear automatically the moment
+            // they come back. No "click refresh" expectation, no manual
+            // page reload.
+            //
+            // Strategy: re-poll on tab focus / visibility change whenever
+            // the combobox has a selected value. Throttled to once per
+            // 1.5s so rapid window switches (alt-tab spam) don't hammer
+            // the endpoint, and a flag suppresses the call when an in-
+            // flight request is already pending.
+            //
+            // The CTA-click "pending intent" we used before is dropped:
+            // it only handled the happy path where users clicked our
+            // button, missing the common case where the rep already had
+            // the jobs editor open in another tab from earlier work.
+            var lastRefreshAt = 0;
+            var REFRESH_MIN_GAP_MS = 1500;
+            function maybeRefreshOnReturn() {
+                if (!$select.val()) return;          // nothing selected → no alert to refresh
+                var now = Date.now();
+                if (now - lastRefreshAt < REFRESH_MIN_GAP_MS) return;
+                lastRefreshAt = now;
                 refreshMeta();
-            });
+            }
+            window.addEventListener('focus', maybeRefreshOnReturn);
             document.addEventListener('visibilitychange', function () {
-                if (document.visibilityState !== 'visible') return;
-                if (!pendingRefresh) return;
-                pendingRefresh = false;
-                refreshMeta();
+                if (document.visibilityState === 'visible') {
+                    maybeRefreshOnReturn();
+                }
+            });
+            // The CTA click stays useful as an EXPLICIT signal: the moment
+            // the editor tab is opened we set a slightly more aggressive
+            // "next focus = guaranteed refresh" so even back-to-back tab
+            // switches within the throttle window still re-check once.
+            $wrap.on('click' + NS, '[data-cw-meta-edit]', function () {
+                lastRefreshAt = 0;   // bypass throttle on the next return
             });
         }
 

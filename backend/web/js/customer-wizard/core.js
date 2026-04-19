@@ -414,6 +414,43 @@
             state.dirty = true;
             setStatus('dirty');
             scheduleAutosave();
+
+            // Auto-dismiss server-side validation errors as soon as the
+            // user (or an auto-fill module like scan.js / scan-income.js)
+            // populates the offending field. Without this, the red ring
+            // and "حقل مطلوب" message linger on a field the user has
+            // already corrected — confusing them into thinking the next
+            // step still won't accept their input.
+            //
+            // Implementation:
+            //   • Clear when the field has a non-empty value (text/number/
+            //     select).
+            //   • Clear when ANY radio in the same name-group is :checked
+            //     (because the listener fires on the individual radio that
+            //     was just toggled).
+            //   • Skip when the field is still empty — the user might be
+            //     deleting and we want the error to remain.
+            var $input = $(this);
+            var $field = $input.closest('.cw-field, .form-group');
+            if (!$field.length || !$field.hasClass('cw-field--error')) return;
+
+            var type = ($input.attr('type') || '').toLowerCase();
+            var hasValue;
+            if (type === 'radio' || type === 'checkbox') {
+                var name = $input.attr('name');
+                hasValue = name
+                    ? state.$shell.find('[name="' + cssEscape(name) + '"]:checked').length > 0
+                    : $input.is(':checked');
+            } else {
+                hasValue = String($input.val() || '').trim() !== '';
+            }
+
+            if (hasValue) {
+                $field.removeClass('cw-field--error');
+                $field.find('.cw-field__error-msg').remove();
+                state.$shell.find('[name="' + cssEscape($input.attr('name') || '') + '"]')
+                    .removeAttr('aria-invalid');
+            }
         });
     }
 
