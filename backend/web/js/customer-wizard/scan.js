@@ -78,106 +78,152 @@
     }
 
     /**
-     * Render document-integrity warnings as STICKY banners at the top of
-     * Step 1 — never as transient toasts alone, because the rep MUST see
-     * the discrepancy before saving the customer.
+     * Render document-integrity warnings as a BLOCKING modal popup that
+     * the rep MUST explicitly acknowledge by clicking «اعتماد» before
+     * any further interaction with the wizard. This is intentionally
+     * disruptive — a discrepancy in the physical document is a fraud /
+     * data-integrity signal and a passive banner is too easy to dismiss
+     * inattentively.
      *
-     * The currently-emitted code is `ID_FRONT_BACK_MISMATCH` (printed
-     * national ID on the front does not match the MRZ-encoded one on the
-     * back of the same Jordanian civil ID — typically a sign of a
-     * tampered document or a damaged MRZ). The banner stays on screen
-     * until the rep explicitly dismisses it AND a parallel long-lived
-     * warning toast fires for redundancy in case the banner is offscreen.
+     * Currently emitted: ID_FRONT_BACK_MISMATCH (printed national ID on
+     * the front of a Jordanian civil ID does not match the MRZ-encoded
+     * one on the back). The modal:
+     *   • Locks focus inside itself (keyboard-trap) until acknowledged.
+     *   • Cannot be dismissed by clicking the backdrop or pressing Esc —
+     *     the rep MUST click the primary button. This is the only place
+     *     in the wizard where we make this trade-off; standard alerts
+     *     remain Esc-dismissable everywhere else.
+     *   • Visually loud (amber palette, large icon, comparison strip).
+     *   • Plays no parallel toast — the modal IS the notification.
      *
-     * Each warning is keyed by `code` so a second scan with the same
-     * mismatch refreshes the existing banner in place rather than
-     * stacking duplicates.
+     * Multiple warnings in the same response are queued and shown one
+     * after another (the next opens when the previous is acknowledged).
      *
      * @param {Array<{level,code,title,message,data}>} warnings
      */
     function renderScanWarnings(warnings) {
         if (!warnings || !warnings.length) return;
+        warnings.forEach(function (w) { showWarningModal(w); });
+    }
 
-        // Banner host — created once on first warning, then reused.
-        var $host = $('#cw-scan-warnings');
-        if (!$host.length) {
-            // Anchor right below the scan-button area so the rep sees the
-            // warning at the exact moment they look for confirmation that
-            // the scan succeeded. Falls back to top of step section if
-            // the scan host isn't found.
-            var $anchor = $('[data-cw-role="scan-input"]').first().closest('.cw-section');
-            if (!$anchor.length) $anchor = $('.cw-section--active').first();
-            if (!$anchor.length) return;
+    // Queue lets us show modals one-at-a-time even if a multi-side scan
+    // returns several warnings in a tight burst.
+    var __warningQueue = [];
+    var __warningOpen  = false;
 
-            $host = $('<div/>', {
-                id: 'cw-scan-warnings',
-                'class': 'cw-scan-warnings',
-                role: 'alert',
-                'aria-live': 'assertive'
-            });
-            $anchor.prepend($host);
+    function showWarningModal(w) {
+        if (!w || !w.code) return;
+        __warningQueue.push(w);
+        if (!__warningOpen) drainWarningQueue();
+    }
+
+    function drainWarningQueue() {
+        if (!__warningQueue.length) { __warningOpen = false; return; }
+        __warningOpen = true;
+        var w = __warningQueue.shift();
+        openWarningModal(w, function () {
+            // Brief gap so the next modal doesn't feel stacked.
+            setTimeout(drainWarningQueue, 120);
+        });
+    }
+
+    function openWarningModal(w, onAck) {
+        var code  = w.code;
+        var title = w.title   || 'تنبيه';
+        var msg   = w.message || '';
+        var data  = w.data    || {};
+
+        // Comparison strip (currently only meaningful for the ID mismatch).
+        var dataHtml = '';
+        if (code === 'ID_FRONT_BACK_MISMATCH') {
+            dataHtml =
+                '<dl class="cw-scan-warning__data">' +
+                    '<dt>الوجه (المطبوع):</dt>' +
+                    '<dd><code>' + esc(data.front_id || '—') + '</code> ' +
+                        '<span class="cw-scan-warning__pill cw-scan-warning__pill--accept">' +
+                        'المعتمد</span>' +
+                    '</dd>' +
+                    '<dt>الظهر (MRZ):</dt>' +
+                    '<dd><code>' + esc(data.back_mrz_id || '—') + '</code> ' +
+                        '<span class="cw-scan-warning__pill cw-scan-warning__pill--reject">' +
+                        'مُهمَل</span>' +
+                    '</dd>' +
+                '</dl>';
         }
 
-        warnings.forEach(function (w) {
-            if (!w || !w.code) return;
-            var code  = w.code;
-            var title = w.title   || 'تنبيه';
-            var msg   = w.message || '';
-            var data  = w.data    || {};
+        var $modal = $(
+            '<div class="cw-scan-modal" role="dialog" aria-modal="true" ' +
+                 'aria-labelledby="cw-scan-modal-title" ' +
+                 'aria-describedby="cw-scan-modal-body" ' +
+                 'data-cw-warning-code="' + esc(code) + '">' +
+                '<div class="cw-scan-modal__backdrop" aria-hidden="true"></div>' +
+                '<div class="cw-scan-modal__dialog">' +
+                    '<div class="cw-scan-modal__icon" aria-hidden="true">' +
+                        '<i class="fa fa-exclamation-triangle"></i>' +
+                    '</div>' +
+                    '<h3 id="cw-scan-modal-title" class="cw-scan-modal__title">' +
+                        esc(title) +
+                    '</h3>' +
+                    '<div id="cw-scan-modal-body" class="cw-scan-modal__body">' +
+                        '<p class="cw-scan-modal__msg">' + esc(msg) + '</p>' +
+                        dataHtml +
+                    '</div>' +
+                    '<div class="cw-scan-modal__actions">' +
+                        '<button type="button" class="cw-btn cw-btn--warning cw-btn--lg" ' +
+                                'data-cw-scan-modal-ack autofocus>' +
+                            '<i class="fa fa-check" aria-hidden="true"></i> ' +
+                            '<span>اعتماد رقم الوجه والمتابعة</span>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>'
+        );
 
-            // Build a concise comparison strip when the warning carries
-            // before/after data — typically for ID mismatches.
-            var dataHtml = '';
-            if (code === 'ID_FRONT_BACK_MISMATCH') {
-                dataHtml =
-                    '<dl class="cw-scan-warning__data">' +
-                        '<dt>الوجه (المطبوع):</dt>' +
-                        '<dd><code>' + esc(data.front_id || '—') + '</code> ' +
-                            '<span class="cw-scan-warning__pill cw-scan-warning__pill--accept">' +
-                            'المعتمد</span>' +
-                        '</dd>' +
-                        '<dt>الظهر (MRZ):</dt>' +
-                        '<dd><code>' + esc(data.back_mrz_id || '—') + '</code> ' +
-                            '<span class="cw-scan-warning__pill cw-scan-warning__pill--reject">' +
-                            'مُهمَل</span>' +
-                        '</dd>' +
-                    '</dl>';
+        // Save the previously-focused element so we can restore focus on
+        // close — standard a11y modal hygiene (WCAG 2.4.3 Focus Order).
+        var prevFocus = document.activeElement;
+
+        // Keyboard trap: keep Tab inside the modal until acknowledged.
+        // We only have one focusable element (the ACK button) right now,
+        // so the trap is a simple "if Tab pressed → refocus the button".
+        function onKeyDown(e) {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                $modal.find('[data-cw-scan-modal-ack]').focus();
+                return;
             }
-
-            var html =
-                '<div class="cw-scan-warning cw-scan-warning--' + esc(w.level || 'warning') + '" ' +
-                     'data-cw-warning-code="' + esc(code) + '">' +
-                    '<button type="button" class="cw-scan-warning__close" ' +
-                            'aria-label="إغلاق التنبيه">&times;</button>' +
-                    '<p class="cw-scan-warning__head">' +
-                        '<span aria-hidden="true">⚠</span> ' +
-                        '<strong>' + esc(title) + '</strong>' +
-                    '</p>' +
-                    '<p class="cw-scan-warning__body">' + esc(msg) + '</p>' +
-                    dataHtml +
-                '</div>';
-
-            // Replace any existing banner for the same code (don't stack).
-            var $existing = $host.find('[data-cw-warning-code="' + code + '"]');
-            if ($existing.length) {
-                $existing.replaceWith(html);
-            } else {
-                $host.append(html);
+            // Enter triggers the primary action (acceptance) — natural
+            // because the button is the focused element. Esc deliberately
+            // does NOTHING: this dialog is a hard ack-required gate.
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
             }
+        }
+        document.addEventListener('keydown', onKeyDown, true);
 
-            // Long-lived toast for visibility when the banner is scrolled
-            // out of view. 12s is well past the 4s "feedback" budget — the
-            // rep needs time to read the comparison and decide.
-            toast(title + ' — ' + msg, 'warning', 12000);
+        // Acknowledgement closes the modal, restores prior focus, and
+        // signals the queue to advance.
+        $modal.on('click', '[data-cw-scan-modal-ack]', function () {
+            document.removeEventListener('keydown', onKeyDown, true);
+            $modal.remove();
+            try { if (prevFocus && prevFocus.focus) prevFocus.focus(); } catch (_) {}
+            if (typeof onAck === 'function') onAck();
         });
 
-        // Wire dismiss once (delegated so dynamic banners are covered).
-        if (!$host.data('cw-bound')) {
-            $host.on('click', '.cw-scan-warning__close', function () {
-                $(this).closest('.cw-scan-warning').remove();
-            });
-            $host.data('cw-bound', true);
-        }
+        // Backdrop click intentionally does NOTHING — see header comment.
+        // We still cancel the event so it doesn't bubble to anything below.
+        $modal.find('.cw-scan-modal__backdrop').on('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // Mount + focus the acknowledgement button on the next tick so the
+        // browser's autofocus heuristics don't fight us.
+        $('body').append($modal);
+        setTimeout(function () {
+            $modal.find('[data-cw-scan-modal-ack]').focus();
+        }, 30);
     }
 
     /** Read the CSRF token Yii embeds in <meta name="csrf-token">. */
