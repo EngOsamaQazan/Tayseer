@@ -1277,7 +1277,7 @@ class WizardController extends Controller
             'source'    => FahrasCheckLog::SOURCE_STEP1,
         ]);
 
-        return [
+        $response = [
             'ok'           => true,
             'enabled'      => true,
             'verdict'      => $verdict->verdict,
@@ -1291,6 +1291,121 @@ class WizardController extends Controller
             'from_cache'   => $verdict->fromCache,
             'can_override' => Yii::$app->user->can($svc->overridePerm),
             'failure_policy' => $svc->failurePolicy,
+        ];
+
+        // ── Same-company short-circuit ────────────────────────────────────
+        // When Fahras blocks because the customer is "ours" (every match is
+        // recorded against this Tayseer instance's own company in Fahras),
+        // we keep the wizard's Next button blocked but expose an alternative
+        // CTA: jump to «إضافة عقد جديد» on the existing local customer
+        // instead of forcing a duplicate customer record.
+        $extras = $this->buildSameCompanyExtras($verdict, $idNumber);
+        if ($extras !== null) {
+            $response = array_merge($response, $extras);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Inspect a Fahras verdict and, when its matches all belong to THIS
+     * Tayseer instance's own company AND it would otherwise be a hard block,
+     * return the metadata the front-end needs to render a green
+     * «إضافة عقد جديد للعميل» CTA in place of the usual "blocked" message.
+     *
+     * Returns null when the optimisation does not apply (most common case),
+     * so the caller can `array_merge` the result safely.
+     *
+     * Fields produced when applicable:
+     *   • same_company_only            — bool, always true when present
+     *   • own_company_name             — string, canonical company label
+     *   • existing_customer_id         — int|null, local Customers.id (if any)
+     *   • existing_customer_name       — string|null, local customer name
+     *   • add_contract_url             — string|null, route to /contracts/contracts/create?id=X
+     *   • add_contract_allowed         — bool, user has CONT_CREATE
+     *   • same_company_message_ar      — string, replacement headline for the card
+     *
+     * Notes:
+     *   • This intentionally does NOT flip blocks=false; the wizard Next stays
+     *     locked because the right action is "stop and add a contract", not
+     *     "create a duplicate customer".
+     *   • Only triggers on cannot_sell / contact_first verdicts — can_sell /
+     *     no_record / error verdicts are pass-through.
+     */
+    protected function buildSameCompanyExtras(FahrasVerdict $verdict, string $idNumber): ?array
+    {
+        $svc = Yii::$app->fahras ?? null;
+        if (!$svc || $svc->companyName === null) return null;
+
+        // Only meaningful for verdicts that would otherwise block the rep
+        // from continuing (cannot_sell) or recommend contacting the prior
+        // company (contact_first). Other verdicts already let the rep proceed.
+        if (!in_array($verdict->verdict, [
+            FahrasVerdict::VERDICT_CANNOT_SELL,
+            FahrasVerdict::VERDICT_CONTACT_FIRST,
+        ], true)) {
+            return null;
+        }
+
+        if (!$svc->isSameCompanyOnly($verdict)) return null;
+
+        $own = $svc->companyName;
+
+        // Look up the existing local customer so we can hand the rep a
+        // direct link to the create-contract form pre-filled with them.
+        $localCustomer = null;
+        if ($idNumber !== '') {
+            try {
+                $localCustomer = Customers::find()
+                    ->where(['id_number' => $idNumber])
+                    ->limit(1)
+                    ->one();
+            } catch (\Throwable $e) {
+                Yii::warning(
+                    'buildSameCompanyExtras: local customer lookup failed: ' . $e->getMessage(),
+                    __METHOD__
+                );
+            }
+        }
+
+        $canAddContract = Permissions::can(Permissions::CONT_CREATE);
+        $addContractUrl = null;
+        if ($localCustomer !== null) {
+            $addContractUrl = Url::to(['/contracts/contracts/create', 'id' => (int)$localCustomer->id]);
+        }
+
+        // Compose a replacement message tailored to the situation:
+        //   • Customer exists locally + user can add contracts → invite them.
+        //   • Customer exists locally + user lacks permission  → explain & ask manager.
+        //   • Customer NOT in local DB (Fahras-cache only)     → explain mismatch.
+        if ($localCustomer === null) {
+            $msg = sprintf(
+                'العميل مسجَّل لدى شركتنا (%s) في الفهرس، لكن لا يوجد له سجل محلي '
+                . 'في تيسير. تواصل مع المسؤول لاستيراد العميل قبل إنشاء عقد جديد له.',
+                $own
+            );
+        } elseif (!$canAddContract) {
+            $msg = sprintf(
+                'هذا عميل قائم لدى شركتنا (%s). لا يمكن إعادة إضافته كعميل جديد — '
+                . 'يجب إنشاء عقد جديد على ملفه الحالي، وأنت لا تملك صلاحية «إضافة عقد».',
+                $own
+            );
+        } else {
+            $msg = sprintf(
+                'هذا العميل قائم لدى شركتنا (%s) ولا يوجد لديه أي سجل لدى شركات تقسيط أخرى — '
+                . 'لذلك يحقّ لك إنشاء عقد جديد على ملفه الحالي بدلاً من إضافته كعميل جديد.',
+                $own
+            );
+        }
+
+        return [
+            'same_company_only'        => true,
+            'own_company_name'         => $own,
+            'existing_customer_id'     => $localCustomer ? (int)$localCustomer->id : null,
+            'existing_customer_name'   => $localCustomer ? (string)$localCustomer->name : null,
+            'add_contract_url'         => $addContractUrl,
+            'add_contract_allowed'     => $canAddContract,
+            'same_company_message_ar'  => $msg,
         ];
     }
 
@@ -3010,6 +3125,25 @@ class WizardController extends Controller
         return $this->_draftKey = self::DRAFT_KEY;
     }
 
+    /**
+     * Whether the current request is operating on an existing customer
+     * (edit-mode draft slot) vs. creating a brand-new one.
+     *
+     * Used by validators to relax "required" enforcement: when editing
+     * an existing customer, the user may want to update a single field
+     * without re-justifying every required column (the customer was
+     * already created with valid data; format/length/range rules still
+     * apply, but blanket required-field gating is dropped).
+     */
+    protected function isEditMode(): bool
+    {
+        try {
+            return strpos($this->draftKey(), 'customer_edit:') === 0;
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     protected function decodePayload($draft)
     {
         if (!$draft || empty($draft->draft_data)) {
@@ -3911,30 +4045,40 @@ class WizardController extends Controller
     protected function validateStep1($data)
     {
         $errors = [];
+        $isEdit = $this->isEditMode();
 
-        $required = [
-            'Customers[name]'                 => 'الاسم الرباعي',
-            'Customers[id_number]'            => 'الرقم الوطني',
-            'Customers[sex]'                  => 'الجنس',
-            'Customers[birth_date]'           => 'تاريخ الميلاد',
-            'Customers[city]'                 => 'مدينة الولادة',
-            'Customers[citizen]'              => 'الجنسية',
-            'Customers[primary_phone_number]' => 'الهاتف الرئيسي',
-            'Customers[hear_about_us]'        => 'كيف سمعت عنا',
-        ];
-        foreach ($required as $key => $label) {
-            $val = $this->dotGet($data, $key);
-            if ($val === null || trim((string)$val) === '') {
-                $errors[$key] = "حقل «{$label}» مطلوب.";
+        // In edit mode we skip required-field gating entirely — the
+        // customer already exists and the user may want to touch just
+        // one field. Format/length/range checks below still apply.
+        if (!$isEdit) {
+            $required = [
+                'Customers[name]'                 => 'الاسم الرباعي',
+                'Customers[id_number]'            => 'الرقم الوطني',
+                'Customers[sex]'                  => 'الجنس',
+                'Customers[birth_date]'           => 'تاريخ الميلاد',
+                'Customers[city]'                 => 'مدينة الولادة',
+                'Customers[citizen]'              => 'الجنسية',
+                'Customers[primary_phone_number]' => 'الهاتف الرئيسي',
+                'Customers[hear_about_us]'        => 'كيف سمعت عنا',
+            ];
+            foreach ($required as $key => $label) {
+                $val = $this->dotGet($data, $key);
+                if ($val === null || trim((string)$val) === '') {
+                    $errors[$key] = "حقل «{$label}» مطلوب.";
+                }
             }
         }
 
         // Name must contain at least 2 words (first + last as bare minimum).
+        // Edits skip the minimum-words rule so historical 1-word names
+        // don't block partial updates; the length cap still applies.
         $name = trim((string)$this->dotGet($data, 'Customers[name]'));
         if ($name !== '') {
-            $wordCount = preg_match_all('/\S+/u', $name);
-            if ($wordCount < 2) {
-                $errors['Customers[name]'] = 'الرجاء إدخال الاسم الرباعي (4 كلمات يفضّل، 2 كحد أدنى).';
+            if (!$isEdit) {
+                $wordCount = preg_match_all('/\S+/u', $name);
+                if ($wordCount < 2) {
+                    $errors['Customers[name]'] = 'الرجاء إدخال الاسم الرباعي (4 كلمات يفضّل، 2 كحد أدنى).';
+                }
             }
             if (mb_strlen($name) > 250) {
                 $errors['Customers[name]'] = 'الاسم طويل جداً (الحد الأقصى 250 حرفاً).';
@@ -3990,6 +4134,18 @@ class WizardController extends Controller
         $notes = (string)$this->dotGet($data, 'Customers[notes]');
         if (mb_strlen($notes) > 500) {
             $errors['Customers[notes]'] = 'الملاحظات تتجاوز 500 حرف.';
+        }
+
+        // ── Personal photo is mandatory for new customers ──
+        // The photo lives outside the Customers form (uploaded async via
+        // upload-extra) and is therefore not in $data. Treat the auto-saved
+        // draft as the source of truth so we can't be tricked by a forged
+        // hidden input — the hidden Customers[_extras_photo_id] field exists
+        // only so renderServerErrors() in core.js can attach the message to
+        // the right card. Skip enforcement when editing an existing customer.
+        $photoErr = $this->validateRequiredPhoto();
+        if ($photoErr !== null) {
+            $errors['Customers[_extras_photo_id]'] = $photoErr;
         }
 
         // ── Fahras gate (server-side authoritative) ──
@@ -4083,6 +4239,58 @@ class WizardController extends Controller
     }
 
     /**
+     * Enforce the «الصورة الشخصية» requirement on Step 1.
+     *
+     * Returns:
+     *   • null            → photo present (or this is an edit flow that
+     *                       does not require one).
+     *   • Arabic string   → block, message to attach under the photo card
+     *                       on the wizard via the standard server-error
+     *                       renderer (keyed on Customers[_extras_photo_id]).
+     *
+     * Authoritative source is the auto-saved draft's `_extras.photo`
+     * structure (populated by recordExtraInDraft() once the upload-extra
+     * AJAX succeeds) — never the posted form data. The hidden form input
+     * is only used so renderServerErrors() can locate the right DOM card
+     * to highlight.
+     */
+    protected function validateRequiredPhoto(): ?string
+    {
+        // Editing an existing customer must not be blocked: many edits
+        // change a single field and have nothing to do with the photo,
+        // and we don't want to force re-uploading historical files.
+        try {
+            $key = $this->draftKey();
+            if (strpos($key, 'customer_edit:') === 0) {
+                return null;
+            }
+        } catch (\Throwable $e) {
+            // Defensive: if the draft key can't be resolved, fall through
+            // and enforce the rule (fail-closed for create flows).
+        }
+
+        try {
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $this->draftKey());
+            if ($draft) {
+                $payload = $this->decodePayload($draft);
+                $photo   = $payload['_extras']['photo'] ?? null;
+                if (is_array($photo) && (int)($photo['image_id'] ?? 0) > 0) {
+                    return null;
+                }
+            }
+        } catch (\Throwable $e) {
+            Yii::warning(
+                'validateRequiredPhoto: draft read failed: ' . $e->getMessage(),
+                __METHOD__
+            );
+            // Fall through and block — better to ask the user to retry
+            // the upload than to silently allow a customer with no photo.
+        }
+
+        return 'الصورة الشخصية للعميل مطلوبة — ارفع صورة واضحة للوجه قبل المتابعة.';
+    }
+
+    /**
      * Validate Step 2 — employment, income, social-security & bank.
      *
      * Required:
@@ -4102,17 +4310,20 @@ class WizardController extends Controller
     protected function validateStep2($data)
     {
         $errors = [];
+        $isEdit = $this->isEditMode();
 
-        // ── Required basics. ──
-        $required = [
-            'Customers[job_title]'         => 'جهة العمل',
-            'Customers[total_salary]'      => 'الراتب الأساسي',
-            'Customers[is_social_security]'=> 'حقل الاشتراك بالضمان',
-        ];
-        foreach ($required as $key => $label) {
-            $val = $this->dotGet($data, $key);
-            if ($val === null || trim((string)$val) === '') {
-                $errors[$key] = "حقل «{$label}» مطلوب.";
+        // ── Required basics (skipped in edit mode). ──
+        if (!$isEdit) {
+            $required = [
+                'Customers[job_title]'         => 'جهة العمل',
+                'Customers[total_salary]'      => 'الراتب الأساسي',
+                'Customers[is_social_security]'=> 'حقل الاشتراك بالضمان',
+            ];
+            foreach ($required as $key => $label) {
+                $val = $this->dotGet($data, $key);
+                if ($val === null || trim((string)$val) === '') {
+                    $errors[$key] = "حقل «{$label}» مطلوب.";
+                }
             }
         }
 
@@ -4139,9 +4350,10 @@ class WizardController extends Controller
         }
 
         // Conditionally required: subscription number when subscribed.
+        // Required-enforcement skipped in edit mode (length cap still applies).
         if ((string)$isSocSec === '1') {
             $socNum = trim((string)$this->dotGet($data, 'Customers[social_security_number]'));
-            if ($socNum === '') {
+            if ($socNum === '' && !$isEdit) {
                 $errors['Customers[social_security_number]'] = 'رقم اشتراك الضمان مطلوب لأنك أشرت إلى أن العميل مشترك.';
             } elseif (mb_strlen($socNum) > 50) {
                 $errors['Customers[social_security_number]'] = 'رقم الاشتراك طويل جداً (> 50 خانة).';
@@ -4161,9 +4373,9 @@ class WizardController extends Controller
             $allowedSrc = array_keys(Yii::$app->params['socialSecuritySources'] ?? [
                 'social_security' => 1, 'retirement_directorate' => 1, 'both' => 1,
             ]);
-            if ($src === '') {
+            if ($src === '' && !$isEdit) {
                 $errors['Customers[social_security_salary_source]'] = 'يرجى اختيار مصدر الراتب التقاعدي.';
-            } elseif (!in_array($src, $allowedSrc, true)) {
+            } elseif ($src !== '' && !in_array($src, $allowedSrc, true)) {
                 $errors['Customers[social_security_salary_source]'] = 'مصدر الراتب غير معروف.';
             }
 
@@ -4234,7 +4446,7 @@ class WizardController extends Controller
                 $rt = trim((string)($re['property_type']   ?? ''));
                 $rn = trim((string)($re['property_number'] ?? ''));
                 if ($rt === '' && $rn === '') continue; // empty rows are dropped silently
-                if ($rt === '') {
+                if ($rt === '' && !$isEdit) {
                     $errors["realestates[$i][property_type]"] = 'اسم/نوع العقار مطلوب.';
                 } elseif (mb_strlen($rt) > 100) {
                     $errors["realestates[$i][property_type]"] = 'الاسم طويل جداً (الحد الأقصى 100 حرف).';
@@ -4264,6 +4476,7 @@ class WizardController extends Controller
     protected function validateStep3($data)
     {
         $errors = [];
+        $isEdit = $this->isEditMode();
 
         // ── Guarantors. ──
         $guarantors = $this->dotGet($data, 'guarantors');
@@ -4283,7 +4496,7 @@ class WizardController extends Controller
             if ($hasAny) $filled[$i] = $g;
         }
 
-        if (count($filled) === 0) {
+        if (count($filled) === 0 && !$isEdit) {
             $errors['guarantors'] = 'يجب إضافة معرّف واحد على الأقل (الاسم + الهاتف + صلة القرابة).';
         }
 
@@ -4297,15 +4510,15 @@ class WizardController extends Controller
             $rel   = trim((string)($g['phone_number_owner'] ?? ''));
             $fb    = trim((string)($g['fb_account'] ?? ''));
 
-            if ($name === '') {
+            if ($name === '' && !$isEdit) {
                 $errors["guarantors[$i][owner_name]"] = 'الاسم مطلوب.';
             } elseif (mb_strlen($name) > 100) {
                 $errors["guarantors[$i][owner_name]"] = 'الاسم طويل جداً (الحد الأقصى 100 حرف).';
             }
 
-            if ($phone === '') {
+            if ($phone === '' && !$isEdit) {
                 $errors["guarantors[$i][phone_number]"] = 'رقم الهاتف مطلوب.';
-            } else {
+            } elseif ($phone !== '') {
                 $digits = preg_replace('/\D+/', '', $phone);
                 $okJO   = (bool)preg_match('/^(?:00962|962|0)?7[789]\d{7}$/', $digits);
                 $okIntl = strlen($digits) >= 8 && strlen($digits) <= 15;
@@ -4314,7 +4527,7 @@ class WizardController extends Controller
                 }
             }
 
-            if ($rel === '') {
+            if ($rel === '' && !$isEdit) {
                 $errors["guarantors[$i][phone_number_owner]"] = 'حدّد صلة القرابة.';
             } elseif (mb_strlen($rel) > 100) {
                 $errors["guarantors[$i][phone_number_owner]"] = 'القيمة طويلة جداً.';
@@ -4338,9 +4551,11 @@ class WizardController extends Controller
             ];
         }
 
+        // In edit mode both blocks are optional — the customer already has
+        // an address on file and the user may want to tweak unrelated fields.
         $blocks = [
-            'home' => ['required' => true,  'cityLabel' => 'مدينة السكن'],
-            'work' => ['required' => false, 'cityLabel' => 'مدينة العمل'],
+            'home' => ['required' => !$isEdit, 'cityLabel' => 'مدينة السكن'],
+            'work' => ['required' => false,    'cityLabel' => 'مدينة العمل'],
         ];
 
         foreach ($blocks as $slot => $cfg) {

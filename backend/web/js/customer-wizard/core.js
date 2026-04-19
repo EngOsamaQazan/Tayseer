@@ -79,12 +79,47 @@
         bindKeyboard();
         bindBeforeUnload();
 
+        // Edit mode: relax HTML5 required gating so reps can save partial
+        // edits without re-justifying every required column. The server's
+        // validateStep* mirrors this relaxation. See
+        // WizardController::isEditMode().
+        if (CW.mode === 'edit') {
+            relaxRequiredAttributes();
+            // Re-apply whenever a sibling module clones new rows
+            // (guarantors/realestate) into the DOM.
+            $(document).on('cw:rows:added' + EVT_NS, function () {
+                relaxRequiredAttributes();
+            });
+            $(document).on('cw:step:rendered' + EVT_NS, function () {
+                relaxRequiredAttributes();
+            });
+        }
+
         renderStepper();
         renderNavMode(state.current);
         showSection(state.current, false);
 
         state.initialized = true;
     };
+
+    /**
+     * Strip HTML5 `required` and tighten `aria-required` for every form
+     * control inside the wizard shell so the browser does not block the
+     * "Next" button on edits. Called once during init in edit mode and
+     * re-applied whenever new sub-rows (guarantor/realestate/extras) are
+     * cloned into the DOM via the global `cw:dom-changed` event.
+     */
+    function relaxRequiredAttributes() {
+        if (!state.$shell || !state.$shell.length) return;
+        state.$shell
+            .find('[required]')
+            .each(function () {
+                this.removeAttribute('required');
+                this.setAttribute('aria-required', 'false');
+                this.setAttribute('data-cw-was-required', '1');
+            });
+    }
+    CW._relaxRequiredAttributes = relaxRequiredAttributes;
 
     CW.destroy = function () {
         if (!state.initialized) return;

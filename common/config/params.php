@@ -18,10 +18,10 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-18 — Customer Wizard v2: full edit-mode
-     *  rollout. New actionEdit + finishEdit, multi-row RealEstate
-     *  repeater, Fahras gate skipped in edit, legacy
-     *  /customers/update/{id} 301-redirected to the wizard. */
+     *  Last bump: 2026-04-18 — Customer Wizard v2 edit mode: relax
+     *  required-field gating (server validators + HTML5 stripping)
+     *  so reps can save partial edits without re-justifying every
+     *  required column. Fahras stays bypassed for edits. */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 
     /**
@@ -46,6 +46,16 @@ return [
 
         // Tenant slug sent as `client=` to Fahras (must exist in $TOKENS map).
         'clientId'       => 'tayseer',
+
+        // Canonical name of THIS Tayseer instance's installments company as
+        // it appears in Fahras `accounts.name` (e.g. "جدل", "نماء", "وتر",
+        // "بسيل", "زجل", "عالم المجد"). Required for the "same-company"
+        // optimisation: when Fahras returns a cannot_sell verdict whose
+        // matches are EXCLUSIVELY from this company, we treat the customer
+        // as "already ours" and offer a quick link to add a new contract
+        // instead of forcing the rep to re-create the customer.
+        // MUST be overridden in params-local.php per environment.
+        'companyName'    => null,
 
         // Hard timeout per HTTP call (seconds).
         'timeoutSec'     => 8,
