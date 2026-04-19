@@ -124,8 +124,23 @@
 ],
 ```
 
-`environments/<env>/common/config/params-local.php` يجب أن يحتوي القيمة
-الفعلية للـ `token` لكل بيئة. **لا تضع token الإنتاج في git أبداً.**
+`environments/<env>/common/config/params-local.php` يصدر التوكن **حصراً**
+عبر `getenv('FAHRAS_TOKEN_TAYSEER')`. لا يوضع التوكن نصّاً صريحاً في
+git. القيمة الفعلية تُحقن في وقت التشغيل عبر Apache:
+
+```apache
+<VirtualHost *:443>
+    ServerName <tenant>.aqssat.co
+    SetEnv FAHRAS_TOKEN_TAYSEER tayseer_fahras_2026_<full_secret>
+    ...
+</VirtualHost>
+```
+
+تُحفظ القيمة الأصلية في `/root/.fahras_tayseer_token` (660، root فقط)
+لإعادة الزرع بعد أي إعادة بناء. السكربت
+`scripts/fix_fahras_tenant_vhosts.sh` يقوم بزرعها بشكل عَيري (idempotent)
+على كل تنانت ويعيد تحميل Apache. لا تتأثر هذه القيمة بأي
+`git pull` لأنها خارج شجرة العمل.
 
 ### 4.2 إعدادات الفهرس
 
