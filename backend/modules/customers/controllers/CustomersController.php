@@ -357,164 +357,29 @@ class CustomersController extends Controller
 
     /**
      * Updates an existing customers model.
-     * For ajax request will return json object
-     * and for non-ajax request if update is successful, the browser will be redirected to the 'view' page.
-     * @param integer $id
-     * @return mixed
+     *
+     * As of 2026-04-18 the legacy update form has been retired in favour
+     * of Customer Wizard v2 (multi-step shell with full edit support,
+     * delta-saving, and conflict detection). This action now exists only
+     * to preserve historical URLs (deep links from notifications, emails,
+     * bookmarks, etc.) — it 301-redirects every request to the wizard
+     * while propagating the optional `$notificationID` so the caller's
+     * read-receipt is still honoured.
+     *
+     * No legacy fallback path is kept: the user explicitly requested
+     * `no_legacy` during the migration plan review (see plan transcript).
+     *
+     * @param integer $id              Customer ID to edit.
+     * @param integer $notificationID  Optional notification to mark as read.
+     * @return \yii\web\Response
      */
     public function actionUpdate($id, $notificationID = 0)
     {
-
-        if ($notificationID != 0) {
-            Yii::$app->notifications->setReaded($notificationID);
+        $params = ['/customers/wizard/edit', 'id' => (int)$id];
+        if ((int)$notificationID !== 0) {
+            $params['notificationID'] = (int)$notificationID;
         }
-        $request = Yii::$app->request;
-        $model = $this->findModel($id);
-        $modelsAddress = Address::find()->where(['customers_id' => $id])->all();
-        $modelsPhoneNumbers = PhoneNumbers::find()->where(['customers_id' => $id])->all();
-        $customerDocumentsModel = CustomersDocument::find()->where(['customer_id' => $id])->all();
-        $modelRealEstate = RealEstate::find()->where(['customer_id' => $id])->all();
-
-        if ($model->load($request->post())) {
-            $oldIDs = yii\helpers\ArrayHelper::map($modelsAddress, 'id', 'id');
-            $oldPhoneIDs = yii\helpers\ArrayHelper::map($modelsPhoneNumbers, 'id', 'id');
-            $oldDocumentsIDs = yii\helpers\ArrayHelper::map($customerDocumentsModel, 'id', 'id');
-            $oldmodelRealEstateIDs = yii\helpers\ArrayHelper::map($modelRealEstate, 'id', 'id');
-
-            $modelsAddress = Model::createMultiple(Address::classname(), $modelsAddress);
-            $modelsPhoneNumbers = Model::createMultiple(PhoneNumbers::classname(), $modelsPhoneNumbers);
-            $customerDocumentsModel = Model::createMultiple(CustomersDocument::classname(), $customerDocumentsModel);
-            $modelRealEstate = Model::createMultiple(RealEstate::classname(), $modelRealEstate);
-
-            Model::loadMultiple($modelsAddress, Yii::$app->request->post());
-            Model::loadMultiple($modelsPhoneNumbers, Yii::$app->request->post());
-            Model::loadMultiple($customerDocumentsModel, Yii::$app->request->post());
-            Model::loadMultiple($modelRealEstate, Yii::$app->request->post());
-
-            $deletedIDs = array_diff($oldIDs, array_filter(yii\helpers\ArrayHelper::map($modelsAddress, 'id', 'id')));
-            $deletedPhoneIDs = array_diff($oldPhoneIDs, array_filter(yii\helpers\ArrayHelper::map($modelsPhoneNumbers, 'id', 'id')));
-            $deletedDocumentsIDs = array_diff($oldDocumentsIDs, array_filter(yii\helpers\ArrayHelper::map($customerDocumentsModel, 'id', 'id')));
-            $deleteRealEstateIDs = array_diff($oldmodelRealEstateIDs, array_filter(yii\helpers\ArrayHelper::map($modelRealEstate, 'id', 'id')));
-
-            $modelsAddress = $this->filterEmptyRows($modelsAddress, ['address_city', 'address_area', 'address_street', 'address_building', 'postal_code', 'latitude', 'longitude', 'address']);
-            $modelsPhoneNumbers = $this->filterEmptyRows($modelsPhoneNumbers, ['phone_number', 'owner_name', 'fb_account', 'phone_number_owner']);
-            $customerDocumentsModel = $this->filterEmptyRows($customerDocumentsModel, ['document_number', 'document_image', 'images']);
-            $modelRealEstate = $this->filterEmptyRows($modelRealEstate, ['property_type', 'property_number']);
-
-            // validate all models
-            $valid = $model->validate();
-            $valid = Model::validateMultiple($modelsAddress) && Model::validateMultiple($modelRealEstate)&& Model::validateMultiple($modelsPhoneNumbers) && Model::validateMultiple($customerDocumentsModel) && $valid;
-
-            if ($valid) {
-                $transaction = \Yii::$app->db->beginTransaction();
-                // Initialize all flags to true so empty sub-arrays don't trip the
-                // commit check (caused production 500 — see issue from 2026-04-18).
-                $flag = false;
-                $addressFlag = true;
-                $phoneNumberflag = true;
-                $modelRealEstateFlag = true;
-                $customersDocumentflag = true;
-                try {
-
-                    if ($flag = $model->save(false)) {
-                        if (!empty($deletedIDs)) {
-                            Address::deleteAll(['id' => $deletedIDs]);
-                        }
-                        foreach ($modelsAddress as $modelAddress) {
-                            $modelAddress->customers_id = $model->id;
-                            if (!($addressFlag = $modelAddress->save(false))) {
-
-                                $transaction->rollBack();
-                                break;
-                            }
-                        }
-                        if (!empty($deleteRealEstateIDs)) {
-
-                            RealEstate::deleteAll(['id' => $deleteRealEstateIDs]);
-                        }
-                        foreach ($modelRealEstate as $modelRealEstates) {
-
-                            $modelRealEstates->customer_id = $model->id;
-                            if (!($modelRealEstateFlag = $modelRealEstates->save(false))) {
-
-                                $transaction->rollBack();
-                                break;
-                            }
-                        }
-
-                        if (!empty($deletedPhoneIDs)) {
-                            PhoneNumbers::deleteAll(['id' => $deletedPhoneIDs]);
-                        }
-                        foreach ($modelsPhoneNumbers as $modelsPhoneNumber) {
-
-                            $modelsPhoneNumber->customers_id = $model->id;
-                            if (!($phoneNumberflag = $modelsPhoneNumber->save(false))) {
-
-                                $transaction->rollBack();
-                                break;
-                            }
-                        }
-                        if (!empty($deletedDocumentsIDs)) {
-                            CustomersDocument::deleteAll(['id' => $deletedDocumentsIDs]);
-                        }
-                        foreach ($customerDocumentsModel as $modelCustomerDocument) {
-
-                            $modelCustomerDocument->customer_id = $model->id;
-                            if (!($customersDocumentflag = ($modelCustomerDocument->save(false)))) {
-                                $transaction->rollBack();
-                                Yii::error('Customer document save failed: ' . print_r($modelCustomerDocument->getErrors(), true), __METHOD__);
-                                break;
-                            }
-                        }
-                    }
-                    if ($flag && $addressFlag && $phoneNumberflag && $modelRealEstateFlag && $customersDocumentflag) {
-                        $transaction->commit();
-
-                        // ═══ Link Smart Media uploads to the customer ═══
-                        $smartMedia = Yii::$app->request->post('SmartMedia', []);
-                        if (!empty($smartMedia) && !empty($model->id)) {
-                            foreach ($smartMedia as $item) {
-                                if (!empty($item['image_id'])) {
-                                    $updateData = ['customer_id' => (int)$model->id];
-                                    if (isset($item['group_name'])) {
-                                        $updateData['groupName'] = $item['group_name'];
-                                    }
-                                    Yii::$app->db->createCommand()->update(
-                                        '{{%ImageManager}}',
-                                        $updateData,
-                                        ['id' => (int)$item['image_id']]
-                                    )->execute();
-                                }
-                            }
-                        }
-
-                        Yii::$app->cache->set(Yii::$app->params['key_customers'],Yii::$app->db->createCommand(Yii::$app->params['customers_query'])->queryAll(), Yii::$app->params['time_duration']);
-                        Yii::$app->cache->set(Yii::$app->params['key_customers_name'],Yii::$app->db->createCommand(Yii::$app->params['customers_name_query'])->queryAll(), Yii::$app->params['time_duration']);
-
-                        return $this->redirect(['update', 'id' => $model->id]);
-                    }
-                } catch (Exception $e) {
-                    $transaction->rollBack();
-                }
-            }
-            return $this->render('update', [
-                'modelCustomer' => $model,
-                'model' => $model,
-                'modelsAddress' => (empty($modelsAddress)) ? [new Address] : $modelsAddress,
-                'modelsPhoneNumbers' => (empty($modelsPhoneNumbers)) ? [new PhoneNumbers] : $modelsPhoneNumbers,
-                'customerDocumentsModel' => (empty($customerDocumentsModel)) ? [new CustomersDocument] : $customerDocumentsModel,
-                'modelRealEstate' => (empty($modelRealEstate)) ? [new RealEstate] : $modelRealEstate
-            ]);
-        } else {
-            return $this->render('update', [
-                'model' => $model,
-                'modelsAddress' => (empty($modelsAddress)) ? [new Address] : $modelsAddress,
-                'modelsPhoneNumbers' => (empty($modelsPhoneNumbers)) ? [new PhoneNumbers] : $modelsPhoneNumbers,
-                'customerDocumentsModel' => (empty($customerDocumentsModel)) ? [new CustomersDocument] : $customerDocumentsModel,
-               'modelRealEstate' => (empty($modelRealEstate)) ? [new RealEstate] : $modelRealEstate
-
-            ]);
-        }
+        return $this->redirect($params, 301);
     }
 
     /**

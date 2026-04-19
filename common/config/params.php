@@ -18,8 +18,10 @@ return [
 
     /** Asset version — bump to force browser cache refresh
      *  (uses this file's mtime; resave to bust caches site-wide).
-     *  Last bump: 2026-04-19 — Extras uploaders: clipboard paste
-     *  (button + Ctrl+V / Win+V) for personal photo & documents. */
+     *  Last bump: 2026-04-18 — Customer Wizard v2: full edit-mode
+     *  rollout. New actionEdit + finishEdit, multi-row RealEstate
+     *  repeater, Fahras gate skipped in edit, legacy
+     *  /customers/update/{id} 301-redirected to the wizard. */
     'assetVersion' => @filemtime(__FILE__) ?: 1,
 
     /**

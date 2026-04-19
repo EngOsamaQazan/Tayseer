@@ -846,6 +846,71 @@ input.cw-input[type="date"]:hover::-webkit-calendar-picker-indicator {
     .cw-scan-doc__actions .cw-btn { width: 100%; justify-content: center; }
 }
 
+/* ─────────────── RealEstate multi-row repeater (Step 2 §D) ─────────────── */
+
+.cw-realestate {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cw-realestate__list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cw-realestate__row {
+    padding: 12px 14px;
+    border: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-md);
+    background: var(--cw-surface);
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.cw-realestate__row:hover {
+    border-color: var(--cw-border-strong, var(--cw-border));
+}
+
+.cw-realestate__row + .cw-realestate__row {
+    margin-top: 0;
+}
+
+.cw-realestate__row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.cw-realestate__row-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cw-text-muted, #6b7280);
+}
+
+.cw-realestate__remove {
+    flex-shrink: 0;
+    color: var(--cw-danger, #b91c1c);
+}
+
+.cw-realestate__remove:hover {
+    background: rgba(185, 28, 28, .08);
+}
+
+.cw-realestate__actions {
+    display: flex;
+    justify-content: flex-start;
+}
+
+/* Edit-mode shell tweak — slightly different header colour cue so users
+ * never confuse "creating a new customer" with "editing an existing one"
+ * mid-task. Subtle on purpose: WCAG AA contrast preserved. */
+.cw-shell--edit .cw-header__title {
+    color: var(--cw-info, #1d4ed8);
+}
+
 /* ─────────────── Reduced-motion ─────────────── */
 
 @media (prefers-reduced-motion: reduce) {

@@ -32,8 +32,14 @@ $citizens = ArrayHelper::map($lookups['citizens']    ?? [], 'id', 'name');
 $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
 
 // Fahras integration toggles (driven by Yii::$app->params['fahras']).
+//
+// Edit mode: Fahras is a CREATE-time gate. Editing an existing customer
+// must NOT render the verdict card or the override / search modals — the
+// customer is already in our system, the gate is moot, and showing an
+// inert "verdict" widget on an edit screen would confuse the rep.
 $fahras = Yii::$app->params['fahras'] ?? [];
-$fahrasEnabled = !empty($fahras['enabled']);
+$isEditMode = (string)($payload['_mode'] ?? 'create') === 'edit';
+$fahrasEnabled = !empty($fahras['enabled']) && !$isEditMode;
 $fahrasCanOverride = $fahrasEnabled
     && !empty($fahras['overridePerm'])
     && Yii::$app->user->can($fahras['overridePerm']);

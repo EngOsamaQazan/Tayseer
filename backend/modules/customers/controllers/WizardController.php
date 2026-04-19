@@ -18,9 +18,11 @@ use backend\modules\customers\components\VisionService;
 use backend\models\Media;
 use backend\helpers\MediaHelper;
 use backend\modules\customers\models\Customers;
+use backend\modules\customers\models\CustomersDocument;
 use backend\modules\address\models\Address;
 use backend\modules\phoneNumbers\models\PhoneNumbers;
 use backend\modules\notification\models\Notification;
+use backend\modules\realEstate\models\RealEstate;
 use common\services\LocationResolverService;
 use common\services\dto\FahrasVerdict;
 
@@ -67,19 +69,46 @@ class WizardController extends Controller
 
     public $defaultAction = 'start';
 
+    /**
+     * Cached draft key for the current request — resolved once via
+     * {@see resolveDraftKey()} and reused by every helper that touches the
+     * `wizard_drafts` row (save / scan / extras / Fahras / finish).
+     *
+     * `null` means "not yet resolved"; callers should always go through
+     * {@see draftKey()} which lazily computes it.
+     *
+     * @var string|null
+     */
+    private $_draftKey = null;
+
     /** {@inheritdoc} */
     public function behaviors()
     {
         return [
             'access' => [
                 'class' => AccessControl::class,
-                'rules' => [[
-                    'allow' => true,
-                    'roles' => ['@'],
-                    'matchCallback' => function ($rule, $action) {
-                        return Permissions::can(Permissions::CUST_CREATE);
-                    },
-                ]],
+                'rules' => [
+                    // Edit-only entry points: gated by CUST_UPDATE.
+                    [
+                        'actions' => ['edit'],
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_UPDATE);
+                        },
+                    ],
+                    // Shared actions (save / validate / finish / scan / etc.) accept
+                    // either permission; per-mode enforcement happens inline inside
+                    // actionFinish() based on the active draft's _mode flag.
+                    [
+                        'allow' => true,
+                        'roles' => ['@'],
+                        'matchCallback' => function ($rule, $action) {
+                            return Permissions::can(Permissions::CUST_CREATE)
+                                || Permissions::can(Permissions::CUST_UPDATE);
+                        },
+                    ],
+                ],
             ],
             'verbs' => [
                 'class' => VerbFilter::class,
@@ -154,6 +183,306 @@ class WizardController extends Controller
         ]);
     }
 
+    /**
+     * Edit-mode entry — loads an existing customer + sub-models, hydrates a
+     * scoped wizard draft (`customer_edit:{id}`) and renders the same shell
+     * with `mode='edit'`.
+     *
+     * Distinct draft slot guarantees that a user's in-flight create draft
+     * (`customer_create`) is NEVER clobbered by clicking «تعديل» on the
+     * customer list — and vice versa.
+     *
+     * Re-hydration policy: every visit to /wizard/edit?id=X re-reads the
+     * authoritative DB row, overwriting any stale draft that may have been
+     * left behind by a previous edit session. Without this, the user would
+     * silently see hours-old data.
+     */
+    public function actionEdit($id, $notificationID = 0)
+    {
+        $id = (int)$id;
+        if ($id <= 0) {
+            throw new NotFoundHttpException('العميل غير موجود.');
+        }
+
+        // Parity with the legacy actionUpdate: clear the originating notification.
+        if ((int)$notificationID !== 0) {
+            try {
+                Yii::$app->notifications->setReaded((int)$notificationID);
+            } catch (\Throwable $e) {
+                Yii::warning('Wizard edit: notification mark-read failed: ' . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        $customer = Customers::findOne($id);
+        if (!$customer) {
+            throw new NotFoundHttpException('العميل غير موجود.');
+        }
+
+        // Pin the active draft slot for this entire request before any helper
+        // touches the draft store.
+        $key = 'customer_edit:' . $id;
+        $this->_draftKey = $key;
+
+        // Re-hydrate from DB on every entry (auto-clear any stale edit draft).
+        $payload = $this->hydratePayloadFromCustomer($customer);
+        $payload['_mode']         = 'edit';
+        $payload['_customer_id']  = $id;
+        $payload['_hydrated_at']  = time();
+        $payload['_step']         = 1;
+        $payload['_summary']      = $this->buildSummary($payload);
+        $payload['_updated']      = time();
+
+        WizardDraft::saveAutoDraft(
+            Yii::$app->user->id,
+            $key,
+            json_encode($payload, JSON_UNESCAPED_UNICODE)
+        );
+
+        $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $key);
+
+        return $this->render('layout', [
+            'draft'       => $draft,
+            'payload'     => $payload,
+            'currentStep' => 1,
+            'totalSteps'  => self::TOTAL_STEPS,
+            'lookups'     => $this->loadLookups(),
+            'mode'        => 'edit',
+            'customerId'  => $id,
+        ]);
+    }
+
+    /**
+     * Build the wizard payload from an existing customer record + its
+     * sub-models (Address, PhoneNumbers, RealEstate, CustomersDocument,
+     * Media for photo/extras).
+     *
+     * Output mirrors the create-flow payload shape so every existing
+     * step partial / validator / save endpoint works without branching.
+     */
+    protected function hydratePayloadFromCustomer(Customers $c): array
+    {
+        $primaryPhone = trim((string)$c->primary_phone_number);
+
+        // ── Identity (Step 1) ──
+        $step1 = [
+            'Customers' => [
+                'name'                 => (string)($c->name ?? ''),
+                'id_number'            => (string)($c->id_number ?? ''),
+                'sex'                  => $c->sex !== null ? (string)$c->sex : '',
+                'birth_date'           => (string)($c->birth_date ?? ''),
+                'city'                 => $c->city !== null && $c->city !== '' ? (string)$c->city : '',
+                'citizen'              => (string)($c->citizen ?? ''),
+                'primary_phone_number' => $primaryPhone,
+                'facebook_account'     => (string)($c->facebook_account ?? ''),
+                'email'                => (string)($c->email ?? ''),
+                'hear_about_us'        => $c->hear_about_us !== null ? (string)$c->hear_about_us : '',
+                'notes'                => (string)($c->notes ?? ''),
+            ],
+        ];
+
+        // ── Financial (Step 2) ──
+        $step2 = [
+            'Customers' => [
+                'job_title'                     => $c->job_title !== null ? (string)$c->job_title : '',
+                'job_number'                    => (string)($c->job_number ?? ''),
+                'total_salary'                  => $c->total_salary !== null ? (string)$c->total_salary : '',
+                'is_social_security'            => $c->is_social_security !== null ? (string)$c->is_social_security : '',
+                'social_security_number'        => (string)($c->social_security_number ?? ''),
+                'has_social_security_salary'    => (string)($c->has_social_security_salary ?? ''),
+                'social_security_salary_source' => (string)($c->social_security_salary_source ?? ''),
+                'retirement_status'             => (string)($c->retirement_status ?? ''),
+                'total_retirement_income'       => $c->total_retirement_income !== null ? (string)$c->total_retirement_income : '',
+                'last_income_query_date'        => (string)($c->last_income_query_date ?? ''),
+                'last_job_query_date'           => (string)($c->last_job_query_date ?? ''),
+                'bank_name'                     => $c->bank_name !== null ? (string)$c->bank_name : '',
+                'bank_branch'                   => (string)($c->bank_branch ?? ''),
+                'account_number'                => (string)($c->account_number ?? ''),
+                // Real-estate single-row legacy fields (kept in payload for
+                // backwards-compat with anything still reading them; the new
+                // canonical source of truth is step2.realestates[]).
+                'do_have_any_property'          => $c->do_have_any_property !== null ? (string)$c->do_have_any_property : '',
+                'property_name'                 => (string)($c->property_name ?? ''),
+                'property_number'               => (string)($c->property_number ?? ''),
+            ],
+        ];
+
+        // ── RealEstate rows (multi). ──
+        // Promote the legacy single Customers.property_* into a synthetic row
+        // when no RealEstate row exists yet (so the user doesn't lose data on
+        // first edit-and-save). Otherwise we rely strictly on the table.
+        $realEstates = [];
+        try {
+            $rows = RealEstate::find()->where(['customer_id' => (int)$c->id])->all();
+            foreach ($rows as $r) {
+                $realEstates[] = [
+                    'id'              => (int)$r->id,
+                    'property_type'   => (string)($r->property_type ?? ''),
+                    'property_number' => (string)($r->property_number ?? ''),
+                ];
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('hydrate: realEstate read failed: ' . $e->getMessage(), __METHOD__);
+        }
+        if (empty($realEstates)) {
+            $legacyName = trim((string)($c->property_name ?? ''));
+            $legacyNum  = trim((string)($c->property_number ?? ''));
+            if ($legacyName !== '' || $legacyNum !== '') {
+                $realEstates[] = [
+                    'id'              => 0,
+                    'property_type'   => $legacyName,
+                    'property_number' => $legacyNum,
+                ];
+            }
+        }
+        $step2['realestates'] = $realEstates;
+
+        // ── Addresses (Step 3) ──
+        // Map the first row whose address_type=2 (residential) into "home";
+        // first row of address_type=1 (work) into "work". Extra rows are
+        // appended to home/work in numerical order — they remain editable
+        // through future iterations of the address repeater.
+        $home = [];
+        $work = [];
+        try {
+            $addrRows = Address::find()->where(['customers_id' => (int)$c->id])->all();
+            foreach ($addrRows as $a) {
+                $row = [
+                    'id'               => (int)$a->id,
+                    'address_type'     => (int)($a->address_type ?? 2),
+                    'address_city'     => (string)($a->address_city     ?? ''),
+                    'address_area'     => (string)($a->address_area     ?? ''),
+                    'address_street'   => (string)($a->address_street   ?? ''),
+                    'address_building' => (string)($a->address_building ?? ''),
+                    'postal_code'      => (string)($a->postal_code      ?? ''),
+                    'address'          => (string)($a->address          ?? ''),
+                    'latitude'         => $a->latitude  !== null ? (string)$a->latitude  : '',
+                    'longitude'        => $a->longitude !== null ? (string)$a->longitude : '',
+                    'plus_code'        => (string)($a->plus_code        ?? ''),
+                ];
+                if ((int)$a->address_type === 1 && empty($work)) {
+                    $work = $row;
+                } elseif (empty($home)) {
+                    $home = $row;
+                }
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('hydrate: address read failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        // ── Guarantors (PhoneNumbers, excluding the primary phone duplicate). ──
+        $guarantors = [];
+        try {
+            $phRows = PhoneNumbers::find()->where(['customers_id' => (int)$c->id])->all();
+            $primaryE164 = $primaryPhone !== ''
+                ? \backend\helpers\PhoneHelper::toE164($primaryPhone)
+                : '';
+            foreach ($phRows as $p) {
+                $row = [
+                    'id'                 => (int)$p->id,
+                    'owner_name'         => (string)($p->owner_name         ?? ''),
+                    'phone_number'       => (string)($p->phone_number       ?? ''),
+                    'phone_number_owner' => (string)($p->phone_number_owner ?? ''),
+                    'fb_account'         => (string)($p->fb_account         ?? ''),
+                ];
+                $rowE164 = (string)$row['phone_number'] !== ''
+                    ? \backend\helpers\PhoneHelper::toE164((string)$row['phone_number'])
+                    : '';
+                // Treat the row as a duplicate of the primary phone only if
+                // BOTH the phone and (any) name match the customer's own —
+                // protects against legacy rows that re-used the primary phone
+                // as a guarantor entry on purpose.
+                if ($primaryE164 !== '' && $rowE164 === $primaryE164
+                    && trim((string)$row['owner_name']) === trim((string)$c->name)) {
+                    continue;
+                }
+                $guarantors[] = $row;
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('hydrate: phoneNumbers read failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        $step3 = [
+            'addresses'  => ['home' => $home, 'work' => $work],
+            'guarantors' => $guarantors,
+        ];
+
+        // ── Identity scan info (CustomersDocument + Media). ──
+        $scan = [];
+        try {
+            $doc = CustomersDocument::find()
+                ->where(['customer_id' => (int)$c->id])
+                ->orderBy(['id' => SORT_DESC])
+                ->one();
+            if ($doc) {
+                $scan['document_number'] = (string)($doc->document_number ?? '');
+                $scan['document_type']   = (string)($doc->document_type   ?? '');
+            }
+
+            $images = [];
+            // ID-card scans: groupName starts with '0' (civil) or '4'
+            // (military), with an optional '_front' / '_back' suffix.
+            $mediaRows = Media::find()
+                ->where(['customer_id' => (int)$c->id])
+                ->andWhere(['or',
+                    ['groupName' => ['0', '4', '0_front', '0_back', '4_front', '4_back']],
+                ])
+                ->orderBy(['id' => SORT_ASC])
+                ->all();
+            foreach ($mediaRows as $m) {
+                $g = (string)$m->groupName;
+                if (substr($g, -5) === '_back') {
+                    $images['back'] = (int)$m->id;
+                } elseif (substr($g, -6) === '_front') {
+                    $images['front'] = (int)$m->id;
+                } elseif (in_array($g, ['0', '4'], true) && empty($images['front'])) {
+                    $images['front'] = (int)$m->id;
+                }
+            }
+            if (!empty($images)) {
+                $scan['images'] = $images;
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('hydrate: scan/media read failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        // ── Extras: personal photo (groupName='8') + docs (groupName='9'). ──
+        $extras = ['photo' => null, 'docs' => []];
+        try {
+            $photo = Media::find()
+                ->where(['customer_id' => (int)$c->id, 'groupName' => '8'])
+                ->orderBy(['id' => SORT_DESC])
+                ->one();
+            if ($photo) {
+                $extras['photo'] = [
+                    'image_id'  => (int)$photo->id,
+                    'url'       => (string)$photo->getUrl(),
+                    'file_name' => (string)$photo->fileName,
+                ];
+            }
+            $docRows = Media::find()
+                ->where(['customer_id' => (int)$c->id, 'groupName' => '9'])
+                ->orderBy(['id' => SORT_ASC])
+                ->all();
+            foreach ($docRows as $d) {
+                $extras['docs'][] = [
+                    'image_id'  => (int)$d->id,
+                    'url'       => (string)$d->getUrl(),
+                    'file_name' => (string)$d->fileName,
+                ];
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('hydrate: extras read failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        return [
+            'step1'   => $step1,
+            'step2'   => $step2,
+            'step3'   => $step3,
+            '_scan'   => $scan,
+            '_extras' => $extras,
+        ];
+    }
+
     /* ════════════════════════════════════════════════════════════════
        PERSISTENCE
        ════════════════════════════════════════════════════════════════ */
@@ -201,7 +530,7 @@ class WizardController extends Controller
             return ['ok' => false, 'error' => 'تجاوزت المسودة الحجم الأقصى. احذف بعض البيانات.'];
         }
 
-        WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
+        WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
 
         return [
             'ok'      => true,
@@ -253,12 +582,25 @@ class WizardController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+        $draftKey = $this->draftKey();
+        $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $draftKey);
         if (!$draft) {
             return ['ok' => false, 'error' => 'لا توجد مسودة لاعتمادها.'];
         }
 
         $payload = $this->decodePayload($draft);
+
+        // ── Branch on mode: edit vs create. Per-mode permission enforced inline.
+        $mode = (string)($payload['_mode'] ?? 'create');
+        if ($mode === 'edit') {
+            if (!Permissions::can(Permissions::CUST_UPDATE)) {
+                return ['ok' => false, 'error' => 'لا تملك صلاحية تعديل العملاء.'];
+            }
+            return $this->finishEdit($payload, $draftKey);
+        }
+        if (!Permissions::can(Permissions::CUST_CREATE)) {
+            return ['ok' => false, 'error' => 'لا تملك صلاحية إضافة عملاء.'];
+        }
 
         // ── 1. Validate every step. ──
         $allErrors = [];
@@ -308,6 +650,34 @@ class WizardController extends Controller
         }
         $guarantors = $payload['step3']['guarantors'] ?? [];
         if (!is_array($guarantors)) $guarantors = [];
+
+        // RealEstate rows (multi). Same shape as edit-mode finishEdit so
+        // both flows treat properties identically. The legacy single-row
+        // Customers.property_name / property_number columns are mirrored
+        // from the FIRST non-empty row for backward compatibility with
+        // downstream reports that haven't migrated yet.
+        $realestates = $payload['step2']['realestates'] ?? [];
+        if (!is_array($realestates)) $realestates = [];
+        $hasRealEstate   = false;
+        $firstRealEstate = ['property_type' => '', 'property_number' => ''];
+        foreach ($realestates as $re) {
+            if (!is_array($re)) continue;
+            $t = trim((string)($re['property_type']   ?? ''));
+            $n = trim((string)($re['property_number'] ?? ''));
+            if ($t !== '' || $n !== '') {
+                $hasRealEstate   = true;
+                $firstRealEstate = ['property_type' => $t, 'property_number' => $n];
+                break;
+            }
+        }
+        $custAttr['do_have_any_property'] = $hasRealEstate ? 1 : 0;
+        if ($hasRealEstate) {
+            $custAttr['property_name']   = $firstRealEstate['property_type'];
+            $custAttr['property_number'] = $firstRealEstate['property_number'];
+        } else {
+            $custAttr['property_name']   = null;
+            $custAttr['property_number'] = null;
+        }
 
         // ── 3. Persist inside a transaction. ──
         $db = Yii::$app->db;
@@ -434,6 +804,28 @@ class WizardController extends Controller
                 }
             }
 
+            // ── 3c. RealEstate properties (multi-row). Empty rows are
+            //       silently skipped so an unfilled "add another" placeholder
+            //       doesn't pollute the table. ──
+            foreach ($realestates as $re) {
+                if (!is_array($re)) continue;
+                $type = trim((string)($re['property_type']   ?? ''));
+                $num  = trim((string)($re['property_number'] ?? ''));
+                if ($type === '' && $num === '') continue;
+                $reModel = new RealEstate();
+                $reModel->setAttributes([
+                    'customer_id'     => $customer->id,
+                    'property_type'   => $type,
+                    'property_number' => $num,
+                ], false);
+                if (!$reModel->save(false)) {
+                    $tx->rollBack();
+                    Yii::error('Wizard finish: realestate save failed: '
+                        . print_r($reModel->getErrors(), true), __METHOD__);
+                    return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العقارات.'];
+                }
+            }
+
             $tx->commit();
         } catch (\Throwable $e) {
             $tx->rollBack();
@@ -497,7 +889,7 @@ class WizardController extends Controller
         }
 
         // ── 5. Drop the auto-draft (manual saved drafts kept). ──
-        WizardDraft::clearAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+        WizardDraft::clearAutoDraft(Yii::$app->user->id, $this->draftKey());
 
         return [
             'ok'           => true,
@@ -508,6 +900,323 @@ class WizardController extends Controller
                 '/customers/customers/create-summary', 'id' => $customer->id,
             ]),
             'message'      => 'تم اعتماد العميل بنجاح.',
+        ];
+    }
+
+    /**
+     * Edit-flow finalize — UPDATE an existing Customer + delta-save its
+     * sub-models (Address / PhoneNumbers / RealEstate). Mirrors the legacy
+     * CustomersController::actionUpdate's `array_diff(oldIds, newIds)`
+     * pattern so deletions, modifications, and additions all round-trip.
+     *
+     * Concurrency: we compare `_hydrated_at` (timestamp captured at the
+     * moment we read the customer into the wizard) with the row's current
+     * `updated_at`. If another user touched the record meanwhile we abort
+     * with a `conflict:true` envelope so the UI can ask the user to refresh.
+     *
+     * Fahras: deliberately skipped — see {@see runFahrasGate} for rationale.
+     *
+     * @param array  $payload   Full decoded wizard payload.
+     * @param string $draftKey  The 'customer_edit:{id}' slot to clear on success.
+     * @return array            JSON envelope (ok | conflict | error).
+     */
+    protected function finishEdit(array $payload, string $draftKey)
+    {
+        $customerId = (int)($payload['_customer_id'] ?? 0);
+        if ($customerId <= 0) {
+            return ['ok' => false, 'error' => 'لا يمكن تحديد العميل المراد تعديله.'];
+        }
+
+        $customer = Customers::findOne($customerId);
+        if (!$customer) {
+            return ['ok' => false, 'error' => 'العميل غير موجود.'];
+        }
+
+        // ── 1. Optimistic-concurrency check. ──
+        $hydratedAt = (int)($payload['_hydrated_at'] ?? 0);
+        $rowUpdated = (int)($customer->updated_at ?? 0);
+        if ($hydratedAt > 0 && $rowUpdated > $hydratedAt + 5) {
+            // 5s slack absorbs clock-skew between PHP/MySQL hosts.
+            return [
+                'ok'       => false,
+                'conflict' => true,
+                'error'    => 'تم تعديل بيانات هذا العميل من مستخدم آخر بعد فتحك للنموذج. أعد تحميل الصفحة لرؤية أحدث البيانات قبل المتابعة.',
+            ];
+        }
+
+        // ── 2. Per-step validation. ──
+        $allErrors = [];
+        for ($n = 1; $n <= self::TOTAL_STEPS; $n++) {
+            $stepData = $payload['step' . $n] ?? [];
+            if (!is_array($stepData)) $stepData = [];
+            $method = "validateStep{$n}";
+            if (method_exists($this, $method)) {
+                $errs = $this->{$method}($stepData);
+                if (!empty($errs)) {
+                    $allErrors['step' . $n] = $errs;
+                }
+            }
+        }
+        if (!empty($allErrors)) {
+            return [
+                'ok'     => false,
+                'error'  => 'تعذّر حفظ التعديلات: بعض الخطوات تحتاج إلى تصحيح. عُد إليها وأكمل الحقول الناقصة.',
+                'errors' => $allErrors,
+            ];
+        }
+
+        // ── 3. Merge Customers attributes from all steps. ──
+        $custAttr = [];
+        foreach (['step1', 'step2', 'step3'] as $sk) {
+            $part = $payload[$sk]['Customers'] ?? null;
+            if (is_array($part)) $custAttr = array_merge($custAttr, $part);
+        }
+        // Normalize empty strings on optional FK fields → NULL.
+        foreach (['job_title', 'bank_name', 'address_city', 'citizen_id', 'hear_about_us'] as $optFk) {
+            if (isset($custAttr[$optFk]) && $custAttr[$optFk] === '') {
+                $custAttr[$optFk] = null;
+            }
+        }
+
+        // Prepare sub-model payloads.
+        $addresses = $payload['step3']['addresses'] ?? null;
+        if (!is_array($addresses)) {
+            $legacy = $payload['step3']['address'] ?? [];
+            $addresses = ['home' => is_array($legacy) ? $legacy : []];
+        }
+        $guarantors = $payload['step3']['guarantors'] ?? [];
+        if (!is_array($guarantors)) $guarantors = [];
+
+        $realestates = $payload['step2']['realestates'] ?? [];
+        if (!is_array($realestates)) $realestates = [];
+
+        // Derive `do_have_any_property` from the live realestates list so
+        // the customers row stays consistent with the repeater (legacy
+        // single-row property_name/property_number columns are best-effort).
+        $hasRealEstate = false;
+        $firstRealEstate = ['property_type' => '', 'property_number' => ''];
+        foreach ($realestates as $re) {
+            if (!is_array($re)) continue;
+            $t = trim((string)($re['property_type']   ?? ''));
+            $n = trim((string)($re['property_number'] ?? ''));
+            if ($t !== '' || $n !== '') {
+                $hasRealEstate = true;
+                $firstRealEstate = [
+                    'property_type'   => $t,
+                    'property_number' => $n,
+                ];
+                break;
+            }
+        }
+        $custAttr['do_have_any_property'] = $hasRealEstate ? 1 : 0;
+        if ($hasRealEstate) {
+            $custAttr['property_name']   = $firstRealEstate['property_type'];
+            $custAttr['property_number'] = $firstRealEstate['property_number'];
+        } else {
+            $custAttr['property_name']   = null;
+            $custAttr['property_number'] = null;
+        }
+
+        // ── 4. Persist inside a single transaction. ──
+        $db = Yii::$app->db;
+        $tx = $db->beginTransaction();
+        try {
+            // 4a. UPDATE Customers row. Only set attributes the wizard owns
+            // (avoids accidentally clobbering audit/system columns).
+            $editableAttrs = array_keys($custAttr);
+            $customer->setAttributes($custAttr, false);
+            // Restrict the column list passed to UPDATE so unrelated columns
+            // never get touched even if some safe attribute leaks in.
+            if (!$customer->save(false, $editableAttrs)) {
+                $tx->rollBack();
+                Yii::error('Wizard finishEdit: customer save failed: '
+                    . print_r($customer->getErrors(), true), __METHOD__);
+                return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العميل.'];
+            }
+
+            // 4b. Addresses — delta save. Build the desired set first.
+            $oldAddresses = Address::find()
+                ->where(['customers_id' => $customerId])
+                ->all();
+            $oldAddrIds = array_map(function ($a) { return (int)$a->id; }, $oldAddresses);
+
+            $defaultTypeFor = ['home' => 2, 'work' => 1];
+            $keptAddrIds = [];
+            foreach ($addresses as $slotKey => $addr) {
+                if (!is_array($addr)) continue;
+
+                $hasAddr = false;
+                foreach (['address_city', 'address_area', 'address_street',
+                          'address_building', 'postal_code', 'address'] as $k) {
+                    if (trim((string)($addr[$k] ?? '')) !== '') { $hasAddr = true; break; }
+                }
+                if (!$hasAddr) continue;
+
+                $lat  = isset($addr['latitude'])  && $addr['latitude']  !== '' ? (float)$addr['latitude']  : null;
+                $lng  = isset($addr['longitude']) && $addr['longitude'] !== '' ? (float)$addr['longitude'] : null;
+                $plus = isset($addr['plus_code']) && $addr['plus_code'] !== '' ? (string)$addr['plus_code'] : null;
+                $typeCode = isset($addr['address_type']) && $addr['address_type'] !== ''
+                    ? (int)$addr['address_type']
+                    : ($defaultTypeFor[$slotKey] ?? 2);
+
+                $existingId = (int)($addr['id'] ?? 0);
+                $addrModel = $existingId > 0
+                    ? (Address::findOne($existingId) ?: new Address())
+                    : new Address();
+
+                $addrModel->setAttributes([
+                    'customers_id'     => $customerId,
+                    'address_type'     => $typeCode,
+                    'address_city'     => $addr['address_city']     ?? null,
+                    'address_area'     => $addr['address_area']     ?? null,
+                    'address_street'   => $addr['address_street']   ?? null,
+                    'address_building' => $addr['address_building'] ?? null,
+                    'postal_code'      => $addr['postal_code']      ?? null,
+                    'address'          => $addr['address']          ?? null,
+                    'latitude'         => $lat,
+                    'longitude'        => $lng,
+                    'plus_code'        => $plus,
+                ], false);
+                if (!$addrModel->save()) {
+                    $tx->rollBack();
+                    Yii::error("Wizard finishEdit: address save failed (slot={$slotKey}): "
+                        . print_r($addrModel->getErrors(), true), __METHOD__);
+                    return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العنوان.'];
+                }
+                $keptAddrIds[] = (int)$addrModel->id;
+            }
+            $deletedAddrIds = array_diff($oldAddrIds, $keptAddrIds);
+            if (!empty($deletedAddrIds)) {
+                Address::deleteAll(['id' => array_values($deletedAddrIds)]);
+            }
+
+            // 4c. Guarantors (PhoneNumbers) — delta save.
+            $oldPhones = PhoneNumbers::find()
+                ->where(['customers_id' => $customerId])
+                ->all();
+            $oldPhoneIds = array_map(function ($p) { return (int)$p->id; }, $oldPhones);
+
+            $keptPhoneIds = [];
+            foreach ($guarantors as $g) {
+                if (!is_array($g)) continue;
+                $name  = trim((string)($g['owner_name']        ?? ''));
+                $phone = trim((string)($g['phone_number']      ?? ''));
+                $rel   = trim((string)($g['phone_number_owner'] ?? ''));
+                $fb    = trim((string)($g['fb_account']        ?? ''));
+                if ($name === '' && $phone === '' && $rel === '' && $fb === '') {
+                    continue;
+                }
+                $existingId = (int)($g['id'] ?? 0);
+                $pn = $existingId > 0
+                    ? (PhoneNumbers::findOne($existingId) ?: new PhoneNumbers())
+                    : new PhoneNumbers();
+                $pn->setAttributes([
+                    'customers_id'       => $customerId,
+                    'owner_name'         => $name,
+                    'phone_number'       => $phone,
+                    'phone_number_owner' => $rel,
+                    'fb_account'         => $fb !== '' ? $fb : null,
+                ], false);
+                if (!$pn->save(false)) {
+                    $tx->rollBack();
+                    Yii::error('Wizard finishEdit: phone save failed: '
+                        . print_r($pn->getErrors(), true), __METHOD__);
+                    return ['ok' => false, 'error' => 'تعذّر حفظ بيانات المعرّفين.'];
+                }
+                $keptPhoneIds[] = (int)$pn->id;
+            }
+            $deletedPhoneIds = array_diff($oldPhoneIds, $keptPhoneIds);
+            if (!empty($deletedPhoneIds)) {
+                PhoneNumbers::deleteAll(['id' => array_values($deletedPhoneIds)]);
+            }
+
+            // 4d. RealEstate — delta save.
+            $oldRealEstates = RealEstate::find()
+                ->where(['customer_id' => $customerId])
+                ->all();
+            $oldReIds = array_map(function ($r) { return (int)$r->id; }, $oldRealEstates);
+
+            $keptReIds = [];
+            foreach ($realestates as $re) {
+                if (!is_array($re)) continue;
+                $type = trim((string)($re['property_type']   ?? ''));
+                $num  = trim((string)($re['property_number'] ?? ''));
+                if ($type === '' && $num === '') continue;
+                $existingId = (int)($re['id'] ?? 0);
+                $reModel = $existingId > 0
+                    ? (RealEstate::findOne($existingId) ?: new RealEstate())
+                    : new RealEstate();
+                $reModel->setAttributes([
+                    'customer_id'     => $customerId,
+                    'property_type'   => $type,
+                    'property_number' => $num,
+                ], false);
+                if (!$reModel->save(false)) {
+                    $tx->rollBack();
+                    Yii::error('Wizard finishEdit: realestate save failed: '
+                        . print_r($reModel->getErrors(), true), __METHOD__);
+                    return ['ok' => false, 'error' => 'تعذّر حفظ بيانات العقارات.'];
+                }
+                $keptReIds[] = (int)$reModel->id;
+            }
+            $deletedReIds = array_diff($oldReIds, $keptReIds);
+            if (!empty($deletedReIds)) {
+                RealEstate::deleteAll(['id' => array_values($deletedReIds)]);
+            }
+
+            $tx->commit();
+        } catch (\Throwable $e) {
+            $tx->rollBack();
+            Yii::error('Wizard finishEdit: unexpected error: ' . $e->getMessage()
+                . "\n" . $e->getTraceAsString(), __METHOD__);
+            return ['ok' => false, 'error' => 'حدث خطأ غير متوقع أثناء حفظ التعديلات.'];
+        }
+
+        // ── 5. Adopt any newly uploaded scan/extras (best-effort). ──
+        try {
+            $this->linkScanImagesToCustomer($customerId, $payload);
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finishEdit: linkScanImagesToCustomer failed: ' . $e->getMessage(), __METHOD__);
+        }
+        try {
+            $this->linkExtrasToCustomer($customerId, $payload);
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finishEdit: linkExtrasToCustomer failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        // ── 6. Refresh customer caches (best-effort). ──
+        try {
+            $params = Yii::$app->params;
+            $cache  = Yii::$app->cache;
+            if (!empty($params['key_customers']) && !empty($params['customers_query'])) {
+                $cache->set(
+                    $params['key_customers'],
+                    Yii::$app->db->createCommand($params['customers_query'])->queryAll(),
+                    $params['time_duration'] ?? 3600
+                );
+            }
+            if (!empty($params['key_customers_name']) && !empty($params['customers_name_query'])) {
+                $cache->set(
+                    $params['key_customers_name'],
+                    Yii::$app->db->createCommand($params['customers_name_query'])->queryAll(),
+                    $params['time_duration'] ?? 3600
+                );
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('Wizard finishEdit: cache refresh failed: ' . $e->getMessage(), __METHOD__);
+        }
+
+        // ── 7. Drop the per-customer edit draft. ──
+        WizardDraft::clearAutoDraft(Yii::$app->user->id, $draftKey);
+
+        return [
+            'ok'           => true,
+            'customer_id'  => $customerId,
+            'customer_name'=> (string)($customer->name ?? ''),
+            'redirect'     => \yii\helpers\Url::to([
+                '/customers/customers/view', 'id' => $customerId,
+            ]),
+            'message'      => 'تم حفظ تعديلات العميل بنجاح.',
         ];
     }
 
@@ -678,7 +1387,8 @@ class WizardController extends Controller
 
         // Record the override into the wizard draft so actionFinish() honours it.
         try {
-            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            $key = $this->draftKey();
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $key);
             if ($draft) {
                 $payload = $this->decodePayload($draft);
                 $payload['_fahras_override'] = [
@@ -694,7 +1404,7 @@ class WizardController extends Controller
                 ];
                 WizardDraft::saveAutoDraft(
                     Yii::$app->user->id,
-                    self::DRAFT_KEY,
+                    $key,
                     json_encode($payload, JSON_UNESCAPED_UNICODE)
                 );
             }
@@ -744,12 +1454,14 @@ class WizardController extends Controller
     public function actionDiscard()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
-        WizardDraft::clearAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+        WizardDraft::clearAutoDraft(Yii::$app->user->id, $this->draftKey());
         return ['ok' => true];
     }
 
     /**
-     * List all manually-saved drafts for the current user.
+     * List all manually-saved drafts for the current user. Manual drafts
+     * are scoped to the create flow only — edit drafts auto-rehydrate from
+     * DB on every entry, so saving them as named slots would be misleading.
      */
     public function actionDrafts()
     {
@@ -759,7 +1471,7 @@ class WizardController extends Controller
 
     /**
      * Resume a manually-saved draft (copies it into the auto slot and
-     * redirects to the wizard shell).
+     * redirects to the wizard shell). Always operates on the create slot.
      */
     public function actionResume($id)
     {
@@ -1579,7 +2291,7 @@ class WizardController extends Controller
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
             if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
-                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
             }
         } catch (\Throwable $e) {
             Yii::warning('Wizard income scan: failed to remember in draft: ' . $e->getMessage(), __METHOD__);
@@ -1728,7 +2440,7 @@ class WizardController extends Controller
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
             if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
-                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
             }
         } catch (\Throwable $e) {
             // Non-fatal — the scan itself succeeded. Just log.
@@ -1744,7 +2456,7 @@ class WizardController extends Controller
     protected function getDraftIssuingBody()
     {
         try {
-            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $this->draftKey());
             if (!$draft) return null;
             $payload = $this->decodePayload($draft);
             $val = $payload['_scan']['issuing_body'] ?? null;
@@ -2232,16 +2944,70 @@ class WizardController extends Controller
 
     protected function getOrCreateAutoDraft()
     {
-        $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+        $key = $this->draftKey();
+        $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $key);
         if (!$draft) {
-            WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, [
+            $seed = [
                 '_step'    => 1,
                 '_created' => time(),
                 '_updated' => time(),
-            ]);
-            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            ];
+            // Encode mode/customer_id eagerly so subsequent helpers (Fahras
+            // gate, finish-branching) read the right context even before the
+            // first save round-trip.
+            if ($key !== self::DRAFT_KEY && strpos($key, 'customer_edit:') === 0) {
+                $seed['_mode']        = 'edit';
+                $seed['_customer_id'] = (int)substr($key, strlen('customer_edit:'));
+            } else {
+                $seed['_mode'] = 'create';
+            }
+            WizardDraft::saveAutoDraft(Yii::$app->user->id, $key, $seed);
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $key);
         }
         return $draft;
+    }
+
+    /**
+     * Resolve the wizard draft slot for the current request — either the
+     * default create slot or a per-customer edit slot.
+     *
+     * Resolution order (highest → lowest priority):
+     *   1. Cached value pinned by an action method (e.g. {@see actionEdit}).
+     *   2. POST/GET body parameters `mode` + `customerId`.
+     *   3. Request-cookie `cw_draft_key` (set by client when entering edit).
+     *   4. Default → {@see DRAFT_KEY}.
+     *
+     * Why not session: a single user can have multiple browser tabs open
+     * (one create, one edit). Session storage would let one tab silently
+     * overwrite the other's slot. Per-request resolution avoids that race.
+     */
+    protected function draftKey(): string
+    {
+        if ($this->_draftKey !== null) {
+            return $this->_draftKey;
+        }
+
+        $req = Yii::$app->request;
+
+        // ── Per-request mode + customerId hints. ──
+        $mode = (string)$req->post('mode', $req->get('mode', ''));
+        $cid  = (int)$req->post('customerId', $req->get('customerId', 0));
+
+        // ── Cookie fallback (client sets when actionEdit lands). ──
+        if ($mode === '' || $cid <= 0) {
+            $cookies = $req->cookies;
+            $cookieKey = (string)$cookies->getValue('cw_draft_key', '');
+            if ($cookieKey !== ''
+                && strpos($cookieKey, 'customer_edit:') === 0) {
+                $mode = 'edit';
+                $cid  = (int)substr($cookieKey, strlen('customer_edit:'));
+            }
+        }
+
+        if ($mode === 'edit' && $cid > 0) {
+            return $this->_draftKey = 'customer_edit:' . $cid;
+        }
+        return $this->_draftKey = self::DRAFT_KEY;
     }
 
     protected function decodePayload($draft)
@@ -2537,7 +3303,7 @@ class WizardController extends Controller
             $payload['_updated'] = time();
             $finalJson = json_encode($payload, JSON_UNESCAPED_UNICODE);
             if ($finalJson !== false && strlen($finalJson) <= self::MAX_DRAFT_BYTES) {
-                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $finalJson);
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $finalJson);
             }
         } catch (\Throwable $e) {
             Yii::warning('Wizard upload-extra: draft remember failed: ' . $e->getMessage(), __METHOD__);
@@ -2550,7 +3316,7 @@ class WizardController extends Controller
     protected function forgetExtraInDraft($purpose, $imageId)
     {
         try {
-            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $this->draftKey());
             if (!$draft) return;
             $payload = $this->decodePayload($draft);
             if (empty($payload['_extras'])) return;
@@ -2574,7 +3340,7 @@ class WizardController extends Controller
             $payload['_updated'] = time();
             $json = json_encode($payload, JSON_UNESCAPED_UNICODE);
             if ($json !== false) {
-                WizardDraft::saveAutoDraft(Yii::$app->user->id, self::DRAFT_KEY, $json);
+                WizardDraft::saveAutoDraft(Yii::$app->user->id, $this->draftKey(), $json);
             }
         } catch (\Throwable $e) {
             Yii::warning('forget-extra failed: ' . $e->getMessage(), __METHOD__);
@@ -3263,9 +4029,23 @@ class WizardController extends Controller
         $svc = Yii::$app->fahras ?? null;
         if (!$svc || !$svc->enabled) return null;
 
+        // ── Fahras only gates new customer CREATION. Editing an existing
+        // customer must not block on Fahras (the customer is already in
+        // our system, the gate is moot, and many edits update fields that
+        // have nothing to do with eligibility). ──
+        try {
+            $key = $this->draftKey();
+            if (strpos($key, 'customer_edit:') === 0) {
+                return null;
+            }
+        } catch (\Throwable $e) {
+            // Defensive: if draft-key resolution fails for any reason, fall
+            // through and enforce the gate (fail-closed for create flows).
+        }
+
         // Honour an active manager override stored in the current draft.
         try {
-            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, self::DRAFT_KEY);
+            $draft = WizardDraft::loadAutoDraft(Yii::$app->user->id, $this->draftKey());
             if ($draft) {
                 $payload = $this->decodePayload($draft);
                 $ovr = $payload['_fahras_override'] ?? null;
@@ -3437,22 +4217,31 @@ class WizardController extends Controller
         }
 
         // ── Real-estate (relocated from Step 3 — see _step_2_employment.php
-        //    Section D for rationale). Treat property fields as financial
-        //    assets, not as addressing data. ──
+        //    Section D for rationale). The wizard now uses a multi-row
+        //    repeater under `realestates[]`; the legacy single-row Customers
+        //    columns are derived server-side from the first non-empty row
+        //    (see finishCreate / finishEdit). Validation here only enforces
+        //    per-field length limits — the "owns property?" radio is purely
+        //    a UX disclosure toggle and is intentionally not required. ──
         $owns = $this->dotGet($data, 'Customers[do_have_any_property]');
         if ($owns !== null && $owns !== '' && !in_array((string)$owns, ['0', '1'], true)) {
             $errors['Customers[do_have_any_property]'] = 'القيمة غير صالحة.';
         }
-        if ((string)$owns === '1') {
-            $pname = trim((string)$this->dotGet($data, 'Customers[property_name]'));
-            if ($pname === '') {
-                $errors['Customers[property_name]'] = 'اسم/نوع العقار مطلوب.';
-            } elseif (mb_strlen($pname) > 50) {
-                $errors['Customers[property_name]'] = 'الاسم طويل جداً.';
-            }
-            $pnum = trim((string)$this->dotGet($data, 'Customers[property_number]'));
-            if (mb_strlen($pnum) > 100) {
-                $errors['Customers[property_number]'] = 'الرقم طويل جداً.';
+        $realestates = $data['realestates'] ?? [];
+        if (is_array($realestates)) {
+            foreach ($realestates as $i => $re) {
+                if (!is_array($re)) continue;
+                $rt = trim((string)($re['property_type']   ?? ''));
+                $rn = trim((string)($re['property_number'] ?? ''));
+                if ($rt === '' && $rn === '') continue; // empty rows are dropped silently
+                if ($rt === '') {
+                    $errors["realestates[$i][property_type]"] = 'اسم/نوع العقار مطلوب.';
+                } elseif (mb_strlen($rt) > 100) {
+                    $errors["realestates[$i][property_type]"] = 'الاسم طويل جداً (الحد الأقصى 100 حرف).';
+                }
+                if (mb_strlen($rn) > 100) {
+                    $errors["realestates[$i][property_number]"] = 'الرقم طويل جداً (الحد الأقصى 100 خانة).';
+                }
             }
         }
 

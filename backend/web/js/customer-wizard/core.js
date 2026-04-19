@@ -60,6 +60,12 @@
         state.completed  = {};
         state.dirty      = false;
 
+        // Mode (create | edit) + the customer being edited. Sibling modules
+        // (fahras.js, review.js, …) read these to short-circuit create-only
+        // behaviour when the user is updating an existing record.
+        CW.mode       = (opts.mode === 'edit') ? 'edit' : 'create';
+        CW.customerId = parseInt(opts.customerId, 10) || 0;
+
         state.$shell      = $(opts.shellSelector || '#cw-shell');
         if (!state.$shell.length) return;
         state.$stepper    = state.$shell.find('[data-cw-stepper]');

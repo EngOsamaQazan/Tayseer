@@ -21,10 +21,15 @@ use yii\helpers\Url;
  * @var int                             $currentStep
  * @var int                             $totalSteps
  * @var array                           $lookups   ['cities'=>[], 'citizens'=>[], 'hearAboutUs'=>[]]
+ * @var string|null                     $mode        'create' (default) or 'edit'
+ * @var int|null                        $customerId  >0 only when $mode === 'edit'
  */
-$lookups = $lookups ?? ['cities' => [], 'citizens' => [], 'hearAboutUs' => []];
+$lookups    = $lookups    ?? ['cities' => [], 'citizens' => [], 'hearAboutUs' => []];
+$mode       = isset($mode) && $mode === 'edit' ? 'edit' : 'create';
+$customerId = isset($customerId) ? (int)$customerId : 0;
+$isEdit     = $mode === 'edit' && $customerId > 0;
 
-$this->title = 'إضافة عميل جديد';
+$this->title = $isEdit ? 'تعديل بيانات العميل' : 'إضافة عميل جديد';
 $this->params['breadcrumbs'] = [
     ['label' => 'العملاء', 'url' => ['/customers/customers/index']],
     $this->title,
@@ -84,6 +89,12 @@ $this->registerJsFile($ver('/js/customer-wizard/core.js'), [
     'position' => \yii\web\View::POS_END,
 ]);
 $this->registerJsFile($ver('/js/customer-wizard/fields.js'), [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
+// RealEstate multi-row repeater (Step 2 — Section D). Standalone module
+// so the create/edit wizards share the exact same UI behaviour.
+$this->registerJsFile($ver('/js/customer-wizard/realestate.js'), [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
@@ -217,7 +228,11 @@ $steps = [
 ];
 ?>
 
-<div id="cw-shell" class="cw-shell" data-cw-current-step="<?= $currentStep ?>">
+<div id="cw-shell"
+     class="cw-shell <?= $isEdit ? 'cw-shell--edit' : '' ?>"
+     data-cw-current-step="<?= $currentStep ?>"
+     data-cw-mode="<?= Html::encode($mode) ?>"
+     <?= $isEdit ? 'data-cw-customer-id="' . (int)$customerId . '"' : '' ?>>
     <div class="cw-container">
 
         <header class="cw-header">
@@ -226,8 +241,10 @@ $steps = [
                      give a useful subtitle (not a duplicate title) + the live
                      status pill. h2 keeps the heading hierarchy clean. -->
                 <h2 class="cw-header__title">
-                    <i class="fa fa-magic" aria-hidden="true"></i>
-                    <span>إنشاء ملف عميل عبر 4 خطوات</span>
+                    <i class="fa <?= $isEdit ? 'fa-pencil-square-o' : 'fa-magic' ?>" aria-hidden="true"></i>
+                    <span><?= $isEdit
+                        ? 'تعديل ملف العميل عبر 4 خطوات'
+                        : 'إنشاء ملف عميل عبر 4 خطوات' ?></span>
                 </h2>
                 <span class="cw-pill"
                       data-cw-status
@@ -240,17 +257,22 @@ $steps = [
                 </span>
             </div>
             <div class="cw-header__actions" role="group" aria-label="إجراءات سريعة">
-                <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-action="save-draft">
-                    <i class="fa fa-floppy-o" aria-hidden="true"></i>
-                    <span>حفظ كمسودة</span>
-                </button>
-                <button type="button" class="cw-btn cw-btn--outline cw-btn--sm" data-cw-action="discard">
-                    <i class="fa fa-trash-o" aria-hidden="true"></i>
-                    <span>إلغاء وبدء جديد</span>
-                </button>
-                <a href="<?= Url::to(['/customers/customers/index']) ?>" class="cw-btn cw-btn--ghost cw-btn--sm">
+                <?php if (!$isEdit): ?>
+                    <button type="button" class="cw-btn cw-btn--ghost cw-btn--sm" data-cw-action="save-draft">
+                        <i class="fa fa-floppy-o" aria-hidden="true"></i>
+                        <span>حفظ كمسودة</span>
+                    </button>
+                    <button type="button" class="cw-btn cw-btn--outline cw-btn--sm" data-cw-action="discard">
+                        <i class="fa fa-trash-o" aria-hidden="true"></i>
+                        <span>إلغاء وبدء جديد</span>
+                    </button>
+                <?php endif ?>
+                <a href="<?= $isEdit
+                            ? Url::to(['/customers/customers/view', 'id' => $customerId])
+                            : Url::to(['/customers/customers/index']) ?>"
+                   class="cw-btn cw-btn--ghost cw-btn--sm">
                     <i class="fa fa-arrow-right" aria-hidden="true"></i>
-                    <span>العودة للقائمة</span>
+                    <span><?= $isEdit ? 'إلغاء التعديل' : 'العودة للقائمة' ?></span>
                 </a>
             </div>
         </header>
@@ -335,6 +357,8 @@ $steps = [
 
 <?php
 $urlsJson = json_encode($urls, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+$modeJs   = json_encode($mode);
+$cidJs    = (int)$customerId;
 $this->registerJs(<<<JS
 jQuery(function () {
     var __cwUrls = {$urlsJson};
@@ -343,7 +367,9 @@ jQuery(function () {
             shellSelector: '#cw-shell',
             urls: __cwUrls,
             totalSteps: {$totalSteps},
-            currentStep: {$currentStep}
+            currentStep: {$currentStep},
+            mode: {$modeJs},
+            customerId: {$cidJs}
         });
     }
     // Fahras gate-rail (only initializes if the verdict card is present).

@@ -566,18 +566,27 @@ $ownsProp = (string)($cust['do_have_any_property'] ?? '') === '1';
         </div>
 
         <!-- ═══════════════ Final CTA ═══════════════ -->
+        <?php
+            // Mode-aware copy. The wizard payload carries _mode so the
+            // partial works correctly even when rendered standalone (e.g.
+            // an AJAX step refresh) without re-reading $mode from the
+            // controller.
+            $isEditMode = (string)($payload['_mode'] ?? 'create') === 'edit';
+        ?>
         <div class="cw-review-final">
             <div class="cw-review-final__text">
                 <h4 class="cw-review-final__title">
                     <i class="fa fa-flag-checkered" aria-hidden="true"></i>
-                    جاهز لاعتماد العميل؟
+                    <?= $isEditMode ? 'جاهز لحفظ التعديلات؟' : 'جاهز لاعتماد العميل؟' ?>
                 </h4>
-                <p>سيتم حفظ السجل بشكل دائم في قاعدة بيانات العملاء، وربط أي مستندات تم مسحها ضوئياً تلقائياً.</p>
+                <p><?= $isEditMode
+                    ? 'سيتم تحديث ملف العميل وربط أي مستندات جديدة تم مسحها ضوئياً تلقائياً.'
+                    : 'سيتم حفظ السجل بشكل دائم في قاعدة بيانات العملاء، وربط أي مستندات تم مسحها ضوئياً تلقائياً.' ?></p>
             </div>
             <div class="cw-review-final__actions">
                 <button type="button" class="cw-btn cw-btn--lg cw-btn--success" data-cw-action="finish">
-                    <i class="fa fa-check-circle" aria-hidden="true"></i>
-                    <span>اعتماد وإضافة العميل</span>
+                    <i class="fa <?= $isEditMode ? 'fa-floppy-o' : 'fa-check-circle' ?>" aria-hidden="true"></i>
+                    <span><?= $isEditMode ? 'حفظ التعديلات' : 'اعتماد وإضافة العميل' ?></span>
                 </button>
             </div>
         </div>

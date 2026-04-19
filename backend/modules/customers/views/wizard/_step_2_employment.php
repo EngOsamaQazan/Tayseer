@@ -416,80 +416,14 @@ $ownsProp = (string)$ownsRaw === '1';
             </div>
         </div>
 
-        <!-- ── Section D: Real-estate assets (progressive disclosure).
-             Treated as a financial asset — stored in the Customers row
-             via `do_have_any_property` + `property_name` + `property_number`.
-             Hidden by default until the user clicks "نعم". ── -->
-        <div class="cw-fieldset">
-            <div class="cw-fieldset__head">
-                <h4 class="cw-fieldset__title">
-                    <i class="fa fa-home" aria-hidden="true"></i>
-                    الأصول العقارية
-                </h4>
-                <p class="cw-fieldset__hint">
-                    العقارات تُعدّ ضمن أصول العميل لأغراض تقييم الملاءة المالية
-                    وقد تُستخدم كضمان إضافي للعقد عند الحاجة.
-                </p>
-            </div>
-
-            <div class="cw-grid cw-grid--3">
-                <div class="cw-field" data-cw-field="Customers[do_have_any_property]">
-                    <fieldset class="cw-radio-group">
-                        <legend class="cw-field__label">
-                            هل يملك العميل عقاراً؟
-                        </legend>
-                        <div class="cw-radio-row">
-                            <label class="cw-radio">
-                                <input type="radio"
-                                       name="Customers[do_have_any_property]" value="1"
-                                       data-cw-toggle="#cw-property-row"
-                                       <?= $ownsProp ? 'checked' : '' ?>>
-                                <span class="cw-radio__mark" aria-hidden="true"></span>
-                                <span>نعم</span>
-                            </label>
-                            <label class="cw-radio">
-                                <input type="radio"
-                                       name="Customers[do_have_any_property]" value="0"
-                                       data-cw-toggle="#cw-property-row"
-                                       data-cw-toggle-hide="1"
-                                       <?= !$ownsProp && $ownsRaw !== '' ? 'checked' : '' ?>>
-                                <span class="cw-radio__mark" aria-hidden="true"></span>
-                                <span>لا</span>
-                            </label>
-                        </div>
-                    </fieldset>
-                </div>
-
-                <div id="cw-property-row"
-                     class="cw-field cw-field--span-2 cw-conditional <?= $ownsProp ? '' : 'cw-conditional--hidden' ?>"
-                     <?= $ownsProp ? '' : 'hidden' ?>>
-                    <div class="cw-grid cw-grid--2">
-                        <div class="cw-field" data-cw-field="Customers[property_name]">
-                            <label class="cw-field__label" for="cw-prop-name">اسم/نوع العقار</label>
-                            <input type="text"
-                                   id="cw-prop-name"
-                                   name="Customers[property_name]"
-                                   value="<?= Html::encode($g('property_name')) ?>"
-                                   class="cw-input"
-                                   maxlength="50"
-                                   dir="auto"
-                                   placeholder="مثال: شقة سكنية">
-                        </div>
-                        <div class="cw-field" data-cw-field="Customers[property_number]">
-                            <label class="cw-field__label" for="cw-prop-num">رقم العقار / الطابو</label>
-                            <input type="text"
-                                   id="cw-prop-num"
-                                   name="Customers[property_number]"
-                                   value="<?= Html::encode($g('property_number')) ?>"
-                                   class="cw-input cw-input--mono"
-                                   maxlength="100"
-                                   dir="ltr"
-                                   placeholder="—">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- ── Section D: Real-estate assets — multi-row repeater.
+             See _step_2_realestate.php for the full data shape and
+             rationale. We dropped the legacy single-row property_name /
+             property_number inputs in favour of the realestates[] array;
+             finishCreate / finishEdit now mirror the FIRST row back into
+             the Customers row's legacy columns automatically for backward
+             compatibility with downstream reports. ── -->
+        <?= $this->render('_step_2_realestate.php', ['payload' => $payload]) ?>
 
         <!-- ── Section E: Bank details (collapsed by default). ── -->
         <details class="cw-fieldset cw-fieldset--collapsible" <?= $bankOpen ? 'open' : '' ?>>

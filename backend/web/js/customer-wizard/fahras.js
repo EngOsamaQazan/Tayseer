@@ -106,6 +106,14 @@
         opts = opts || {};
         state.urls = $.extend({}, opts.urls || {});
 
+        // ── Edit mode: Fahras is a CREATE-time gate (it screens new
+        // customers against the central blacklist). When editing an
+        // existing customer we deliberately bail out so the verdict
+        // card never appears and the "Next" button is never locked. ──
+        if (window.CW && window.CW.mode === 'edit') {
+            return;
+        }
+
         state.$card = $('[data-cw-fahras]');
         if (!state.$card.length) return;          // Fahras disabled / not on step 1
 
