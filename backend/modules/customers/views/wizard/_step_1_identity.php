@@ -172,15 +172,10 @@ $fahrasOverride = $payload['_fahras_override'] ?? null;
                            required
                            aria-describedby="cw-phone-hint"
                            aria-required="true"
+                           title="يقبل الحقل أي صيغة: 0791234567 أو 791234567 أو 962791234567 أو +962791234567 — وسيتم حفظه تلقائيًا بصيغة E.164."
                            data-cw-phone>
                     <p id="cw-phone-hint" class="cw-field__hint">
-                        اختر بلد الرقم من القائمة (الافتراضي الأردن)، ويمكنك
-                        كتابة الرقم بأي صيغة تريحك، مثل:
-                        <bdi dir="ltr">0791234567</bdi> أو
-                        <bdi dir="ltr">791234567</bdi> أو
-                        <bdi dir="ltr">962791234567</bdi> أو
-                        <bdi dir="ltr">+962791234567</bdi>،
-                        وسيتم حفظ الرقم تلقائيًا بصيغة دولية موحّدة (E.164).
+                        يقبل الحقل أي صيغة (محلية أو دولية) ويُحفظ بصيغة موحّدة (E.164).
                     </p>
                 </div>
             </div>
