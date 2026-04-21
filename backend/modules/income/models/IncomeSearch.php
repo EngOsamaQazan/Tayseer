@@ -279,12 +279,12 @@ class IncomeSearch extends Income
             ]);
         }
         if ((!empty($this->date_from))) {
-
-            $query->andFilterWhere(['>=', 'date', $this->date_from]);
+            // Qualify table because the joined view also exposes a `date` column,
+            // otherwise MySQL throws "Column 'date' in where clause is ambiguous".
+            $query->andFilterWhere(['>=', '{{%income}}.date', $this->date_from]);
         }
         if ((!empty($this->date_to))) {
-
-            $query->andFilterWhere(['<=', 'date', $this->date_to]);
+            $query->andFilterWhere(['<=', '{{%income}}.date', $this->date_to]);
         }
 
 
