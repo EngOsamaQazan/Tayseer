@@ -666,62 +666,81 @@ class FollowUpController extends Controller
      */
     public function actionVerifyClearance($c, $n, $s)
     {
-        $this->layout = 'main';
+        // Public (guest-safe) endpoint. Mirrors verify-statement: never set a
+        // custom layout and never let an inner error bubble up as a raw 500 —
+        // always fall back to rendering the verify-clearance view so the QR
+        // scanner still gets a proper page.
+        try {
+            $contractId = (int) $c;
+            $certNumber = (string) $n;
+            $sig        = (string) $s;
 
-        $contractId = (int) $c;
-        $certNumber = (string) $n;
-        $sig        = (string) $s;
+            $cert = \backend\modules\followUp\models\ClearanceCertificate::find()
+                ->where([
+                    'cert_number' => $certNumber,
+                    'contract_id' => $contractId,
+                    'is_deleted'  => 0,
+                ])
+                ->one();
 
-        $cert = \backend\modules\followUp\models\ClearanceCertificate::find()
-            ->where([
-                'cert_number' => $certNumber,
+            if (!$cert || !$cert->isSignatureValid($sig)) {
+                return $this->render('verify-clearance', [
+                    'status'      => 'invalid',
+                    'label'       => 'غير صحيح',
+                    'message'     => 'الباركود غير صالح أو تم التلاعب به.',
+                    'cert'        => null,
+                    'snapshot'    => null,
+                    'contract_id' => $contractId,
+                ]);
+            }
+
+            if ($cert->isRevoked()) {
+                return $this->render('verify-clearance', [
+                    'status'      => 'revoked',
+                    'label'       => 'ملغاة',
+                    'message'     => 'تم إلغاء شهادة براءة الذمة هذه ولم تعد صالحة.',
+                    'cert'        => $cert,
+                    'snapshot'    => $cert->getSnapshot(),
+                    'contract_id' => $contractId,
+                ]);
+            }
+
+            $expired = $this->isClearanceExpired($cert);
+            if ($expired) {
+                return $this->render('verify-clearance', [
+                    'status'      => 'expired',
+                    'label'       => 'منتهية الصلاحية',
+                    'message'     => 'تم تسجيل حركة جديدة على العقد بعد إصدار هذه الشهادة. يرجى طلب إصدار شهادة جديدة بعد إلغاء هذه الشهادة.',
+                    'cert'        => $cert,
+                    'snapshot'    => $cert->getSnapshot(),
+                    'contract_id' => $contractId,
+                ]);
+            }
+
+            return $this->render('verify-clearance', [
+                'status'      => 'valid',
+                'label'       => 'فعّالة',
+                'message'     => 'شهادة براءة الذمة سارية وصالحة.',
+                'cert'        => $cert,
+                'snapshot'    => $cert->getSnapshot(),
                 'contract_id' => $contractId,
-                'is_deleted'  => 0,
-            ])
-            ->one();
-
-        if (!$cert || !$cert->isSignatureValid($sig)) {
+            ]);
+        } catch (\Throwable $e) {
+            Yii::error(
+                'verify-clearance failed: ' . $e->getMessage()
+                    . ' in ' . $e->getFile() . ':' . $e->getLine()
+                    . "\n" . $e->getTraceAsString(),
+                __METHOD__
+            );
             return $this->render('verify-clearance', [
                 'status'      => 'invalid',
                 'label'       => 'غير صحيح',
-                'message'     => 'الباركود غير صالح أو تم التلاعب به.',
+                'message'     => 'تعذّر التحقق من الشهادة حالياً. يرجى المحاولة لاحقاً.',
                 'cert'        => null,
                 'snapshot'    => null,
-                'contract_id' => $contractId,
+                'contract_id' => (int) $c,
             ]);
         }
-
-        if ($cert->isRevoked()) {
-            return $this->render('verify-clearance', [
-                'status'      => 'revoked',
-                'label'       => 'ملغاة',
-                'message'     => 'تم إلغاء شهادة براءة الذمة هذه ولم تعد صالحة.',
-                'cert'        => $cert,
-                'snapshot'    => $cert->getSnapshot(),
-                'contract_id' => $contractId,
-            ]);
-        }
-
-        $expired = $this->isClearanceExpired($cert);
-        if ($expired) {
-            return $this->render('verify-clearance', [
-                'status'      => 'expired',
-                'label'       => 'منتهية الصلاحية',
-                'message'     => 'تم تسجيل حركة جديدة على العقد بعد إصدار هذه الشهادة. يرجى طلب إصدار شهادة جديدة بعد إلغاء هذه الشهادة.',
-                'cert'        => $cert,
-                'snapshot'    => $cert->getSnapshot(),
-                'contract_id' => $contractId,
-            ]);
-        }
-
-        return $this->render('verify-clearance', [
-            'status'      => 'valid',
-            'label'       => 'فعّالة',
-            'message'     => 'شهادة براءة الذمة سارية وصالحة.',
-            'cert'        => $cert,
-            'snapshot'    => $cert->getSnapshot(),
-            'contract_id' => $contractId,
-        ]);
     }
 
     /**
