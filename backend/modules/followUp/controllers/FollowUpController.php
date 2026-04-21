@@ -51,7 +51,8 @@ class FollowUpController extends Controller
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
                         'actions' => ['index', 'view', 'panel', 'find-next-contract',
-                            'printer', 'clearance', 'custamer-info', 'get-timeline', 'customer-image',
+                            'printer', 'clearance', 'download-clearance-pdf',
+                            'custamer-info', 'get-timeline', 'customer-image',
                             'export-phone-numbers-excel', 'export-phone-numbers-pdf',
                             'export-loan-scheduling-excel', 'export-loan-scheduling-pdf',
                             'contract-phones'],
@@ -654,6 +655,61 @@ class FollowUpController extends Controller
         }
 
         return $this->redirect(['clearance', 'contract_id' => (int) $cert->contract_id]);
+    }
+
+    /**
+     * Download a PDF copy of the issued clearance certificate.
+     * Renders from the immutable snapshot so the PDF matches what was issued.
+     */
+    public function actionDownloadClearancePdf($id)
+    {
+        $cert = \backend\modules\followUp\models\ClearanceCertificate::findOne((int) $id);
+        if (!$cert) {
+            throw new NotFoundHttpException('الشهادة غير موجودة.');
+        }
+
+        $snapshot = $cert->getSnapshot();
+        $isExpired = $cert->isRevoked() ? false : $this->isClearanceExpired($cert);
+        $verifyUrl = $this->buildClearanceVerifyUrl($cert);
+
+        $html = $this->renderPartial('_clearance-pdf', [
+            'cert'      => $cert,
+            'snapshot'  => $snapshot,
+            'isExpired' => $isExpired,
+            'isRevoked' => $cert->isRevoked(),
+            'verifyUrl' => $verifyUrl,
+        ]);
+
+        try {
+            $mpdf = new \Mpdf\Mpdf([
+                'mode'            => 'utf-8',
+                'format'          => 'A4',
+                'directionality'  => 'rtl',
+                'default_font'    => 'xbriyaz',
+                'margin_top'      => 14,
+                'margin_bottom'   => 14,
+                'margin_left'     => 14,
+                'margin_right'    => 14,
+                'margin_header'   => 0,
+                'margin_footer'   => 0,
+            ]);
+            $mpdf->SetTitle('شهادة براءة ذمة — ' . $cert->cert_number);
+            $mpdf->SetAuthor($snapshot['companyName'] ?? 'Tayseer ERP');
+            $mpdf->SetDisplayMode('fullpage');
+            $mpdf->WriteHTML($html);
+        } catch (\Throwable $e) {
+            Yii::error('Clearance PDF build failed: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+            Yii::$app->session->setFlash('error', 'تعذّر توليد ملف PDF حالياً. يرجى المحاولة لاحقاً.');
+            return $this->redirect(['clearance', 'contract_id' => (int) $cert->contract_id]);
+        }
+
+        $filename = 'Clearance_' . $cert->cert_number . '.pdf';
+        $tmp = tempnam(sys_get_temp_dir(), 'clr') . '.pdf';
+        $mpdf->Output($tmp, \Mpdf\Output\Destination::FILE);
+
+        return Yii::$app->response
+            ->sendFile($tmp, $filename, ['mimeType' => 'application/pdf', 'inline' => true])
+            ->on(\yii\web\Response::EVENT_AFTER_SEND, function () use ($tmp) { @unlink($tmp); });
     }
 
     /**
