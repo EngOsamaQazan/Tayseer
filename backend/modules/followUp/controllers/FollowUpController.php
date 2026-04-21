@@ -51,7 +51,7 @@ class FollowUpController extends Controller
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
                     [
                         'actions' => ['index', 'view', 'panel', 'find-next-contract',
-                            'printer', 'clearance', 'download-clearance-pdf',
+                            'printer', 'download-statement-pdf', 'clearance', 'download-clearance-pdf',
                             'custamer-info', 'get-timeline', 'customer-image',
                             'export-phone-numbers-excel', 'export-phone-numbers-pdf',
                             'export-loan-scheduling-excel', 'export-loan-scheduling-pdf',
@@ -478,6 +478,170 @@ class FollowUpController extends Controller
             'contract_id' => $contract_id,
 
         ]);
+    }
+
+    /**
+     * Download the customer account statement as a PDF (mpdf).
+     * Mirrors actionDownloadClearancePdf — builds an mpdf-friendly HTML
+     * (no flex/grid, only tables + inline styles) and streams the file
+     * to the browser.
+     */
+    public function actionDownloadStatementPdf($contract_id)
+    {
+        $contractId = (int) $contract_id;
+
+        $modelf = new \common\helper\LoanContract();
+        $contractModel = $modelf->findContract($contractId);
+        if (!$contractModel) {
+            throw new NotFoundHttpException('العقد غير موجود.');
+        }
+
+        // ── Company ──
+        $CompanyChecked  = new \common\components\CompanyChecked();
+        $primary_company = $CompanyChecked->findPrimaryCompany();
+        if ($primary_company == '') {
+            $companyName  = Yii::$app->params['companies_logo'] ?? '';
+            $companyBanks = '';
+            $companyPhone = '';
+        } else {
+            $companyName  = $primary_company->name;
+            $companyBanks = $CompanyChecked->findPrimaryCompanyBancks();
+            $companyPhone = $primary_company->phone ?? '';
+        }
+
+        // ── Customers ──
+        $clientRows = \backend\modules\customers\models\ContractsCustomers::find()
+            ->where(['customer_type' => 'client', 'contract_id' => $contractId])->all();
+        $guarantorRows = \backend\modules\customers\models\ContractsCustomers::find()
+            ->where(['customer_type' => 'guarantor', 'contract_id' => $contractId])->all();
+
+        $clientNames = array_map(function ($c) {
+            $cust = \backend\modules\customers\models\Customers::findOne($c->customer_id);
+            return $cust ? $cust->name : '';
+        }, $clientRows);
+        $guarantorNames = array_map(function ($c) {
+            $cust = \backend\modules\customers\models\Customers::findOne($c->customer_id);
+            return $cust ? $cust->name : '';
+        }, $guarantorRows);
+
+        // ── Financials ──
+        $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractModel->id);
+        $totalDebt        = $vb ? $vb['totalDebt'] : (float) $contractModel->total_value;
+        $paidAmount       = $vb ? $vb['paid']      : 0;
+        $remainingBalance = $vb ? $vb['remaining'] : 0;
+        $contractModel->total_value = $totalDebt;
+
+        $lastIncome = \backend\modules\contractInstallment\models\ContractInstallment::find()
+            ->where(['contract_id' => $contractId])->orderBy(['date' => SORT_DESC])->one();
+
+        // ── Movements (mirrors printer.php) ──
+        $movements = Yii::$app->db->createCommand("
+            SELECT total_value as amount, 'ثمن البضاعة' as description, Date_of_sale as date, 'مدين' as type, '' as notes
+            FROM os_contracts WHERE id = :cid1
+            UNION ALL
+            SELECT lawyer_cost, 'اتعاب محاماه', created_at, 'مدين', '' FROM os_judiciary WHERE contract_id = :cid2
+            UNION ALL
+            SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid3
+            UNION ALL
+            SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid4
+        ", [':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId, ':cid4' => $contractId])->queryAll();
+
+        // Sort: sale first, then dated rows asc, then undated rows at end.
+        $isDateValid = function ($date) {
+            if ($date === null || $date === '') return false;
+            $str = is_string($date) ? substr($date, 0, 10) : date('Y-m-d', strtotime($date));
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $str)) return false;
+            $y = (int) substr($str, 0, 4);
+            return $y >= 1990 && $y <= 2030;
+        };
+        $saleRow = null; $withDate = []; $noDate = [];
+        foreach ($movements as $m) {
+            if (trim($m['description'] ?? '') === 'ثمن البضاعة') { $saleRow = $m; continue; }
+            if ($isDateValid($m['date'] ?? null)) { $withDate[] = $m; } else { $noDate[] = $m; }
+        }
+        usort($withDate, function ($a, $b) {
+            return strtotime(substr($a['date'] ?? '', 0, 10)) <=> strtotime(substr($b['date'] ?? '', 0, 10));
+        });
+        $movements = array_merge($saleRow ? [$saleRow] : [], $withDate, $noDate);
+
+        // ── Signature / verify URL (identical to printer.php) ──
+        $lastMovementDate = null;
+        foreach ($movements as $m) {
+            $d = isset($m['date']) ? (is_string($m['date']) ? substr($m['date'], 0, 10) : date('Y-m-d', strtotime($m['date']))) : null;
+            if ($d && (!$lastMovementDate || $d > $lastMovementDate)) $lastMovementDate = $d;
+        }
+        if (!$lastMovementDate) $lastMovementDate = date('Y-m-d');
+        $statementDate = date('Y-m-d');
+        $secret    = Yii::$app->params['statementVerifySecret'] ?? 'tayseer-statement-verify-default';
+        $payload   = $contractId . '|' . $statementDate . '|' . $lastMovementDate;
+        $signature = hash_hmac('sha256', $payload, $secret);
+        $verifyUrl = \yii\helpers\Url::to([
+            '/followUp/follow-up/verify-statement',
+            'c' => $contractId, 'd' => $statementDate, 't' => $lastMovementDate, 's' => $signature,
+        ], true);
+
+        // ── Court cost row (optional) ──
+        $courtRow = null;
+        if ($contractModel->status === 'judiciary') {
+            $courtRow = \backend\modules\judiciary\models\Judiciary::find()
+                ->where(['contract_id' => $contractModel->id])->orderBy(['contract_id' => SORT_DESC])->one();
+        }
+
+        $data = [
+            'contractId'       => $contractId,
+            'companyName'      => $companyName,
+            'companyPhone'     => $companyPhone,
+            'companyBanks'     => $companyBanks,
+            'clientNames'      => $clientNames,
+            'guarantorNames'   => $guarantorNames,
+            'totalValue'       => $contractModel->total_value,
+            'paidAmount'       => $paidAmount,
+            'remainingBalance' => $remainingBalance,
+            'dateSale'         => $contractModel->Date_of_sale ?? '—',
+            'firstInstDate'    => $contractModel->first_installment_date ?? '—',
+            'lastIncomeDate'   => $lastIncome ? $lastIncome->date : null,
+            'monthlyInst'      => $contractModel->monthly_installment_value,
+            'courtCaseCost'    => $courtRow ? $courtRow->case_cost   : null,
+            'courtLawyerCost'  => $courtRow ? $courtRow->lawyer_cost : null,
+            'movements'        => $movements,
+            'statementDate'    => $statementDate,
+            'lastMovementDate' => $lastMovementDate,
+            'signature'        => $signature,
+            'verifyUrl'        => $verifyUrl,
+        ];
+
+        $html = $this->renderPartial('_statement-pdf', ['data' => $data]);
+
+        try {
+            $mpdf = new \Mpdf\Mpdf([
+                'mode'            => 'utf-8',
+                'format'          => 'A4',
+                'directionality'  => 'rtl',
+                'default_font'    => 'xbriyaz',
+                'margin_top'      => 12,
+                'margin_bottom'   => 12,
+                'margin_left'     => 12,
+                'margin_right'    => 12,
+                'margin_header'   => 0,
+                'margin_footer'   => 0,
+            ]);
+            $mpdf->SetTitle('كشف حساب — عقد ' . $contractId);
+            $mpdf->SetAuthor($companyName ?: 'Tayseer ERP');
+            $mpdf->SetDisplayMode('fullpage');
+            $mpdf->WriteHTML($html);
+        } catch (\Throwable $e) {
+            Yii::error('Statement PDF build failed: ' . $e->getMessage() . "\n" . $e->getTraceAsString(), __METHOD__);
+            Yii::$app->session->setFlash('error', 'تعذّر توليد ملف PDF حالياً. يرجى المحاولة لاحقاً.');
+            return $this->redirect(['printer', 'contract_id' => $contractId]);
+        }
+
+        $filename = 'Statement_' . $contractId . '_' . $statementDate . '.pdf';
+        $tmp = tempnam(sys_get_temp_dir(), 'stmt') . '.pdf';
+        $mpdf->Output($tmp, \Mpdf\Output\Destination::FILE);
+
+        return Yii::$app->response
+            ->sendFile($tmp, $filename, ['mimeType' => 'application/pdf', 'inline' => true])
+            ->on(\yii\web\Response::EVENT_AFTER_SEND, function () use ($tmp) { @unlink($tmp); });
     }
 
     /**
