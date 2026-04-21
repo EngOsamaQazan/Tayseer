@@ -473,6 +473,25 @@ return [
                     'realEstate'            => 'real-estate',
                 ];
 
+                /*
+                 * Legacy URL aliases (PARSING_ONLY)
+                 * --------------------------------
+                 * Map old/deprecated URLs to the current canonical action.
+                 * Used when a URL was previously generated incorrectly by a
+                 * menu item or external link and may still live in browser
+                 * history, bookmarks, or old documents.
+                 */
+                $rules[] = [
+                    'pattern' => 'income/income/income-item-list',
+                    'route'   => 'income/income/income-list',
+                    'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                ];
+                $rules[] = [
+                    'pattern' => 'income/income-item-list',
+                    'route'   => 'income/income/income-list',
+                    'mode'    => \yii\web\UrlRule::PARSING_ONLY,
+                ];
+
                 // --- Old-format backward compat for single-controller modules ---
                 foreach ($singleControllerModules as $moduleId => $controllerId) {
                     $rules[] = [
