@@ -28,7 +28,7 @@ class  ContractInstallmentController extends Controller
                         'allow' => true,
                     ],
                     [
-                        'actions' => ['logout', 'index', 'update', 'create', 'delete', 'print'],
+                        'actions' => ['logout', 'index', 'view', 'update', 'create', 'delete', 'print'],
                         'allow' => true,
                         'roles' => ['@'],
                     ],
@@ -70,9 +70,11 @@ class  ContractInstallmentController extends Controller
      */
     public function actionView($id)
     {
+        $model = $this->findModel($id);
+
         return $this->render('view', [
-            'model' => $this->findModel($id),
-            'contract_id' => $this->findModel($id)->contract_id,
+            'model' => $model,
+            'contract_id' => $model->contract_id,
         ]);
     }
 
