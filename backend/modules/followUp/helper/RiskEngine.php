@@ -39,6 +39,24 @@ class RiskEngine
         $this->signals = [];
         $this->score = 0;
 
+        // ── Short-circuit: closed / fully-paid contracts carry no collection risk.
+        //    Without this, historical follow-ups (counted as "broken promises")
+        //    and the natural absence of recent contact on a closed file would
+        //    incorrectly push the score into "high" territory for a clean,
+        //    already-settled contract.
+        if ($this->isClosedOrFullyPaid()) {
+            return [
+                'level'          => 'low',
+                'score'          => 0,
+                'signals'        => [[
+                    'code'   => 'closed',
+                    'weight' => 0,
+                    'reason' => $this->closedReason(),
+                ]],
+                'primary_reason' => $this->closedReason(),
+            ];
+        }
+
         $this->assessDPD();
         $this->assessPaymentHistory();
         $this->assessPromiseHistory();
@@ -211,15 +229,68 @@ class RiskEngine
     }
 
     /**
-     * Get count of broken (expired unfulfilled) promises
+     * Get count of broken (expired AND unfulfilled) promises.
+     *
+     * A promise is considered "broken" only when:
+     *   1. Its date is strictly in the past, AND
+     *   2. No payment was recorded on the contract on or after the promise
+     *      date (i.e. the customer did not pay by or after the promised date).
+     *
+     * Previously this method counted every past promise as broken, which
+     * unfairly penalized contracts where the promise was actually kept.
      */
     public function getBrokenPromisesCount()
     {
-        return (int)FollowUp::find()
+        $today = date('Y-m-d');
+
+        $promises = FollowUp::find()
+            ->select(['promise_to_pay_at'])
             ->where(['contract_id' => $this->contract->id])
             ->andWhere(['IS NOT', 'promise_to_pay_at', null])
-            ->andWhere(['<', 'promise_to_pay_at', date('Y-m-d')])
-            ->count();
+            ->andWhere(['<', 'promise_to_pay_at', $today])
+            ->column();
+
+        if (empty($promises)) {
+            return 0;
+        }
+
+        $broken = 0;
+        foreach ($promises as $promiseDate) {
+            $paidOnOrAfter = (float) Yii::$app->db->createCommand(
+                "SELECT COALESCE(SUM(amount), 0) FROM {{%income}}
+                 WHERE contract_id = :cid AND date >= :pdate",
+                [':cid' => $this->contract->id, ':pdate' => substr($promiseDate, 0, 10)]
+            )->queryScalar();
+
+            if ($paidOnOrAfter <= 0) {
+                $broken++;
+            }
+        }
+
+        return $broken;
+    }
+
+    /**
+     * True when the contract represents zero collection risk:
+     *   - remaining balance is fully paid, OR
+     *   - contract is in a terminal status (finished / canceled / refused).
+     */
+    private function isClosedOrFullyPaid(): bool
+    {
+        $terminal = ['finished', 'canceled', 'refused'];
+        if (in_array($this->contract->status, $terminal, true)) {
+            return true;
+        }
+        return $this->calc->remainingAmount() <= 0.009; // tolerate rounding
+    }
+
+    private function closedReason(): string
+    {
+        $terminal = ['finished', 'canceled', 'refused'];
+        if (in_array($this->contract->status, $terminal, true)) {
+            return 'العقد مُغلق (' . self::statusLabel($this->contract->status) . ')';
+        }
+        return 'العقد مُسدّد بالكامل — لا يوجد خطر تحصيل';
     }
 
     /**
