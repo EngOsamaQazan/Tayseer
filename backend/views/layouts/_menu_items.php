@@ -30,7 +30,7 @@ $mainMenuItems = [
         'privilege' => [Permissions::FINANCIAL_TRANSACTION, Permissions::INCOME, Permissions::EXPENSES, Permissions::LOAN_SCHEDULING, Permissions::ACC_VIEW, Permissions::ACC_COA_MANAGE],
         'items' => [
             ['label' => 'الحركات المالية',       'icon' => 'exchange',      'url' => ['/financialTransaction/financial-transaction/index']],
-            ['label' => 'الدخل',                  'icon' => 'arrow-down',    'url' => ['/income/income/income-item-list']],
+            ['label' => 'الدخل',                  'icon' => 'arrow-down',    'url' => ['/income/income/income-list']],
             ['label' => 'المصاريف',               'icon' => 'arrow-up',      'url' => ['/expenses/expenses/index']],
             ['label' => 'التسويات المالية',       'icon' => 'calendar',      'url' => ['/loanScheduling/loan-scheduling/index']],
             ['label' => 'المحاسبة', 'header' => true],
