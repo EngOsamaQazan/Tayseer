@@ -544,7 +544,22 @@ class FollowUpController extends Controller
             SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid3
             UNION ALL
             SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid4
-        ", [':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId, ':cid4' => $contractId])->queryAll();
+            UNION ALL
+            SELECT amount,
+                   CASE type
+                      WHEN 'discount'      THEN 'خصم تجاري'
+                      WHEN 'write_off'     THEN 'شطب'
+                      WHEN 'waiver'        THEN 'إعفاء'
+                      WHEN 'free_discount' THEN 'خصم مجاني'
+                      ELSE 'تسوية'
+                   END,
+                   created_at, 'دائن', COALESCE(reason, '')
+            FROM os_contract_adjustments
+            WHERE contract_id = :cid5 AND is_deleted = 0
+        ", [
+            ':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId,
+            ':cid4' => $contractId, ':cid5' => $contractId,
+        ])->queryAll();
 
         // Sort: sale first, then dated rows asc, then undated rows at end.
         $isDateValid = function ($date) {
@@ -1229,8 +1244,23 @@ class FollowUpController extends Controller
                 SELECT amount, description, created_at, 'مدين', notes FROM os_expenses WHERE contract_id = :cid3
                 UNION ALL
                 SELECT amount, _by, date, 'دائن', notes FROM os_income WHERE contract_id = :cid4
+                UNION ALL
+                SELECT amount,
+                       CASE type
+                          WHEN 'discount'      THEN 'خصم تجاري'
+                          WHEN 'write_off'     THEN 'شطب'
+                          WHEN 'waiver'        THEN 'إعفاء'
+                          WHEN 'free_discount' THEN 'خصم مجاني'
+                          ELSE 'تسوية'
+                       END,
+                       created_at, 'دائن', COALESCE(reason, '')
+                FROM os_contract_adjustments
+                WHERE contract_id = :cid5 AND is_deleted = 0
                 ORDER BY date
-            ", [':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId, ':cid4' => $contractId])->queryAll();
+            ", [
+                ':cid1' => $contractId, ':cid2' => $contractId, ':cid3' => $contractId,
+                ':cid4' => $contractId, ':cid5' => $contractId,
+            ])->queryAll();
 
             $company = (new \common\components\CompanyChecked())->findPrimaryCompany();
             $companyName = $company ? $company->name : (Yii::$app->params['companies_logo'] ?? '');
