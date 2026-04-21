@@ -53,7 +53,8 @@ class FollowUpController extends Controller
                         'actions' => ['index', 'view', 'panel', 'find-next-contract',
                             'printer', 'clearance', 'custamer-info', 'get-timeline', 'customer-image',
                             'export-phone-numbers-excel', 'export-phone-numbers-pdf',
-                            'export-loan-scheduling-excel', 'export-loan-scheduling-pdf'],
+                            'export-loan-scheduling-excel', 'export-loan-scheduling-pdf',
+                            'contract-phones'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -388,7 +389,14 @@ class FollowUpController extends Controller
     public function actionSmsDraftList()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
-        return ['success' => true, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+        try {
+            return ['success' => true, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+        } catch (\Throwable $e) {
+            // Table may not exist on a fresh environment — fail soft so the UI
+            // shows "no drafts" instead of a red error.
+            Yii::error('SmsDraft list failed: ' . $e->getMessage(), __METHOD__);
+            return ['success' => true, 'drafts' => []];
+        }
     }
 
     public function actionSmsDraftSave()
@@ -399,19 +407,29 @@ class FollowUpController extends Controller
         if ($name === '' || $text === '') {
             return ['success' => false, 'message' => 'الاسم والنص مطلوبان'];
         }
-        $ok = \backend\modules\followUp\models\SmsDraft::saveDraft($name, $text);
-        return ['success' => $ok, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+        try {
+            $ok = \backend\modules\followUp\models\SmsDraft::saveDraft($name, $text);
+            return ['success' => $ok, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+        } catch (\Throwable $e) {
+            Yii::error('SmsDraft save failed: ' . $e->getMessage(), __METHOD__);
+            return ['success' => false, 'message' => 'تعذر حفظ المسودة'];
+        }
     }
 
     public function actionSmsDraftDelete()
     {
         Yii::$app->response->format = \yii\web\Response::FORMAT_JSON;
         $id = (int)Yii::$app->request->post('id', 0);
-        $model = \backend\modules\followUp\models\SmsDraft::findOne($id);
-        if ($model) {
-            $model->delete();
+        try {
+            $model = \backend\modules\followUp\models\SmsDraft::findOne($id);
+            if ($model) {
+                $model->delete();
+            }
+            return ['success' => true, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
+        } catch (\Throwable $e) {
+            Yii::error('SmsDraft delete failed: ' . $e->getMessage(), __METHOD__);
+            return ['success' => false, 'drafts' => []];
         }
-        return ['success' => true, 'drafts' => \backend\modules\followUp\models\SmsDraft::getAllDrafts()];
     }
 
     public function actionAddNewLoan()
@@ -676,6 +694,55 @@ class FollowUpController extends Controller
             Yii::error('buildStatementData failed: ' . $e->getMessage(), __METHOD__);
             return null;
         }
+    }
+
+    /**
+     * Return fresh phone list for a contract as JSON.
+     * Used by the Bulk SMS modal to stay in sync with live changes
+     * without requiring a full page reload.
+     */
+    public function actionContractPhones($contract_id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $contract = Contracts::findOne($contract_id);
+        if (!$contract) {
+            return ['success' => false, 'phones' => [], 'error' => 'contract_not_found'];
+        }
+
+        $phones = [];
+        try {
+            foreach ($contract->contractsCustomers ?? [] as $cc) {
+                $cust = $cc->customer;
+                if (!$cust) continue;
+                $partyType = $cc->customer_type === 'client' ? 'مشتري' : 'كفيل';
+
+                if ($cust->primary_phone_number) {
+                    $phones[] = [
+                        'number' => \backend\helpers\PhoneHelper::toWhatsApp($cust->primary_phone_number),
+                        'local'  => \backend\helpers\PhoneHelper::toLocal($cust->primary_phone_number),
+                        'name'   => $cust->name,
+                        'label'  => $partyType . ' — الرقم الرئيسي',
+                        'primary' => true,
+                    ];
+                }
+
+                foreach ($cust->phoneNumbers ?? [] as $pn) {
+                    $rel = \backend\modules\cousins\models\Cousins::findOne(['id' => $pn->phone_number_owner]);
+                    $phones[] = [
+                        'number' => \backend\helpers\PhoneHelper::toWhatsApp($pn->phone_number),
+                        'local'  => \backend\helpers\PhoneHelper::toLocal($pn->phone_number),
+                        'name'   => $pn->owner_name ?: $cust->name,
+                        'label'  => $rel ? $rel->name : $partyType,
+                        'primary' => false,
+                    ];
+                }
+            }
+        } catch (\Throwable $e) {
+            Yii::error('contractPhones failed: ' . $e->getMessage(), __METHOD__);
+            return ['success' => false, 'phones' => [], 'error' => 'exception'];
+        }
+
+        return ['success' => true, 'phones' => $phones];
     }
 
     /**

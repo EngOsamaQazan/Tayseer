@@ -56,6 +56,7 @@ $this->registerJs("window.OCP_CONFIG = " . Json::encode([
         'savePromise' => Url::to(['/followUp/follow-up/save-promise']),
         'aiFeedback' => Url::to(['/followUp/follow-up/ai-feedback']),
         'getTimeline' => Url::to(['/followUp/follow-up/get-timeline', 'contract_id' => $contractId]),
+        'contractPhones' => Url::to(['/followUp/follow-up/contract-phones', 'contract_id' => $contractId]),
         'sendSms' => Url::to(['/followUp/follow-up/send-sms']),
         'bulkSendSms' => Url::to(['/followUp/follow-up/bulk-send-sms']),
         'smsDraftList' => Url::to(['/followUp/follow-up/sms-draft-list']),
@@ -76,7 +77,7 @@ $this->registerJsVar('send_sms', Url::to(['/followUp/follow-up/send-sms']), \yii
 $this->registerJsVar('bulk_send_sms', Url::to(['/followUp/follow-up/bulk-send-sms']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('customer_info_url', Url::to(['/followUp/follow-up/custamer-info']), \yii\web\View::POS_HEAD);
 $this->registerJsVar('quick_update_customer_url', Url::to(['/followUp/follow-up/quick-update-customer']), \yii\web\View::POS_HEAD);
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js?v=20260408c', ['depends' => [\yii\web\JqueryAsset::class]]);
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/follow-up.js?v=20260421b', ['depends' => [\yii\web\JqueryAsset::class]]);
 
 $_lastPay = $riskData['last_payment'] ?? ['date' => '-', 'amount' => 0];
 $_custShort = $customer ? NameHelper::short($customer->name) : 'غير محدد';
@@ -660,7 +661,22 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                     var id = 'tab-' + tabs[i];
                     var newEl = doc.getElementById(id);
                     var curEl = document.getElementById(id);
-                    if (newEl && curEl) curEl.innerHTML = newEl.innerHTML;
+                    if (newEl && curEl) {
+                        curEl.innerHTML = newEl.innerHTML;
+                        // innerHTML doesn't execute <script> tags — re-run them so inline
+                        // assignments like `window._bulkSmsPhones = [...]` take effect.
+                        var scripts = curEl.querySelectorAll('script');
+                        for (var s = 0; s < scripts.length; s++) {
+                            var oldS = scripts[s];
+                            if (oldS.src) continue; // external scripts already loaded
+                            var newS = document.createElement('script');
+                            for (var a = 0; a < oldS.attributes.length; a++) {
+                                newS.setAttribute(oldS.attributes[a].name, oldS.attributes[a].value);
+                            }
+                            newS.text = oldS.textContent;
+                            oldS.parentNode.replaceChild(newS, oldS);
+                        }
+                    }
                 }
 
                 var newBtns = doc.querySelectorAll('.ocp-tabs .ocp-tab');
@@ -672,6 +688,13 @@ $riskLevelArabic = ['low' => 'منخفض', 'med' => 'متوسط', 'high' => 'م�
                 }
 
                 if (activeTab) OCP.switchTab(activeTab);
+
+                // Always pull fresh phone list from the dedicated JSON endpoint so
+                // the Bulk SMS modal (and window._bulkSmsPhones) stays in sync with
+                // any add/edit/delete done on the page without a reload.
+                if (typeof BulkSms !== 'undefined' && BulkSms.syncFromWindow) {
+                    BulkSms.syncFromWindow();
+                }
             };
             xhr.onerror = function() { _ocpRefreshPending = false; };
             xhr.send();

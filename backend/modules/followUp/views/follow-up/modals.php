@@ -41,6 +41,19 @@ $contractModel = $contractCalculations->contract_model;
 .sdt-draft-del:hover{background:#EF4444;color:#fff}
 .sdt-empty{text-align:center;padding:16px;color:#94A3B8;font-size:12px;font-weight:600}
 .sdt-empty i{font-size:20px;display:block;margin-bottom:6px}
+
+.sdt-save-row{display:flex;gap:6px;align-items:stretch}
+.sdt-save-input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid #CBD5E1;font-size:12px;font-family:inherit;background:#fff;outline:none;transition:border-color .15s,box-shadow .15s}
+.sdt-save-input:focus{border-color:#10B981;box-shadow:0 0 0 3px rgba(16,185,129,.15)}
+.sdt-save-input.sdt-invalid{border-color:#EF4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+.sdt-save-go{border:none;border-radius:8px;padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,#10B981,#059669);color:#fff;font-family:inherit;transition:all .15s}
+.sdt-save-go:hover{box-shadow:0 2px 10px rgba(16,185,129,.35)}
+.sdt-save-go:disabled{opacity:.6;cursor:wait}
+.sdt-save-cancel{border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;background:#F1F5F9;color:#64748B;font-family:inherit;transition:all .15s}
+.sdt-save-cancel:hover{background:#E2E8F0;color:#1E293B}
+.sdt-save-hint{font-size:10px;color:#94A3B8;margin-top:6px}
+.sdt-save-hint.sdt-error{color:#EF4444;font-weight:600}
+
 @keyframes sdt-fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
 </style>
 
@@ -130,6 +143,15 @@ $contractModel = $contractCalculations->contract_model;
                     <button type="button" class="sdt-btn sdt-btn-drafts" onclick="SmsDrafts.togglePanel('ssms-drafts-panel')"><i class="fa fa-bookmark"></i> مسودات</button>
                     <button type="button" class="sdt-btn sdt-btn-save" onclick="SmsDrafts.promptSave('sms_text')"><i class="fa fa-floppy-o"></i> حفظ كمسودة</button>
                     <button type="button" class="ssms-clear-btn" style="width:auto;flex:none;margin:0;padding:6px 12px;font-size:11px" onclick="SingleSms.clearText()"><i class="fa fa-trash"></i> مسح</button>
+                </div>
+                <div class="sdt-panel" id="ssms-save-panel">
+                    <div class="sdt-panel-title"><i class="fa fa-floppy-o"></i> حفظ نص الرسالة كمسودة</div>
+                    <div class="sdt-save-row">
+                        <input type="text" class="sdt-save-input" id="ssms-save-name" placeholder="اسم المسودة (مثال: تذكير بالدفعة)" maxlength="100" data-ta="sms_text" data-panel="ssms-save-panel">
+                        <button type="button" class="sdt-save-go" data-ta="sms_text" data-name-input="ssms-save-name" data-panel="ssms-save-panel"><i class="fa fa-check"></i> حفظ</button>
+                        <button type="button" class="sdt-save-cancel" data-panel="ssms-save-panel">إلغاء</button>
+                    </div>
+                    <div class="sdt-save-hint" id="ssms-save-hint"><i class="fa fa-info-circle"></i> يتم حفظ النص الحالي كما هو — يمكن استخدام المتغيرات مثل {اسم_العميل}</div>
                 </div>
                 <div class="sdt-panel" id="ssms-vars-panel">
                     <div class="sdt-panel-title"><i class="fa fa-code"></i> إدراج متغير — يتم تعبئته تلقائياً حسب العقد الحالي</div>
@@ -324,6 +346,15 @@ $contractModel = $contractCalculations->contract_model;
                                 <button type="button" class="sdt-btn sdt-btn-drafts" onclick="SmsDrafts.togglePanel('bsms-drafts-panel')"><i class="fa fa-bookmark"></i> مسودات</button>
                                 <button type="button" class="sdt-btn sdt-btn-save" onclick="SmsDrafts.promptSave('bsms-text')"><i class="fa fa-floppy-o"></i> حفظ كمسودة</button>
                                 <button type="button" class="bsms-clear-btn" style="width:auto;flex:none;margin:0;padding:6px 12px;font-size:11px" onclick="BulkSms.clearText()"><i class="fa fa-trash"></i> مسح</button>
+                            </div>
+                            <div class="sdt-panel" id="bsms-save-panel">
+                                <div class="sdt-panel-title"><i class="fa fa-floppy-o"></i> حفظ نص الرسالة كمسودة</div>
+                                <div class="sdt-save-row">
+                                    <input type="text" class="sdt-save-input" id="bsms-save-name" placeholder="اسم المسودة (مثال: تذكير بالدفعة)" maxlength="100" data-ta="bsms-text" data-panel="bsms-save-panel">
+                                    <button type="button" class="sdt-save-go" data-ta="bsms-text" data-name-input="bsms-save-name" data-panel="bsms-save-panel"><i class="fa fa-check"></i> حفظ</button>
+                                    <button type="button" class="sdt-save-cancel" data-panel="bsms-save-panel">إلغاء</button>
+                                </div>
+                                <div class="sdt-save-hint" id="bsms-save-hint"><i class="fa fa-info-circle"></i> يتم حفظ النص الحالي كما هو — يمكن استخدام المتغيرات مثل {اسم_العميل}</div>
                             </div>
                             <div class="sdt-panel" id="bsms-vars-panel">
                                 <div class="sdt-panel-title"><i class="fa fa-code"></i> إدراج متغير — يتم تعبئته تلقائياً حسب العقد الحالي</div>

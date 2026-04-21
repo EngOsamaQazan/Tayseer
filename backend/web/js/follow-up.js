@@ -489,26 +489,140 @@ var SmsDrafts = (function () {
         });
     }
 
+    // Maps textarea id -> inline save panel id (replaces the native prompt()
+    // because embedded browsers like Cursor's suppress window.prompt).
+    var _savePanelMap = {
+        'sms_text': { panel: 'ssms-save-panel', input: 'ssms-save-name', hint: 'ssms-save-hint' },
+        'bsms-text': { panel: 'bsms-save-panel', input: 'bsms-save-name', hint: 'bsms-save-hint' }
+    };
+
+    function _setSaveHint(hintId, msg, isError) {
+        var el = document.getElementById(hintId);
+        if (!el) return;
+        el.classList.toggle('sdt-error', !!isError);
+        if (isError) {
+            el.innerHTML = '<i class="fa fa-exclamation-circle"></i> ' + _esc(msg);
+        } else {
+            el.innerHTML = '<i class="fa fa-info-circle"></i> ' + _esc(msg);
+        }
+    }
+
+    function _flashInput(inputId) {
+        var el = document.getElementById(inputId);
+        if (!el) return;
+        el.classList.add('sdt-invalid');
+        setTimeout(function () { el.classList.remove('sdt-invalid'); }, 1200);
+    }
+
     function promptSave(textareaId) {
         var ta = document.getElementById(textareaId);
-        if (!ta || !ta.value.trim()) {
-            ta && (ta.style.borderColor = '#EF4444');
-            setTimeout(function () { ta && (ta.style.borderColor = ''); }, 1500);
+        var cfg = _savePanelMap[textareaId];
+        if (!ta || !cfg) return;
+
+        if (!ta.value.trim()) {
+            ta.style.borderColor = '#EF4444';
+            setTimeout(function () { ta.style.borderColor = ''; }, 1500);
             return;
         }
-        var name = prompt('اسم المسودة:');
-        if (!name) return;
+
+        var panel = document.getElementById(cfg.panel);
+        if (!panel) return;
+
+        // Close sibling panels, open ours
+        var parent = panel.parentNode;
+        if (parent) {
+            parent.querySelectorAll('.sdt-panel').forEach(function (p) { p.classList.remove('open'); });
+        }
+        panel.classList.add('open');
+
+        _setSaveHint(cfg.hint, 'يتم حفظ النص الحالي كما هو — يمكن استخدام المتغيرات مثل {اسم_العميل}', false);
+
+        var input = document.getElementById(cfg.input);
+        if (input) {
+            input.value = '';
+            setTimeout(function () { input.focus(); }, 50);
+        }
+    }
+
+    function _submitSave(textareaId, nameInputId, hintId, panelId, goBtn) {
+        var ta = document.getElementById(textareaId);
+        var nameEl = document.getElementById(nameInputId);
+        if (!ta || !nameEl) return;
+
+        var name = nameEl.value.trim();
+        var text = ta.value.trim();
+
+        if (!name) {
+            _setSaveHint(hintId, 'يرجى إدخال اسم للمسودة', true);
+            _flashInput(nameInputId);
+            nameEl.focus();
+            return;
+        }
+        if (!text) {
+            _setSaveHint(hintId, 'نص الرسالة فارغ', true);
+            return;
+        }
+
+        var origHtml = goBtn ? goBtn.innerHTML : '';
+        if (goBtn) {
+            goBtn.disabled = true;
+            goBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+        }
+
         $.post(_urls().save, { name: name, text: ta.value }, function (res) {
             if (res && res.success) {
-                _refreshAllDraftPanels(res.drafts);
+                _refreshAllDraftPanels(res.drafts || []);
                 if (typeof WaDraftPicker !== 'undefined') WaDraftPicker.invalidateCache();
+                nameEl.value = '';
+                var panel = document.getElementById(panelId);
+                if (panel) panel.classList.remove('open');
+                // Open the drafts list so the user sees the newly saved item
+                var draftsPanelId = panelId.replace('-save-panel', '-drafts-panel');
+                var dp = document.getElementById(draftsPanelId);
+                if (dp) dp.classList.add('open');
             } else {
-                alert(res && res.message ? res.message : 'خطأ في الحفظ');
+                _setSaveHint(hintId, (res && res.message) ? res.message : 'تعذر حفظ المسودة', true);
             }
         }).fail(function () {
-            alert('خطأ في الاتصال بالسيرفر');
+            _setSaveHint(hintId, 'خطأ في الاتصال بالسيرفر', true);
+        }).always(function () {
+            if (goBtn) {
+                goBtn.disabled = false;
+                goBtn.innerHTML = origHtml;
+            }
         });
     }
+
+    // Wire up inline save controls (works for both single + bulk SMS panels).
+    // Convention: panel id is "{prefix}-save-panel" and hint id is "{prefix}-save-hint".
+    $(document).on('click', '.sdt-save-go', function (e) {
+        e.preventDefault();
+        var $btn = $(this);
+        var ta = $btn.attr('data-ta');
+        var nameInput = $btn.attr('data-name-input');
+        var panel = $btn.attr('data-panel');
+        var hint = panel ? panel.replace('-panel', '-hint') : '';
+        _submitSave(ta, nameInput, hint, panel, this);
+    });
+
+    $(document).on('click', '.sdt-save-cancel', function (e) {
+        e.preventDefault();
+        var panelId = $(this).attr('data-panel');
+        var panel = document.getElementById(panelId);
+        if (panel) panel.classList.remove('open');
+    });
+
+    $(document).on('keydown', '.sdt-save-input', function (e) {
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            e.preventDefault();
+            var $go = $(this).closest('.sdt-panel').find('.sdt-save-go');
+            if ($go.length) $go.trigger('click');
+        } else if (e.key === 'Escape' || e.keyCode === 27) {
+            var panelId = $(this).attr('data-panel');
+            var panel = document.getElementById(panelId);
+            if (panel) panel.classList.remove('open');
+        }
+    });
 
     function togglePanel(panelId) {
         var panel = document.getElementById(panelId);
@@ -643,27 +757,27 @@ var BulkSms = (function () {
         document.getElementById('bsms-s-total').textContent = s.parts * selectedCount;
     }
 
-    function open() {
-        phones = (window._bulkSmsPhones || []).slice();
-        if (!phones.length) return;
-
-        sending = false;
-        document.getElementById('bsms-text').value = '';
-        document.getElementById('bsms-progress').style.display = 'none';
-        document.getElementById('bsms-results').style.display = 'none';
-        document.getElementById('bsms-results').innerHTML = '';
-        document.getElementById('bsms-send-btn').disabled = false;
-        document.getElementById('bsms-send-btn').innerHTML = '<i class="fa fa-paper-plane"></i> إرسال للمحددين';
-        var emojiPanel = document.getElementById('bsms-emoji-panel');
-        if (emojiPanel) emojiPanel.classList.remove('open');
+    function renderList(preserveState) {
+        // preserveState: when true, keep existing checkbox states / excluded flags
+        // for phones that still exist (matched by `number`). Used on live refresh.
+        var prevState = {};
+        if (preserveState) {
+            document.querySelectorAll('#bsms-list .bsms-item').forEach(function (item) {
+                var idx = parseInt(item.getAttribute('data-idx'));
+                var cb = item.querySelector('input[type=checkbox]');
+                var oldP = (typeof prevPhones !== 'undefined' && prevPhones[idx]) ? prevPhones[idx] : null;
+                if (oldP && cb) prevState[oldP.number] = cb.checked;
+            });
+        }
 
         var html = '';
         for (var i = 0; i < phones.length; i++) {
             var p = phones[i];
             var tagCls = p.primary ? 'primary' : 'extra';
             var tagText = p.primary ? 'رئيسي' : p.label;
-            html += '<label class="bsms-item" data-idx="' + i + '">';
-            html += '<input type="checkbox" checked data-idx="' + i + '">';
+            var checked = preserveState && prevState.hasOwnProperty(p.number) ? prevState[p.number] : true;
+            html += '<label class="bsms-item' + (checked ? '' : ' excluded') + '" data-idx="' + i + '">';
+            html += '<input type="checkbox"' + (checked ? ' checked' : '') + ' data-idx="' + i + '">';
             html += '<span class="bsms-num">' + esc(p.local) + '</span>';
             html += '<span class="bsms-name">' + esc(p.name) + '</span>';
             html += '<span class="bsms-tag ' + tagCls + '">' + esc(tagText) + '</span>';
@@ -695,6 +809,50 @@ var BulkSms = (function () {
                 window.location.href = url;
             });
         });
+    }
+
+    var prevPhones = [];
+
+    // Pulls the latest phone list from the server so the modal stays in sync
+    // with adds/edits/deletes done on the page without needing a reload.
+    function fetchLivePhones(callback) {
+        var urls = (typeof OCP_CONFIG !== 'undefined' && OCP_CONFIG.urls) ? OCP_CONFIG.urls : {};
+        var url = urls.contractPhones || '';
+        if (!url || typeof $ === 'undefined' || !$.get) {
+            callback(window._bulkSmsPhones || []);
+            return;
+        }
+        $.get(url).done(function (res) {
+            var list = (res && res.phones) ? res.phones : (window._bulkSmsPhones || []);
+            window._bulkSmsPhones = list;
+            callback(list);
+        }).fail(function () {
+            callback(window._bulkSmsPhones || []);
+        });
+    }
+
+    function syncFromWindow() {
+        fetchLivePhones(function (list) {
+            prevPhones = phones.slice();
+            phones = list.slice();
+            renderList(true);
+        });
+    }
+
+    function open() {
+        phones = (window._bulkSmsPhones || []).slice();
+
+        sending = false;
+        document.getElementById('bsms-text').value = '';
+        document.getElementById('bsms-progress').style.display = 'none';
+        document.getElementById('bsms-results').style.display = 'none';
+        document.getElementById('bsms-results').innerHTML = '';
+        document.getElementById('bsms-send-btn').disabled = false;
+        document.getElementById('bsms-send-btn').innerHTML = '<i class="fa fa-paper-plane"></i> إرسال للمحددين';
+        var emojiPanel = document.getElementById('bsms-emoji-panel');
+        if (emojiPanel) emojiPanel.classList.remove('open');
+
+        renderList(false);
 
         SmsDrafts.invalidateCache();
         SmsDrafts.renderVarsPanel('bsms-vars-list', 'bsms-text');
@@ -702,6 +860,14 @@ var BulkSms = (function () {
         document.querySelectorAll('#bulkSmsModal .sdt-panel').forEach(function (p) { p.classList.remove('open'); });
 
         $('#bulkSmsModal').modal('show');
+
+        // Pull fresh data from server so any recent add/edit/delete is reflected
+        // immediately without needing a page reload.
+        fetchLivePhones(function (list) {
+            prevPhones = phones.slice();
+            phones = list.slice();
+            renderList(true);
+        });
     }
 
     function updateCount() {
@@ -932,6 +1098,7 @@ var BulkSms = (function () {
         clearText: clearText,
         send: send,
         sendWhatsApp: sendWhatsApp,
-        refreshStats: refreshStats
+        refreshStats: refreshStats,
+        syncFromWindow: syncFromWindow
     };
 })();
