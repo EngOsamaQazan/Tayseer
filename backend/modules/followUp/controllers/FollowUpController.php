@@ -45,7 +45,7 @@ class FollowUpController extends Controller
                 'class' => AccessControl::className(),
                 'rules' => [
                     [
-                        'actions' => ['login', 'error', 'verify-statement'],
+                        'actions' => ['login', 'error', 'verify-statement', 'verify-clearance'],
                         'allow' => true,
                     ],
                     ['actions' => ['logout'], 'allow' => true, 'roles' => ['@']],
@@ -74,7 +74,8 @@ class FollowUpController extends Controller
                     ],
                     [
                         'actions' => ['update', 'change-status', 'move-task',
-                            'ai-feedback', 'update-judiciary-check', 'quick-update-customer'],
+                            'ai-feedback', 'update-judiciary-check', 'quick-update-customer',
+                            'issue-clearance'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -82,7 +83,7 @@ class FollowUpController extends Controller
                         },
                     ],
                     [
-                        'actions' => ['delete'],
+                        'actions' => ['delete', 'revoke-clearance'],
                         'allow' => true,
                         'roles' => ['@'],
                         'matchCallback' => function () {
@@ -96,6 +97,8 @@ class FollowUpController extends Controller
                 'actions' => [
                     'logout' => ['post'],
                     'adb-call' => ['post'],
+                    'issue-clearance'  => ['post'],
+                    'revoke-clearance' => ['post'],
                 ],
             ],
         ];
@@ -476,12 +479,328 @@ class FollowUpController extends Controller
         ]);
     }
 
+    /**
+     * Clearance dispatcher:
+     *  - If the contract has an issued (non-revoked) certificate → render the
+     *    issued certificate view from its immutable snapshot (QR verifiable).
+     *  - Else → render the preview page where the user can click "إصدار".
+     */
     public function actionClearance($contract_id)
     {
+        $contract_id = (int) $contract_id;
+
+        $contractModel = (new \common\helper\LoanContract())->findContract($contract_id);
+        if (!$contractModel) {
+            throw new NotFoundHttpException('العقد غير موجود.');
+        }
+
+        $cert = \backend\modules\followUp\models\ClearanceCertificate::getLatestForContract($contract_id);
+
         $this->layout = '/print-template-1';
-        return $this->render('clearance', [
-            'contract_id' => $contract_id
+
+        if ($cert && !$cert->isRevoked()) {
+            $expired = $this->isClearanceExpired($cert);
+            return $this->render('clearance-issued', [
+                'cert'        => $cert,
+                'snapshot'    => $cert->getSnapshot(),
+                'isExpired'   => $expired,
+                'verifyUrl'   => $this->buildClearanceVerifyUrl($cert),
+                'canRevoke'   => Permissions::can(Permissions::FOLLOWUP_DELETE),
+            ]);
+        }
+
+        // No cert, or latest cert is revoked → show preview with Issue button.
+        $calc = ContractCalculations::fromView($contractModel->id);
+        $remaining = $calc ? (float) $calc['remaining'] : (float) $contractModel->total_value;
+
+        return $this->render('clearance-preview', [
+            'contract_id'      => $contract_id,
+            'contractModel'    => $contractModel,
+            'calc'             => $calc,
+            'remaining'        => $remaining,
+            'judiciaryCases'   => $this->buildJudiciaryCases($contract_id),
+            'previousRevoked'  => $cert && $cert->isRevoked() ? $cert : null,
         ]);
+    }
+
+    /**
+     * Officially issue a clearance certificate.
+     * Guards: remaining=0, no existing non-revoked cert, confirm_cases when cases exist.
+     */
+    public function actionIssueClearance($contract_id)
+    {
+        $contract_id = (int) $contract_id;
+
+        $contractModel = (new \common\helper\LoanContract())->findContract($contract_id);
+        if (!$contractModel) {
+            throw new NotFoundHttpException('العقد غير موجود.');
+        }
+
+        $redirectBack = ['clearance', 'contract_id' => $contract_id];
+
+        $calc = ContractCalculations::fromView($contractModel->id);
+        $remaining = $calc ? (float) $calc['remaining'] : (float) $contractModel->total_value;
+        $totalDebt = $calc ? (float) $calc['totalDebt'] : (float) $contractModel->total_value;
+        $paid      = $calc ? (float) $calc['paid'] : 0.0;
+
+        if (round($remaining, 2) > 0) {
+            Yii::$app->session->setFlash('error', 'لا يمكن إصدار براءة الذمة: يوجد رصيد مالي متبقٍ على العقد.');
+            return $this->redirect($redirectBack);
+        }
+
+        $existing = \backend\modules\followUp\models\ClearanceCertificate::getLatestForContract($contract_id);
+        if ($existing && !$existing->isRevoked()) {
+            Yii::$app->session->setFlash('error', 'توجد شهادة براءة ذمة سابقة لهذا العقد. يجب إلغاؤها أولاً قبل إصدار شهادة جديدة.');
+            return $this->redirect($redirectBack);
+        }
+
+        $cases = $this->buildJudiciaryCases($contract_id);
+        $confirmed = (int) Yii::$app->request->post('confirm_cases', 0) === 1;
+        if (!empty($cases) && !$confirmed) {
+            Yii::$app->session->setFlash('warning', 'يوجد قضايا مسجلة على العميل. يرجى تأكيد المتابعة من نافذة التنبيه.');
+            return $this->redirect($redirectBack);
+        }
+
+        // Build immutable snapshot
+        $clientRows = \backend\modules\customers\models\ContractsCustomers::find()
+            ->where(['customer_type' => 'client', 'contract_id' => $contract_id])->all();
+        $guarantorRows = \backend\modules\customers\models\ContractsCustomers::find()
+            ->where(['customer_type' => 'guarantor', 'contract_id' => $contract_id])->all();
+
+        $clientNames = array_values(array_filter(array_map(function ($c) {
+            $cust = \backend\modules\customers\models\Customers::findOne($c->customer_id);
+            return $cust ? $cust->name : '';
+        }, $clientRows)));
+
+        $guarantorNames = array_values(array_filter(array_map(function ($c) {
+            $cust = \backend\modules\customers\models\Customers::findOne($c->customer_id);
+            return $cust ? $cust->name : '';
+        }, $guarantorRows)));
+
+        $lastIncome = \backend\modules\contractInstallment\models\ContractInstallment::find()
+            ->where(['contract_id' => $contract_id])->orderBy(['date' => SORT_DESC])->one();
+
+        $company = (new \common\components\CompanyChecked())->findPrimaryCompany();
+        $companyName = $company ? $company->name : (Yii::$app->params['companies_logo'] ?? '');
+        $companyPhone = $company ? ($company->phone ?? '') : '';
+        $companyId = $company ? (int) $company->id : null;
+
+        $snapshot = [
+            'companyName'      => $companyName,
+            'companyPhone'     => $companyPhone,
+            'clientNames'      => $clientNames,
+            'guarantorNames'   => $guarantorNames,
+            'totalValue'       => $totalDebt,
+            'paidAmount'       => $paid,
+            'remainingBalance' => $remaining,
+            'dateSale'         => $contractModel->Date_of_sale ?? null,
+            'firstInstDate'    => $contractModel->first_installment_date ?? null,
+            'lastIncomeDate'   => $lastIncome ? $lastIncome->date : null,
+            'monthlyInst'      => $contractModel->monthly_installment_value,
+            'judiciaryCases'   => $cases,
+        ];
+
+        $certNumber = \backend\modules\followUp\models\ClearanceCertificate::generateNextNumber();
+        $issuedAt   = date('Y-m-d H:i:s');
+        $issuedDate = substr($issuedAt, 0, 10);
+        $signature  = \backend\modules\followUp\models\ClearanceCertificate::buildSignature(
+            $contract_id,
+            $certNumber,
+            $issuedDate
+        );
+
+        $cert = new \backend\modules\followUp\models\ClearanceCertificate();
+        $cert->cert_number   = $certNumber;
+        $cert->contract_id   = $contract_id;
+        $cert->company_id    = $companyId;
+        $cert->issued_at     = $issuedAt;
+        $cert->signature     = $signature;
+        $cert->snapshot_json = json_encode($snapshot, JSON_UNESCAPED_UNICODE);
+        $cert->status        = \backend\modules\followUp\models\ClearanceCertificate::STATUS_ACTIVE;
+
+        if (!$cert->save()) {
+            Yii::error('Failed saving clearance certificate: ' . json_encode($cert->getErrors()), __METHOD__);
+            Yii::$app->session->setFlash('error', 'تعذّر حفظ الشهادة. يرجى المحاولة مرة أخرى.');
+            return $this->redirect($redirectBack);
+        }
+
+        Yii::$app->session->setFlash('success', 'تم إصدار شهادة براءة الذمة رقم ' . $certNumber . ' بنجاح.');
+        return $this->redirect($redirectBack);
+    }
+
+    /**
+     * Revoke an issued clearance certificate. Unlocks re-issue.
+     */
+    public function actionRevokeClearance($id)
+    {
+        $cert = \backend\modules\followUp\models\ClearanceCertificate::findOne((int) $id);
+        if (!$cert) {
+            throw new NotFoundHttpException('الشهادة غير موجودة.');
+        }
+
+        if ($cert->isRevoked()) {
+            Yii::$app->session->setFlash('warning', 'هذه الشهادة ملغاة مسبقاً.');
+            return $this->redirect(['clearance', 'contract_id' => (int) $cert->contract_id]);
+        }
+
+        $cert->status     = \backend\modules\followUp\models\ClearanceCertificate::STATUS_REVOKED;
+        $cert->revoked_at = date('Y-m-d H:i:s');
+        $cert->revoked_by = Yii::$app->user->id;
+
+        if (!$cert->save(false)) {
+            Yii::$app->session->setFlash('error', 'تعذّر إلغاء الشهادة.');
+        } else {
+            Yii::$app->session->setFlash('success', 'تم إلغاء الشهادة رقم ' . $cert->cert_number . '. يمكنك الآن إصدار شهادة جديدة.');
+        }
+
+        return $this->redirect(['clearance', 'contract_id' => (int) $cert->contract_id]);
+    }
+
+    /**
+     * Public QR endpoint. Shows the issued certificate with a live
+     * validity badge (valid / expired / revoked / invalid).
+     *
+     * @param string $c contract id
+     * @param string $n cert number
+     * @param string $s HMAC signature
+     */
+    public function actionVerifyClearance($c, $n, $s)
+    {
+        $this->layout = 'main';
+
+        $contractId = (int) $c;
+        $certNumber = (string) $n;
+        $sig        = (string) $s;
+
+        $cert = \backend\modules\followUp\models\ClearanceCertificate::find()
+            ->where([
+                'cert_number' => $certNumber,
+                'contract_id' => $contractId,
+                'is_deleted'  => 0,
+            ])
+            ->one();
+
+        if (!$cert || !$cert->isSignatureValid($sig)) {
+            return $this->render('verify-clearance', [
+                'status'      => 'invalid',
+                'label'       => 'غير صحيح',
+                'message'     => 'الباركود غير صالح أو تم التلاعب به.',
+                'cert'        => null,
+                'snapshot'    => null,
+                'contract_id' => $contractId,
+            ]);
+        }
+
+        if ($cert->isRevoked()) {
+            return $this->render('verify-clearance', [
+                'status'      => 'revoked',
+                'label'       => 'ملغاة',
+                'message'     => 'تم إلغاء شهادة براءة الذمة هذه ولم تعد صالحة.',
+                'cert'        => $cert,
+                'snapshot'    => $cert->getSnapshot(),
+                'contract_id' => $contractId,
+            ]);
+        }
+
+        $expired = $this->isClearanceExpired($cert);
+        if ($expired) {
+            return $this->render('verify-clearance', [
+                'status'      => 'expired',
+                'label'       => 'منتهية الصلاحية',
+                'message'     => 'تم تسجيل حركة جديدة على العقد بعد إصدار هذه الشهادة. يرجى طلب إصدار شهادة جديدة بعد إلغاء هذه الشهادة.',
+                'cert'        => $cert,
+                'snapshot'    => $cert->getSnapshot(),
+                'contract_id' => $contractId,
+            ]);
+        }
+
+        return $this->render('verify-clearance', [
+            'status'      => 'valid',
+            'label'       => 'فعّالة',
+            'message'     => 'شهادة براءة الذمة سارية وصالحة.',
+            'cert'        => $cert,
+            'snapshot'    => $cert->getSnapshot(),
+            'contract_id' => $contractId,
+        ]);
+    }
+
+    /**
+     * Return active (non-deleted) judiciary cases linked to the contract,
+     * joined with the court name. Used by preview and by issuance snapshot.
+     */
+    private function buildJudiciaryCases($contract_id)
+    {
+        try {
+            $db = Yii::$app->db;
+            $p  = $db->tablePrefix;
+
+            $rows = $db->createCommand("
+                SELECT
+                    j.id,
+                    j.judiciary_number,
+                    j.year,
+                    j.case_status,
+                    j.created_at,
+                    c.name AS court_name
+                FROM {$p}judiciary j
+                LEFT JOIN {$p}court c ON c.id = j.court_id
+                WHERE j.contract_id = :cid
+                  AND (j.is_deleted IS NULL OR j.is_deleted = 0)
+                ORDER BY j.created_at DESC
+            ", [':cid' => (int) $contract_id])->queryAll();
+
+            return is_array($rows) ? $rows : [];
+        } catch (\Throwable $e) {
+            Yii::error('buildJudiciaryCases failed: ' . $e->getMessage(), __METHOD__);
+            return [];
+        }
+    }
+
+    /**
+     * True when any movement date on the contract is strictly greater than
+     * the certificate's issue date (mirrors verify-statement expiry logic).
+     */
+    private function isClearanceExpired(\backend\modules\followUp\models\ClearanceCertificate $cert)
+    {
+        try {
+            $contractId = (int) $cert->contract_id;
+            $issuedDate = $cert->getIssuedDate();
+
+            $currentMax = Yii::$app->db->createCommand("
+                SELECT MAX(dt) AS mx FROM (
+                    SELECT DATE(Date_of_sale) AS dt FROM os_contracts WHERE id = :cid1
+                    UNION ALL
+                    SELECT DATE(created_at) FROM os_judiciary WHERE contract_id = :cid2
+                    UNION ALL
+                    SELECT DATE(created_at) FROM os_expenses WHERE contract_id = :cid3
+                    UNION ALL
+                    SELECT DATE(date)       FROM os_income WHERE contract_id = :cid4
+                ) u
+            ", [
+                ':cid1' => $contractId,
+                ':cid2' => $contractId,
+                ':cid3' => $contractId,
+                ':cid4' => $contractId,
+            ])->queryScalar();
+
+            return $currentMax && $currentMax > $issuedDate;
+        } catch (\Throwable $e) {
+            Yii::error('isClearanceExpired failed: ' . $e->getMessage(), __METHOD__);
+            return false;
+        }
+    }
+
+    /**
+     * Build the absolute QR verification URL for an issued certificate.
+     */
+    private function buildClearanceVerifyUrl(\backend\modules\followUp\models\ClearanceCertificate $cert)
+    {
+        return Url::to([
+            '/followUp/follow-up/verify-clearance',
+            'c' => (int) $cert->contract_id,
+            'n' => $cert->cert_number,
+            's' => $cert->signature,
+        ], true);
     }
 
     /**
