@@ -14,6 +14,15 @@ use common\helper\Permissions;
 
 class ProvisionController extends Controller
 {
+    /**
+     * CSRF kept disabled while the matching admin view's `$.ajax`
+     * call is still token-less (backend/modules/companyManagement/views/default/view.php).
+     * Action is admin-only (Permissions::COMPANY_MANAGEMENT) and POST
+     * verb is enforced by VerbFilter, which limits the blast radius.
+     *
+     * TODO M8 cleanup — wire `headers: {'X-CSRF-Token': yii.getCsrfToken()}`
+     * into the .btn-run-step ajax call and flip this back to true.
+     */
     public $enableCsrfValidation = false;
 
     public function behaviors()

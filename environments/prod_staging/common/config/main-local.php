@@ -1,16 +1,21 @@
 <?php
+/**
+ * STAGING database configuration.
+ *
+ * IMPORTANT: This DSN MUST point at a SEPARATE physical database
+ * (`tayseer_staging`), never at a production tenant DB. The previous
+ * version of this file pointed at `namaa_erp` which would have made
+ * staging writes silently corrupt production data — fixed 2026-04-22
+ * as part of the unify-media safety-net work.
+ *
+ * The `tayseer_staging` schema is refreshed nightly from the most
+ * recent `namaa` daily snapshot; see scripts/staging/refresh.sh.
+ */
 return [
     'components' => [
-        //  'request' => [
-
-        //              'enableCsrfValidation' => false
-        //              ],
-        // 'cache' => [
-        //   'class' => 'yii\caching\FileCache',
-        //   ],
         'db' => [
             'class' => 'yii\db\Connection',
-            'dsn' => 'mysql:host=localhost;dbname=namaa_erp',
+            'dsn' => 'mysql:host=localhost;dbname=tayseer_staging',
             'username' => 'osama',
             'password' => 'O$amaDaTaBase@123',
             'charset' => 'utf8',
@@ -30,9 +35,9 @@ return [
         'mailer' => [
             'class' => 'yii\symfonymailer\Mailer',
             'viewPath' => '@common/mail',
-            // send all mails to a file by default. You have to set
-            // 'useFileTransport' to false and configure a transport
-            // for the mailer to send real emails.
+            // Staging never sends real email — file transport prevents
+            // an accidental "send 4000 reminder SMS to test customers"
+            // incident on cloned production data.
             'useFileTransport' => true,
         ],
     ],

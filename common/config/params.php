@@ -90,4 +90,72 @@ return [
         // RBAC permission name allowed to view the audit log screen.
         'logViewPerm'    => 'customer.fahras.log.view',
     ],
+
+    /**
+     * Unify-Media feature flags.
+     *
+     * The whole point of these flags is that a controller migrated to
+     * the new MediaService can be flipped back to the legacy upload
+     * path WITHOUT a redeploy — operator just edits params-local.php
+     * on the affected tenant and clears OPcache. This is the fast
+     * rollback the rollout plan relies on (see scripts/backup/README.md).
+     *
+     * Defaults are intentionally CONSERVATIVE: every flag here is
+     * `false` so a fresh deploy never silently switches behaviour.
+     * Each environment opts in by overriding inside its own
+     * params-local.php — typically:
+     *
+     *   1. Enable on `prod_staging` first (whole module = true).
+     *   2. Soak 1+ week, watch the media_audit_log table.
+     *   3. Enable on one production tenant (e.g. prod_majd) for a week.
+     *   4. Roll out to remaining tenants.
+     *
+     * The flags are read through {@see common\helper\MediaFlags} so a
+     * typo in a controller raises an exception in dev instead of
+     * silently behaving the wrong way.
+     */
+    'media' => [
+        // Global kill-switch. When false, no controller may use the
+        // unified service regardless of per-controller flags below.
+        'use_unified'           => false,
+
+        // Per-controller flags. Each one corresponds to a Phase-2+
+        // adopter in the unify-media plan. Listed in deliberate
+        // rollout order — do NOT enable a later one without enabling
+        // its predecessors and confirming the audit log stays clean.
+        'controllers' => [
+            'wizard'          => false, // backend\modules\customers\controllers\WizardController
+            'smart_media'     => false, // backend\modules\customers\controllers\SmartMediaController
+            'lawyers'         => false, // backend\modules\lawyers\controllers\LawyersController
+            'employee'        => false, // backend\modules\employee\controllers\EmployeeController
+            'companies'       => false, // backend\modules\companies\controllers\CompaniesController
+            'document_holder' => false, // backend\modules\documentHolder\controllers\DocumentHolderController
+            'judiciary'       => false, // backend\modules\judiciary\controllers\JudiciaryController
+            'judiciary_acts'  => false, // backend\modules\judiciaryCustomersActions\controllers\...
+            'movement'        => false, // backend\modules\movment\controllers\MovmentController
+            'media_api'       => false, // api\modules\v1\controllers\CustomerImagesController
+        ],
+
+        // Async pipeline switch. When true, MediaService dispatches the
+        // 4 post-store jobs (scan, exif, optimize, thumbnail) onto the
+        // queue. When false (default), the service marks rows ready
+        // synchronously — safe baseline for environments without a
+        // running `php yii queue/listen` worker.
+        'async_jobs'            => false,
+
+        // Soft-fail dedup. When true, an upload whose SHA-256 matches
+        // a row uploaded by the same user in the last 24h returns the
+        // existing row instead of inserting a duplicate. Off by
+        // default until we have a week of audit data confirming no
+        // false positives in the wild.
+        'dedup_enabled'         => false,
+    ],
+
+    /**
+     * Environment label shown in a top-of-page banner. NULL hides
+     * the banner. Production tenants leave it null; staging sets it
+     * to "STAGING — لا تدخل بيانات حقيقية" (or similar) so a careless
+     * tab switch from prod to staging is impossible to miss.
+     */
+    'environmentBanner' => null,
 ];

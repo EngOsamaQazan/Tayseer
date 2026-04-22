@@ -1,0 +1,110 @@
+name: Deploy unify-media branch to staging
+
+# Independent of the production deploy.yml. Triggered ONLY by pushes
+# to the `unify-media` branch (and manual `workflow_dispatch`), so a
+# routine `main` push never accidentally redeploys staging — and a
+# broken `unify-media` commit never touches production.
+#
+# Staging deploys are deliberately FASTER than the prod deploy:
+#   • Pulls one site only (staging.aqssat.co), not four in parallel.
+#   • Skips the SQL/idempotent-update step (staging is rebuilt nightly
+#     from a production snapshot anyway — see scripts/staging/refresh.sh).
+#   • Runs migrations because staging IS the place to catch them.
+
+on:
+  push:
+    branches: [unify-media]
+  workflow_dispatch:
+
+jobs:
+  deploy_staging:
+    name: Deploy to staging.aqssat.co
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host:     ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          port: 22
+          command_timeout: 4m
+          script: |
+            set -e
+
+            REPO_URL="https://${{ secrets.GH_TOKEN }}@github.com/EngOsamaQazan/Tayseer.git"
+            BRANCH="unify-media"
+            SITE_DIR="/var/www/staging.aqssat.co"
+            ENV_DIR="prod_staging"
+
+            echo "=== Deploying $BRANCH to $SITE_DIR ==="
+
+            # First-time clone vs. subsequent fast-pull
+            if [ ! -d "$SITE_DIR/.git" ]; then
+              echo "  First deploy — cloning..."
+              mkdir -p "$SITE_DIR"
+              cd /tmp
+              rm -rf staging_temp
+              git clone --depth 1 --branch "$BRANCH" "$REPO_URL" staging_temp
+              rsync -a --exclude='.env' --exclude='runtime/' --exclude='web/images/' --exclude='web/uploads/' staging_temp/ "$SITE_DIR/"
+              rm -rf staging_temp
+              cd "$SITE_DIR"
+              git init
+              git remote add origin "$REPO_URL"
+              git fetch origin "$BRANCH" --depth 1
+              git reset --hard "origin/$BRANCH"
+            else
+              cd "$SITE_DIR"
+              git fetch origin "$BRANCH" --depth 1
+              git reset --hard "origin/$BRANCH"
+            fi
+
+            # Apply staging environment configs
+            echo "  Applying $ENV_DIR configs..."
+            for cfg in common/config/main-local.php common/config/params-local.php \
+                       backend/web/index.php frontend/web/index.php \
+                       console/config/main-local.php console/config/params-local.php yii; do
+              if [ -f "environments/$ENV_DIR/$cfg" ]; then
+                mkdir -p "$(dirname "$cfg")"
+                cp -f "environments/$ENV_DIR/$cfg" "$cfg"
+              fi
+            done
+            chmod +x yii 2>/dev/null || true
+
+            # Cookie keys: only create if missing
+            for cfg in backend/config/main-local.php backend/config/params-local.php \
+                       frontend/config/main-local.php frontend/config/params-local.php; do
+              if [ ! -f "$cfg" ] && [ -f "environments/$ENV_DIR/$cfg" ]; then
+                mkdir -p "$(dirname "$cfg")"
+                cp "environments/$ENV_DIR/$cfg" "$cfg"
+                KEY=$(openssl rand -hex 32)
+                sed -i "s/=> ''/=> '$KEY'/" "$cfg"
+              fi
+            done
+
+            # Composer deps if changed
+            NEW_HASH=$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1)
+            OLD_HASH=$(cat .composer-hash 2>/dev/null || echo "")
+            if [ "$NEW_HASH" != "$OLD_HASH" ]; then
+              composer install --no-dev --no-interaction --optimize-autoloader 2>&1 || \
+                echo "WARN: composer install had issues"
+              echo "$NEW_HASH" > .composer-hash
+            fi
+
+            chown -R www-data:www-data backend/ common/ console/ frontend/ api/ vendor/ 2>/dev/null || true
+
+            # Migrations: staging is the gate — if they fail here, they
+            # never reach production.
+            echo "  Running migrations on staging DB..."
+            php yii migrate/up --interactive=0
+
+            # Cache flush + opcache reload
+            rm -rf backend/runtime/cache/* frontend/runtime/cache/* 2>/dev/null || true
+            chmod -R 775 backend/runtime/ backend/web/assets/ frontend/runtime/ frontend/web/assets/ 2>/dev/null || true
+
+            PHP_VER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "8.5")
+            systemctl reload "php${PHP_VER}-fpm" 2>/dev/null || true
+
+            echo "=== Done. https://staging.aqssat.co ==="

@@ -26,8 +26,23 @@
  *   • Status announcements ride on CW.toast (polite live region).
  *   • Filled fields get a brief visual highlight class (cw-field--auto-filled)
  *     that respects prefers-reduced-motion via core.css.
+ *
+ * @deprecated Phase 6 / M6.2 — superseded by MediaUploader.scanner
+ *             (backend/web/js/media-uploader/scanner.js). The wizard-
+ *             specific OCR + auto-fill behaviour stays here for now,
+ *             but the file-upload primitives can be lifted to the
+ *             unified bundle once we are ready to retire the bespoke
+ *             scan endpoint. Removal target: M8 (≈ 2026-07-19).
  */
 (function ($, window) {
+
+    if (typeof console !== 'undefined' && console.warn) {
+        console.warn(
+            'DEPRECATED uploader: customer-wizard/scan.js — file upload '
+            + 'primitives are now in MediaUploader.scanner. The OCR auto-'
+            + 'fill flow remains here pending Phase 8 cleanup.'
+        );
+    }
     'use strict';
 
     if (!$) return;

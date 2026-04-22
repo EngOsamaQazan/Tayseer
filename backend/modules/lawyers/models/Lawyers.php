@@ -171,6 +171,17 @@ class Lawyers extends \yii\db\ActiveRecord {
         $query->attachBehavior('softDelete', SoftDeleteQueryBehavior::className());
         return $query->notDeleted();
     }
+    /**
+     * @deprecated Phase 3.5 — superseded by
+     *             LawyersController::handleLawyerPhotosUpload(),
+     *             which routes through MediaService for dedup,
+     *             audit log, and unified storage layout.
+     *             Scheduled for removal in M8 (Phase 8 cleanup
+     *             after the 3-month deprecation window expires).
+     *             Kept here so any out-of-tree integration that
+     *             still calls $lawyer->uploadeMultipleImag() keeps
+     *             functioning until then.
+     */
     public function uploadeMultipleImag($model)
     {
         $instances = UploadedFile::getInstances($model, 'image');

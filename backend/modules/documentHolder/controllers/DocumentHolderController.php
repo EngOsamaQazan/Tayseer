@@ -14,7 +14,6 @@ use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
-use yii\web\UploadedFile;
 use backend\helpers\ExportTrait;
 
 /**

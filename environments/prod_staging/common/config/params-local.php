@@ -85,4 +85,39 @@ return [
         'overridePerm'   => 'customer.fahras.override',
         'logViewPerm'    => 'customer.fahras.log.view',
     ],
+
+    /**
+     * On staging we deliberately enable the unified media stack
+     * EARLY — that is the whole point of having a staging tier.
+     * Every Phase-2 controller adopter should land here BEFORE it
+     * lands on any production tenant.
+     *
+     * If a flag here causes problems, flip it back to `false` and
+     * `php yii cache/flush-all` on staging only — no redeploy
+     * needed, no production impact.
+     */
+    'media' => [
+        'use_unified'   => true,
+        'controllers'   => [
+            'wizard'          => true,
+            'smart_media'     => true,
+            'lawyers'         => true,
+            'employee'        => true,
+            'companies'       => true,
+            'document_holder' => true,
+            'judiciary'       => true,
+            'judiciary_acts'  => true,
+            'movement'        => true,
+            'media_api'       => true,
+        ],
+        'async_jobs'    => false,   // turn on once `php yii queue/listen` is supervised
+        'dedup_enabled' => true,
+    ],
+
+    /**
+     * Big visible banner so a tab-switch from prod to staging is
+     * impossible to miss. Rendered by the `EnvironmentBannerWidget`
+     * (added in the same change-set as the unify-media rollout).
+     */
+    'environmentBanner' => 'STAGING — بيانات اختبارية فقط — لا تُدخل بيانات حقيقية',
 ];

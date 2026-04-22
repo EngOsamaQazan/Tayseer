@@ -148,6 +148,28 @@ if (Yii::$app->controller->action->id === 'login') {
     <a class="skip-to-content" href="#main-content">انتقل للمحتوى الرئيسي</a>
 
     <?php
+    // Environment banner. Renders ONLY when params['environmentBanner']
+    // is non-null — production tenants never see it. Fixed at the top
+    // of the viewport so a tab-switch from prod to staging is impossible
+    // to miss (key safety guard for the unify-media rollout — without
+    // this banner a QA accidentally entering data on staging is mostly
+    // wasted, but a QA accidentally treating prod as staging is a real
+    // incident).
+    $envBanner = \common\helper\MediaFlags::environmentBanner();
+    if ($envBanner !== null):
+    ?>
+    <div role="alert" aria-live="polite" style="
+        position: sticky; top: 0; z-index: 2000;
+        background: repeating-linear-gradient(45deg, #b91c1c, #b91c1c 18px, #991b1b 18px, #991b1b 36px);
+        color: #fff; font-weight: 700; text-align: center;
+        padding: 6px 14px; letter-spacing: .3px;
+        box-shadow: 0 2px 6px rgba(0,0,0,.25);
+        font-size: 14px; line-height: 1.4;">
+        <?= \yii\helpers\Html::encode($envBanner) ?>
+    </div>
+    <?php endif; ?>
+
+    <?php
     yii\bootstrap5\Modal::begin([
         'id' => 'gModal',
         'title' => '<h3 id="gModalLabel"></h3>',

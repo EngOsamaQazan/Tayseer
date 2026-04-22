@@ -13,6 +13,7 @@ use \yii\web\Response;
 use yii\helpers\Html;
 use yii\web\UploadedFile;
 use backend\helpers\ExportTrait;
+use common\services\media\MediaContext;
 
 /**
  * MovmentController implements the CRUD actions for Movment model.
@@ -141,25 +142,47 @@ class MovmentController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post())) {
-                $model->receipt_image = UploadedFile::getInstance($model, 'receipt_image');
-                if ($model->receipt_image->saveAs('images/' . $model->receipt_image->baseName . '.' . $model->receipt_image->extension)) {
-                    $model->receipt_image = 'images/' . $model->receipt_image->baseName . '.' . $model->receipt_image->extension;
-                    $model->user_id = Yii::$app->user->id;
-
-                }
+                $model->user_id = Yii::$app->user->id;
+                // Save the row first so we have a numeric id to associate the
+                // receipt media with via MediaService::store().
                 if (!$model->save()) {
                     return $this->render('create', [
                         'model' => $model,
                     ]);
-                } else {
-                    $searchModel = new MovmentSearch();
-                    $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
-
-                    return $this->render('index', [
-                        'searchModel' => $searchModel,
-                        'dataProvider' => $dataProvider,
-                    ]);
                 }
+
+                // ── Receipt upload via the unified MediaService ────────
+                // Replaces the original `saveAs('images/' . …)` path,
+                // which was CWD-relative (it broke whenever the worker
+                // process happened to be running from a directory other
+                // than `backend/web/`). MediaService writes to the same
+                // /images/imagemanager/ tree the rest of the system reads
+                // from, returns a stable URL, and dedupes against
+                // double-clicks of the upload button.
+                $upload = UploadedFile::getInstance($model, 'receipt_image');
+                if ($upload !== null) {
+                    try {
+                        $result = Yii::$app->media->store(
+                            $upload,
+                            MediaContext::forMovement((int)$model->id)
+                        );
+                        // Store the public URL in the existing varchar
+                        // column so legacy readers keep working. Phase 5
+                        // backfill will fold this into a media_id link.
+                        $model->receipt_image = $result->url;
+                        $model->save(false);
+                    } catch (\Throwable $e) {
+                        Yii::error('MovmentController: receipt upload failed: ' . $e->getMessage(), __METHOD__);
+                        Yii::$app->session->setFlash('error', 'فشل رفع إيصال الحركة: ' . $e->getMessage());
+                    }
+                }
+
+                $searchModel = new MovmentSearch();
+                $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
+                return $this->render('index', [
+                    'searchModel' => $searchModel,
+                    'dataProvider' => $dataProvider,
+                ]);
             } else {
                 return $this->render('create', [
                     'model' => $model,
@@ -220,12 +243,25 @@ class MovmentController extends Controller
             *   Process for non-ajax request
             */
             if ($model->load($request->post())) {
-
-                $model->receipt_image = UploadedFile::getInstance($model, 'receipt_image');
-                if ($model->receipt_image->saveAs('images/' . $model->receipt_image->baseName . '.' . $model->receipt_image->extension)) {
-                    $model->receipt_image = 'images/' . $model->receipt_image->baseName . '.' . $model->receipt_image->extension;
-                    $model->user_id = Yii::$app->user->id;
+                // Same migration as actionCreate(): the receipt now flows
+                // through MediaService instead of the broken CWD-relative
+                // saveAs(). On update we KEEP the existing receipt URL
+                // when no new file is uploaded.
+                $upload = UploadedFile::getInstance($model, 'receipt_image');
+                if ($upload !== null) {
+                    try {
+                        $result = Yii::$app->media->store(
+                            $upload,
+                            MediaContext::forMovement((int)$model->id)
+                        );
+                        $model->receipt_image = $result->url;
+                    } catch (\Throwable $e) {
+                        Yii::error('MovmentController: receipt update upload failed: ' . $e->getMessage(), __METHOD__);
+                        Yii::$app->session->setFlash('error', 'فشل رفع إيصال الحركة: ' . $e->getMessage());
+                    }
                 }
+                $model->user_id = Yii::$app->user->id;
+
                 if (!$model->save()) {
                     return $this->render('create', [
                         'model' => $model,

@@ -5,10 +5,14 @@ use yii\widgets\ActiveForm;
 use yii\helpers\Url;
 use common\components\CompanyChecked;
 use common\helper\Permissions;
+use backend\assets\MediaUploaderAsset;
 
 /** @var yii\web\View $this */
 /** @var backend\modules\companies\models\Companies $model */
 /** @var yii\widgets\ActiveForm $form */
+
+MediaUploaderAsset::register($this);
+$companyId = $model->isNewRecord ? 0 : (int)$model->id;
 ?>
 
 <style>
@@ -76,11 +80,20 @@ use common\helper\Permissions;
                     $logoSrc = $model->isNewRecord ? Url::to([$logo]) : Url::to(['/' . $model->logo]);
                     ?>
                     <img src="<?= $logoSrc ?>" class="inv-logo-preview" id="logoPreview" alt="الشعار">
-                    <?= $form->field($model, 'logo')->fileInput([
-                        'accept' => '.png,.jpg,.jpeg,.gif,.bmp,.webp,.svg,.pdf',
-                        'onchange' => "var r=new FileReader();r.onload=function(e){document.getElementById('logoPreview').src=e.target.result};r.readAsDataURL(this.files[0])",
-                    ])->label(false) ?>
-                    <div class="inv-logo-hint">PNG, JPG, JPEG, GIF, WebP, SVG, PDF</div>
+                    <div id="logoHost"
+                         data-media-uploader
+                         data-entity-type="company"
+                         data-entity-id="<?= $companyId ?>"
+                         data-group-name="company_logo"
+                         data-uploaded-via="company_form"
+                         data-accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.svg"
+                         data-max-mb="3"
+                         data-target-name="Companies[adopted_logo_id]">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-media-pick>
+                            <i class="fa fa-upload"></i> اختر شعاراً
+                        </button>
+                    </div>
+                    <div class="inv-logo-hint">PNG, JPG, JPEG, GIF, WebP, SVG</div>
                 </div>
             </div>
 
@@ -88,12 +101,20 @@ use common\helper\Permissions;
             <div class="inv-card">
                 <div class="inv-card-title"><i class="fa fa-file-text"></i> السجل التجاري</div>
                 <div class="inv-card-body">
-                    <div class="inv-upload-zone" id="regDropZone" onclick="document.getElementById('regFileInput').click()">
-                        <i class="fa fa-cloud-upload"></i>
-                        <span>اضغط لرفع ملفات السجل التجاري</span>
-                        <input type="file" id="regFileInput" name="Companies[commercial_register_files][]" multiple
-                               accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf"
-                               onchange="showSelectedFiles(this,'regDropZone','regFileList')">
+                    <div class="inv-upload-zone" id="regDropZone"
+                         data-media-uploader
+                         data-entity-type="company"
+                         data-entity-id="<?= $companyId ?>"
+                         data-group-name="commercial_register"
+                         data-uploaded-via="company_form"
+                         data-multiple="1"
+                         data-accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf"
+                         data-max-mb="20"
+                         data-target-name="Companies[adopted_register_ids][]">
+                        <button type="button" class="inv-pick-btn" data-media-pick style="background:none;border:0;padding:0;cursor:pointer">
+                            <i class="fa fa-cloud-upload"></i>
+                            <span>اضغط لرفع ملفات السجل التجاري</span>
+                        </button>
                     </div>
                     <ul class="inv-doc-list" id="regFileList"></ul>
                     <div class="inv-logo-hint">PDF, PNG, JPG — يمكنك رفع عدة ملفات</div>
@@ -115,12 +136,20 @@ use common\helper\Permissions;
             <div class="inv-card">
                 <div class="inv-card-title"><i class="fa fa-id-card"></i> رخص المهن</div>
                 <div class="inv-card-body">
-                    <div class="inv-upload-zone" id="licDropZone" onclick="document.getElementById('licFileInput').click()">
-                        <i class="fa fa-cloud-upload"></i>
-                        <span>اضغط لرفع ملفات رخص المهن</span>
-                        <input type="file" id="licFileInput" name="Companies[trade_license_files][]" multiple
-                               accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf"
-                               onchange="showSelectedFiles(this,'licDropZone','licFileList')">
+                    <div class="inv-upload-zone" id="licDropZone"
+                         data-media-uploader
+                         data-entity-type="company"
+                         data-entity-id="<?= $companyId ?>"
+                         data-group-name="trade_license"
+                         data-uploaded-via="company_form"
+                         data-multiple="1"
+                         data-accept=".png,.jpg,.jpeg,.gif,.bmp,.webp,.pdf"
+                         data-max-mb="20"
+                         data-target-name="Companies[adopted_license_ids][]">
+                        <button type="button" class="inv-pick-btn" data-media-pick style="background:none;border:0;padding:0;cursor:pointer">
+                            <i class="fa fa-cloud-upload"></i>
+                            <span>اضغط لرفع ملفات رخص المهن</span>
+                        </button>
                     </div>
                     <ul class="inv-doc-list" id="licFileList"></ul>
                     <div class="inv-logo-hint">PDF, PNG, JPG — يمكنك رفع عدة ملفات</div>
@@ -249,28 +278,46 @@ use common\helper\Permissions;
 </div>
 
 <script>
-function showSelectedFiles(input, zoneId, listId) {
-    var zone = document.getElementById(zoneId);
-    var list = document.getElementById(listId);
-    list.innerHTML = '';
-    if (!input.files || input.files.length === 0) {
-        zone.classList.remove('inv-upload-zone-active');
-        return;
+/**
+ * Companies form — slim glue script (Phase 6.2).
+ * Drag/drop, file picker, progress, and CSRF are owned by the unified
+ * MediaUploader. This script only mirrors successfully-uploaded files
+ * into the visual list and updates the logo preview.
+ */
+(function() {
+    if (!window.MediaUploader) return;
+
+    function attachListAppender(hostId, listId, zoneId) {
+        var list = document.getElementById(listId);
+        var zone = document.getElementById(zoneId);
+        MediaUploader.attach('#' + hostId, {
+            onSuccess: function(resp) {
+                var f = resp && resp.file;
+                if (!f || !list) return;
+                var name = f.fileName || f.name || 'file';
+                var ext = (name.split('.').pop() || '').toLowerCase();
+                var icon = (ext === 'pdf') ? 'fa-file-pdf-o' : 'fa-file-image-o';
+                var li = document.createElement('li');
+                li.innerHTML = '<i class="fa ' + icon + '"></i>'
+                    + '<a href="' + f.url + '" target="_blank" style="flex:1;color:#334155">' + name + '</a>'
+                    + '<span style="font-size:11px;color:#94a3b8">جديد</span>';
+                list.appendChild(li);
+                if (zone) zone.classList.add('inv-upload-zone-active');
+            }
+        });
     }
-    zone.classList.add('inv-upload-zone-active');
-    for (var i = 0; i < input.files.length; i++) {
-        var f = input.files[i];
-        var ext = f.name.split('.').pop().toLowerCase();
-        var icon = (ext === 'pdf') ? 'fa-file-pdf-o' : 'fa-file-image-o';
-        var size = f.size < 1024 * 1024
-            ? (f.size / 1024).toFixed(1) + ' KB'
-            : (f.size / (1024 * 1024)).toFixed(1) + ' MB';
-        var li = document.createElement('li');
-        li.innerHTML = '<i class="fa ' + icon + '"></i>'
-            + '<span style="flex:1;color:#334155">' + f.name + '</span>'
-            + '<span style="font-size:11px;color:#94a3b8">' + size + '</span>';
-        list.appendChild(li);
-    }
-    zone.querySelector('span').textContent = input.files.length + ' ملف جاهز للرفع — اضغط حفظ';
-}
+
+    attachListAppender('regDropZone', 'regFileList', 'regDropZone');
+    attachListAppender('licDropZone', 'licFileList', 'licDropZone');
+
+    MediaUploader.attach('#logoHost', {
+        onSuccess: function(resp) {
+            var url = resp && resp.file && resp.file.url;
+            if (url) {
+                var prev = document.getElementById('logoPreview');
+                if (prev) prev.src = url;
+            }
+        }
+    });
+})();
 </script>

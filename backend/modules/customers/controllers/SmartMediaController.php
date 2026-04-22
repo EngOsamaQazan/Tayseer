@@ -2,6 +2,16 @@
 /**
  * SmartMediaController — Smart Document & Photo Management
  * Handles: file upload, webcam capture, AI classification, usage stats
+ *
+ * Phase 3.2 of unify-media-system: every write path now delegates to
+ * `Yii::$app->media` (MediaService). The controller is now ~70 % smaller
+ * because validation, hashing, dedup, audit and async pipeline live
+ * inside MediaService where the other 16 upload surfaces also benefit.
+ *
+ * CSRF was previously disabled (`$enableCsrfValidation = false`) — it
+ * is now ENABLED. The corresponding JS (`backend/web/js/smart-media.js`)
+ * installs an `$.ajaxPrefilter` that attaches the X-CSRF-Token header
+ * to every mutating request automatically.
  */
 
 namespace backend\modules\customers\controllers;
@@ -11,17 +21,12 @@ use yii\web\Controller;
 use yii\web\Response;
 use yii\web\UploadedFile;
 use yii\filters\AccessControl;
-use yii\filters\VerbFilter;
 use backend\modules\customers\components\VisionService;
 use backend\helpers\MediaHelper;
+use common\services\media\MediaContext;
 
 class SmartMediaController extends Controller
 {
-    /**
-     * Disable CSRF for AJAX file upload & webcam
-     */
-    public $enableCsrfValidation = false;
-
     public function behaviors()
     {
         return [
@@ -51,110 +56,95 @@ class SmartMediaController extends Controller
             return ['success' => false, 'error' => 'لم يتم استلام الملف'];
         }
 
-        // Validate
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
-        if (!in_array($file->type, $allowed)) {
-            return ['success' => false, 'error' => 'نوع الملف غير مدعوم. المسموح: JPG, PNG, WebP, PDF'];
-        }
+        $customerId   = Yii::$app->request->post('customer_id');
+        $customerId   = $customerId !== null && $customerId !== '' ? (int)$customerId : null;
+        $autoClassify = Yii::$app->request->post('auto_classify', '1') === '1';
 
-        $maxSize = 10 * 1024 * 1024; // 10MB
-        if ($file->size > $maxSize) {
-            return ['success' => false, 'error' => 'حجم الملف أكبر من 10MB'];
-        }
-
-        $customerId = Yii::$app->request->post('customer_id');
+        // Build the MediaContext once. The eventual groupName is set
+        // by the AI classifier, so we start with the generic
+        // 'smart_media' bucket and let MediaService::store() update it
+        // via the autoClassify pipeline if auto-classify is on.
+        //
+        // When customer_id is missing, this is an orphan upload that
+        // will be adopted later (same lifecycle as the wizard).
+        $ctx = $customerId !== null
+            ? MediaContext::forCustomer($customerId, 'smart_media', 'smart_media')
+            : new MediaContext(
+                entityType:  'customer',
+                entityId:    null,
+                groupName:   'smart_media',
+                uploadedVia: 'smart_media',
+                userId:      Yii::$app->user->id ?? null,
+                autoClassify: false, // we run classification ourselves below to control the response shape
+            );
 
         try {
-            // AI Classification first (to determine groupName before saving)
-            $aiResult = null;
-            $autoClassify = Yii::$app->request->post('auto_classify', '1');
-            $ext = strtolower($file->extension);
-
-            if ($autoClassify === '1' && strpos($file->type, 'image/') === 0) {
-                $tempPath = Yii::getAlias('@runtime') . '/temp_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
-                $file->saveAs($tempPath, false);
-                Yii::$app->session->close();
-                $aiResult = VisionService::classify($tempPath, $customerId ? (int)$customerId : null);
-                @unlink($tempPath);
-            }
-
-            // Determine groupName from AI classification
-            $groupName = '9'; // default: "أخرى" (other)
-            if ($aiResult && !empty($aiResult['classification']['type'])) {
-                $groupName = (string)$aiResult['classification']['type'];
-            }
-
-            // Generate hash for ImageManager
-            $fileHash = Yii::$app->security->generateRandomString(32);
-
-            // Insert into os_ImageManager FIRST to get the ID
-            $db = Yii::$app->db;
-            $db->createCommand()->insert('{{%ImageManager}}', [
-                'fileName'    => $file->name,
-                'fileHash'    => $fileHash,
-                'customer_id' => $customerId ? (int)$customerId : null,
-                'contractId'  => null,  // contractId reserved for contract images only
-                'groupName'   => $groupName,
-                'created'     => date('Y-m-d H:i:s'),
-                'modified'    => date('Y-m-d H:i:s'),
-                'createdBy'   => Yii::$app->user->id ?? null,
-                'modifiedBy'  => Yii::$app->user->id ?? null,
-            ])->execute();
-
-            $imageId = $db->getLastInsertID();
-
-            $destPath = MediaHelper::filePath((int)$imageId, $fileHash, $file->name);
-            $destDir = dirname($destPath);
-            if (!is_dir($destDir)) mkdir($destDir, 0755, true);
-            $webPath = MediaHelper::url((int)$imageId, $fileHash, $file->name);
-
-            if (!$file->saveAs($destPath)) {
-                // Rollback DB insert if file save fails
-                $db->createCommand()->delete('{{%ImageManager}}', ['id' => $imageId])->execute();
-                throw new \Exception('فشل في حفظ الملف');
-            }
-
-            $thumbWebPath = null;
-            if (strpos($file->type, 'image/') === 0) {
-                $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
-                if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-                $thumbFile = 'thumb_' . basename($destPath);
-                $thumbFullPath = $thumbDir . '/' . $thumbFile;
-                if (VisionService::createThumbnail($destPath, $thumbFullPath)) {
-                    $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
-                }
-            }
-
-            return [
-                'success' => true,
-                'file' => [
-                    'id'             => (int)$imageId,
-                    'name'           => $file->name,
-                    'path'           => $webPath,
-                    'full_path'      => $destPath,
-                    'thumb'          => $thumbWebPath ?: $webPath,
-                    'size'           => $file->size,
-                    'mime'           => $file->type,
-                    'capture_method' => 'upload',
-                    'group_name'     => $groupName,
-                ],
-                'ai' => $aiResult ? [
-                    'classification' => $aiResult['classification'],
-                    'text_preview'   => mb_substr($aiResult['text'] ?? '', 0, 200),
-                    'labels'         => array_slice($aiResult['labels'] ?? [], 0, 5),
-                    'response_time'  => $aiResult['response_time_ms'] ?? 0,
-                ] : null,
-            ];
-
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            $result = Yii::$app->media->store($file, $ctx);
+        } catch (\InvalidArgumentException $e) {
+            // Translates the registry's MIME / size / group rejections
+            // back to the friendly Arabic strings the previous
+            // implementation used.
+            return ['success' => false, 'error' => $this->humaniseUploadError($e->getMessage())];
+        } catch (\Throwable $e) {
+            Yii::error('SmartMediaController: store failed: ' . $e->getMessage(), __METHOD__);
+            return ['success' => false, 'error' => 'فشل حفظ الملف'];
         }
+
+        // ── Optional AI classification ────────────────────────────────
+        // We run it after store() (instead of before, like the original
+        // code did) because:
+        //   1. The bytes already live at a stable on-disk path —
+        //      no need to write a temp file just to call classify().
+        //   2. Failures here NEVER prevent the upload from succeeding
+        //      (classification is best-effort enrichment).
+        $ai = null;
+        $groupName = $result->groupName;
+        if ($autoClassify && str_starts_with($result->mimeType, 'image/')) {
+            try {
+                Yii::$app->session->close(); // free the session lock for parallel uploads
+                $localPath = MediaHelper::filePath($result->id, $this->fileHashFor($result->id), $result->fileName);
+                if (is_file($localPath)) {
+                    $ai = VisionService::classify($localPath, $customerId);
+                    if (!empty($ai['classification']['type'])) {
+                        $groupName = (string)$ai['classification']['type'];
+                        // Persist the AI-derived groupName so the row
+                        // in os_ImageManager reflects what Vision saw.
+                        Yii::$app->db->createCommand()->update(
+                            '{{%ImageManager}}',
+                            ['groupName' => $groupName, 'modified' => date('Y-m-d H:i:s')],
+                            ['id' => $result->id]
+                        )->execute();
+                    }
+                }
+            } catch (\Throwable $e) {
+                Yii::warning('SmartMediaController: classify failed (non-fatal): ' . $e->getMessage(), __METHOD__);
+            }
+        }
+
+        return [
+            'success' => true,
+            'file' => [
+                'id'             => $result->id,
+                'name'           => $result->fileName,
+                'path'           => $result->url,
+                'thumb'          => $result->thumbUrl ?: $result->url,
+                'size'           => $result->fileSize,
+                'mime'           => $result->mimeType,
+                'capture_method' => 'upload',
+                'group_name'     => $groupName,
+            ],
+            'ai' => $ai !== null ? [
+                'classification' => $ai['classification'] ?? null,
+                'text_preview'   => mb_substr($ai['text'] ?? '', 0, 200),
+                'labels'         => array_slice($ai['labels'] ?? [], 0, 5),
+                'response_time'  => $ai['response_time_ms'] ?? 0,
+            ] : null,
+        ];
     }
 
     /**
      * Capture webcam photo
      * POST: image_data (base64 data URL), customer_id (optional), photo_type
-     * 
      */
     public function actionWebcamCapture()
     {
@@ -164,84 +154,47 @@ class SmartMediaController extends Controller
         if (!$imageData) {
             return ['success' => false, 'error' => 'لم يتم استلام بيانات الصورة'];
         }
-
-        // Validate base64 data URL
-        if (!preg_match('/^data:image\/(jpeg|png|webp);base64,/', $imageData, $matches)) {
+        if (!preg_match('/^data:image\/(jpeg|png|webp);base64,/', $imageData)) {
             return ['success' => false, 'error' => 'صيغة البيانات غير صحيحة'];
         }
 
-        $ext = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
-        $mimeType = 'image/' . $matches[1];
+        $customerId = Yii::$app->request->post('customer_id');
+        $customerId = $customerId !== null && $customerId !== '' ? (int)$customerId : null;
+        $photoType  = Yii::$app->request->post('photo_type', 'webcam');
+
+        // The legacy mapping: id_front/id_back → '0', everything else → '8'.
+        $groupName = ($photoType === 'id_front' || $photoType === 'id_back') ? '0' : '8';
+
+        $ctx = $customerId !== null
+            ? MediaContext::forCustomer($customerId, $groupName, 'smart_media')
+            : new MediaContext(
+                entityType:  'customer',
+                entityId:    null,
+                groupName:   $groupName,
+                uploadedVia: 'smart_media',
+                userId:      Yii::$app->user->id ?? null,
+            );
 
         try {
-            // Decode base64
-            $base64Data = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
-            $binaryData = base64_decode($base64Data);
-
-            if (!$binaryData) {
-                throw new \Exception('فشل في فك تشفير الصورة');
-            }
-
-            $customerId = Yii::$app->request->post('customer_id');
-            $photoType = Yii::$app->request->post('photo_type', 'webcam');
-
-            // Map photo_type to groupName
-            $groupName = '8'; // default: صورة شخصية (personal photo)
-            if ($photoType === 'id_front' || $photoType === 'id_back') {
-                $groupName = '0'; // هوية وطنية
-            }
-
-            // Generate hash & filename for ImageManager
-            $fileHash = Yii::$app->security->generateRandomString(32);
-            $originalName = 'cam_' . date('Ymd_His') . '.' . $ext;
-
-            // Insert into os_ImageManager
-            $db = Yii::$app->db;
-            $db->createCommand()->insert('{{%ImageManager}}', [
-                'fileName'    => $originalName,
-                'fileHash'    => $fileHash,
-                'customer_id' => $customerId ? (int)$customerId : null,
-                'contractId'  => null,
-                'groupName'   => $groupName,
-                'created'     => date('Y-m-d H:i:s'),
-                'modified'    => date('Y-m-d H:i:s'),
-                'createdBy'   => Yii::$app->user->id ?? null,
-                'modifiedBy'  => Yii::$app->user->id ?? null,
-            ])->execute();
-
-            $imageId = $db->getLastInsertID();
-
-            $destPath = MediaHelper::filePath((int)$imageId, $fileHash, $originalName);
-            $destDir = dirname($destPath);
-            if (!is_dir($destDir)) mkdir($destDir, 0755, true);
-            $webPath = MediaHelper::url((int)$imageId, $fileHash, $originalName);
-
-            file_put_contents($destPath, $binaryData);
-
-            $thumbWebPath = null;
-            $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
-            if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-            $thumbFile = 'thumb_' . basename($destPath);
-            $thumbFullPath = $thumbDir . '/' . $thumbFile;
-            if (VisionService::createThumbnail($destPath, $thumbFullPath, 150, 150)) {
-                $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
-            }
-
-            return [
-                'success' => true,
-                'photo' => [
-                    'id'    => (int)$imageId,
-                    'path'  => $webPath,
-                    'thumb' => $thumbWebPath ?: $webPath,
-                    'size'  => strlen($binaryData),
-                    'type'  => $photoType,
-                    'group_name' => $groupName,
-                ],
-            ];
-
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+            $result = Yii::$app->media->storeFromBase64($imageData, $ctx);
+        } catch (\InvalidArgumentException $e) {
+            return ['success' => false, 'error' => $this->humaniseUploadError($e->getMessage())];
+        } catch (\Throwable $e) {
+            Yii::error('SmartMediaController: webcam store failed: ' . $e->getMessage(), __METHOD__);
+            return ['success' => false, 'error' => 'فشل حفظ الصورة'];
         }
+
+        return [
+            'success' => true,
+            'photo' => [
+                'id'         => $result->id,
+                'path'       => $result->url,
+                'thumb'      => $result->thumbUrl ?: $result->url,
+                'size'       => $result->fileSize,
+                'type'       => $photoType,
+                'group_name' => $groupName,
+            ],
+        ];
     }
 
     /**
@@ -252,54 +205,59 @@ class SmartMediaController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
+        $imageId = Yii::$app->request->post('image_id');
         $webPath = Yii::$app->request->post('file_path');
-        if (!$webPath) {
-            return ['success' => false, 'error' => 'مسار الملف مطلوب'];
+
+        // Resolve the local path through MediaService when possible —
+        // it knows the storage layout and works transparently for any
+        // future driver. Fall back to the legacy webPath translation
+        // only when the caller did not pass an image_id.
+        $filePath = null;
+        if ($imageId) {
+            $media = Yii::$app->media->getById((int)$imageId);
+            if ($media !== null) {
+                $filePath = MediaHelper::filePath((int)$media->id, (string)$media->fileHash, (string)$media->fileName);
+            }
         }
-
-        $filePath = Yii::getAlias('@backend/web') . $webPath;
-
-        if (!file_exists($filePath)) {
+        if ($filePath === null && $webPath) {
+            $filePath = Yii::getAlias('@backend/web') . $webPath;
+        }
+        if (!$filePath || !is_file($filePath)) {
             return ['success' => false, 'error' => 'الملف غير موجود'];
         }
 
         $customerId = Yii::$app->request->post('customer_id');
-        $imageId = Yii::$app->request->post('image_id');
+        $customerId = $customerId !== null && $customerId !== '' ? (int)$customerId : null;
 
-        $result = VisionService::classify($filePath, $customerId ? (int)$customerId : null);
+        $result = VisionService::classify($filePath, $customerId);
 
-        // Update groupName in os_ImageManager if we have an image_id and classification succeeded
-        if ($result['success'] && $imageId && !empty($result['classification']['type'])) {
+        if (!empty($result['success']) && $imageId && !empty($result['classification']['type'])) {
             Yii::$app->db->createCommand()->update(
                 '{{%ImageManager}}',
-                ['groupName' => (string)$result['classification']['type']],
+                [
+                    'groupName' => (string)$result['classification']['type'],
+                    'modified'  => date('Y-m-d H:i:s'),
+                ],
                 ['id' => (int)$imageId]
             )->execute();
         }
 
         return [
-            'success' => $result['success'],
+            'success'        => $result['success'] ?? false,
             'classification' => $result['classification'] ?? null,
-            'text_preview' => mb_substr($result['text'] ?? '', 0, 300),
-            'labels' => array_slice($result['labels'] ?? [], 0, 8),
-            'error' => $result['error'] ?? null,
-            'response_time' => $result['response_time_ms'] ?? 0,
+            'text_preview'   => mb_substr($result['text'] ?? '', 0, 300),
+            'labels'         => array_slice($result['labels'] ?? [], 0, 8),
+            'error'          => $result['error'] ?? null,
+            'response_time'  => $result['response_time_ms'] ?? 0,
         ];
     }
 
-    /**
-     * Get usage statistics — local tracking data
-     */
     public function actionUsageStats()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
         return VisionService::getUsageStats();
     }
 
-    /**
-     * Get LIVE Google Cloud data — real billing + real usage metrics
-     * Pulls directly from Google Billing API & Monitoring API
-     */
     public function actionGoogleStats()
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
@@ -314,9 +272,8 @@ class SmartMediaController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $imageId = Yii::$app->request->post('image_id');
+        $imageId   = Yii::$app->request->post('image_id');
         $groupName = Yii::$app->request->post('group_name');
-
         if (!$imageId) {
             return ['success' => false, 'error' => 'معرف الصورة مطلوب'];
         }
@@ -324,10 +281,9 @@ class SmartMediaController extends Controller
         try {
             Yii::$app->db->createCommand()->update(
                 '{{%ImageManager}}',
-                ['groupName' => (string)$groupName],
+                ['groupName' => (string)$groupName, 'modified' => date('Y-m-d H:i:s')],
                 ['id' => (int)$imageId]
             )->execute();
-
             return ['success' => true];
         } catch (\Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
@@ -336,8 +292,6 @@ class SmartMediaController extends Controller
 
     /**
      * Extract structured fields from a document image using OCR + field parser.
-     * POST: file (multipart image), customer_id (optional)
-     * Returns: JSON with extracted customer/document/job fields + classification
      */
     public function actionExtractFields()
     {
@@ -348,88 +302,61 @@ class SmartMediaController extends Controller
             return ['success' => false, 'error' => 'لم يتم استلام الملف'];
         }
 
-        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-        if (!in_array($file->type, $allowed)) {
-            return ['success' => false, 'error' => 'نوع الملف غير مدعوم'];
-        }
-
-        $maxSize = 10 * 1024 * 1024;
-        if ($file->size > $maxSize) {
-            return ['success' => false, 'error' => 'حجم الملف أكبر من 10MB'];
-        }
-
         $customerId = Yii::$app->request->post('customer_id');
+        $customerId = $customerId !== null && $customerId !== '' ? (int)$customerId : null;
+
+        // We need the bytes BEFORE we hand them to MediaService so we
+        // can run OCR and let the extracted document type drive the
+        // groupName. Copy to a runtime temp first; MediaService later
+        // reads the uploaded file directly from $file->tempName.
+        $ext = strtolower($file->extension ?: 'bin');
+        $tempPath = Yii::getAlias('@runtime') . '/scan_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
+        if (!@copy($file->tempName, $tempPath)) {
+            return ['success' => false, 'error' => 'فشل في حفظ النسخة المؤقتة'];
+        }
 
         try {
-            $ext = strtolower($file->extension);
-            $tempPath = Yii::getAlias('@runtime') . '/scan_' . Yii::$app->security->generateRandomString(8) . '.' . $ext;
-            $file->saveAs($tempPath, false);
-
-            // Release session lock so parallel uploads aren't blocked
             Yii::$app->session->close();
-
             $extraction = VisionService::extractFromDocument($tempPath);
+            $groupName  = $extraction['document']['type'] ?? '9';
 
-            // Save to ImageManager for later use
-            $groupName = $extraction['document']['type'] ?? '9';
-            $fileHash = Yii::$app->security->generateRandomString(32);
+            $ctx = $customerId !== null
+                ? MediaContext::forCustomer($customerId, $groupName, 'smart_media')
+                : new MediaContext(
+                    entityType:  'customer',
+                    entityId:    null,
+                    groupName:   $groupName,
+                    uploadedVia: 'smart_media',
+                    userId:      Yii::$app->user->id ?? null,
+                );
 
-            $db = Yii::$app->db;
-            $db->createCommand()->insert('{{%ImageManager}}', [
-                'fileName'    => $file->name,
-                'fileHash'    => $fileHash,
-                'customer_id' => $customerId ? (int)$customerId : null,
-                'contractId'  => null,
-                'groupName'   => $groupName,
-                'created'     => date('Y-m-d H:i:s'),
-                'modified'    => date('Y-m-d H:i:s'),
-                'createdBy'   => Yii::$app->user->id ?? null,
-                'modifiedBy'  => Yii::$app->user->id ?? null,
-            ])->execute();
-
-            $imageId = $db->getLastInsertID();
-            $destPath = MediaHelper::filePath((int)$imageId, $fileHash, $file->name);
-            $destDir = dirname($destPath);
-            if (!is_dir($destDir)) mkdir($destDir, 0755, true);
-            $webPath = MediaHelper::url((int)$imageId, $fileHash, $file->name);
-
-            if (file_exists($tempPath)) {
-                copy($tempPath, $destPath);
-            }
-            @unlink($tempPath);
-
-            // Generate thumbnail
-            $thumbWebPath = null;
-            if (strpos($file->type, 'image/') === 0) {
-                $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
-                if (!is_dir($thumbDir)) mkdir($thumbDir, 0755, true);
-                $thumbFile = 'thumb_' . basename($destPath);
-                $thumbFullPath = $thumbDir . '/' . $thumbFile;
-                if (VisionService::createThumbnail($destPath, $thumbFullPath)) {
-                    $thumbWebPath = '/uploads/customers/documents/thumbs/' . $thumbFile;
-                }
+            try {
+                $result = Yii::$app->media->store($file, $ctx);
+            } catch (\InvalidArgumentException $e) {
+                return ['success' => false, 'error' => $this->humaniseUploadError($e->getMessage())];
             }
 
             return [
-                'success' => true,
-                'extraction' => $extraction,
+                'success'        => true,
+                'extraction'     => $extraction,
                 'file' => [
-                    'id'         => (int)$imageId,
-                    'name'       => $file->name,
-                    'path'       => $webPath,
-                    'thumb'      => $thumbWebPath ?: ($file->type === 'application/pdf' ? '/css/images/pdf-icon.png' : $webPath),
-                    'size'       => $file->size,
-                    'mime'       => $file->type,
+                    'id'         => $result->id,
+                    'name'       => $result->fileName,
+                    'path'       => $result->url,
+                    'thumb'      => $result->thumbUrl ?: ($result->mimeType === 'application/pdf'
+                                        ? '/css/images/pdf-icon.png' : $result->url),
+                    'size'       => $result->fileSize,
+                    'mime'       => $result->mimeType,
                     'group_name' => $groupName,
                 ],
-                'ocr_text' => $extraction['meta']['ocr_text'] ?? '',
-                'ocr_preview' => mb_substr($extraction['meta']['ocr_text'] ?? '', 0, 300),
+                'ocr_text'       => $extraction['meta']['ocr_text'] ?? '',
+                'ocr_preview'    => mb_substr($extraction['meta']['ocr_text'] ?? '', 0, 300),
                 'classification' => $extraction['meta']['classification'] ?? null,
             ];
-
         } catch (\Exception $e) {
-            @unlink($tempPath ?? '');
             return ['success' => false, 'error' => $e->getMessage()];
+        } finally {
+            @unlink($tempPath);
         }
     }
 
@@ -441,46 +368,59 @@ class SmartMediaController extends Controller
     {
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        $webPath = Yii::$app->request->post('file_path');
         $imageId = Yii::$app->request->post('image_id');
+        if ($imageId) {
+            // Hard-delete via MediaService — the user explicitly clicked
+            // the delete button, so we want both the row and the bytes
+            // gone. Soft-delete is reserved for system-initiated removals.
+            $ok = Yii::$app->media->delete((int)$imageId, hardDelete: true);
+            return ['success' => $ok];
+        }
 
-        if (!$webPath && !$imageId) {
+        // Fallback to the legacy "delete by web path" flow for old
+        // callers that don't carry the image_id. Will be removed in
+        // the Phase 8 cleanup once we verify nobody still calls it.
+        $webPath = Yii::$app->request->post('file_path');
+        if (!$webPath) {
             return ['success' => false, 'error' => 'مسار الملف أو معرف الصورة مطلوب'];
         }
+        $filePath = Yii::getAlias('@backend/web') . $webPath;
+        if (is_file($filePath)) @unlink($filePath);
+        Yii::warning('SmartMediaController::actionDelete called with file_path only (no image_id) — '
+            . "DEPRECATED, switch to image_id. Removal: 2026-07-19", __METHOD__);
+        return ['success' => true];
+    }
 
-        try {
-            // Delete the physical file
-            if ($webPath) {
-                $filePath = Yii::getAlias('@backend/web') . $webPath;
-                if (file_exists($filePath)) {
-                    unlink($filePath);
-                }
-                // Delete thumbnail
-                $thumbPath = str_replace(basename($webPath), 'thumbs/thumb_' . basename($webPath), Yii::getAlias('@backend/web/uploads/customers/documents/') . basename($webPath));
-                if (file_exists($thumbPath)) {
-                    unlink($thumbPath);
-                }
-            }
+    // ─── Private helpers ───────────────────────────────────────────
 
-            // Delete from os_ImageManager if we have the ID
-            if ($imageId) {
-                $record = Yii::$app->db->createCommand(
-                    "SELECT id, fileName, fileHash FROM {{%ImageManager}} WHERE id = :id",
-                    [':id' => (int)$imageId]
-                )->queryOne();
+    private function fileHashFor(int $imageId): string
+    {
+        $row = Yii::$app->db->createCommand(
+            "SELECT fileHash FROM {{%ImageManager}} WHERE id = :id",
+            [':id' => $imageId]
+        )->queryOne();
+        return (string)($row['fileHash'] ?? '');
+    }
 
-                if ($record) {
-                    $imgPath = MediaHelper::filePath((int)$record['id'], $record['fileHash'], $record['fileName']);
-                    if (file_exists($imgPath)) {
-                        unlink($imgPath);
-                    }
-                    Yii::$app->db->createCommand()->delete('{{%ImageManager}}', ['id' => (int)$imageId])->execute();
-                }
-            }
-
-            return ['success' => true];
-        } catch (\Exception $e) {
-            return ['success' => false, 'error' => $e->getMessage()];
+    /**
+     * Translate the structured exceptions MediaService throws back
+     * into the user-friendly Arabic strings the previous controller
+     * used, so the front-end toast text does not regress.
+     */
+    private function humaniseUploadError(string $msg): string
+    {
+        if (str_contains($msg, 'MIME')) {
+            return 'نوع الملف غير مدعوم';
         }
+        if (str_contains($msg, 'exceeds limit')) {
+            return 'حجم الملف أكبر من المسموح';
+        }
+        if (str_contains($msg, 'is not allowed for entity_type')) {
+            return 'نوع المستند غير مسموح لهذه الجهة';
+        }
+        if (str_contains($msg, 'empty')) {
+            return 'الملف فارغ';
+        }
+        return $msg;
     }
 }

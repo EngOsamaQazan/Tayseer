@@ -1,9 +1,30 @@
 /**
  * Smart Onboarding — Live Risk Assessment Panel
  * Handles: Wizard steps, live risk calculation, alerts, decision actions
+ *
+ * @deprecated Phase 6 / M6.2 — file-upload primitives in this module
+ *             (initDocumentScan / initDocumentUploads) are superseded
+ *             by the unified MediaUploader (backend/web/js/media-uploader/).
+ *             The OCR / risk-scoring / wizard-step logic stays here for
+ *             now, but the upload XHRs can be lifted to MediaUploader
+ *             once we are ready to retire the per-step ad-hoc endpoints.
+ *             Removal target: M8 (≈ 2026-07-19).
+ *
+ *             Server-side note: all upload endpoints already route
+ *             through MediaService (see SmartOnboardingController /
+ *             WizardController, Phase 3.1 / 3.2) so behaviour is
+ *             identical regardless of which client uploader fires.
  */
 (function($) {
     'use strict';
+
+    if (typeof console !== 'undefined' && console.warn) {
+        console.warn(
+            'DEPRECATED uploader: smart-onboarding.js upload primitives — '
+            + 'switch to MediaUploader (backend\\assets\\MediaUploaderAsset). '
+            + 'Removal: 2026-07-19.'
+        );
+    }
 
     var isEditMode = window.soConfig && window.soConfig.isEditMode;
 

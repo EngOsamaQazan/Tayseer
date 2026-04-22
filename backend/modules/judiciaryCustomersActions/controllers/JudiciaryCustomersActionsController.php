@@ -10,9 +10,11 @@ use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
 use \yii\web\Response;
+use yii\web\UploadedFile;
 use yii\helpers\Html;
 use backend\helpers\ExportHelper;
 use backend\helpers\ExportTrait;
+use common\services\media\MediaContext;
 
 /**
  * JudiciaryCustomersActionsController implements the CRUD actions for JudiciaryCustomersActions model.
@@ -165,35 +167,11 @@ class JudiciaryCustomersActionsController extends Controller
                 }
 
                 // Handle file upload (shared across all parties)
-                $imagePath = null;
                 if ($request->post('remove_image')) {
                     $model->image = null;
                 }
-                $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
-                if ($uploadedFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
-                    if (!is_dir($uploadDir)) {
-                        mkdir($uploadDir, 0777, true);
-                    }
-                    $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
-                    if ($uploadedFile->saveAs($filePath)) {
-                        $imagePath = str_replace(Yii::getAlias('@webroot'), '', $filePath);
-                    }
-                }
-
-                // Handle decision_file upload
-                $decisionPath = null;
-                $decisionFile = \yii\web\UploadedFile::getInstance($model, 'decision_file');
-                if ($decisionFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_decisions');
-                    if (!is_dir($uploadDir)) {
-                        mkdir($uploadDir, 0777, true);
-                    }
-                    $decPath = $uploadDir . '/' . uniqid() . '.' . $decisionFile->extension;
-                    if ($decisionFile->saveAs($decPath)) {
-                        $decisionPath = str_replace(Yii::getAlias('@webroot'), '', $decPath);
-                    }
-                }
+                $imagePath    = $this->saveJudiciaryUpload($model, 'image', 'judiciary_action');
+                $decisionPath = $this->saveJudiciaryUpload($model, 'decision_file', 'judiciary_decision');
 
                 // Auto-approve parent request when linking a document to it
                 $actionDef = \backend\modules\judiciaryActions\models\JudiciaryActions::findOne($model->judiciary_actions_id);
@@ -270,16 +248,9 @@ class JudiciaryCustomersActionsController extends Controller
             }
         } else {
             if ($model->load($request->post())) {
-                $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
-                if ($uploadedFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
-                    if (!is_dir($uploadDir)) {
-                        mkdir($uploadDir, 0777, true);
-                    }
-                    $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
-                    if ($uploadedFile->saveAs($filePath)) {
-                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath);
-                    }
+                $imagePath = $this->saveJudiciaryUpload($model, 'image', 'judiciary_action');
+                if ($imagePath !== null) {
+                    $model->image = $imagePath;
                 }
 
                 if ($model->save()) {
@@ -324,23 +295,13 @@ class JudiciaryCustomersActionsController extends Controller
                 }
 
                 // Handle file uploads
-                $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
-                if ($uploadedFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-                    $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
-                    if ($uploadedFile->saveAs($filePath)) {
-                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath);
-                    }
+                $imagePath = $this->saveJudiciaryUpload($model, 'image', 'judiciary_action');
+                if ($imagePath !== null) {
+                    $model->image = $imagePath;
                 }
-                $decisionFile = \yii\web\UploadedFile::getInstance($model, 'decision_file');
-                if ($decisionFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_decisions');
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-                    $decPath = $uploadDir . '/' . uniqid() . '.' . $decisionFile->extension;
-                    if ($decisionFile->saveAs($decPath)) {
-                        $model->decision_file = str_replace(Yii::getAlias('@webroot'), '', $decPath);
-                    }
+                $decisionPath = $this->saveJudiciaryUpload($model, 'decision_file', 'judiciary_decision');
+                if ($decisionPath !== null) {
+                    $model->decision_file = $decisionPath;
                 }
 
                 // When marking doc_status as current, deactivate old ones
@@ -425,25 +386,14 @@ class JudiciaryCustomersActionsController extends Controller
                 if ($request->post('remove_image')) {
                     $model->image = null;
                 }
-                // Handle file upload
-                $uploadedFile = \yii\web\UploadedFile::getInstance($model, 'image');
-                if ($uploadedFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_customers_actions');
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-                    $filePath = $uploadDir . '/' . uniqid() . '.' . $uploadedFile->extension;
-                    if ($uploadedFile->saveAs($filePath)) {
-                        $model->image = str_replace(Yii::getAlias('@webroot'), '', $filePath);
-                    }
+                // Handle file uploads via the unified MediaService.
+                $imagePath = $this->saveJudiciaryUpload($model, 'image', 'judiciary_action');
+                if ($imagePath !== null) {
+                    $model->image = $imagePath;
                 }
-                // Handle decision_file upload
-                $decisionFile = \yii\web\UploadedFile::getInstance($model, 'decision_file');
-                if ($decisionFile) {
-                    $uploadDir = Yii::getAlias('@webroot/uploads/judiciary_decisions');
-                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
-                    $decPath = $uploadDir . '/' . uniqid() . '.' . $decisionFile->extension;
-                    if ($decisionFile->saveAs($decPath)) {
-                        $model->decision_file = str_replace(Yii::getAlias('@webroot'), '', $decPath);
-                    }
+                $decisionPath = $this->saveJudiciaryUpload($model, 'decision_file', 'judiciary_decision');
+                if ($decisionPath !== null) {
+                    $model->decision_file = $decisionPath;
                 }
 
                 // When marking doc_status as current, deactivate old ones
@@ -678,6 +628,50 @@ class JudiciaryCustomersActionsController extends Controller
             return $model;
         } else {
             throw new NotFoundHttpException('The requested page does not exist.');
+        }
+    }
+
+    /**
+     * Single funnel for every judiciary file upload (image / decision_file).
+     *
+     * Migrated to MediaService (Phase 3.3):
+     *   • Replaces four near-identical inline blocks that each created
+     *     their own directory, generated their own uniqid filename, and
+     *     wrote a `str_replace(@webroot,…)` path back to the model.
+     *   • The legacy duplicate in JudiciaryController::actionCustomerAction
+     *     is being kept as a thin wrapper (see method docblock there).
+     *
+     * Returns the URL to write into the corresponding column, or null
+     * when no file was uploaded / the upload failed (caller decides
+     * whether to flash an error or quietly skip).
+     *
+     * Note on entityId: the create-multi flow uploads BEFORE any of the
+     * N parallel JudiciaryCustomersActions rows exist, so entity_id is
+     * intentionally null here. The unified system tolerates this for
+     * non-wizard groups; the URL string in the column is what links
+     * the action to the file, exactly as it did pre-migration.
+     */
+    private function saveJudiciaryUpload(JudiciaryCustomersActions $model, string $field, string $groupName): ?string
+    {
+        $file = UploadedFile::getInstance($model, $field);
+        if (!$file) {
+            return null;
+        }
+
+        try {
+            $entityId = $model->id ? (int)$model->id : null;
+            $ctx = new MediaContext(
+                entityType:  'judiciary_action',
+                entityId:    $entityId,
+                groupName:   $groupName,
+                uploadedVia: 'judiciary_form',
+                userId:      Yii::$app->user->isGuest ? null : (int)Yii::$app->user->id,
+            );
+            $result = Yii::$app->media->store($file, $ctx);
+            return $result->url;
+        } catch (\Throwable $e) {
+            Yii::error("Judiciary {$field} upload failed: " . $e->getMessage(), __METHOD__);
+            return null;
         }
     }
 }

@@ -17,6 +17,7 @@ use common\helper\Permissions;
 use backend\modules\customers\components\VisionService;
 use backend\models\Media;
 use backend\helpers\MediaHelper;
+use common\services\media\MediaContext;
 use backend\modules\customers\models\Customers;
 use backend\modules\customers\models\CustomersDocument;
 use backend\modules\address\models\Address;
@@ -2521,76 +2522,30 @@ class WizardController extends Controller
     }
 
     /**
-     * Persist a successfully-scanned SS statement into the Media store with
-     * groupName = '5' (كتاب ضمان اجتماعي). Mirror of persistScanImage()
-     * but without side / issuing-body / document_number.
+     * Persist a successfully-scanned SS statement into the canonical
+     * Media store with groupName = '5' (كتاب ضمان اجتماعي).
+     *
+     * Phase 3.1 migration: was a hand-rolled `new Media([...]) → save →
+     * rename → thumb` sequence; now delegates the row + bytes lifecycle
+     * to MediaService::storeFromPath while preserving the legacy
+     * thumbnail-cache convention (`thumb_…` under /uploads/customers/
+     * documents/thumbs) so the wizard's own preview UI keeps rendering
+     * during the deprecation window.
+     *
+     * Mirror of persistScanImage() but without side / issuing-body /
+     * document_number.
      */
     protected function persistIncomeScanImage($tmpPath, $uploadedFile)
     {
-        try {
-            if (!is_file($tmpPath)) return null;
-
-            $fileHash = Yii::$app->security->generateRandomString(32);
-            $origName = $uploadedFile->name ?: ('income_kashf.pdf');
-            $origName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($origName));
-            if ($origName === '' || $origName === '.' || $origName === '..') {
-                $ext = strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'pdf';
-                $origName = 'income_kashf.' . $ext;
-            }
-
-            $media = new Media([
-                'fileName'    => $origName,
-                'fileHash'    => $fileHash,
-                'customer_id' => null, // adopted by linkScanImagesToCustomer()
-                'contractId'  => null,
-                'groupName'   => '5', // كتاب ضمان اجتماعي
-                'created'     => date('Y-m-d H:i:s'),
-                'modified'    => date('Y-m-d H:i:s'),
-                'createdBy'   => Yii::$app->user->id ?? null,
-                'modifiedBy'  => Yii::$app->user->id ?? null,
-            ]);
-            if (!$media->save(false)) {
-                Yii::warning('Wizard income scan: failed to persist Media row', __METHOD__);
-                return null;
-            }
-
-            $destPath = MediaHelper::filePath((int)$media->id, $fileHash, $origName);
-            $destDir  = dirname($destPath);
-            if (!is_dir($destDir)) @mkdir($destDir, 0755, true);
-
-            if (!@rename($tmpPath, $destPath)) {
-                if (!@copy($tmpPath, $destPath)) {
-                    $media->delete();
-                    Yii::warning('Wizard income scan: failed to move file to Media store', __METHOD__);
-                    return null;
-                }
-                @unlink($tmpPath);
-            }
-            @chmod($destPath, 0644);
-
-            // Best-effort thumbnail (image only — we don't rasterize PDFs here).
-            try {
-                $isImage = strpos((string)$uploadedFile->type, 'image/') === 0;
-                if ($isImage && method_exists(VisionService::class, 'createThumbnail')) {
-                    $thumbDir = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
-                    if (!is_dir($thumbDir)) @mkdir($thumbDir, 0755, true);
-                    $thumbPath = $thumbDir . '/thumb_' . basename($destPath);
-                    VisionService::createThumbnail($destPath, $thumbPath);
-                }
-            } catch (\Throwable $te) {
-                Yii::warning('Wizard income scan: thumbnail generation failed: ' . $te->getMessage(), __METHOD__);
-            }
-
-            return [
-                'image_id'   => (int)$media->id,
-                'url'        => $media->getUrl(),
-                'group_name' => '5',
-                'file_name'  => $origName,
-            ];
-        } catch (\Throwable $e) {
-            Yii::error('Wizard income scan persistence failed: ' . $e->getMessage(), __METHOD__);
-            return null;
-        }
+        return $this->persistWizardScanFile(
+            tmpPath:      $tmpPath,
+            uploadedFile: $uploadedFile,
+            groupName:    '5',
+            fallbackName: 'income_kashf.pdf',
+            fallbackBase: 'income_kashf',
+            withThumbnail: true,
+            errorContext: 'income scan'
+        );
     }
 
     /**
@@ -2716,79 +2671,16 @@ class WizardController extends Controller
      */
     protected function persistScanImage($tmpPath, $uploadedFile, $side, $issuingBody, $documentNumber, $docType = null)
     {
-        try {
-            if (!is_file($tmpPath)) return null;
-
-            // 1. Insert Media row first to get the auto-increment ID — the
-            //    file path includes the row ID so we can't write the file
-            //    until we know its ID.
-            $fileHash = Yii::$app->security->generateRandomString(32);
-            $origName = $uploadedFile->name ?: ('scan_' . $side . '.jpg');
-            // Sanitize the filename: avoid path traversal & weird chars.
-            $origName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($origName));
-            if ($origName === '' || $origName === '.' || $origName === '..') {
-                $origName = 'scan_' . $side . '.' . (strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'jpg');
-            }
-
-            $groupName = $this->groupNameForScan($side, $issuingBody, $docType);
-
-            $media = new Media([
-                'fileName'    => $origName,
-                'fileHash'    => $fileHash,
-                'customer_id' => null, // adopted later by linkScanImagesToCustomer()
-                'contractId'  => null,
-                'groupName'   => $groupName,
-                'created'     => date('Y-m-d H:i:s'),
-                'modified'    => date('Y-m-d H:i:s'),
-                'createdBy'   => Yii::$app->user->id ?? null,
-                'modifiedBy'  => Yii::$app->user->id ?? null,
-            ]);
-            if (!$media->save(false)) {
-                Yii::warning('Wizard scan: failed to persist Media row', __METHOD__);
-                return null;
-            }
-
-            // 2. Move the runtime tmp file into the Media-canonical path.
-            $destPath = MediaHelper::filePath((int)$media->id, $fileHash, $origName);
-            $destDir  = dirname($destPath);
-            if (!is_dir($destDir)) {
-                @mkdir($destDir, 0755, true);
-            }
-            // Use rename() — fast, atomic, and zero-copy on the same volume.
-            if (!@rename($tmpPath, $destPath)) {
-                // Fall back to copy + unlink if rename crosses devices.
-                if (!@copy($tmpPath, $destPath)) {
-                    $media->delete();
-                    Yii::warning('Wizard scan: failed to move file to Media store', __METHOD__);
-                    return null;
-                }
-                @unlink($tmpPath);
-            }
-            @chmod($destPath, 0644);
-
-            // 3. Best-effort thumbnail (matches SmartMediaController convention).
-            try {
-                $thumbDir  = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
-                if (!is_dir($thumbDir)) @mkdir($thumbDir, 0755, true);
-                $thumbFile = 'thumb_' . basename($destPath);
-                $thumbPath = $thumbDir . '/' . $thumbFile;
-                if (method_exists(VisionService::class, 'createThumbnail')) {
-                    VisionService::createThumbnail($destPath, $thumbPath);
-                }
-            } catch (\Throwable $te) {
-                Yii::warning('Wizard scan: thumbnail generation failed: ' . $te->getMessage(), __METHOD__);
-            }
-
-            return [
-                'image_id'   => (int)$media->id,
-                'url'        => $media->getUrl(),
-                'group_name' => $groupName,
-                'file_name'  => $origName,
-            ];
-        } catch (\Throwable $e) {
-            Yii::error('Wizard scan persistence failed: ' . $e->getMessage(), __METHOD__);
-            return null;
-        }
+        $groupName = $this->groupNameForScan($side, $issuingBody, $docType);
+        return $this->persistWizardScanFile(
+            tmpPath:      $tmpPath,
+            uploadedFile: $uploadedFile,
+            groupName:    $groupName,
+            fallbackName: 'scan_' . $side . '.jpg',
+            fallbackBase: 'scan_' . $side,
+            withThumbnail: true,
+            errorContext: 'scan'
+        );
     }
 
     /**
@@ -3703,48 +3595,118 @@ class WizardController extends Controller
      */
     protected function persistExtraMedia($tmpPath, $uploadedFile, $groupName)
     {
-        if (!is_file($tmpPath)) return null;
+        $result = $this->persistWizardScanFile(
+            tmpPath:      $tmpPath,
+            uploadedFile: $uploadedFile,
+            groupName:    $groupName,
+            fallbackName: 'extra_' . time() . '.bin',
+            fallbackBase: 'extra_' . time(),
+            withThumbnail: false,
+            errorContext: 'upload-extra'
+        );
 
-        $fileHash = Yii::$app->security->generateRandomString(32);
-        $origName = $uploadedFile->name ?: ('extra_' . time() . '.bin');
-        $origName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($origName));
-        if ($origName === '' || $origName === '.' || $origName === '..') {
-            $origName = 'extra_' . time() . '.' . (strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'bin');
-        }
-
-        $media = new Media([
-            'fileName'    => $origName,
-            'fileHash'    => $fileHash,
-            'customer_id' => null,           // adopted by linkExtrasToCustomer() on finish
-            'contractId'  => null,
-            'groupName'   => $groupName,
-            'created'     => date('Y-m-d H:i:s'),
-            'modified'    => date('Y-m-d H:i:s'),
-            'createdBy'   => Yii::$app->user->id ?? null,
-            'modifiedBy'  => Yii::$app->user->id ?? null,
-        ]);
-        if (!$media->save(false)) {
-            Yii::warning('Wizard upload-extra: failed to persist Media row', __METHOD__);
+        if ($result === null) {
             return null;
         }
 
-        $destPath = MediaHelper::filePath((int)$media->id, $fileHash, $origName);
-        $destDir  = dirname($destPath);
-        if (!is_dir($destDir)) @mkdir($destDir, 0755, true);
-        if (!@rename($tmpPath, $destPath)) {
-            if (!@copy($tmpPath, $destPath)) {
-                $media->delete();
+        // The extra-upload contract historically excluded `group_name`
+        // from the response — preserve that shape so existing JS in
+        // `customer-wizard/extras.js` keeps deserialising correctly.
+        unset($result['group_name']);
+        return $result;
+    }
+
+    /**
+     * Single funnel for every wizard upload that lands in os_ImageManager.
+     *
+     * Phase 3.1 unification: extracted from the three near-identical
+     * `persistXxxImage()` methods that each re-implemented the same
+     * flow:  tmp file → sanitise filename → INSERT Media → rename
+     * bytes into the canonical path → optional thumb → return tuple.
+     *
+     * The implementation now delegates the row + bytes lifecycle to
+     * MediaService::storeFromPath() so dedup, audit, MIME validation,
+     * and async post-processing (when the queue is wired up) all run
+     * consistently for every wizard upload.
+     *
+     * Why we KEEP the `thumb_…` PNG generation here even though
+     * MediaService dispatches GenerateThumbnailJob:
+     *   • The wizard preview UI reads from the legacy thumbnail path
+     *     synchronously when it renders the just-uploaded scan card.
+     *     The async job has no chance to run in that single request.
+     *   • Once Phase 6 swaps the wizard UI to the unified thumbnail
+     *     endpoint, this block can be removed.
+     *
+     * @return array{image_id:int,url:string,group_name:string,file_name:string}|null
+     */
+    protected function persistWizardScanFile(
+        string $tmpPath,
+        UploadedFile $uploadedFile,
+        string $groupName,
+        string $fallbackName,
+        string $fallbackBase,
+        bool $withThumbnail,
+        string $errorContext
+    ): ?array {
+        try {
+            if (!is_file($tmpPath)) {
                 return null;
             }
-            @unlink($tmpPath);
-        }
-        @chmod($destPath, 0644);
 
-        return [
-            'image_id'  => (int)$media->id,
-            'url'       => $media->getUrl(),
-            'file_name' => $origName,
-        ];
+            $origName = $uploadedFile->name !== '' ? $uploadedFile->name : $fallbackName;
+            $origName = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($origName));
+            if ($origName === '' || $origName === '.' || $origName === '..') {
+                $ext = strtolower(pathinfo($tmpPath, PATHINFO_EXTENSION)) ?: 'bin';
+                $origName = $fallbackBase . '.' . $ext;
+            }
+
+            // Wizard uploads happen BEFORE the customer row exists; we
+            // intentionally pass entity_id=null and let MediaService::
+            // adoptOrphans() attach the rows on finish().
+            $ctx = MediaContext::forWizardScan($groupName, Yii::$app->user->id ?? null)
+                ->withOriginalName($origName)
+                ->withAutoClassify(false); // wizard does its own VisionService::scanImage
+
+            $result = Yii::$app->media->storeFromPath($tmpPath, $ctx);
+
+            // Move (vs copy) the temp file out of @runtime so disk usage
+            // does not bloat between request and async job. storeFromPath
+            // copies the bytes into the canonical Media path, leaving the
+            // source file behind — clean it up here.
+            @unlink($tmpPath);
+
+            // Best-effort legacy thumbnail (matches SmartMediaController
+            // convention). PDFs are skipped by VisionService::createThumbnail
+            // itself, no need to gate on MIME here.
+            if ($withThumbnail) {
+                try {
+                    // The on-disk filename uses the FIRST 32 chars of the
+                    // SHA-256 (mirrors LocalDiskDriver::buildKey + the
+                    // legacy `fileHash` column shape).
+                    $shortHash = substr((string)$result->checksumSha256, 0, 32);
+                    $destPath  = MediaHelper::filePath($result->id, $shortHash, $origName);
+                    $thumbDir  = Yii::getAlias('@backend/web/uploads/customers/documents/thumbs');
+                    if (!is_dir($thumbDir)) @mkdir($thumbDir, 0755, true);
+                    $thumbPath = $thumbDir . '/thumb_' . basename($destPath);
+                    if (is_file($destPath) && method_exists(VisionService::class, 'createThumbnail')) {
+                        VisionService::createThumbnail($destPath, $thumbPath);
+                    }
+                } catch (\Throwable $te) {
+                    Yii::warning("Wizard {$errorContext}: thumbnail generation failed: "
+                        . $te->getMessage(), __METHOD__);
+                }
+            }
+
+            return [
+                'image_id'   => $result->id,
+                'url'        => $result->url,
+                'group_name' => $result->groupName ?: $groupName,
+                'file_name'  => $result->fileName ?: $origName,
+            ];
+        } catch (\Throwable $e) {
+            Yii::error("Wizard {$errorContext} persistence failed: " . $e->getMessage(), __METHOD__);
+            return null;
+        }
     }
 
     /**
@@ -3854,6 +3816,12 @@ class WizardController extends Controller
     /**
      * Hard-delete an orphan Media row + its file. Safe-noop when the row
      * is already adopted by a customer (customer_id IS NOT NULL).
+     *
+     * Phase 3.1 migration: was hand-rolled `unlink + $row->delete()`;
+     * now delegates to MediaService::delete() so audit-log entries fire
+     * consistently and the storage driver is consulted (matters once
+     * we move to S3 — the driver will know its bucket layout, the
+     * hand-rolled path would not).
      */
     protected function safeDeleteOrphanMedia($imageId)
     {
@@ -3861,13 +3829,7 @@ class WizardController extends Controller
             $row = Media::findOne((int)$imageId);
             if (!$row) return;
             if ((int)$row->customer_id !== 0) return;     // adopted → leave alone
-            try {
-                $abs = MediaHelper::filePath((int)$row->id, $row->fileHash, $row->fileName);
-                if ($abs && is_file($abs)) @unlink($abs);
-            } catch (\Throwable $fe) {
-                Yii::warning('safeDeleteOrphanMedia: unlink failed: ' . $fe->getMessage(), __METHOD__);
-            }
-            $row->delete();
+            Yii::$app->media->delete((int)$row->id, hardDelete: true);
         } catch (\Throwable $e) {
             Yii::warning('safeDeleteOrphanMedia failed: ' . $e->getMessage(), __METHOD__);
         }

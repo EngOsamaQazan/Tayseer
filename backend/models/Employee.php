@@ -321,6 +321,13 @@ class Employee extends \common\models\Model
         return $this->hasOne(EmployeeFiles::className(), ['user_id' => 'id'])->andWhere(['type' => EmployeeFiles::TYPE_ATTACHMENT]);
     }
 
+    /**
+     * @deprecated Phase 3.6 — superseded by
+     *             EmployeeController::saveEmployeeAvatar(), which
+     *             routes through MediaService for dedup, audit
+     *             log, and unified storage layout. Scheduled for
+     *             removal in M8 (Phase 8 cleanup).
+     */
     public function updateProfileAvatar()
     {
         $saveToDirectory = Yii::getAlias("@backend/web/images/employeeImage");
@@ -343,6 +350,14 @@ class Employee extends \common\models\Model
         return false;
     }
 
+    /**
+     * @deprecated Phase 3.6 — superseded by
+     *             EmployeeController::saveEmployeeAttachments(),
+     *             which routes through MediaService AND fixes the
+     *             long-standing `return true` inside the foreach
+     *             that silently dropped every attachment past the
+     *             first. Scheduled for removal in M8.
+     */
     public function addProfileAttachment()
     {
         $attachmentFiles = $this->profile_attachment_files;

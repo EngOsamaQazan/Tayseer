@@ -40,39 +40,24 @@ try {
   exit();
 }
 
-// Notes:
-//   • Single-character codes are the legacy convention used by the old
-//     wizard / SmartMediaController (still in active use for some flows).
-//   • The new wizard (WizardController::groupNameForScan) splits ID cards
-//     into front/back to keep the documents tab cleanly labelled, which
-//     produces composite codes like '0_front', '0_back', '4_front',
-//     '4_back'. Any new composite codes from the wizard MUST be added
-//     here too — otherwise they fall through to "أخرى" silently and
-//     the rep can't tell which scan is which.
-$docTypes = [
-  '0' => 'هوية وطنية',       '1' => 'جواز سفر',       '2' => 'رخصة قيادة',
-  '3' => 'شهادة ميلاد',      '4' => 'شهادة تعيين',     '5' => 'كتاب ضمان اجتماعي',
-  '6' => 'كشف راتب',         '7' => 'شهادة تعيين عسكري','8' => 'صورة شخصية',
-  '9' => 'غير محدد',
-  // New wizard ID-card subcodes (front/back capture).
-  '0_front' => 'هوية وطنية — الوجه',
-  '0_back'  => 'هوية وطنية — الظهر',
-  '4_front' => 'شهادة تعيين عسكرية — الوجه',
-  '4_back'  => 'شهادة تعيين عسكرية — الظهر',
-  'coustmers'  => 'وثيقة عميل',
-  'customers'  => 'وثيقة عميل',
-  'contracts'  => 'وثيقة عقد',
-  'smart_media'=> 'وسائط ذكية',
-];
+// Phase 4 / M4.1 — single source of truth (no more 3-copy drift).
+require_once __DIR__ . '/_doc_types.php';
+// $docTypes is now provided by _doc_types.php (see GroupNameRegistry).
 
 $images = [];
 try {
   $db->bind = [];
+  // Phase 4 / M4.1 — also include rows written via MediaService
+  // (entity_type='customer'). Skip soft-deleted rows.
   $stmt = $db->run("
     SELECT id, fileName, fileHash, groupName
     FROM os_ImageManager
-    WHERE customer_id = {$custId}
-       OR CAST(contractId AS UNSIGNED) = {$custId}
+    WHERE deleted_at IS NULL
+      AND (
+            customer_id = {$custId}
+         OR CAST(contractId AS UNSIGNED) = {$custId}
+         OR (entity_type = 'customer' AND entity_id = {$custId})
+      )
     ORDER BY id DESC
     LIMIT 50
   ");
@@ -96,7 +81,7 @@ if (!empty($images)) {
     $ext    = pathinfo($fileName, PATHINFO_EXTENSION);
     $imgUrl = $baseUrl . $imgId . '_' . $fileHash . ($ext ? '.' . $ext : '');
     $gn     = $img['groupName'] ?? '9';
-    $label  = $docTypes[$gn] ?? 'أخرى';
+    $label  = $docTypes[$gn] ?? fahras_doc_label($gn);
     $count++;
 
     echo '<div style="text-align:center;margin-bottom:10px;">';

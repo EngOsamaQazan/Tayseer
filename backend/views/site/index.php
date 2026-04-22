@@ -6,6 +6,8 @@
 
 use yii\helpers\Html;
 use yii\helpers\Url;
+use common\helper\Permissions;
+use backend\widgets\MediaHealthWidget;
 
 $this->title = 'لوحة التحكم';
 
@@ -480,6 +482,12 @@ a.db-kpi { text-decoration: none; color: inherit; cursor: pointer; }
             </table>
         </div>
     </div>
+
+    <?php if (Yii::$app->user->can(Permissions::MANAGER)): ?>
+    <div class="db-section" data-db-section="media-health" style="margin-bottom:24px">
+        <?= MediaHealthWidget::widget() ?>
+    </div>
+    <?php endif; ?>
 </div>
 
 <!-- Dashboard Customization — Drag & Drop -->

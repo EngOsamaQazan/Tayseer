@@ -40,24 +40,9 @@ if (!isset($_REQUEST['token']) || $_REQUEST['token'] != 'b83ba7a49b72') {
 
 $baseUrl = $baseUrlMap[$requestDb] ?? '';
 
-// Notes: see client-attachments.php for why the composite '<n>_front' /
-// '<n>_back' codes exist. Keep this map in sync with the other fahras
-// files (api.php + client-attachments.php) — otherwise the same image
-// gets a different label depending on which screen it appears on.
-$docTypes = [
-  '0' => 'هوية وطنية',       '1' => 'جواز سفر',       '2' => 'رخصة قيادة',
-  '3' => 'شهادة ميلاد',      '4' => 'شهادة تعيين',     '5' => 'كتاب ضمان اجتماعي',
-  '6' => 'كشف راتب',         '7' => 'شهادة تعيين عسكري','8' => 'صورة شخصية',
-  '9' => 'غير محدد',
-  '0_front' => 'هوية وطنية — الوجه',
-  '0_back'  => 'هوية وطنية — الظهر',
-  '4_front' => 'شهادة تعيين عسكرية — الوجه',
-  '4_back'  => 'شهادة تعيين عسكرية — الظهر',
-  'coustmers'  => 'وثيقة عميل',
-  'customers'  => 'وثيقة عميل',
-  'contracts'  => 'وثيقة عقد',
-  'smart_media'=> 'وسائط ذكية',
-];
+// Phase 4 / M4.1 — single source of truth (no more 3-copy drift).
+require_once __DIR__ . '/_doc_types.php';
+// $docTypes is now provided by _doc_types.php (see GroupNameRegistry).
 
 $contractId = isset($_REQUEST['contract']) ? (int)$_REQUEST['contract'] : 0;
 $clientId = isset($_REQUEST['client']) ? (int)$_REQUEST['client'] : 0;
@@ -127,11 +112,17 @@ if (isset($_REQUEST['format']) && $_REQUEST['format'] === 'json') {
     if ($cid > 0) {
       try {
         $db->bind = [];
+        // Phase 4 / M4.1 — also include rows written via MediaService
+        // (entity_type='customer'). Skip soft-deleted rows.
         $stmtImg = $db->run("
           SELECT id, fileName, fileHash, groupName, created
           FROM os_ImageManager
-          WHERE customer_id = {$cid}
-             OR CAST(contractId AS UNSIGNED) = {$cid}
+          WHERE deleted_at IS NULL
+            AND (
+                  customer_id = {$cid}
+               OR CAST(contractId AS UNSIGNED) = {$cid}
+               OR (entity_type = 'customer' AND entity_id = {$cid})
+            )
           ORDER BY created DESC
         ");
         if ($stmtImg && is_object($stmtImg)) {
@@ -142,7 +133,7 @@ if (isset($_REQUEST['format']) && $_REQUEST['format'] === 'json') {
             $images[] = [
               'id'   => (int)$img['id'],
               'url'  => $imgUrl,
-              'type' => $docTypes[$gn] ?? 'أخرى',
+              'type' => $docTypes[$gn] ?? fahras_doc_label($gn),
               'type_code' => $gn,
               'file_name' => $img['fileName'] ?? '',
               'date' => $img['created'] ?? '',

@@ -24,6 +24,16 @@ use backend\helpers\MediaHelper;
 class SiteController extends Controller
 {
 
+    /**
+     * CSRF is disabled only for the system-settings "test connection"
+     * buttons. Those endpoints are gated by Permissions::getSettingsPermissions()
+     * (admin-only) and POST-only via VerbFilter; any successful XSRF
+     * would just trigger an outbound test ping with no DB side-effects.
+     *
+     * Reviewed Phase 7 / M7.1 — kept narrowly disabled. TODO M8 cleanup
+     * — make the matching system-settings JS attach X-CSRF-Token and
+     * remove this list entirely.
+     */
     public function beforeAction($action)
     {
         if (in_array($action->id, ['test-google-connection', 'test-maps-connection', 'test-sms-connection', 'test-whatsapp-connection', 'test-whatsapp-message'])) {
@@ -974,6 +984,11 @@ class SiteController extends Controller
         $search   = trim(Yii::$app->request->get('search', ''));
         $dateFrom = Yii::$app->request->get('date_from', '');
         $dateTo   = Yii::$app->request->get('date_to', '');
+        // Phase 4 / M4.2 — new filter dimension: limit to a specific
+        // unified entity_type (customer / contract / lawyer / employee /
+        // company / judiciary_action / movement / contract_doc).
+        // Empty string = no entity_type constraint (legacy behavior).
+        $entityType = trim((string) Yii::$app->request->get('entity_type', ''));
         $offset   = ($page - 1) * $perPage;
 
         $db = Yii::$app->db;
@@ -984,13 +999,31 @@ class SiteController extends Controller
         $uploadsPhotosDir = Yii::getAlias('@backend/web/uploads/customers/photos');
 
         // ──────────────────────────────────────────────────────────
-        //  استعلام موحّد: UNION بين os_ImageManager و os_customer_documents
-        //  يُجمع كل الصور من النظامين في استعلام واحد مرتب بالتاريخ
+        //  Phase 4 / M4.2 — Image Manager unified query.
+        //
+        //  Historically this method merged TWO sources:
+        //    • os_ImageManager           (canonical, kept)
+        //    • os_customer_documents     (Smart Media legacy table)
+        //
+        //  After Phase 5 backfill (`media-backfill/all`) every row in
+        //  os_customer_documents is also written into os_ImageManager
+        //  with entity_type='customer', groupName='smart_media'. At
+        //  that point this merge becomes dead weight and is scheduled
+        //  for removal in M8 (3-month deprecation window). Until then
+        //  we keep the merge so screens that still query the legacy
+        //  Smart Media table during the cut-over keep functioning.
         // ──────────────────────────────────────────────────────────
 
         // ── فلتر os_ImageManager ──
-        $imWhere = "WHERE 1=1";
+        // Always exclude soft-deleted rows from the management UI.
+        $imWhere = "WHERE im.deleted_at IS NULL";
         $imParams = [];
+
+        // Optional entity_type filter (Phase 4 addition).
+        if ($entityType !== '') {
+            $imWhere .= " AND im.entity_type = :entityType";
+            $imParams[':entityType'] = $entityType;
+        }
 
         if ($filter === 'orphans') {
             $imWhere .= " AND im.groupName IN ('coustmers','customers','0','1','2','3','4','5','6','7','8','9') AND c.id IS NULL";
@@ -1026,13 +1059,19 @@ class SiteController extends Controller
             $imParams[':dateTo'] = $dateTo;
         }
 
-        // ── فلتر os_customer_documents ──
+        // ── فلتر os_customer_documents (DEPRECATED — to be removed in M8) ──
         $cdWhere = "WHERE 1=1";
         $cdParams = [];
         $includeSmartMedia = true;
 
         if ($filter === 'orphans' || $filter === 'contracts' || $filter === 'unlinked' || $filter === 'no_customer') {
             $includeSmartMedia = false; // Smart Media دائماً مرتبطة بعميل
+        }
+        // Phase 4 / M4.2 — entity_type filter excludes the deprecated
+        // smart-media side-table: that table predates entity_type, so
+        // any explicit entity_type filter implies "unified rows only".
+        if ($entityType !== '') {
+            $includeSmartMedia = false;
         }
 
         if ($search !== '' && $includeSmartMedia) {

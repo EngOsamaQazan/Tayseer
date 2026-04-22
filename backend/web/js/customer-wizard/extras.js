@@ -1,4 +1,10 @@
 /**
+ * @deprecated Phase 6 / M6.2 — extras upload primitives are now in
+ *             MediaUploader (backend/web/js/media-uploader/). This
+ *             file remains so already-mounted wizard pages keep
+ *             functioning; new screens should use MediaUploader.attach.
+ *             Removal: M8 (≈ 2026-07-19).
+ *
  * Customer Wizard V2 — extras uploader (personal photo + supporting documents).
  *
  * Bound by markup contract (see _step_1_extras.php), zero direct coupling

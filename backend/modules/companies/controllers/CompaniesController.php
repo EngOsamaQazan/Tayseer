@@ -20,11 +20,11 @@ use yii\filters\VerbFilter;
 use \yii\web\Response;
 use yii\helpers\Html;
 use yii\web\UploadedFile;
-use yii\helpers\FileHelper;
 use yii2tech\ar\softdelete\SoftDeleteBehavior;
 use backend\helpers\PdfToImageHelper;
 use yii\filters\AccessControl;
 use common\helper\Permissions;
+use common\services\media\MediaContext;
 
 /**
  * CompaniesController implements the CRUD actions for Companies model.
@@ -196,19 +196,29 @@ class CompaniesController extends Controller
         if ($model->load($request->post())) {
 
             $model->created_by = Yii::$app->user->id;
-            $model->logo = UploadedFile::getInstance($model, 'logo');
-            if (!empty($model->logo)) {
-                $imagesDir = Yii::getAlias('@webroot/images');
-                if (!is_dir($imagesDir)) {
-                    mkdir($imagesDir, 0755, true);
-                }
-                $logoPath = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
-                if ($model->logo->saveAs(Yii::getAlias('@webroot/' . $logoPath))) {
+
+            $logoUpload = UploadedFile::getInstance($model, 'logo');
+            if ($logoUpload) {
+                $logoPath = $this->saveCompanyLogo($logoUpload);
+                if ($logoPath !== null) {
                     $model->logo = $logoPath;
+                }
+            } else {
+                // Phase 6.2: a unified MediaUploader may have already
+                // uploaded the logo via /media/upload — pick it up
+                // before nulling the AR attribute.
+                $adoptedLogoUrl = $this->adoptUploadedLogo(null);
+                if ($adoptedLogoUrl !== null) {
+                    $model->logo = $adoptedLogoUrl;
+                } else {
+                    // Avoid the AR setter inheriting an UploadedFile that
+                    // would fail validation; null means "no change".
+                    $model->logo = null;
                 }
             }
 
             $this->handleDocumentUploads($model);
+            $this->adoptUploadedDocuments($model);
 
             $modelsCompanieBanks = Model::createMultiple(CompanyBanks::classname());
             Model::loadMultiple($modelsCompanieBanks, Yii::$app->request->post());
@@ -270,23 +280,19 @@ class CompaniesController extends Controller
         $existingLicense = $model->trade_license;
         $createdBy = $model->created_by;
         if ($model->load($request->post())) {
-            $model->logo = UploadedFile::getInstance($model, 'logo');
-            if (!empty($model->logo)) {
-                $imagesDir = Yii::getAlias('@webroot/images');
-                if (!is_dir($imagesDir)) {
-                    mkdir($imagesDir, 0755, true);
-                }
-                $logoPath = 'images/' . $model->logo->baseName . '.' . $model->logo->extension;
-                if ($model->logo->saveAs(Yii::getAlias('@webroot/' . $logoPath))) {
-                    $model->logo = $logoPath;
-                }
+            $logoUpload = UploadedFile::getInstance($model, 'logo');
+            if ($logoUpload) {
+                $logoPath = $this->saveCompanyLogo($logoUpload, (int)$model->id);
+                $model->logo = $logoPath !== null ? $logoPath : $logo;
             } else {
-                $model->logo = $logo;
+                $adoptedLogoUrl = $this->adoptUploadedLogo((int)$model->id);
+                $model->logo = $adoptedLogoUrl !== null ? $adoptedLogoUrl : $logo;
             }
 
             $model->commercial_register = $existingRegister;
             $model->trade_license = $existingLicense;
             $this->handleDocumentUploads($model);
+            $this->adoptUploadedDocuments($model);
 
 
             $oldIDs = yii\helpers\ArrayHelper::map($modelsCompanieBanks, 'id', 'id');
@@ -452,58 +458,223 @@ class CompaniesController extends Controller
         }
     }
 
+    /**
+     * Persist commercial register + trade licence documents through
+     * the unified MediaService.
+     *
+     * Phase 3.7 migration notes:
+     *   • The DB columns stay JSON-encoded `[{path, name}, …]` for
+     *     full back-compat with `getCommercialRegisterList()` /
+     *     `getTradeLicenseList()` and every view that reads them.
+     *     Phase 5 will introduce a M5 backfill that decomposes the
+     *     JSON into individual `os_ImageManager` rows; until then
+     *     the new uploads land in BOTH places (the unified row +
+     *     the JSON column) so reports keep working unchanged.
+     *   • PdfToImageHelper still runs on every PDF so the existing
+     *     thumbnail cache stays warm — even though the unified
+     *     pipeline will eventually own thumbnail generation, the
+     *     old admin views read from `PdfToImageHelper::convertAndCache`
+     *     and we don't want a UI regression mid-deprecation.
+     */
     protected function handleDocumentUploads($model)
     {
-        $uploadDir = Yii::getAlias('@backend/web/uploads/investors/');
-        if (!is_dir($uploadDir)) {
-            FileHelper::createDirectory($uploadDir, 0775, true);
-        }
+        $this->ingestCompanyDocuments(
+            $model,
+            'commercial_register_files',
+            'commercial_register',
+            'reg_'
+        );
+        $this->ingestCompanyDocuments(
+            $model,
+            'trade_license_files',
+            'trade_license',
+            'lic_'
+        );
 
-        $regFiles = UploadedFile::getInstances($model, 'commercial_register_files');
-        if (!empty($regFiles)) {
-            $existing = $model->getCommercialRegisterList();
-            foreach ($regFiles as $file) {
-                $fname = uniqid('reg_') . '.' . $file->extension;
-                $fullPath = $uploadDir . $fname;
-                if ($file->saveAs($fullPath)) {
-                    $existing[] = [
-                        'path' => 'uploads/investors/' . $fname,
-                        'name' => $file->baseName . '.' . $file->extension,
-                    ];
-                } else {
-                    Yii::error("Failed to save register file: {$file->name} to {$fullPath}", __METHOD__);
-                }
-            }
-            $model->commercial_register = json_encode($existing, JSON_UNESCAPED_UNICODE);
-        }
-
-        $licFiles = UploadedFile::getInstances($model, 'trade_license_files');
-        if (!empty($licFiles)) {
-            $existing = $model->getTradeLicenseList();
-            foreach ($licFiles as $file) {
-                $fname = uniqid('lic_') . '.' . $file->extension;
-                $fullPath = $uploadDir . $fname;
-                if ($file->saveAs($fullPath)) {
-                    $existing[] = [
-                        'path' => 'uploads/investors/' . $fname,
-                        'name' => $file->baseName . '.' . $file->extension,
-                    ];
-                } else {
-                    Yii::error("Failed to save license file: {$file->name} to {$fullPath}", __METHOD__);
-                }
-            }
-            $model->trade_license = json_encode($existing, JSON_UNESCAPED_UNICODE);
-        }
-
+        // Keep the legacy PDF→image cache warm for both lists. We
+        // intentionally read back from the *getter* (not the raw
+        // UploadedFile arrays) so any newly-stored document is
+        // also processed.
         foreach ($model->getCommercialRegisterList() as $doc) {
-            if (strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) === 'pdf') {
+            if (isset($doc['name']) && strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) === 'pdf') {
                 PdfToImageHelper::convertAndCache($doc['path']);
             }
         }
         foreach ($model->getTradeLicenseList() as $doc) {
-            if (strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) === 'pdf') {
+            if (isset($doc['name']) && strtolower(pathinfo($doc['name'], PATHINFO_EXTENSION)) === 'pdf') {
                 PdfToImageHelper::convertAndCache($doc['path']);
             }
         }
+    }
+
+    /**
+     * Ingest one bucket of company documents (register OR licence)
+     * into MediaService and append the resulting URLs to the JSON
+     * column on the model.
+     *
+     * @param Companies $model
+     * @param string $field         e.g. 'commercial_register_files'
+     * @param string $jsonAttribute e.g. 'commercial_register'
+     * @param string $idPrefix      e.g. 'reg_' (kept for log/debug parity)
+     */
+    private function ingestCompanyDocuments($model, string $field, string $jsonAttribute, string $idPrefix): void
+    {
+        $files = UploadedFile::getInstances($model, $field);
+        if (empty($files)) {
+            return;
+        }
+
+        $listGetter = $jsonAttribute === 'commercial_register'
+            ? 'getCommercialRegisterList'
+            : 'getTradeLicenseList';
+        $existing = $model->$listGetter();
+
+        foreach ($files as $file) {
+            try {
+                $entityId = $model->id ? (int)$model->id : null;
+                $ctx = new MediaContext(
+                    entityType:  'company',
+                    entityId:    $entityId,
+                    groupName:   $jsonAttribute,
+                    uploadedVia: 'company_form',
+                    userId:      Yii::$app->user->isGuest ? null : (int)Yii::$app->user->id,
+                );
+                $result = Yii::$app->media->store($file, $ctx);
+            } catch (\Throwable $e) {
+                Yii::error("Companies {$idPrefix}upload failed: " . $e->getMessage(), __METHOD__);
+                continue;
+            }
+
+            $existing[] = [
+                // Legacy `path` shape: relative-to-webroot, no leading
+                // slash, e.g. 'uploads/investors/reg_xxx.pdf'. The
+                // unified URL we get back is rooted at '/images/…'
+                // so we strip the leading slash for back-compat with
+                // call sites doing `Url::to(['/' . $doc['path']])`.
+                'path' => ltrim($result->url, '/'),
+                'name' => $file->baseName . '.' . $file->extension,
+            ];
+        }
+
+        $model->$jsonAttribute = json_encode($existing, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
+     * Persist a company logo through MediaService. Returns the URL
+     * to write into the `logo` column (without leading slash to
+     * match the historical `Url::to(['/' . $model->logo])` callers),
+     * or null on failure (caller decides whether to keep the old
+     * logo or surface a flash error).
+     */
+    private function saveCompanyLogo(UploadedFile $file, ?int $companyId = null): ?string
+    {
+        try {
+            $ctx = new MediaContext(
+                entityType:  'company',
+                entityId:    $companyId,
+                groupName:   'company_logo',
+                uploadedVia: 'company_form',
+                userId:      Yii::$app->user->isGuest ? null : (int)Yii::$app->user->id,
+            );
+            $result = Yii::$app->media->store($file, $ctx);
+            return ltrim($result->url, '/');
+        } catch (\Throwable $e) {
+            Yii::error('Company logo upload failed: ' . $e->getMessage(), __METHOD__);
+            Yii::$app->session->setFlash('error',
+                'تعذّر حفظ الشعار: تحقّق من الحجم ونوع الملف.');
+            return null;
+        }
+    }
+
+    /**
+     * Phase 6.2 — adopt a company logo uploaded async via the unified
+     * MediaUploader. Returns the URL string ready to be assigned to
+     * the `logo` column (no leading slash, matching legacy callers),
+     * or null if no logo was uploaded via the new path.
+     */
+    protected function adoptUploadedLogo(?int $companyId): ?string
+    {
+        $body = (array)Yii::$app->request->post('Companies', []);
+        $mediaId = (int)($body['adopted_logo_id'] ?? 0);
+        if ($mediaId <= 0) {
+            return null;
+        }
+
+        if ($companyId !== null && $companyId > 0) {
+            if (!Yii::$app->media->adopt($mediaId, 'company', $companyId)) {
+                Yii::warning("Companies adopt logo #$mediaId failed for company #$companyId", __METHOD__);
+                return null;
+            }
+        }
+        // For brand-new records the row stays an orphan until the
+        // company is saved; the next form post (or a backfill cron)
+        // will adopt it. The URL itself is already correct.
+
+        try {
+            return ltrim(Yii::$app->media->url($mediaId), '/');
+        } catch (\Throwable $e) {
+            Yii::error('Companies adopt logo url() failed: ' . $e->getMessage(), __METHOD__);
+            return null;
+        }
+    }
+
+    /**
+     * Phase 6.2 — adopt N register/licence documents uploaded async
+     * via the unified MediaUploader. Each id arrives under
+     * Companies[adopted_register_ids][] / Companies[adopted_license_ids][].
+     * We adopt them and append their URLs to the matching JSON column
+     * so getCommercialRegisterList()/getTradeLicenseList() keep working.
+     */
+    protected function adoptUploadedDocuments(Companies $model): void
+    {
+        $body = (array)Yii::$app->request->post('Companies', []);
+        $this->adoptUploadedDocumentBucket(
+            $model,
+            (array)($body['adopted_register_ids'] ?? []),
+            'commercial_register'
+        );
+        $this->adoptUploadedDocumentBucket(
+            $model,
+            (array)($body['adopted_license_ids'] ?? []),
+            'trade_license'
+        );
+    }
+
+    private function adoptUploadedDocumentBucket(Companies $model, array $ids, string $jsonAttribute): void
+    {
+        if (empty($ids)) {
+            return;
+        }
+
+        $listGetter = $jsonAttribute === 'commercial_register'
+            ? 'getCommercialRegisterList'
+            : 'getTradeLicenseList';
+        $existing = $model->$listGetter();
+
+        foreach ($ids as $rawId) {
+            $mediaId = (int)$rawId;
+            if ($mediaId <= 0) continue;
+
+            if ($model->id) {
+                if (!Yii::$app->media->adopt($mediaId, 'company', (int)$model->id)) {
+                    Yii::warning("Companies adopt $jsonAttribute #$mediaId failed", __METHOD__);
+                    continue;
+                }
+            }
+
+            try {
+                $url = Yii::$app->media->url($mediaId);
+            } catch (\Throwable $e) {
+                Yii::error("Companies adopt $jsonAttribute url() failed: " . $e->getMessage(), __METHOD__);
+                continue;
+            }
+
+            $existing[] = [
+                'path' => ltrim($url, '/'),
+                'name' => basename(parse_url($url, PHP_URL_PATH) ?: ('media-' . $mediaId)),
+            ];
+        }
+
+        $model->$jsonAttribute = json_encode($existing, JSON_UNESCAPED_UNICODE);
     }
 }

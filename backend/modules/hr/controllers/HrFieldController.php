@@ -27,7 +27,15 @@ use common\helper\Permissions;
 class HrFieldController extends Controller
 {
     /**
-     * Disable CSRF for API endpoints (mobile fetch calls)
+     * Disable CSRF for the mobile-app endpoints listed in $apiActions.
+     *
+     * These actions are consumed only by the field-tracking mobile app
+     * (token-authenticated, no session cookie ⇒ classic CSRF model
+     * does not apply). Every browser-facing action on this controller
+     * still enforces CSRF.
+     *
+     * Reviewed Phase 7 / M7.1 — confirmed mobile-only, kept disabled
+     * for the listed actions.
      */
     public function beforeAction($action)
     {

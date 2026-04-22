@@ -2220,32 +2220,37 @@ class JudiciaryController extends Controller
         }
     }
 
+    /**
+     * @deprecated Phase 3.3 (consolidation) — this is the historical
+     *             duplicate of JudiciaryCustomersActionsController::
+     *             actionCreateFollowupJudicaryCustamerAction. The
+     *             reports module's `_form.php` still posts to it via
+     *             `customer-action?judiciary=…` so we keep the route
+     *             alive but forward to the unified path so files flow
+     *             through MediaService instead of the broken `saveAs`
+     *             with a relative path (which used to land wherever
+     *             the PHP CWD was — typically `index.php`'s directory).
+     *
+     *             Remove after the reports form is repointed (M3.8 /
+     *             dead-code sweep).
+     */
     public function actionCustomerAction($judiciary, $contract_id)
     {
-        $modelCustomerAction = new JudiciaryCustomersActions();
-        $request = Yii::$app->request;
-        $modelCustomerAction->judiciary_id = $judiciary;
+        // Forward into the canonical controller. We keep the input
+        // payload intact (`Yii::$app->request->post()` is preserved
+        // across runAction calls) so multi-customer parsing, decision
+        // file handling, and the doc_status invalidation logic all
+        // execute exactly once in their proper home.
+        Yii::warning(
+            "Deprecated route hit: judiciary/customer-action — "
+            . "forward to judiciaryCustomersActions/create-followup-judicary-custamer-action",
+            __METHOD__
+        );
 
-        if ($modelCustomerAction->load($request->post())) {
-            // Handle file upload
-            $uploadedFile = \yii\web\UploadedFile::getInstance($modelCustomerAction, 'image');
-            if ($uploadedFile) {
-                $filePath = 'uploads/judiciary_customers_actions/' . uniqid() . '.' . $uploadedFile->extension;
-                if ($uploadedFile->saveAs($filePath)) {
-                    $modelCustomerAction->image = $filePath; // Save the file path to the model
-                }
-            }
-
-            if ($modelCustomerAction->save()) {
-                return $this->redirect(['update', 'id' => $judiciary, 'contract_id' => $contract_id]);
-            }
-        }
-
-        return $this->render('update', [
-            'modelCustomerAction' => $modelCustomerAction,
-            'judiciary' => $judiciary,
-            'contract_id' => $contract_id,
-        ]);
+        return Yii::$app->runAction(
+            'judiciary-customers-actions/create-followup-judicary-custamer-action',
+            ['contractID' => $contract_id]
+        );
     }
 
     public function actionDeleteCustomerAction($id, $judiciary)

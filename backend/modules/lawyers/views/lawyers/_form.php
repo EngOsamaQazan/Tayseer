@@ -4,9 +4,12 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 use yii\widgets\ActiveForm;
 use backend\modules\lawyers\models\Lawyers;
+use backend\assets\MediaUploaderAsset;
 
 /* @var $this yii\web\View */
 /* @var $model backend\modules\lawyers\models\Lawyers */
+
+MediaUploaderAsset::register($this);
 
 $isLawyer = ($model->representative_type === Lawyers::REP_TYPE_LAWYER);
 $hasSignature = $model->signature_image && file_exists(Yii::getAlias('@backend/web/') . $model->signature_image);
@@ -15,6 +18,8 @@ if (!$model->isNewRecord) {
     $existingImages = \backend\modules\LawyersImage\models\LawyersImage::find()
         ->where(['lawyer_id' => $model->id])->all();
 }
+
+$lawyerId = $model->isNewRecord ? 0 : (int)$model->id;
 ?>
 
 <style>
@@ -111,37 +116,59 @@ $form = ActiveForm::begin([
 </div>
 
 <!-- ───── التوقيع الإلكتروني (وكيل محامي فقط) ───── -->
+<!-- M6.2: الرفع يتم مباشرة عبر MediaUploader إلى /media/upload؛
+     الـ controller يقرأ Lawyers[adopted_signature_id] ويستدعي adopt(). -->
 <div class="lw-card" id="lw-sig-card" style="<?= !$isLawyer ? 'display:none' : '' ?>">
     <div class="lw-card-head"><i class="fa fa-pencil"></i> التوقيع الإلكتروني</div>
     <div class="lw-card-body">
         <p style="font-size:12px;color:#64748b;margin:0 0 14px">ارفق صورة توقيع المحامي بصيغة PNG (يُفضّل خلفية شفافة) لاستخدامه تلقائياً في الطلبات التنفيذية.</p>
-        <div class="lw-sig-zone" id="lw-sig-drop">
+
+        <div id="lw-sig-host"
+             class="lw-sig-zone"
+             data-media-uploader
+             data-entity-type="lawyer"
+             data-entity-id="<?= $lawyerId ?>"
+             data-group-name="signature"
+             data-uploaded-via="lawyer_form"
+             data-accept="image/png,image/jpeg"
+             data-max-mb="2"
+             data-target-name="Lawyers[adopted_signature_id]">
             <div class="lw-sig-preview" id="lw-sig-prev" style="<?= !$hasSignature ? 'display:none' : '' ?>">
                 <img src="<?= $hasSignature ? Yii::$app->request->baseUrl . '/' . $model->signature_image : '' ?>" alt="التوقيع" id="lw-sig-img">
                 <button type="button" class="lw-sig-del" id="lw-sig-rm"><i class="fa fa-times"></i></button>
             </div>
             <div id="lw-sig-ph" style="<?= $hasSignature ? 'display:none' : '' ?>">
                 <i class="fa fa-cloud-upload" style="font-size:32px;color:#cbd5e1;margin-bottom:8px"></i>
-                <p style="margin:0;font-size:13px;color:#64748b">اسحب صورة التوقيع هنا أو <span style="color:#800020;cursor:pointer">تصفّح</span></p>
-                <small style="color:#94a3b8;font-size:11px">PNG فقط &bull; 400&times;150 بكسل</small>
+                <p style="margin:0;font-size:13px;color:#64748b">اسحب صورة التوقيع هنا أو <span style="color:#800020;cursor:pointer" data-media-pick>تصفّح</span></p>
+                <small style="color:#94a3b8;font-size:11px">PNG/JPG &bull; حدّ 2MB</small>
             </div>
-            <input type="file" name="signature_file" id="lw-sig-file" accept="image/png" style="display:none">
         </div>
         <?= $form->field($model, 'signature_image')->hiddenInput(['id' => 'lw-sig-path'])->label(false) ?>
     </div>
 </div>
 
 <!-- ───── صور الهوية والوثائق ───── -->
+<!-- M6.2: كل صورة تُرفع فوراً وتُسجَّل كـ orphan media؛ controller
+     يستدعي adopt() على كل id موجود في Lawyers[adopted_photo_ids][]. -->
 <div class="lw-card">
     <div class="lw-card-head"><i class="fa fa-id-card-o"></i> صور الهوية والوثائق</div>
     <div class="lw-card-body">
-        <div class="lw-photos-zone" id="lw-photos-drop">
+        <div id="lw-photos-host"
+             class="lw-photos-zone"
+             data-media-uploader
+             data-entity-type="lawyer"
+             data-entity-id="<?= $lawyerId ?>"
+             data-group-name="lawyer_photo"
+             data-uploaded-via="lawyer_form"
+             data-multiple="1"
+             data-accept="image/jpeg,image/png"
+             data-max-mb="5"
+             data-target-name="Lawyers[adopted_photo_ids][]">
             <div>
                 <i class="fa fa-picture-o" style="font-size:28px;color:#cbd5e1;margin-bottom:6px"></i>
-                <p style="margin:0;font-size:13px;color:#64748b">اسحب صور الهوية هنا أو <span style="color:#800020;cursor:pointer">تصفّح</span></p>
-                <small style="color:#94a3b8;font-size:11px">JPG, PNG &bull; حد أقصى صورتان</small>
+                <p style="margin:0;font-size:13px;color:#64748b">اسحب صور الهوية هنا أو <span style="color:#800020;cursor:pointer" data-media-pick>تصفّح</span></p>
+                <small style="color:#94a3b8;font-size:11px">JPG, PNG &bull; حدّ 5MB لكل صورة</small>
             </div>
-            <input type="file" name="Lawyers[image][]" id="lw-photos-file" accept="image/jpeg,image/png" multiple style="display:none">
         </div>
         <div class="lw-photos-grid" id="lw-photos-grid">
             <?php foreach ($existingImages as $img): ?>
@@ -168,10 +195,23 @@ $form = ActiveForm::begin([
 </div>
 
 <script>
+/**
+ * Lawyers form — slim glue script.
+ *
+ * Phase 6.2: drag-drop + multipart upload + previews are owned by the
+ * shared MediaUploader (registered via MediaUploaderAsset). This script
+ * only handles:
+ *
+ *   • The representative-type toggle (lawyer ⟷ delegate).
+ *   • Signature preview/removal UI (sets Lawyers[signature_image] = '__removed__'
+ *     so the controller drops the previous file on save).
+ *   • Live preview thumbnails for newly-uploaded photos via MediaUploader's
+ *     onSuccess hook.
+ *   • Existing-photo delete (unchanged — same delete-photo endpoint).
+ */
 document.addEventListener('DOMContentLoaded', function() {
     var $ = jQuery;
 
-    // ── Type picker ──
     $('#lw-type-picker').on('click', '.lw-type-btn', function() {
         var v = $(this).data('val');
         $('#lw-type-picker .lw-type-btn').removeClass('active');
@@ -184,69 +224,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // ── Signature drop zone ──
-    var $sigDrop = $('#lw-sig-drop'),
-        $sigFile = $('#lw-sig-file');
-
-    $sigDrop.on('click', function(e) {
-        if (!$(e.target).closest('.lw-sig-del, input[type="file"]').length) $sigFile[0].click();
-    });
-    $sigDrop.on('dragover dragenter', function(e) { e.preventDefault(); $(this).addClass('drag-over'); });
-    $sigDrop.on('dragleave drop', function(e) { e.preventDefault(); $(this).removeClass('drag-over'); });
-    $sigDrop.on('drop', function(e) {
-        var f = e.originalEvent.dataTransfer.files;
-        if (f.length && f[0].type === 'image/png') { $sigFile[0].files = f; showSigPreview(f[0]); }
-    });
-    $sigFile.on('change', function() { if (this.files.length) showSigPreview(this.files[0]); });
-
     $('#lw-sig-rm').on('click', function(e) {
         e.stopPropagation();
-        $('#lw-sig-prev').hide(); $('#lw-sig-ph').show();
-        $sigFile.val(''); $('#lw-sig-path').val('__removed__');
+        $('#lw-sig-prev').hide();
+        $('#lw-sig-ph').show();
+        $('#lw-sig-path').val('__removed__');
+        // also drop any orphan adopted_signature_id we may have queued
+        $('#lw-sig-host input[name="Lawyers[adopted_signature_id]"]').remove();
     });
 
-    function showSigPreview(file) {
-        var r = new FileReader();
-        r.onload = function(e) { $('#lw-sig-img').attr('src', e.target.result); $('#lw-sig-prev').show(); $('#lw-sig-ph').hide(); };
-        r.readAsDataURL(file);
+    if (window.MediaUploader) {
+        MediaUploader.attach('#lw-sig-host', {
+            onSuccess: function(resp) {
+                var url = resp && resp.file && resp.file.url;
+                if (url) {
+                    $('#lw-sig-img').attr('src', url);
+                    $('#lw-sig-prev').show();
+                    $('#lw-sig-ph').hide();
+                    $('#lw-sig-path').val('');
+                }
+            }
+        });
+
+        var $pGrid = $('#lw-photos-grid');
+        MediaUploader.attach('#lw-photos-host', {
+            onSuccess: function(resp) {
+                var f = resp && resp.file;
+                if (!f) return;
+                $pGrid.append(
+                    '<div class="lw-photo-thumb is-new" data-media-id="' + f.id + '">' +
+                        '<img src="' + f.url + '" alt="هوية" onclick="window.open(this.src,\'_blank\')">' +
+                        '<button type="button" class="lw-pd is-new-del"><i class="fa fa-times"></i></button>' +
+                    '</div>'
+                );
+            }
+        });
+
+        $pGrid.on('click', '.is-new-del', function(e) {
+            e.stopPropagation();
+            var $t = $(this).closest('.lw-photo-thumb');
+            var mid = String($t.data('media-id') || '');
+            if (mid) {
+                // Drop the matching hidden input so the controller never adopts it.
+                $('#lw-photos-host input[name="Lawyers[adopted_photo_ids][]"]').filter(function() {
+                    return this.value === mid;
+                }).remove();
+            }
+            $t.fadeOut(200, function() { $(this).remove(); });
+        });
     }
 
-    // ── Photos drop zone ──
-    var $pDrop = $('#lw-photos-drop'), $pFile = $('#lw-photos-file'), $pGrid = $('#lw-photos-grid');
-
-    $pDrop.on('click', function(e) {
-        if (!$(e.target).closest('input[type="file"], .lw-pd').length) $pFile[0].click();
-    });
-    $pDrop.on('dragover dragenter', function(e) { e.preventDefault(); $(this).addClass('drag-over'); });
-    $pDrop.on('dragleave drop', function(e) { e.preventDefault(); $(this).removeClass('drag-over'); });
-    $pDrop.on('drop', function(e) {
-        var f = e.originalEvent.dataTransfer.files;
-        if (f.length) { $pFile[0].files = f; showPhotosPrev(f); }
-    });
-    $pFile.on('change', function() { if (this.files.length) showPhotosPrev(this.files); });
-
-    function showPhotosPrev(files) {
-        $pGrid.find('.is-new').remove();
-        for (var i = 0; i < files.length; i++) {
-            (function(f) {
-                var r = new FileReader();
-                r.onload = function(e) {
-                    $pGrid.append(
-                        '<div class="lw-photo-thumb is-new"><img src="'+e.target.result+'" alt="هوية" onclick="window.open(this.src,\'_blank\')"><button type="button" class="lw-pd is-new-del"><i class="fa fa-times"></i></button></div>'
-                    );
-                };
-                r.readAsDataURL(f);
-            })(files[i]);
-        }
-    }
-
-    $pGrid.on('click', '.is-new-del', function(e) {
-        e.stopPropagation();
-        $(this).closest('.lw-photo-thumb').fadeOut(200, function() { $(this).remove(); });
-        $pFile.val('');
-    });
-
-    $pGrid.on('click', '.lw-pd:not(.is-new-del)', function(e) {
+    $('#lw-photos-grid').on('click', '.lw-pd:not(.is-new-del)', function(e) {
         e.stopPropagation();
         var $t = $(this).closest('.lw-photo-thumb'), imgId = $t.data('img-id');
         if (!imgId || !confirm('هل أنت متأكد من حذف هذه الصورة؟')) return;

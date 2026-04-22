@@ -20,6 +20,16 @@ use backend\modules\hr\models\HrWorkShift;
  */
 class HrTrackingApiController extends Controller
 {
+    /**
+     * CSRF is intentionally disabled on this controller because every
+     * action is consumed by the field-tracking MOBILE app (React Native /
+     * native Android), which authenticates with a token-based scheme
+     * (see HrFieldEmployeeIdentity::authByMobileToken) and has no Yii
+     * session cookie to defend against. Browser callers MUST go through
+     * the matching admin controllers instead.
+     *
+     * Reviewed Phase 7 / M7.1 — confirmed mobile-only, kept disabled.
+     */
     public $enableCsrfValidation = false;
 
     public function beforeAction($action)

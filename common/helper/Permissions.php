@@ -669,6 +669,17 @@ class Permissions
             'site/image-search-customers' => self::getSettingsPermissions(),
             'site/image-update-doc-type'  => self::getSettingsPermissions(),
             'site/image-delete'           => self::getSettingsPermissions(),
+            /* نظام الميديا الموحّد — endpoints لقراءة قاموس groupName + meta عام
+             * (Phase 1 / M1.2). مفتوح لأي مستخدم مسجّل دخول لأن البيانات وصفية فقط
+             * (لا تكشف ملفات أو محتوى)، لكن لا تُتاح للزوار.
+             *  • media/labels  — JSON لقاموس groupName (Phase 1)
+             *  • media/upload  — endpoint رفع موحّد (Phase 6)
+             *  • media/health  — مقاييس تشغيلية (Phase 7) */
+            'media'                       => [],
+            'media/media'                 => [],
+            'media/labels'                => [],
+            'media/upload'                => [],
+            'media/health'                => [],
             'site/server-backup'          => self::getSettingsPermissions(),
             'site/test-google-connection'   => self::getSettingsPermissions(),
             'site/test-maps-connection'     => self::getSettingsPermissions(),

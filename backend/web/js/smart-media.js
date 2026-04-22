@@ -1,9 +1,28 @@
 /**
  * Smart Media System — Document AI & WebCam
  * Handles: drag-drop upload, webcam capture, AI classification, usage stats
+ *
+ * @deprecated Phase 6 / M6.2 — superseded by the unified MediaUploader
+ *             (backend/web/js/media-uploader/). This file remains live
+ *             so already-deployed Smart Media screens keep working
+ *             during the 3-month deprecation window. Removal: M8
+ *             (≈ 2026-07-19). Migrating a screen is straightforward:
+ *               1. Register backend\assets\MediaUploaderAsset
+ *               2. Replace the smart-media markup with
+ *                  data-media-uploader / data-media-webcam attributes
+ *               3. Remove the smart-media.js include
+ *             See backend/web/js/media-uploader/core.js for the full
+ *             attribute contract.
  */
 (function($) {
     'use strict';
+
+    if (typeof console !== 'undefined' && console.warn) {
+        console.warn(
+            'DEPRECATED uploader: smart-media.js — switch to MediaUploader '
+            + '(backend\\assets\\MediaUploaderAsset). Removal: 2026-07-19.'
+        );
+    }
 
     var SM = {
         stream: null,
@@ -15,6 +34,39 @@
             '6': 'كشف راتب', '7': 'شهادة تعيين عسكري', '8': 'صورة شخصية', '9': 'أخرى'
         }
     };
+
+    /*
+     * CSRF support — Phase 3.2 of unify-media-system.
+     *
+     * SmartMediaController used to disable CSRF validation entirely
+     * (`$enableCsrfValidation = false`) because this file did not send
+     * the token with its AJAX/FormData requests. Re-enabling CSRF on
+     * the server requires the client to send the token on EVERY
+     * mutating request — we install an ajaxPrefilter so $.ajax,
+     * $.post, $.get and $.getJSON all pick it up automatically (and
+     * future code added to this file inherits the behaviour for free).
+     *
+     * Yii ships `yii.getCsrfToken()` / `yii.getCsrfParam()` via yii.js;
+     * we fall back to reading the meta tags directly if for any reason
+     * yii.js is not present (e.g. on a custom layout).
+     */
+    function csrfTokenName() {
+        if (window.yii && yii.getCsrfParam) return yii.getCsrfParam();
+        return $('meta[name=csrf-param]').attr('content') || '_csrf-backend';
+    }
+    function csrfTokenValue() {
+        if (window.yii && yii.getCsrfToken) return yii.getCsrfToken();
+        return $('meta[name=csrf-token]').attr('content') || '';
+    }
+    $.ajaxPrefilter(function(options) {
+        // Only attach to mutating requests on the same origin.
+        if (!options.crossDomain && /^(POST|PUT|PATCH|DELETE)$/i.test(options.type || '')) {
+            options.headers = options.headers || {};
+            if (!options.headers['X-CSRF-Token']) {
+                options.headers['X-CSRF-Token'] = csrfTokenValue();
+            }
+        }
+    });
 
     $(function() {
         initDropZone();

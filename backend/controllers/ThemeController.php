@@ -11,8 +11,13 @@ use common\models\UserPreference;
 
 class ThemeController extends Controller
 {
-    public $enableCsrfValidation = false;
-
+    /**
+     * Phase 7 / M7.1 — CSRF is now enforced. The matching client
+     * (`backend/web/js/tayseer-theme.js::save()`) already sends the
+     * X-CSRF-Token header on every POST, so re-enabling validation
+     * is a no-op for legitimate users and blocks XSRF attacks
+     * targeting `/theme/save` with the user's session cookie.
+     */
     public function behaviors()
     {
         return [

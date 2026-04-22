@@ -9,6 +9,10 @@ use backend\modules\location\models\Location;
 use backend\modules\designation\models\Designation;
 use backend\modules\department\models\Department;
 use common\models\Countries;
+use backend\assets\MediaUploaderAsset;
+
+MediaUploaderAsset::register($this);
+$empId = isset($model->id) ? (int)$model->id : 0;
 
 /** @var yii\web\View $this */
 /** @var backend\models\Employee $model */
@@ -136,17 +140,20 @@ $maritalLabel = $model->marital_status === 'married' ? 'متزوج' : ($model->m
                 </div>
             </div>
         </div>
-        <div class="emp-avatar-upload">
-            <label class="emp-upload-btn" for="emp-avatar-input">
+        <div class="emp-avatar-upload"
+             id="emp-avatar-host"
+             data-media-uploader
+             data-entity-type="employee"
+             data-entity-id="<?= $empId ?>"
+             data-group-name="employee_avatar"
+             data-uploaded-via="employee_form"
+             data-accept="image/*"
+             data-max-mb="3"
+             data-target-name="Employee[adopted_avatar_id]">
+            <button type="button" class="emp-upload-btn" data-media-pick>
                 <i class="fa fa-camera"></i>
                 تغيير الصورة
-            </label>
-            <div class="emp-file-hidden-wrap">
-                <?= Html::activeFileInput($model, 'profile_avatar_file', [
-                    'id' => 'emp-avatar-input',
-                    'accept' => 'image/*',
-                ]) ?>
-            </div>
+            </button>
         </div>
     </div>
 
@@ -346,18 +353,26 @@ $maritalLabel = $model->marital_status === 'married' ? 'متزوج' : ($model->m
 <?php
 $js = <<<JS
 
-// Avatar preview on file change
-document.getElementById('emp-avatar-input').addEventListener('change', function(e) {
-    var file = e.target.files[0];
-    if (file && file.type.startsWith('image/')) {
-        var reader = new FileReader();
-        reader.onload = function(ev) {
-            var frame = document.getElementById('emp-avatar-preview');
-            frame.innerHTML = '<img src="' + ev.target.result + '" class="emp-avatar-img t-zoomable" style="cursor:zoom-in" alt="Preview">';
-        };
-        reader.readAsDataURL(file);
-    }
-});
+/**
+ * Avatar preview — Phase 6.2.
+ * MediaUploader uploads the file immediately to /media/upload and
+ * appends a hidden Employee[adopted_avatar_id] to the form. The
+ * controller adopts that media row on save. We just refresh the
+ * preview frame from MediaUploader's onSuccess hook.
+ */
+if (window.MediaUploader) {
+    MediaUploader.attach('#emp-avatar-host', {
+        onSuccess: function(resp) {
+            var url = resp && resp.file && resp.file.url;
+            if (url) {
+                var frame = document.getElementById('emp-avatar-preview');
+                if (frame) {
+                    frame.innerHTML = '<img src="' + url + '" class="emp-avatar-img t-zoomable" style="cursor:zoom-in" alt="Preview">';
+                }
+            }
+        }
+    });
+}
 
 JS;
 
