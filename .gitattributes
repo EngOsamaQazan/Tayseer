@@ -1,0 +1,36 @@
+# Tayseer git attributes
+# ───────────────────────────────────────────────────────────────────
+# Enforce LF line endings on EVERY shell script in the repo regardless
+# of the contributor's OS. Bash on the Linux server refuses to run
+# scripts containing CR characters (`/usr/bin/env: 'bash\r'`), and we
+# author from Windows.
+
+*.sh        text eol=lf
+*.bash      text eol=lf
+yii         text eol=lf
+
+# PHP / config / yml are also safer with LF on the server.
+*.php       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.json      text eol=lf
+*.md        text eol=lf
+*.sql       text eol=lf
+
+# Windows-only files keep CRLF.
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# Binary assets — never normalize.
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.webp      binary
+*.pdf       binary
+*.ico       binary
+*.woff      binary
+*.woff2     binary
+*.ttf       binary
+*.zip       binary
