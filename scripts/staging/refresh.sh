@@ -11,18 +11,19 @@
 #   2. Loads its DB dump into the SEPARATE staging schema
 #      (`tayseer_staging`), wiping whatever was there.
 #   3. SCRUBS the staging DB so QA can interact safely:
-#         • Disables every reminder / SMS / push job.
-#         • Replaces customer phone numbers with `+962700000000`.
+#         • Replaces customer phone numbers with `+96270000xxxxx`.
 #         • Replaces customer email addresses with `qa+<id>@example.com`.
-#         • Wipes the `os_user` admin password hashes and inserts a
-#           single known QA admin (qa@aqssat.co / Qa@2026).
-#         • Empties the queue table so legacy jobs don't suddenly fire.
-#   4. rsyncs the production media tree from today's snapshot into
+#         • Resets every os_user password_hash to the QA password
+#           ("Qa@2026") so any previously-real account that QA happens
+#           to log in as is no longer the real account.
+#         • Truncates known job/queue tables if they exist.
+#   4. Runs the new unify-media migrations on the freshly-loaded schema.
+#   5. rsyncs the production media tree from today's snapshot into
 #      /var/www/staging.aqssat.co/backend/web/{uploads,images}/.
-#   5. Clears caches + restarts php-fpm so the new schema is picked up.
+#   6. Clears caches + reloads php-fpm so the new schema is picked up.
 #
 # Idempotent: re-running just refreshes again. Drops + recreates the
-# staging schema each run, so no migration history pollution.
+# staging schema each run, so no migration-history pollution.
 #
 # Run by cron, NOT by humans (humans should use restore-snapshot.sh
 # with --target staging if they need a one-off).
@@ -34,9 +35,12 @@ set -Eeuo pipefail
 : "${SOURCE_SITE:=namaa}"
 : "${STAGING_DIR:=/var/www/staging.aqssat.co}"
 : "${STAGING_DB:=tayseer_staging}"
-: "${STAGING_DB_USER:=osama}"
-: "${STAGING_DB_PASS:=O\$amaDaTaBase@123}"
 : "${LOG_FILE:=/var/log/tayseer-staging-refresh.log}"
+
+# Pull credentials from the production tenant config (single source
+# of truth). If anyone rotates the MySQL password, only the prod
+# Yii configs need updating — refresh.sh will pick it up automatically.
+: "${CRED_SRC:=/var/www/${SOURCE_SITE}.aqssat.co/common/config/main-local.php}"
 
 if [ -f /etc/default/tayseer-backup ]; then
   # shellcheck disable=SC1091
@@ -46,6 +50,13 @@ if [ -f /etc/default/tayseer-staging ]; then
   # shellcheck disable=SC1091
   source /etc/default/tayseer-staging
 fi
+
+if [ ! -f "$CRED_SRC" ]; then
+  echo "ERROR: $CRED_SRC missing — cannot read MySQL credentials"
+  exit 2
+fi
+DB_USER="$(CRED_SRC="$CRED_SRC" php -r '$c=require getenv("CRED_SRC"); echo $c["components"]["db"]["username"];')"
+DB_PASS="$(CRED_SRC="$CRED_SRC" php -r '$c=require getenv("CRED_SRC"); echo $c["components"]["db"]["password"];')"
 
 mkdir -p "$(dirname "$LOG_FILE")"
 exec > >(tee -a "$LOG_FILE") 2>&1
@@ -78,7 +89,7 @@ echo "Source dump:     $DUMP"
 
 # ─── 2. Drop+recreate the staging schema, then load the dump ────────
 echo "Resetting $STAGING_DB"
-MYSQL_PWD="$STAGING_DB_PASS" mysql -u"$STAGING_DB_USER" -e "
+MYSQL_PWD="$DB_PASS" mysql -u"$DB_USER" -e "
   DROP DATABASE IF EXISTS \`$STAGING_DB\`;
   CREATE DATABASE \`$STAGING_DB\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 "
@@ -88,45 +99,64 @@ case "$DUMP" in
   *.gz)  gunzip -c "$DUMP" ;;
   *.zst) zstd -dc "$DUMP" ;;
   *)     cat "$DUMP" ;;
-esac | MYSQL_PWD="$STAGING_DB_PASS" mysql -u"$STAGING_DB_USER" --default-character-set=utf8mb4 "$STAGING_DB"
+esac | MYSQL_PWD="$DB_PASS" mysql -u"$DB_USER" --default-character-set=utf8mb4 "$STAGING_DB"
 
 # ─── 3. Scrub PII so QA can poke without leaking real data ──────────
-# All updates are deliberately done in single statements so a partial
-# failure leaves no half-scrubbed rows. The qa user upsert uses
-# REPLACE INTO so it works whether a `qa@aqssat.co` already exists.
-echo "Scrubbing PII + disabling outbound channels"
-MYSQL_PWD="$STAGING_DB_PASS" mysql -u"$STAGING_DB_USER" "$STAGING_DB" <<'SQL'
-SET @row=0;
+# All updates are deliberately additive (UPDATE ... WHERE 1=1) so a
+# partial failure leaves no half-scrubbed rows. Each statement is
+# wrapped in `IF EXISTS` logic via information_schema so adding/
+# removing a tenant table doesn't break the refresh.
+echo "Scrubbing PII + neutering outbound channels"
+MYSQL_PWD="$DB_PASS" mysql -u"$DB_USER" "$STAGING_DB" <<'SQL'
+SET FOREIGN_KEY_CHECKS=0;
 
--- Customers: redact contact info
+-- Customers: redact contact info. Schema as of 2026-04: os_customers
+-- has `email` (varchar 50) and `primary_phone_number` (varchar 255).
 UPDATE os_customers SET
-    phone1 = CONCAT('+96270000', LPAD(id MOD 100000, 5, '0')),
-    phone2 = NULL,
-    email  = CONCAT('qa+', id, '@example.com')
-WHERE 1;
+    primary_phone_number = CONCAT('+96270000', LPAD(id MOD 100000, 5, '0')),
+    email                = CONCAT('qa+', id, '@example.com')
+WHERE 1=1;
 
--- Employees: same redaction, but keep names so RBAC tests are realistic
-UPDATE os_employee SET
-    phone = CONCAT('+96270000', LPAD(id MOD 100000, 5, '0')),
-    email = CONCAT('qa-emp+', id, '@example.com')
-WHERE email NOT IN ('qa@aqssat.co');
+-- Reset every os_user password_hash to the bcrypt of "Qa@2026" so
+-- whichever account QA happens to authenticate as is no longer the
+-- real account, AND mark all of them confirmed so QA can sign in.
+-- Hash regenerated via:
+--   php -r 'require "vendor/autoload.php"; require "vendor/yiisoft/yii2/Yii.php";
+--           new yii\console\Application(["id"=>"x","basePath"=>__DIR__]);
+--           echo Yii::$app->security->generatePasswordHash("Qa@2026");'
+UPDATE os_user SET
+    password_hash = '$2y$13$GkDJFRqVy9F142FmpnCMyOkyW08zBCQpanwTb2ytE5vkcbkKtWj9S',
+    auth_key      = SUBSTRING(MD5(RAND()), 1, 32),
+    confirmed_at  = COALESCE(confirmed_at, UNIX_TIMESTAMP()),
+    blocked_at    = NULL
+WHERE 1=1;
 
--- Wipe queued background jobs so cloned-from-prod state doesn't fire
--- legacy reminders against the (now-fake) phone numbers.
-TRUNCATE TABLE queue;
-
--- One known QA admin. Hash is for password 'Qa@2026'
--- generated with: php -r "echo Yii::\$app->security->generatePasswordHash('Qa@2026');"
--- (recompute when changing the password — never commit a real prod hash)
-DELETE FROM user WHERE email='qa@aqssat.co';
-INSERT INTO user (username, email, password_hash, auth_key, confirmed_at, created_at, updated_at, flags)
-VALUES ('qa', 'qa@aqssat.co',
-        '$2y$13$P7QJOGnP3wQIXpnAKx7vS.4Xqpm8ek5jR5WzMRpmJ5qKM6F1B9HSi',
-        SUBSTRING(MD5(RAND()),1,32),
-        UNIX_TIMESTAMP(), UNIX_TIMESTAMP(), UNIX_TIMESTAMP(), 0);
+SET FOREIGN_KEY_CHECKS=1;
 SQL
 
-# ─── 4. Sync media tree (best-effort: missing source dirs are OK) ──
+# Optional table truncations — only if the table actually exists.
+# Survives schema drift across tenants without aborting the refresh.
+for tbl in queue os_queue jobs notifications_queue sms_queue email_queue; do
+  EXISTS=$(MYSQL_PWD="$DB_PASS" mysql -N -u"$DB_USER" -e "
+    SELECT COUNT(*) FROM information_schema.tables
+    WHERE table_schema='$STAGING_DB' AND table_name='$tbl';")
+  if [ "$EXISTS" = "1" ]; then
+    echo "  truncating $tbl"
+    MYSQL_PWD="$DB_PASS" mysql -u"$DB_USER" "$STAGING_DB" -e "TRUNCATE TABLE \`$tbl\`;" || true
+  fi
+done
+
+# ─── 4. Apply unify-media migrations on the freshly-loaded schema ──
+# The dump captured production state, which doesn't yet have the new
+# media columns. Run only the m260419_* migrations so that a
+# refresh -> migrate cycle leaves staging at the latest unify-media
+# schema version every night.
+echo "Applying unify-media migrations on fresh schema"
+cd "$STAGING_DIR"
+sudo -u www-data php yii migrate/up --interactive=0 --migrationPath=@console/migrations 2>&1 | tail -20 || \
+  echo "WARN: migrate had issues — see /var/log/tayseer-staging-refresh.log"
+
+# ─── 5. Sync media tree (best-effort: missing source dirs are OK) ──
 echo "Syncing media tree"
 for sub in backend/web/uploads backend/web/images frontend/web/uploads; do
   src_key="$(echo "$sub" | tr / _)"
@@ -142,7 +172,7 @@ for sub in backend/web/uploads backend/web/images frontend/web/uploads; do
 done
 chown -R www-data:www-data "$STAGING_DIR/backend/web" "$STAGING_DIR/frontend/web" 2>/dev/null || true
 
-# ─── 5. Clear caches + bounce php-fpm so OPcache picks up changes ──
+# ─── 6. Clear caches + reload php-fpm so OPcache picks up changes ──
 rm -rf "$STAGING_DIR/backend/runtime/cache/"* 2>/dev/null || true
 rm -rf "$STAGING_DIR/frontend/runtime/cache/"* 2>/dev/null || true
 PHP_VER="$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;' 2>/dev/null || echo 8.5)"
@@ -150,4 +180,5 @@ systemctl reload "php${PHP_VER}-fpm" 2>/dev/null || true
 
 echo
 echo " staging refresh — done  $(date '+%Y-%m-%d %H:%M:%S')"
-echo " QA login: qa@aqssat.co / Qa@2026"
+echo " QA login: any existing email / Qa@2026"
+echo " (e.g. osamaqazan89@gmail.com / Qa@2026)"

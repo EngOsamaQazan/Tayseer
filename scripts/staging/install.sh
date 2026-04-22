@@ -82,9 +82,25 @@ for cfg in backend/config/main-local.php backend/config/params-local.php \
   fi
 done
 
-# Composer install (production deps only — no xdebug)
+# Composer install (production deps only — no xdebug).
+# COMPOSER_ALLOW_SUPERUSER=1 forces composer to load plugins even when
+# running as root, which is the only way the yiisoft/yii2-composer
+# plugin can populate vendor/yiisoft/extensions.php. Without that file
+# every Yii extension's Bootstrap class is skipped on every request —
+# most visibly, dektrium/yii2-user never registers the @dektrium/user
+# alias and /user/login returns "Unable to resolve the request".
+export COMPOSER_ALLOW_SUPERUSER=1
 composer install --no-dev --no-interaction --optimize-autoloader 2>&1 || \
   echo "WARN: composer install had issues"
+
+# Belt-and-braces: if extensions.php is empty (the symptom of a prior
+# install having silently skipped plugins), nuke vendor/ and reinstall
+# from scratch so the post-install hook actually fires.
+if [ ! -s vendor/yiisoft/extensions.php ]; then
+  echo "vendor/yiisoft/extensions.php empty — forcing full reinstall"
+  rm -rf vendor
+  composer install --no-dev --no-interaction --optimize-autoloader
+fi
 
 # Permissions
 chown -R www-data:www-data backend/ common/ console/ frontend/ api/ vendor/ 2>/dev/null || true
@@ -93,7 +109,30 @@ chmod -R 775 backend/runtime backend/web/assets frontend/runtime frontend/web/as
 
 # ─── 4. Create the staging schema if it does not exist ──────────────
 echo "Ensuring MySQL schema $STAGING_DB"
-mysql -e "CREATE DATABASE IF NOT EXISTS \`$STAGING_DB\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Borrow credentials from a known production tenant (jadal). The Yii
+# config files are the canonical place we already store DB passwords;
+# duplicating them in this script would be a stale-credential trap.
+CRED_SRC="${CRED_SRC:-/var/www/jadal.aqssat.co/common/config/main-local.php}"
+if [ ! -f "$CRED_SRC" ]; then
+  echo "ERROR: $CRED_SRC missing — cannot read DB credentials"
+  exit 2
+fi
+DB_USER="$(CRED_SRC="$CRED_SRC" php -r '$c=require getenv("CRED_SRC"); echo $c["components"]["db"]["username"];')"
+DB_PASS="$(CRED_SRC="$CRED_SRC" php -r '$c=require getenv("CRED_SRC"); echo $c["components"]["db"]["password"];')"
+DB_HOST="$(CRED_SRC="$CRED_SRC" php -r '$c=require getenv("CRED_SRC"); preg_match("/host=([^;]+)/",$c["components"]["db"]["dsn"],$m); echo $m[1] ?? "localhost";')"
+
+MYSQL_PWD="$DB_PASS" mysql -h"$DB_HOST" -u"$DB_USER" \
+  -e "CREATE DATABASE IF NOT EXISTS \`$STAGING_DB\` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Make sure the staging Yii config actually points at the staging DB
+# (catches the historical bug where staging silently used namaa_erp).
+STAGING_DB_IN_CFG="$(php -r '$c=require "common/config/main-local.php"; preg_match("/dbname=([^;]+)/",$c["components"]["db"]["dsn"],$m); echo $m[1];' 2>/dev/null || echo "")"
+if [ "$STAGING_DB_IN_CFG" != "$STAGING_DB" ]; then
+  echo "ERROR: staging common/config/main-local.php points at '$STAGING_DB_IN_CFG'"
+  echo "       not '$STAGING_DB'. Refusing to continue (would corrupt prod)."
+  exit 2
+fi
 
 # Run migrations (the schema starts empty; refresh.sh later replaces
 # everything with a snapshot, but a fresh schema avoids confusing the

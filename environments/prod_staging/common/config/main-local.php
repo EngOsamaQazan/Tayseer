@@ -16,8 +16,15 @@ return [
         'db' => [
             'class' => 'yii\db\Connection',
             'dsn' => 'mysql:host=localhost;dbname=tayseer_staging',
+            // Same MySQL user as production tenants — `osama` already
+            // has GRANT ALL PRIVILEGES ON *.* on this server, which is
+            // what we need to CREATE / DROP / TRUNCATE the staging
+            // schema during refresh.sh. The password lives here and in
+            // every prod_<tenant>/common/config/main-local.php; if it
+            // is ever rotated, all of these files must change in lock-
+            // step.
             'username' => 'osama',
-            'password' => 'O$amaDaTaBase@123',
+            'password' => 'OsamaDB123',
             'charset' => 'utf8',
             'tablePrefix' => 'os_',
             'enableSchemaCache' => true,
