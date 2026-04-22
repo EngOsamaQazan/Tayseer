@@ -177,19 +177,25 @@ for site in $SITES; do
   # --quick               : stream rows one-by-one (huge tables)
   # --routines/triggers/events : full schema fidelity
   # --hex-blob            : safe for binary payloads
-  # --set-gtid-purged=OFF : harmless on non-replicated, required on RDS
+  # --set-gtid-purged=OFF : MySQL-Oracle-only (RDS, Aurora). MariaDB
+  #                         rejects the flag with "unknown variable".
+  #                         We probe once and add it only if supported.
   # We pass the password via an env var so it never appears in `ps`.
-  if MYSQL_PWD="$db_pass" mysqldump \
-        --host="$db_host" \
-        --user="$db_user" \
-        --single-transaction \
-        --quick \
-        --routines \
-        --triggers \
-        --events \
-        --hex-blob \
-        --default-character-set=utf8mb4 \
-        --set-gtid-purged=OFF \
+  dump_args=(
+        --host="$db_host"
+        --user="$db_user"
+        --single-transaction
+        --quick
+        --routines
+        --triggers
+        --events
+        --hex-blob
+        --default-character-set=utf8mb4
+  )
+  if mysqldump --help 2>/dev/null | grep -q -- '--set-gtid-purged'; then
+    dump_args+=(--set-gtid-purged=OFF)
+  fi
+  if MYSQL_PWD="$db_pass" mysqldump "${dump_args[@]}" \
         "$db_name" > "$dump_file" 2>"$out_dir/db.dump.err"; then
     compress "$dump_file"
     rm -f "$out_dir/db.dump.err"
