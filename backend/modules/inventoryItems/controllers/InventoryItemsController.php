@@ -43,7 +43,7 @@ class InventoryItemsController extends Controller
                     ['actions' => ['login', 'error'], 'allow' => true],
                     [
                         'actions' => [
-                            'index', 'items', 'view', 'movements', 'settings',
+                            'index', 'items', 'items-stream', 'view', 'movements', 'settings',
                             'search-items', 'item-query',
                             'serial-numbers', 'serial-view',
                             'export-excel', 'export-pdf',
@@ -179,10 +179,171 @@ class InventoryItemsController extends Controller
         $searchModel  = new InventoryItemsSearch();
         $dataProvider = $searchModel->search(Yii::$app->request->queryParams);
 
+        /* ── فلاتر إضافية: flag (low/out/recent) + sort ── */
+        $flag = Yii::$app->request->get('flag');
+        $sort = Yii::$app->request->get('sort');
+
+        $query = $dataProvider->query;
+        $itmTblFull = InventoryItems::tableName();
+        $qtyTblFull = \backend\modules\inventoryItemQuantities\models\InventoryItemQuantities::tableName();
+
+        if ($flag === 'low') {
+            $query->andWhere([
+                'AND',
+                ['>', $itmTblFull . '.min_stock_level', 0],
+                [
+                    '<',
+                    new \yii\db\Expression(
+                        '(SELECT COALESCE(SUM(q.quantity),0) FROM ' . $qtyTblFull . ' q WHERE q.item_id = ' . $itmTblFull . '.id AND q.is_deleted = 0)'
+                    ),
+                    new \yii\db\Expression($itmTblFull . '.min_stock_level'),
+                ],
+            ]);
+        } elseif ($flag === 'out') {
+            $query->andWhere([
+                '=',
+                new \yii\db\Expression(
+                    '(SELECT COALESCE(SUM(q.quantity),0) FROM ' . $qtyTblFull . ' q WHERE q.item_id = ' . $itmTblFull . '.id AND q.is_deleted = 0)'
+                ),
+                0,
+            ]);
+        } elseif ($flag === 'recent') {
+            $query->andWhere(['>=', 'created_at', strtotime('-7 days')]);
+        }
+
+        /* فرز */
+        if ($sort) {
+            $direction = SORT_ASC;
+            $field = $sort;
+            if (substr($sort, 0, 1) === '-') {
+                $direction = SORT_DESC;
+                $field = substr($sort, 1);
+            }
+            $allowed = ['item_name', 'unit_price', 'created_at'];
+            if (in_array($field, $allowed, true)) {
+                $query->orderBy([$field => $direction]);
+            }
+        } else {
+            $query->orderBy(['created_at' => SORT_DESC]);
+        }
+
+        /* ── إحصائيات شريط الأداء (KPIs) ── */
+        $kpi = $this->buildItemsKpi();
+
+        /* قائمة التصنيفات للفلتر */
+        $categories = InventoryItems::find()
+            ->select('category')
+            ->distinct()
+            ->andWhere(['not', ['category' => null]])
+            ->andWhere(['!=', 'category', ''])
+            ->orderBy(['category' => SORT_ASC])
+            ->column();
+
+        /* وضع العرض: cards (افتراضي) أو table */
+        $viewMode = Yii::$app->request->get('view', 'cards');
+        if (!in_array($viewMode, ['cards', 'table'], true)) $viewMode = 'cards';
+
+        /* تكبير حجم الصفحة لعرض البطاقات */
+        if ($viewMode === 'cards') {
+            $dataProvider->pagination->pageSize = 24;
+        }
+
         return $this->render('items', [
             'searchModel'  => $searchModel,
             'dataProvider' => $dataProvider,
+            'kpi'          => $kpi,
+            'categories'   => $categories,
+            'viewMode'     => $viewMode,
         ]);
+    }
+
+    /**
+     * بناء بطاقات الـ KPI للأصناف — يُستخدم في الشاشة وفي endpoint الـ stream
+     */
+    protected function buildItemsKpi(): array
+    {
+        $totalItems    = (int) InventoryItems::find()->count();
+        $approvedCount = (int) InventoryItems::find()->andWhere(['status' => InventoryItems::STATUS_APPROVED])->count();
+        $pendingCount  = (int) InventoryItems::find()->andWhere(['status' => InventoryItems::STATUS_PENDING])->count();
+        $rejectedCount = (int) InventoryItems::find()->andWhere(['status' => InventoryItems::STATUS_REJECTED])->count();
+
+        $qtyTbl = \backend\modules\inventoryItemQuantities\models\InventoryItemQuantities::tableName();
+        $itmTbl = InventoryItems::tableName();
+        $stockRows = (new \yii\db\Query())
+            ->select(["i.id", "i.min_stock_level", "i.unit_price", "COALESCE(SUM(q.quantity),0) AS total_qty"])
+            ->from(["i" => $itmTbl])
+            ->leftJoin(["q" => $qtyTbl], "q.item_id = i.id AND q.is_deleted = 0")
+            ->where(['i.is_deleted' => 0])
+            ->groupBy("i.id")
+            ->all();
+
+        $lowStock = 0;
+        $outOfStock = 0;
+        $stockValue = 0.0;
+        $totalUnits = 0;
+        foreach ($stockRows as $r) {
+            $q = (int) $r['total_qty'];
+            $totalUnits += $q;
+            $stockValue += $q * (float) $r['unit_price'];
+            if ($q <= 0) {
+                $outOfStock++;
+            } elseif ((int) $r['min_stock_level'] > 0 && $q < (int) $r['min_stock_level']) {
+                $lowStock++;
+            }
+        }
+
+        return [
+            'total'    => $totalItems,
+            'approved' => $approvedCount,
+            'pending'  => $pendingCount,
+            'rejected' => $rejectedCount,
+            'low'      => $lowStock,
+            'out'      => $outOfStock,
+            'units'    => $totalUnits,
+            'value'    => round($stockValue, 2),
+        ];
+    }
+
+    /**
+     * Live stream endpoint — يُستدعى عبر polling كل 30 ثانية
+     * الإدخال: ?since=<unix-timestamp>
+     * الإخراج: { ok, ts, kpi, changed: [ids], changed_count, totals_changed }
+     */
+    public function actionItemsStream()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $req   = Yii::$app->request;
+        $since = (int) $req->get('since', 0);
+
+        $kpi = $this->buildItemsKpi();
+
+        $changed = [];
+        $changedCount = 0;
+        if ($since > 0) {
+            $changed = InventoryItems::find()
+                ->select('id')
+                ->andWhere(['or',
+                    ['>=', 'updated_at', $since],
+                    ['>=', 'created_at', $since],
+                ])
+                ->limit(50)
+                ->column();
+            $changedCount = (int) InventoryItems::find()
+                ->andWhere(['or',
+                    ['>=', 'updated_at', $since],
+                    ['>=', 'created_at', $since],
+                ])
+                ->count();
+        }
+
+        return [
+            'ok'              => true,
+            'ts'              => time(),
+            'kpi'             => $kpi,
+            'changed'         => array_values(array_map('intval', $changed)),
+            'changed_count'   => $changedCount,
+            'totals_changed'  => $changedCount > 0,
+        ];
     }
 
     /* ═══════════════════════════════════════════════════════════

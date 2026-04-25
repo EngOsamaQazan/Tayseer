@@ -155,6 +155,49 @@ class InventoryItems extends ActiveRecord
         return $this->min_stock_level > 0 && $this->getTotalStock() < $this->min_stock_level;
     }
 
+    /**
+     * معدّل دوران المخزون (Stock Turnover) — مرات/سنة
+     *
+     * الصيغة (مبسّطة، آخر 90 يوم → معايرة سنوية):
+     *   COGS_units_90d / avg_stock_90d * (365/90)
+     *
+     * - COGS_units_90d : إجمالي وحدات الخروج (OUT) خلال 90 يوم
+     * - avg_stock_90d  : تقدير = (المخزون الحالي + COGS_90d) / 2
+     *
+     * Returns null إذا لم تتوفر بيانات حركة كافية.
+     *
+     * @return float|null
+     */
+    public function getTurnover()
+    {
+        try {
+            $stock = $this->getTotalStock();
+            $since = time() - (90 * 86400);
+
+            $cogs = (int) StockMovement::find()
+                ->andWhere(['item_id' => $this->id])
+                ->andWhere(['movement_type' => 'OUT'])
+                ->andWhere(['>=', 'created_at', $since])
+                ->sum('quantity');
+
+            if ($cogs <= 0) {
+                return null;
+            }
+
+            $avgStock = ($stock + $cogs) / 2.0;
+            if ($avgStock <= 0) {
+                return null;
+            }
+
+            $turnover90d = $cogs / $avgStock;
+            $annualized  = $turnover90d * (365.0 / 90.0);
+
+            return round($annualized, 2);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     /* ── حالات العنصر ── */
     public static function getStatusList()
     {
