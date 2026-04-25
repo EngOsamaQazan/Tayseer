@@ -143,10 +143,10 @@ fix-configs.py
 *.cookies.txt
 
 # ─── Local-only operational scripts ───────────
-# These contain hard-coded server passwords, GitHub OAuth tokens, and
-# DB credentials inlined while we were doing migration / hot-fix work.
-# Keep them out of the repo until they've been refactored to read
-# secrets from credentials.py / env vars.
+# Most ad-hoc helpers in scripts/ have hard-coded server passwords or
+# tokens inlined while we were doing migration / hot-fix work, so they
+# stay local. Only the curated, cloud-essential set (refactored to load
+# secrets from credentials.py) is whitelisted below.
 /scripts/*.py
 /scripts/*.php
 /scripts/*.sh
@@ -163,6 +163,66 @@ fix-configs.py
 /scripts/backup/
 /scripts/deploy/
 /scripts/misc/
+
+# ── Whitelist: cloud-essential scripts that read from credentials.py ──
+!/scripts/credentials.example.py
+!/scripts/setup_server_git.py
+!/scripts/backup/
+/scripts/backup/*
+!/scripts/backup/backup.py
+!/scripts/deploy/
+/scripts/deploy/*
+!/scripts/deploy/deploy.py
+!/scripts/dns/
+/scripts/dns/*
+!/scripts/dns/update_dns.py
+!/scripts/setup/
+/scripts/setup/*
+!/scripts/setup/install-phpmyadmin.py
+!/scripts/setup/setup-tayseer.ps1
+!/scripts/migration/
+/scripts/migration/*
+!/scripts/migration/MIGRATION_GUIDE.md
+!/scripts/migration/hestia_remote_install.sh
+!/scripts/migration/01_setup_new_server.py
+!/scripts/migration/02_migrate_data.py
+!/scripts/migration/03_setup_vhosts_ssl.py
+!/scripts/migration/04_verify_and_switch.py
+!/scripts/migration/05_update_deploy_scripts.py
+!/scripts/migration/06_install_hestiacp.py
+!/scripts/migration/06b_launch_hestia_install.py
+!/scripts/migration/06c_run_hestia_direct.py
+!/scripts/migration/07_check_and_fix.py
+!/scripts/migration/08_fix_and_install_hestia.py
+!/scripts/migration/09_final_hestia_fix.py
+!/scripts/migration/10_fix_and_install_webmin.py
+!/scripts/migration/11_webmin_and_restore_db.py
+!/scripts/migration/12_install_webmin_deb.py
+!/scripts/migration/13_webmin_ssl.py
+!/scripts/server/
+/scripts/server/*
+!/scripts/server/check-server.py
+!/scripts/server/check-server-alive.py
+!/scripts/server/check-server-specs.py
+!/scripts/server/check-ssh-ports.py
+!/scripts/server/check-production.py
+!/scripts/server/fix-production.py
+!/scripts/server/fix-server-config.py
+!/scripts/server/analyze-disk.py
+!/scripts/server/optimize-new-server.py
+!/scripts/server/server-cleanup-secure.py
+!/scripts/server/server-stats.py
+!/scripts/upgrade/
+/scripts/upgrade/*
+!/scripts/upgrade/upgrade-debian12.py
+!/scripts/upgrade/upgrade-debian12-fix.py
+!/scripts/upgrade/upgrade-php85.py
+!/scripts/upgrade/upgrade-php85-v2.py
+!/scripts/upgrade/upgrade-php85-v3.py
+!/scripts/upgrade/upgrade-php85-go.py
+!/scripts/upgrade/upgrade-php85-final.py
+!/scripts/upgrade/post-upgrade-verify.py
+!/scripts/upgrade/post-upgrade-dbcheck.py
 
 # ─── Local agent / IDE state ──────────────────
 /.claude/
