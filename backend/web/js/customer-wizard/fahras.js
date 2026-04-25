@@ -373,6 +373,11 @@
      */
     function renderError(message, blocks, resp) {
         state.$card.attr('data-cw-fahras-state', 'error');
+        // The "blocks" argument is honoured in the messaging only — the
+        // Next button gate is decided by applyVerdictGate(), which (post
+        // 2026-04) explicitly does NOT block on transport-level errors.
+        // The body text mirrors that policy so the rep is never told
+        // "you cannot proceed" because of a network blip.
         var html =
             '<div class="cw-fahras__icon" aria-hidden="true"><i class="fa fa-exclamation-triangle"></i></div>' +
             '<div class="cw-fahras__message">' +
@@ -384,11 +389,8 @@
                         '<span class="cw-fahras__verdict-panel-label">' + escapeHtml(message) + '</span>' +
                     '</p>' +
                 '</div>' +
-                (blocks
-                    ? '<p class="cw-fahras__meta"><i class="fa fa-lock"></i> ' +
-                      'لا يمكن إنشاء العميل قبل عودة نظام الفهرس. يرجى المحاولة لاحقاً أو الضغط على «إعادة الفحص».</p>'
-                    : '<p class="cw-fahras__meta"><i class="fa fa-exclamation"></i> ' +
-                      'تحذير فقط — يمكنك المتابعة على مسؤوليتك.</p>') +
+                '<p class="cw-fahras__meta"><i class="fa fa-exclamation"></i> ' +
+                'يمكنك المتابعة وسنحاول الفحص لاحقاً تلقائياً. الحظر يسري فقط على القرارات الصريحة من الفهرس (محظور البيع).</p>' +
                 renderDiagPanel(resp || {}) +
             '</div>';
         state.$body.html(html);
@@ -856,10 +858,26 @@
     }
 
     // ─── "Next" button gate ─────────────────────────────────────────────
+    //
+    // Blocking policy (matches backend after the 2026-04 failurePolicy=open
+    // rollout): the wizard MUST only block when Fahras returned a real
+    // "cannot_sell" verdict OR the controller forced blocks=true for one
+    // of its productive-CTA / id-mismatch short-circuits. A transport-level
+    // failure (verdict='error') is treated as a loud warning — visible red
+    // panel — but the rep can still proceed. Blocking on a connectivity
+    // hiccup conflated "we don't know" with "the customer is forbidden",
+    // which reps reported as illogical (and which the operations team
+    // confirmed is not the policy: only cannot_sell is a hard block).
     function applyVerdictGate(resp) {
         if (!resp) {
             state.blocking = false;
         } else if (resp.override) {
+            state.blocking = false;
+        } else if (resp.verdict === 'error') {
+            // Defense-in-depth: even if a stale server still returns
+            // blocks=true on error (failurePolicy='closed'), don't lock
+            // the Next button — the user explicitly does not want
+            // connectivity errors to stop them from proceeding.
             state.blocking = false;
         } else {
             state.blocking = !!resp.blocks;

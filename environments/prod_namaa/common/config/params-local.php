@@ -102,7 +102,7 @@ return [
         'companyName'    => getenv('FAHRAS_COMPANY_NAME') ?: 'نماء',
         'timeoutSec'     => 8,
         'cacheTtlSec'    => 0,    // verdict cache disabled — see common/config/params.php
-        'failurePolicy'  => 'closed',
+        'failurePolicy'  => 'open',
         'overridePerm'   => 'customer.fahras.override',
         'logViewPerm'    => 'customer.fahras.log.view',
     ],

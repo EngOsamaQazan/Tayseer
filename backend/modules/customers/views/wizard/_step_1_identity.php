@@ -27,6 +27,19 @@ $g = function (string $k, $default = '') use ($d) {
     return isset($d[$k]) && $d[$k] !== null ? $d[$k] : $default;
 };
 
+// ── Document-number hydration ──
+// `document_number` is a property of CustomersDocument (the physical
+// card / passport / license), NOT of Customers itself. The wizard
+// stashes it under `_scan.document_number` whenever a back-of-ID scan
+// extracts it, AND lets the rep edit it manually via the field below
+// (POSTed under the `WizardScan` group, then merged into `_scan` by
+// actionSave). Source-of-truth order: edited value in step1 > scan
+// extracted value > empty.
+$scanScratch = $payload['step1']['WizardScan'] ?? [];
+$docNumberDraft = isset($scanScratch['document_number'])
+    ? (string)$scanScratch['document_number']
+    : (string)($payload['_scan']['document_number'] ?? '');
+
 $cities  = ArrayHelper::map($lookups['cities']      ?? [], 'id', 'name');
 $citizens = ArrayHelper::map($lookups['citizens']    ?? [], 'id', 'name');
 $hearOpts = ArrayHelper::map($lookups['hearAboutUs'] ?? [], 'id', 'name');
@@ -290,6 +303,32 @@ $fahrasOverride = $payload['_fahras_override'] ?? null;
                     </select>
                     <p class="cw-field__hint">
                         لا تجد الجنسية؟ اكتب اسمها وستظهر «إضافة» في القائمة فوراً.
+                    </p>
+                </div>
+
+                <!-- Document number (رقم الوثيقة) — printed on the back of the
+                     Jordanian ID, on the bio page of a passport, or on the
+                     face of a driving licence. Auto-filled by the smart
+                     scan (back-of-ID) but always editable so the rep can
+                     correct an OCR misread. Persisted under the WizardScan
+                     group and merged into `_scan.document_number` on save,
+                     which actionFinish() then writes to customers_document. -->
+                <div class="cw-field" data-cw-field="WizardScan[document_number]">
+                    <label class="cw-field__label" for="cw-doc-number">
+                        رقم الوثيقة
+                    </label>
+                    <input type="text"
+                           id="cw-doc-number"
+                           name="WizardScan[document_number]"
+                           value="<?= Html::encode($docNumberDraft) ?>"
+                           class="cw-input cw-input--mono"
+                           autocomplete="off"
+                           dir="ltr"
+                           maxlength="50"
+                           aria-describedby="cw-doc-number-hint"
+                           placeholder="مثال: FBY86966 / A212449">
+                    <p id="cw-doc-number-hint" class="cw-field__hint">
+                        رقم البطاقة/الجواز/الرخصة — يُقرأ تلقائياً من ظهر الهوية، ويمكن تعديله يدوياً.
                     </p>
                 </div>
 

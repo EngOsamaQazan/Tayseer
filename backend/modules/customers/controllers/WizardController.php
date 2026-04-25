@@ -522,6 +522,30 @@ class WizardController extends Controller
 
         $payload["step{$step}"] = $stepData;
         $payload['_step'] = $step;
+
+        // ── document_number bridge (Step 1 only). ──
+        // The Step-1 view renders `WizardScan[document_number]` so the rep
+        // can see/edit the scan's extraction. We mirror it into the
+        // canonical `_scan.document_number` slot on every save so the
+        // finish-step persistence path (linkScanImagesToCustomer) keeps
+        // working with a single source of truth — even when the rep
+        // overrides the OCR value manually.
+        if ($step === 1) {
+            $editedDocNum = isset($stepData['WizardScan']['document_number'])
+                ? trim((string)$stepData['WizardScan']['document_number'])
+                : null;
+            if ($editedDocNum !== null) {
+                if (!isset($payload['_scan']) || !is_array($payload['_scan'])) {
+                    $payload['_scan'] = [];
+                }
+                if ($editedDocNum === '') {
+                    unset($payload['_scan']['document_number']);
+                } else {
+                    $payload['_scan']['document_number'] = $editedDocNum;
+                }
+            }
+        }
+
         $payload['_summary'] = $this->buildSummary($payload);
         $payload['_updated'] = time();
 
@@ -3058,13 +3082,28 @@ class WizardController extends Controller
         // marbouta, alef variants, or word boundaries. The user explicitly
         // requires "اسامه عبد المهدي" stays "اسامه عبد المهدي" — never
         // normalized to "أسامة عبدالمهدي".
+        //
+        // ARABIC-ONLY GUARD: Gemini occasionally returns the English
+        // (MRZ-decoded) name in the `name` field instead of the printed
+        // Arabic one — typically when the printed Arabic line is blurred
+        // or angled. The wizard must NEVER fill the customer's name with
+        // a Latin string: the rest of the system (contracts, vouchers,
+        // invoices) all expects the legal Arabic name. So we reject any
+        // value that contains no Arabic letters at all and fall back to
+        // `name_en` ONLY as a typed-fallback in `unmapped` so the rep
+        // can see what was read but is not auto-filled.
         if (!empty($extracted['name']) && is_string($extracted['name'])) {
-            $name = (string)$extracted['name'];
-            // Collapse runs of any Unicode whitespace into a single ASCII
-            // space (handles non-breaking spaces, tabs, etc) without
-            // touching the actual letters.
-            $name = preg_replace('/\s+/u', ' ', $name);
-            $fields['Customers[name]'] = trim($name);
+            $name = preg_replace('/\s+/u', ' ', (string)$extracted['name']);
+            $name = trim($name);
+            if ($name !== '' && preg_match('/\p{Arabic}/u', $name)) {
+                $fields['Customers[name]'] = $name;
+            } else {
+                Yii::warning(
+                    'Wizard scan: rejected non-Arabic name from extraction "'
+                    . $name . '" — refusing to auto-fill Customers[name].',
+                    __METHOD__
+                );
+            }
         }
         // ── ID NUMBER (Jordanian National ID) — strict 10-digit validation
         // with MRZ-shift recovery.
@@ -3132,6 +3171,20 @@ class WizardController extends Controller
                 $fields['Customers[city]'] = (string)$cityId;
             } else {
                 $unmapped['city'] = trim($extracted['birth_place']);
+            }
+        }
+
+        // ── DOCUMENT NUMBER — surface to the visible UI field on Step 1.
+        // The value is also remembered under `_scan.document_number` by
+        // rememberScanInDraft(), but reps need to see and (occasionally)
+        // correct it manually. The form field's name is intentionally
+        // `WizardScan[document_number]` so it doesn't collide with the
+        // Customers model — actionSave() merges it back into `_scan` on
+        // every step-1 save.
+        if (!empty($extracted['document_number']) && is_string($extracted['document_number'])) {
+            $docNum = trim($extracted['document_number']);
+            if ($docNum !== '') {
+                $fields['WizardScan[document_number]'] = $docNum;
             }
         }
 

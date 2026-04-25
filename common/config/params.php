@@ -80,9 +80,18 @@ return [
         'cacheTtlSec'    => 0,
 
         // Failure policy when Fahras is unreachable / errors out:
-        //   'closed' → block customer creation (recommended for production).
-        //   'open'   → warn but allow creation (for staging / dev).
-        'failurePolicy'  => 'closed',
+        //   'closed' → block customer creation when Fahras itself errors.
+        //   'open'   → warn but allow creation; only `cannot_sell` blocks.
+        //
+        // Operational decision (2026-04): keep the wizard usable when the
+        // Fahras endpoint is intermittently unreachable. Reps reported the
+        // 'closed' policy as illogical because a transport-level failure
+        // is NOT the same as a "sale forbidden" verdict — it just means
+        // we couldn't ask. The wizard still surfaces the error visibly
+        // (red panel), the rep is on the hook to retry, and a `cannot_sell`
+        // verdict (the only verdict that means "the customer is actually
+        // banned") continues to block as before.
+        'failurePolicy'  => 'open',
 
         // RBAC permission name allowed to override a `cannot_sell` verdict.
         'overridePerm'   => 'customer.fahras.override',
