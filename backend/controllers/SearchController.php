@@ -195,6 +195,11 @@ class SearchController extends Controller
         $like  = '%' . $q . '%';
         $isNum = ctype_digit($q);
 
+        /*
+         * نستعمل placeholders مميّزة (:l0, :l1, ...) لأن PDO مع MariaDB
+         * في وضع ATTR_EMULATE_PREPARES=false يرفض إعادة استخدام نفس
+         * الـ named placeholder ويرمي SQLSTATE[HY093].
+         */
         $sql = "SELECT cu.id, cu.name, cu.primary_phone_number, cu.id_number,
                        GROUP_CONCAT(DISTINCT ct.id ORDER BY ct.id DESC SEPARATOR ',') AS contract_ids,
                        GROUP_CONCAT(DISTINCT ct.status ORDER BY ct.id DESC SEPARATOR '|') AS contract_statuses
@@ -202,17 +207,20 @@ class SearchController extends Controller
                 LEFT JOIN os_contracts_customers cc ON cc.customer_id = cu.id
                 LEFT JOIN os_contracts ct ON ct.id = cc.contract_id AND (ct.is_deleted IS NULL OR ct.is_deleted = 0)
                 WHERE (cu.is_deleted IS NULL OR cu.is_deleted = 0)
-                  AND (cu.name LIKE :like
-                       OR cu.primary_phone_number LIKE :like
-                       OR cu.id_number LIKE :like
-                       OR cu.email LIKE :like
+                  AND (cu.name LIKE :l0
+                       OR cu.primary_phone_number LIKE :l1
+                       OR cu.id_number LIKE :l2
+                       OR cu.email LIKE :l3
                        " . ($isNum ? "OR cu.id = :idnum" : "") . ")
                 GROUP BY cu.id
                 ORDER BY cu.id DESC
                 LIMIT :lim";
 
         $cmd = Yii::$app->db->createCommand($sql)
-            ->bindValue(':like', $like)
+            ->bindValue(':l0', $like)
+            ->bindValue(':l1', $like)
+            ->bindValue(':l2', $like)
+            ->bindValue(':l3', $like)
             ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT);
         if ($isNum) {
             $cmd->bindValue(':idnum', (int)$q, \PDO::PARAM_INT);
@@ -286,28 +294,31 @@ class SearchController extends Controller
         $isNum = ctype_digit($q);
 
         /*
-         * نستعمل ANY_VALUE() لتفادي خطأ ONLY_FULL_GROUP_BY عند احتواء SELECT
-         * على أعمدة من جدول مرتبط (os_customers) خارج مفتاح GROUP BY.
+         * MariaDB لا يدعم ANY_VALUE() ولا يحتاجها — sql_mode الافتراضي
+         * عنده لا يفعّل ONLY_FULL_GROUP_BY. لذا نختار الأعمدة مباشرةً.
+         * كذلك نستعمل placeholders مميّزة (:l0..:l2) لتجنّب خطأ HY093.
          */
         $sql = "SELECT c.id,
-                       ANY_VALUE(c.status)        AS status,
-                       ANY_VALUE(c.total_value)   AS total_value,
-                       ANY_VALUE(c.Date_of_sale)  AS Date_of_sale,
-                       ANY_VALUE(cu.name)         AS customer_name
+                       c.status,
+                       c.total_value,
+                       c.Date_of_sale,
+                       MAX(cu.name) AS customer_name
                 FROM os_contracts c
                 LEFT JOIN os_contracts_customers cc ON cc.contract_id = c.id
                 LEFT JOIN os_customers cu ON cu.id = cc.customer_id
                 WHERE (c.is_deleted IS NULL OR c.is_deleted = 0)
-                  AND (cu.name LIKE :like
-                       OR cu.primary_phone_number LIKE :like
-                       OR cu.id_number LIKE :like
+                  AND (cu.name LIKE :l0
+                       OR cu.primary_phone_number LIKE :l1
+                       OR cu.id_number LIKE :l2
                        " . ($isNum ? "OR c.id = :idnum" : "") . ")
                 GROUP BY c.id
                 ORDER BY c.id DESC
                 LIMIT :lim";
 
         $cmd = Yii::$app->db->createCommand($sql)
-            ->bindValue(':like', $like)
+            ->bindValue(':l0', $like)
+            ->bindValue(':l1', $like)
+            ->bindValue(':l2', $like)
             ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT);
         if ($isNum) {
             $cmd->bindValue(':idnum', (int)$q, \PDO::PARAM_INT);
@@ -346,12 +357,15 @@ class SearchController extends Controller
         $like = '%' . $q . '%';
         $sql = "SELECT id, name, username, email, mobile
                 FROM {{%user}}
-                WHERE name LIKE :like OR username LIKE :like OR email LIKE :like OR mobile LIKE :like
+                WHERE name LIKE :l0 OR username LIKE :l1 OR email LIKE :l2 OR mobile LIKE :l3
                 ORDER BY id DESC
                 LIMIT :lim";
 
         $rows = Yii::$app->db->createCommand($sql)
-            ->bindValue(':like', $like)
+            ->bindValue(':l0', $like)
+            ->bindValue(':l1', $like)
+            ->bindValue(':l2', $like)
+            ->bindValue(':l3', $like)
             ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT)
             ->queryAll();
 
@@ -388,12 +402,13 @@ class SearchController extends Controller
         $sql = "SELECT id, item_name, item_barcode, category
                 FROM os_inventory_items
                 WHERE (is_deleted IS NULL OR is_deleted = 0)
-                  AND (item_name LIKE :like OR item_barcode LIKE :like)
+                  AND (item_name LIKE :l0 OR item_barcode LIKE :l1)
                 ORDER BY id DESC
                 LIMIT :lim";
 
         $rows = Yii::$app->db->createCommand($sql)
-            ->bindValue(':like', $like)
+            ->bindValue(':l0', $like)
+            ->bindValue(':l1', $like)
             ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT)
             ->queryAll();
 
@@ -428,12 +443,14 @@ class SearchController extends Controller
         $sql = "SELECT id, name, phone_number, adress
                 FROM os_inventory_suppliers
                 WHERE (is_deleted IS NULL OR is_deleted = 0)
-                  AND (name LIKE :like OR phone_number LIKE :like OR adress LIKE :like)
+                  AND (name LIKE :l0 OR phone_number LIKE :l1 OR adress LIKE :l2)
                 ORDER BY id DESC
                 LIMIT :lim";
 
         $rows = Yii::$app->db->createCommand($sql)
-            ->bindValue(':like', $like)
+            ->bindValue(':l0', $like)
+            ->bindValue(':l1', $like)
+            ->bindValue(':l2', $like)
             ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT)
             ->queryAll();
 
@@ -519,21 +536,31 @@ class SearchController extends Controller
             $caseYear = $m[2];
         }
 
+        /*
+         * ملاحظات تنفيذية:
+         *   1) MariaDB لا يملك ANY_VALUE() ولا يحتاجها — sql_mode الافتراضي
+         *      عنده لا يفعّل ONLY_FULL_GROUP_BY. لذا نعتمد على MAX/MIN
+         *      لاستخراج قيم تمثيلية بسيطة بدون أعمدة aggregator.
+         *   2) PDO مع MariaDB في وضع ATTR_EMULATE_PREPARES=false يرفض
+         *      تكرار نفس الـ named placeholder، لذلك نستعمل أسماء مميّزة
+         *      (:l0, :l1, :cnumA, :cnumB ...).
+         */
         $params = [
-            ':like' => $like,
-            ':lim'  => self::PER_GROUP_LIMIT,
+            ':l0'  => $like,
+            ':l1'  => $like,
+            ':lim' => self::PER_GROUP_LIMIT,
         ];
 
         $conditions = [
-            'cu.name LIKE :like',
-            'j.judiciary_number LIKE :like',
+            'cu.name LIKE :l0',
+            'j.judiciary_number LIKE :l1',
         ];
 
         if ($caseNum !== null && $caseYear !== null) {
             /* تطابق دقيق على رقم + سنة (الأولوية الأعلى) */
-            $conditions[] = '(j.judiciary_number = :cnum AND j.year LIKE :cyear)';
-            $params[':cnum']  = $caseNum;
-            $params[':cyear'] = '%' . $caseYear;
+            $conditions[] = '(j.judiciary_number = :cnumA AND j.year LIKE :cyearA)';
+            $params[':cnumA']  = $caseNum;
+            $params[':cyearA'] = '%' . $caseYear;
         }
         if ($isNum) {
             $conditions[] = 'j.id = :idnum';
@@ -543,22 +570,24 @@ class SearchController extends Controller
         $whereOr = implode(' OR ', $conditions);
 
         /*
-         * ANY_VALUE() يتجنب خطأ ONLY_FULL_GROUP_BY حين تكون الأعمدة في
-         * SELECT من جداول JOIN ولا تنتمي إلى مفتاح GROUP BY.
+         * في الـ priority CASE نحتاج placeholders إضافية لأن نفس القيم
+         * تُستخدم في SELECT (لا يجوز إعادة استخدام :cnumA/:cyearA/:l1 هنا).
          */
+        $priorityCase = "CASE ";
+        if ($caseNum !== null && $caseYear !== null) {
+            $priorityCase .= "WHEN j.judiciary_number = :cnumB AND j.year LIKE :cyearB THEN 0 ";
+            $params[':cnumB']  = $caseNum;
+            $params[':cyearB'] = '%' . $caseYear;
+        }
+        $priorityCase .= "WHEN j.judiciary_number LIKE :l2 THEN 1 ELSE 2 END";
+        $params[':l2'] = $like;
+
         $sql = "SELECT j.id,
-                       ANY_VALUE(j.judiciary_number) AS judiciary_number,
-                       ANY_VALUE(j.year)             AS year,
-                       ANY_VALUE(j.case_status)      AS case_status,
-                       ANY_VALUE(cu.name)            AS customer_name,
-                       /* درجة الأولوية: مطابقة دقيقة لرقم+سنة أعلى من غيرها */
-                       MIN(CASE
-                           " . ($caseNum !== null && $caseYear !== null
-                               ? "WHEN j.judiciary_number = :cnum2 AND j.year LIKE :cyear2 THEN 0"
-                               : "") . "
-                           WHEN j.judiciary_number LIKE :like THEN 1
-                           ELSE 2
-                       END) AS sort_priority
+                       MAX(j.judiciary_number) AS judiciary_number,
+                       MAX(j.year)             AS year,
+                       MAX(j.case_status)      AS case_status,
+                       MAX(cu.name)            AS customer_name,
+                       MIN({$priorityCase})    AS sort_priority
                 FROM os_judiciary j
                 LEFT JOIN os_contracts c ON c.id = j.contract_id
                 LEFT JOIN os_contracts_customers cc ON cc.contract_id = c.id
@@ -576,10 +605,6 @@ class SearchController extends Controller
             } else {
                 $cmd->bindValue($name, $val);
             }
-        }
-        if ($caseNum !== null && $caseYear !== null) {
-            $cmd->bindValue(':cnum2',  $caseNum);
-            $cmd->bindValue(':cyear2', '%' . $caseYear);
         }
 
         $rows = $cmd->queryAll();
@@ -616,12 +641,13 @@ class SearchController extends Controller
         $sql = "SELECT id, name, phone_number
                 FROM os_companies
                 WHERE (is_deleted IS NULL OR is_deleted = 0)
-                  AND (name LIKE :like OR phone_number LIKE :like)
+                  AND (name LIKE :l0 OR phone_number LIKE :l1)
                 ORDER BY id DESC
                 LIMIT :lim";
 
         $rows = Yii::$app->db->createCommand($sql)
-            ->bindValue(':like', $like)
+            ->bindValue(':l0', $like)
+            ->bindValue(':l1', $like)
             ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT)
             ->queryAll();
 
@@ -659,15 +685,16 @@ class SearchController extends Controller
                 FROM os_inventory_invoices i
                 LEFT JOIN os_inventory_suppliers s ON s.id = i.suppliers_id
                 WHERE (i.is_deleted IS NULL OR i.is_deleted = 0)
-                  AND (i.invoice_number LIKE :like
-                       OR s.name LIKE :like
+                  AND (i.invoice_number LIKE :l0
+                       OR s.name LIKE :l1
                        " . ($isNum ? "OR i.id = :idnum" : "") . ")
                 ORDER BY i.id DESC
                 LIMIT :lim";
 
         try {
             $cmd = Yii::$app->db->createCommand($sql)
-                ->bindValue(':like', $like)
+                ->bindValue(':l0', $like)
+                ->bindValue(':l1', $like)
                 ->bindValue(':lim', self::PER_GROUP_LIMIT, \PDO::PARAM_INT);
             if ($isNum) {
                 $cmd->bindValue(':idnum', (int)$q, \PDO::PARAM_INT);
