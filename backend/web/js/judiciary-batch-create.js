@@ -110,7 +110,7 @@
         $$('.bw-tab').forEach(function (t) {
             t.addEventListener('click', function () { activateTab(t.dataset.tab); });
         });
-        var startTab = BOOT.defaultTab && BOOT.defaultTab !== 'preview' ? BOOT.defaultTab : 'paste';
+        var startTab = BOOT.defaultTab && BOOT.defaultTab !== 'preview' ? BOOT.defaultTab : 'selection';
         activateTab(startTab);
     }
 

@@ -1633,9 +1633,9 @@ class JudiciaryController extends Controller
             $preselected = array_values(array_filter(array_map('intval', explode(',', (string)$rawIds))));
         }
 
-        $defaultTab = $request->get('tab', $preselected ? 'preview' : 'paste');
+        $defaultTab = $request->get('tab', $preselected ? 'preview' : 'selection');
         if (!in_array($defaultTab, ['paste', 'excel', 'selection', 'preview'], true)) {
-            $defaultTab = 'paste';
+            $defaultTab = 'selection';
         }
 
         return $this->render('batch_create', [

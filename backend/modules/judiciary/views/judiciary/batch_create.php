@@ -232,9 +232,9 @@ $bootstrap = [
     <!-- ─── Step 1: Input ─── -->
     <section class="bw-card" id="bw-step-1">
         <div class="bw-tabs">
-            <div class="bw-tab" data-tab="paste">📋 لصق أرقام عقود</div>
-            <div class="bw-tab" data-tab="excel">📊 رفع ملف Excel</div>
             <div class="bw-tab" data-tab="selection">🔎 اختيار من النظام</div>
+            <div class="bw-tab" data-tab="excel">📊 رفع ملف Excel</div>
+            <div class="bw-tab" data-tab="paste">📋 لصق أرقام عقود</div>
         </div>
 
         <!-- Paste -->
