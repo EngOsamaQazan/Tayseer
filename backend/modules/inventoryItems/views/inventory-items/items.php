@@ -19,19 +19,15 @@
 use yii\helpers\Url;
 use yii\helpers\Html;
 use yii\widgets\Pjax;
-use kartik\grid\GridView;
+use yii\widgets\LinkPager;
 use common\helper\Permissions;
 use backend\modules\inventoryItems\models\InventoryItems;
 use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة المخزون — الأصناف';
 
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=1');
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
-    'depends' => [\yii\web\JqueryAsset::class],
-]);
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=1', [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
@@ -461,22 +457,182 @@ $builtinViews = [
                 </div>
             <?php endif; ?>
 
-        <?php else: /* TABLE MODE */ ?>
-            <?= GridView::widget([
-                'id' => 'crud-datatable',
-                'dataProvider' => $dataProvider,
-                'filterModel' => $searchModel,
-                'columns' => require(__DIR__ . '/_columns.php'),
-                'summary' => '<span style="font-size:12.5px;color:var(--inv-text-2)"><i class="fa fa-table"></i> عرض <b>{begin}–{end}</b> من <b>{totalCount}</b> صنف</span>',
-                'striped' => true,
-                'condensed' => true,
-                'responsive' => true,
-                'panel' => [
-                    'type' => 'default',
-                    'heading' => '<i class="fa fa-cubes"></i> أصناف المخزون <span class="badge" style="background:var(--inv-brand);margin-right:6px">' . number_format($dataProvider->totalCount) . '</span>',
-                ],
-                'pjax' => false,
-            ]) ?>
+        <?php else: /* TABLE MODE — Custom HTML, no Kartik */ ?>
+            <?php
+            $models = $dataProvider->getModels();
+            if (empty($models)):
+            ?>
+                <div class="inv-empty">
+                    <div class="inv-empty-icon"><i class="fa fa-table"></i></div>
+                    <h3>لا توجد أصناف لعرضها</h3>
+                    <p>جرّب تعديل المرشحات أو إضافة صنف جديد.</p>
+                </div>
+            <?php else: ?>
+                <div class="inv-table-pro-wrap">
+                    <div class="inv-table-pro-head">
+                        <h3 class="inv-table-pro-title">
+                            <i class="fa fa-cubes"></i> أصناف المخزون
+                            <span class="inv-table-pro-count"><?= number_format($dataProvider->totalCount) ?></span>
+                        </h3>
+                        <div style="font-size:12px;color:var(--inv-text-2)">
+                            عرض <strong style="color:var(--inv-text-1)"><?= ($dataProvider->pagination->page * $dataProvider->pagination->pageSize) + 1 ?></strong>—<strong style="color:var(--inv-text-1)"><?= min(($dataProvider->pagination->page + 1) * $dataProvider->pagination->pageSize, $dataProvider->totalCount) ?></strong>
+                        </div>
+                    </div>
+
+                    <div class="inv-table-pro-scroll">
+                        <table class="inv-table-pro" role="table" aria-label="أصناف المخزون">
+                            <thead>
+                                <tr>
+                                    <th style="width:38px"><input type="checkbox" data-inv-select-all-cb aria-label="تحديد الكل"></th>
+                                    <th>الصنف</th>
+                                    <th>الباركود</th>
+                                    <th>المخزون</th>
+                                    <th>السعر</th>
+                                    <th>القيمة</th>
+                                    <th>الدوران</th>
+                                    <th>الحالة</th>
+                                    <th>التاريخ</th>
+                                    <th style="text-align:end">إجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($models as $m):
+                                    $stock = $m->getTotalStock();
+                                    $minVal = (int) $m->min_stock_level;
+                                    $level = 'ok';
+                                    if ($stock <= 0)            $level = 'out';
+                                    elseif ($minVal > 0 && $stock < $minVal) $level = 'low';
+                                    $cap = $minVal > 0 ? max($minVal * 2, $minVal + 1) : max($stock, 100);
+                                    $percent = $cap > 0 ? min(100, max(0, ($stock / $cap) * 100)) : 0;
+
+                                    $turnover = method_exists($m, 'getTurnover') ? $m->getTurnover() : null;
+
+                                    $statusBadge = [
+                                        'approved' => 'inv-pro-badge--success',
+                                        'pending'  => 'inv-pro-badge--warning',
+                                        'rejected' => 'inv-pro-badge--danger',
+                                    ][$m->status] ?? '';
+
+                                    $statusIcon = [
+                                        'approved' => 'fa-check-circle',
+                                        'pending'  => 'fa-clock-o',
+                                        'rejected' => 'fa-times-circle',
+                                        'draft'    => 'fa-pencil',
+                                    ][$m->status] ?? 'fa-question';
+                                ?>
+                                <tr data-inv-row-id="<?= $m->id ?>">
+                                    <td data-label="تحديد">
+                                        <input type="checkbox" class="inv-card-check" data-inv-pick="<?= $m->id ?>" aria-label="تحديد الصنف">
+                                    </td>
+                                    <td data-label="الصنف">
+                                        <div class="inv-cell-strong"><?= Html::encode($m->item_name) ?></div>
+                                        <?php if ($m->category): ?>
+                                            <span class="inv-pro-badge inv-pro-badge--info" style="margin-top:3px">
+                                                <i class="fa fa-folder-o"></i> <?= Html::encode($m->category) ?>
+                                            </span>
+                                        <?php endif ?>
+                                    </td>
+                                    <td data-label="الباركود" style="direction:ltr;font-family:Courier New,monospace;font-weight:700;font-size:12px">
+                                        <?= Html::encode($m->item_barcode) ?>
+                                    </td>
+                                    <td data-label="المخزون">
+                                        <div style="min-width:140px">
+                                            <div class="inv-cell-num" style="color:<?= $level === 'out' ? '#b91c1c' : ($level === 'low' ? '#b45309' : '#15803d') ?>">
+                                                <?= number_format($stock) ?>
+                                                <?php if ($m->unit): ?><small style="color:#94a3b8;font-weight:600;font-size:11px"><?= Html::encode($m->unit) ?></small><?php endif ?>
+                                            </div>
+                                            <div style="height:5px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:4px">
+                                                <div style="height:100%;width:<?= number_format($percent, 1) ?>%;background:<?= $level === 'out' ? '#b91c1c' : ($level === 'low' ? 'linear-gradient(90deg,#d97706,#f59e0b)' : 'linear-gradient(90deg,#15803d,#22c55e)') ?>;border-radius:999px;transition:width .5s"></div>
+                                            </div>
+                                            <?php if ($minVal > 0): ?>
+                                                <div class="inv-cell-muted" style="margin-top:2px">حد أدنى: <?= number_format($minVal) ?></div>
+                                            <?php endif ?>
+                                        </div>
+                                    </td>
+                                    <td data-label="السعر" class="inv-cell-num">
+                                        <?php if ($m->unit_price): ?>
+                                            <?= number_format($m->unit_price, 2) ?> <small style="color:#94a3b8">د.أ</small>
+                                        <?php else: ?>
+                                            <span style="color:#cbd5e1">—</span>
+                                        <?php endif ?>
+                                    </td>
+                                    <td data-label="القيمة" class="inv-cell-num" style="color:#6d28d9;font-weight:800">
+                                        <?php $val = $stock * (float) $m->unit_price; ?>
+                                        <?= $val > 0 ? number_format($val, 0) . ' <small style="color:#94a3b8">د.أ</small>' : '<span style="color:#cbd5e1">—</span>' ?>
+                                    </td>
+                                    <td data-label="الدوران">
+                                        <?php if ($turnover === null): ?>
+                                            <span style="color:#cbd5e1">—</span>
+                                        <?php else:
+                                            $tColor = $turnover >= 4 ? 'success' : ($turnover >= 1 ? 'warning' : 'danger');
+                                        ?>
+                                            <span class="inv-pro-badge inv-pro-badge--<?= $tColor ?>">
+                                                <i class="fa fa-refresh"></i> <?= number_format($turnover, 1) ?>×
+                                            </span>
+                                        <?php endif ?>
+                                    </td>
+                                    <td data-label="الحالة">
+                                        <span class="inv-pro-badge <?= $statusBadge ?>">
+                                            <i class="fa <?= $statusIcon ?>"></i> <?= Html::encode($m->getStatusLabel()) ?>
+                                        </span>
+                                    </td>
+                                    <td data-label="التاريخ" class="inv-cell-muted" style="font-variant-numeric:tabular-nums">
+                                        <?php if ($m->created_at): ?>
+                                            <div style="font-size:12px;color:#475569"><?= date('Y-m-d', $m->created_at) ?></div>
+                                        <?php else: ?>—<?php endif ?>
+                                    </td>
+                                    <td data-label="إجراءات" class="inv-cell-actions">
+                                        <?= Html::a('<i class="fa fa-eye"></i>', Url::to(['view', 'id' => $m->id]), [
+                                            'class' => 'inv-pro-btn inv-pro-btn--sm inv-pro-btn--icon',
+                                            'role' => 'modal-remote', 'data-pjax' => '0',
+                                            'title' => 'عرض', 'aria-label' => 'عرض ' . $m->item_name,
+                                        ]) ?>
+                                        <?php if ($canUpdate): ?>
+                                            <?= Html::a('<i class="fa fa-pencil"></i>', Url::to(['update', 'id' => $m->id]), [
+                                                'class' => 'inv-pro-btn inv-pro-btn--sm inv-pro-btn--icon',
+                                                'role' => 'modal-remote', 'data-pjax' => '0',
+                                                'title' => 'تعديل', 'aria-label' => 'تعديل ' . $m->item_name,
+                                            ]) ?>
+                                        <?php endif ?>
+                                        <?php if ($canUpdate && $m->status === 'pending'): ?>
+                                            <button type="button" class="inv-pro-btn inv-pro-btn--sm inv-pro-btn--icon inv-pro-btn--success inv-approve-btn"
+                                                    data-id="<?= $m->id ?>" title="اعتماد"><i class="fa fa-check"></i></button>
+                                            <button type="button" class="inv-pro-btn inv-pro-btn--sm inv-pro-btn--icon inv-pro-btn--danger-solid inv-reject-btn"
+                                                    data-id="<?= $m->id ?>" title="رفض"><i class="fa fa-times"></i></button>
+                                        <?php endif ?>
+                                        <?php if ($canDelete): ?>
+                                            <?= Html::a('<i class="fa fa-trash"></i>', Url::to(['delete', 'id' => $m->id]), [
+                                                'class' => 'inv-pro-btn inv-pro-btn--sm inv-pro-btn--icon inv-pro-btn--danger',
+                                                'data-confirm-title' => 'تأكيد الحذف',
+                                                'data-confirm-message' => 'هل أنت متأكد من حذف هذا الصنف؟',
+                                                'data-method' => 'post',
+                                                'title' => 'حذف', 'aria-label' => 'حذف ' . $m->item_name,
+                                            ]) ?>
+                                        <?php endif ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="inv-pager-pro">
+                    <span class="inv-pager-pro-info">
+                        عرض <strong><?= ($dataProvider->pagination->page * $dataProvider->pagination->pageSize) + 1 ?>—<?= min(($dataProvider->pagination->page + 1) * $dataProvider->pagination->pageSize, $dataProvider->totalCount) ?></strong>
+                        من <strong><?= number_format($dataProvider->totalCount) ?></strong> صنف
+                    </span>
+                    <?= LinkPager::widget([
+                        'pagination' => $dataProvider->pagination,
+                        'options' => ['class' => 'pagination'],
+                        'firstPageLabel' => '«',
+                        'lastPageLabel'  => '»',
+                        'prevPageLabel'  => '‹',
+                        'nextPageLabel'  => '›',
+                        'maxButtonCount' => 7,
+                    ]) ?>
+                </div>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php Pjax::end(); ?>
@@ -510,25 +666,11 @@ $builtinViews = [
 
 </div>
 
-<!-- ═══════════════════════════════════════════════════════
-     Modal (Bootstrap-compatible)
-     ═══════════════════════════════════════════════════════ -->
-<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-            </div>
-            <div class="modal-body">
-                <div style="text-align:center;padding:40px">
-                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:#800020"></i>
-                </div>
-            </div>
-            <div class="modal-footer"></div>
-        </div>
-    </div>
-</div>
+<!--
+     Note: legacy #ajaxCrudModal removed.
+     Modals now rendered dynamically by InvItemsPro.Modal (vanilla JS).
+     -->
+
 
 <?php
 $approveBaseUrl = Url::to(['approve', 'id' => '__ID__']);

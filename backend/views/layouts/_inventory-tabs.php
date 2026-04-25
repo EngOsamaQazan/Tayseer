@@ -1,9 +1,11 @@
 <?php
 /**
- * شريط تبويبات إدارة المخزون v2 — تصميم احترافي
- * التبويبات: لوحة التحكم | أوامر الشراء | حركات المخزون | الأصناف | الإعدادات
+ * ═══════════════════════════════════════════════════════════════
+ *  Inventory Tabs Bar — Pro Redesign
+ *  Tayseer ERP — نظام تيسير
+ *  Replaces .fin-tabs-bar with .inv-tabs-pro (gradient brand active state)
+ * ═══════════════════════════════════════════════════════════════
  */
-
 use yii\helpers\Url;
 use common\helper\Permissions;
 
@@ -11,7 +13,6 @@ $u = Yii::$app->user;
 
 $tabs = [];
 
-/* لوحة التحكم — متاحة لأي صلاحية مخزون */
 if ($u->can(Permissions::INVENTORY_ITEMS) || $u->can(Permissions::INVENTORY_INVOICES)) {
     $tabs[] = [
         'id'    => 'dashboard',
@@ -21,7 +22,6 @@ if ($u->can(Permissions::INVENTORY_ITEMS) || $u->can(Permissions::INVENTORY_INVO
     ];
 }
 
-/* أوامر الشراء */
 if ($u->can(Permissions::INVENTORY_INVOICES)) {
     $tabs[] = [
         'id'    => 'invoices',
@@ -31,7 +31,6 @@ if ($u->can(Permissions::INVENTORY_INVOICES)) {
     ];
 }
 
-/* حركات المخزون */
 if ($u->can(Permissions::INVENTORY_ITEMS) || $u->can(Permissions::INVENTORY_ITEMS_QUANTITY)) {
     $tabs[] = [
         'id'    => 'movements',
@@ -41,7 +40,6 @@ if ($u->can(Permissions::INVENTORY_ITEMS) || $u->can(Permissions::INVENTORY_ITEM
     ];
 }
 
-/* الأصناف */
 if ($u->can(Permissions::INVENTORY_ITEMS)) {
     $tabs[] = [
         'id'    => 'items',
@@ -51,7 +49,6 @@ if ($u->can(Permissions::INVENTORY_ITEMS)) {
     ];
 }
 
-/* الأرقام التسلسلية */
 if ($u->can(Permissions::INVENTORY_ITEMS)) {
     $tabs[] = [
         'id'    => 'serials',
@@ -61,7 +58,6 @@ if ($u->can(Permissions::INVENTORY_ITEMS)) {
     ];
 }
 
-/* الإعدادات — الموردين + المواقع */
 if ($u->can(Permissions::INVENTORY_SUPPLIERS) || $u->can(Permissions::INVENTORY_STOCK_LOCATIONS)) {
     $tabs[] = [
         'id'    => 'settings',
@@ -72,14 +68,18 @@ if ($u->can(Permissions::INVENTORY_SUPPLIERS) || $u->can(Permissions::INVENTORY_
 }
 
 if (count($tabs) <= 1) return;
+
+$baseUrl = Yii::$app->request->baseUrl;
+$this->registerCssFile($baseUrl . '/css/inv-items-pro.css?v=2');
 ?>
 
-<nav class="fin-tabs-bar" aria-label="إدارة المخزون">
+<nav class="inv-tabs-pro" aria-label="إدارة المخزون" role="tablist">
     <?php foreach ($tabs as $tab): ?>
         <a href="<?= $tab['url'] ?>"
-           class="fin-tab <?= ($activeTab === $tab['id']) ? 'fin-tab--active' : '' ?>"
-           <?= ($activeTab === $tab['id']) ? 'aria-current="page"' : '' ?>>
-            <i class="fa <?= $tab['icon'] ?>"></i>
+           class="inv-tab-pro <?= ($activeTab === $tab['id']) ? 'inv-tab-pro--active' : '' ?>"
+           role="tab"
+           <?= ($activeTab === $tab['id']) ? 'aria-current="page" aria-selected="true"' : 'aria-selected="false"' ?>>
+            <i class="fa <?= $tab['icon'] ?>" aria-hidden="true"></i>
             <span><?= $tab['label'] ?></span>
         </a>
     <?php endforeach ?>

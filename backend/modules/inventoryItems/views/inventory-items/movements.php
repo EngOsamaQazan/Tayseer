@@ -12,6 +12,11 @@ use backend\modules\contracts\models\Contracts;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
 ?>
 
 <?= $this->render('@app/views/layouts/_inventory-tabs', ['activeTab' => 'movements']) ?>
@@ -65,7 +70,7 @@ $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['de
 .sm-empty i { font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.4; }
 </style>
 
-<div class="sm-page">
+<div class="sm-page inv-page-pro">
 
     <!-- ═══ فلترة ═══ -->
     <form method="get" action="<?= Url::to(['movements']) ?>" class="sm-filter">

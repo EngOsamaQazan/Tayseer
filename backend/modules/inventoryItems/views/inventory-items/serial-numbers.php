@@ -10,9 +10,10 @@ use backend\widgets\ExportButtons;
 
 $this->title = 'الأرقام التسلسلية — إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/tayseer-gridview-responsive.css?v=1');
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.js?v=1', [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
     'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
 ]);
 ?>
 
@@ -91,7 +92,7 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.
 .sn-serial-cell { direction: ltr; font-family: 'Courier New', monospace; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; color: #0f172a; }
 </style>
 
-<div class="sn-page">
+<div class="sn-page inv-page-pro">
 
     <!-- ═══ إحصائيات ═══ -->
     <div class="sn-stats">
@@ -184,22 +185,7 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/tayseer-gridview-modal.
     </div>
 </div>
 
-<div class="modal fade" id="ajaxCrudModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title"></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
-            </div>
-            <div class="modal-body">
-                <div style="text-align:center;padding:40px">
-                    <i class="fa fa-spinner fa-spin" style="font-size:24px;color:var(--ty-clr-primary,#800020)"></i>
-                </div>
-            </div>
-            <div class="modal-footer"></div>
-        </div>
-    </div>
-</div>
+<!-- legacy modal removed; modals rendered by InvItemsPro.Modal -->
 
 <?php
 $changeStatusUrl = Url::to(['serial-change-status']);

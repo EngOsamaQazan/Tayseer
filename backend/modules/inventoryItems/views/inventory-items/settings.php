@@ -7,6 +7,11 @@ use yii\helpers\Html;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
+    'depends' => [\yii\web\JqueryAsset::class],
+    'position' => \yii\web\View::POS_END,
+]);
 $csrfToken = Yii::$app->request->csrfToken;
 ?>
 
@@ -70,7 +75,7 @@ $csrfToken = Yii::$app->request->csrfToken;
 .transfer-supplier-option.selected { background: #0369a1; color: #fff; border-color: #0369a1; }
 </style>
 
-<div class="st-page">
+<div class="st-page inv-page-pro">
     <div class="st-grid">
 
         <!-- ═══ الموردين ═══ -->

@@ -6,6 +6,13 @@ use yii\base\Widget;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
+/**
+ * Export Buttons (Excel + PDF) — Pro Style
+ *
+ * Renders modern green/red gradient buttons matching the
+ * inventory-pro design system (.inv-pro-btn--excel / --pdf).
+ * Falls back gracefully on legacy pages via inline classes.
+ */
 class ExportButtons extends Widget
 {
     /** @var string|array Route for Excel export action */
@@ -18,33 +25,59 @@ class ExportButtons extends Widget
     public $passQueryParams = true;
 
     /** @var string Excel button CSS class */
-    public $excelBtnClass = 'btn btn-success btn-sm';
+    public $excelBtnClass = 'inv-pro-btn inv-pro-btn--excel inv-pro-btn--sm';
 
     /** @var string PDF button CSS class */
-    public $pdfBtnClass = 'btn btn-danger btn-sm';
+    public $pdfBtnClass = 'inv-pro-btn inv-pro-btn--pdf inv-pro-btn--sm';
+
+    /** @var bool Wrap buttons in a flex group */
+    public $group = true;
 
     public function run()
     {
         $params = $this->passQueryParams ? \Yii::$app->request->queryParams : [];
 
         $html = '';
+        $buttons = '';
 
         if ($this->excelRoute) {
             $excelUrl = $this->buildUrl($this->excelRoute, $params);
-            $html .= Html::a(
+            $buttons .= Html::a(
                 '<i class="fa fa-file-excel-o"></i> Excel',
                 $excelUrl,
-                ['class' => $this->excelBtnClass, 'style' => 'margin-left:4px', 'data-pjax' => '0', 'target' => '_blank']
+                [
+                    'class' => $this->excelBtnClass,
+                    'data-pjax' => '0',
+                    'target' => '_blank',
+                    'title' => 'تصدير Excel',
+                    'aria-label' => 'تصدير إلى ملف Excel',
+                ]
             );
         }
 
         if ($this->pdfRoute) {
             $pdfUrl = $this->buildUrl($this->pdfRoute, $params);
-            $html .= Html::a(
+            $buttons .= Html::a(
                 '<i class="fa fa-file-pdf-o"></i> PDF',
                 $pdfUrl,
-                ['class' => $this->pdfBtnClass, 'style' => 'margin-left:4px', 'data-pjax' => '0', 'target' => '_blank']
+                [
+                    'class' => $this->pdfBtnClass,
+                    'data-pjax' => '0',
+                    'target' => '_blank',
+                    'title' => 'تصدير PDF',
+                    'aria-label' => 'تصدير إلى ملف PDF',
+                ]
             );
+        }
+
+        if (!$buttons) {
+            return '';
+        }
+
+        if ($this->group) {
+            $html = '<div class="inv-export-group" role="group" aria-label="تصدير" style="display:inline-flex;gap:6px">' . $buttons . '</div>';
+        } else {
+            $html = $buttons;
         }
 
         return $html;

@@ -443,6 +443,226 @@
     };
 
     /* ═══════════════════════════════════════════════════════
+     *  Custom Modal (replaces #ajaxCrudModal / role="modal-remote")
+     * ═══════════════════════════════════════════════════════ */
+    const Modal = {
+        overlay: null,
+        modal: null,
+        titleEl: null,
+        bodyEl: null,
+        footerEl: null,
+        lastTrigger: null,
+
+        ensure() {
+            if (this.overlay) return;
+            const html = `
+                <div class="inv-modal-pro-overlay" data-show="0" role="dialog" aria-modal="true" aria-labelledby="inv-modal-pro-title">
+                    <div class="inv-modal-pro inv-modal-pro--lg" data-modal-card>
+                        <header class="inv-modal-pro-header">
+                            <h3 class="inv-modal-pro-title" id="inv-modal-pro-title">
+                                <i class="fa fa-circle-o-notch fa-spin"></i>
+                                <span data-modal-title>جاري التحميل...</span>
+                            </h3>
+                            <button type="button" class="inv-modal-pro-close" data-modal-close aria-label="إغلاق" title="إغلاق (Esc)">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </header>
+                        <div class="inv-modal-pro-body" data-modal-body>
+                            <div class="inv-modal-pro-loading">
+                                <div class="inv-modal-pro-loading-spinner"></div>
+                                <div class="inv-modal-pro-loading-text">جاري التحميل، يرجى الانتظار...</div>
+                            </div>
+                        </div>
+                        <footer class="inv-modal-pro-footer" data-modal-footer hidden></footer>
+                    </div>
+                </div>
+            `;
+            const wrap = document.createElement('div');
+            wrap.innerHTML = html.trim();
+            this.overlay = wrap.firstElementChild;
+            document.body.appendChild(this.overlay);
+            this.modal = this.overlay.querySelector('[data-modal-card]');
+            this.titleEl = this.overlay.querySelector('[data-modal-title]');
+            this.bodyEl = this.overlay.querySelector('[data-modal-body]');
+            this.footerEl = this.overlay.querySelector('[data-modal-footer]');
+
+            this.overlay.addEventListener('click', (e) => {
+                if (e.target === this.overlay) this.close();
+                if (e.target.closest('[data-modal-close]')) this.close();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && this.isOpen()) this.close();
+            });
+        },
+
+        isOpen() { return this.overlay && this.overlay.getAttribute('data-show') === '1'; },
+
+        showLoading() {
+            if (!this.bodyEl) return;
+            this.bodyEl.innerHTML = `
+                <div class="inv-modal-pro-loading">
+                    <div class="inv-modal-pro-loading-spinner"></div>
+                    <div class="inv-modal-pro-loading-text">جاري التحميل، يرجى الانتظار...</div>
+                </div>
+            `;
+        },
+
+        open(url, opts) {
+            opts = opts || {};
+            this.ensure();
+            this.lastTrigger = document.activeElement;
+            this.titleEl.textContent = opts.title || 'تحميل...';
+            this.showLoading();
+            this.footerEl.hidden = true;
+            this.footerEl.innerHTML = '';
+            this.overlay.setAttribute('data-show', '1');
+            document.body.style.overflow = 'hidden';
+
+            fetch(url, {
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-Pjax': 'true' }
+            })
+            .then(r => r.text())
+            .then(html => {
+                this.injectContent(html);
+                setTimeout(() => {
+                    const f = this.bodyEl.querySelector('input,select,textarea');
+                    if (f && !f.disabled) f.focus();
+                }, 100);
+            })
+            .catch(() => {
+                this.bodyEl.innerHTML = '<div style="padding:40px;text-align:center;color:#b91c1c"><i class="fa fa-exclamation-triangle" style="font-size:30px;margin-bottom:10px;display:block"></i>تعذّر تحميل المحتوى. حاول مرة أخرى.</div>';
+            });
+        },
+
+        injectContent(html) {
+            // Try to extract title and body from JSON or full HTML
+            let title = null, body = html, footerBtns = null;
+            try {
+                const json = JSON.parse(html);
+                if (json.content || json.title || json.forceClose) {
+                    if (json.title) title = json.title;
+                    if (json.content) body = json.content;
+                    if (json.forceClose) {
+                        this.close();
+                        if (json.forceReload && window.jQuery && window.jQuery.pjax) {
+                            window.jQuery.pjax.reload({ container: PJAX_ID });
+                        } else if (json.forceReload) {
+                            window.location.reload();
+                        }
+                        return;
+                    }
+                }
+            } catch (_) { /* not JSON */ }
+
+            if (title) this.titleEl.textContent = title;
+            this.bodyEl.innerHTML = body;
+
+            // Promote any submit/cancel buttons inside form to footer
+            const formBtns = this.bodyEl.querySelectorAll('.form-group button[type="submit"], .form-group .btn, .inv-form-footer button, .inv-form-footer a');
+            if (formBtns.length) {
+                this.footerEl.hidden = false;
+                formBtns.forEach(b => {
+                    const clone = b.cloneNode(true);
+                    if (clone.tagName === 'BUTTON') clone.type = b.type || 'button';
+                    clone.addEventListener('click', () => b.click());
+                    this.footerEl.appendChild(clone);
+                });
+                formBtns.forEach(b => {
+                    const wrap = b.closest('.form-group');
+                    if (wrap && wrap.children.length === 1) wrap.style.display = 'none';
+                    else b.style.display = 'none';
+                });
+            }
+
+            // Hijack form submission for AJAX
+            const form = this.bodyEl.querySelector('form');
+            if (form) this.bindForm(form);
+
+            // Init Select2 if present
+            if (window.jQuery && window.jQuery.fn.select2) {
+                window.jQuery(this.bodyEl).find('select').not('.no-select2').each(function () {
+                    if (!window.jQuery(this).hasClass('select2-hidden-accessible')) {
+                        window.jQuery(this).select2({ dir: 'rtl', width: '100%' });
+                    }
+                });
+            }
+        },
+
+        bindForm(form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const submitBtns = this.overlay.querySelectorAll('button[type="submit"], [data-form-submit]');
+                submitBtns.forEach(b => { b.disabled = true; });
+                const original = submitBtns[0] ? submitBtns[0].innerHTML : '';
+                if (submitBtns[0]) submitBtns[0].innerHTML = '<i class="fa fa-spinner fa-spin"></i> جاري الحفظ...';
+
+                const fd = new FormData(form);
+                fetch(form.action || window.location.href, {
+                    method: form.method || 'POST',
+                    body: fd,
+                    credentials: 'same-origin',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.text())
+                .then(text => {
+                    let json = null;
+                    try { json = JSON.parse(text); } catch (_) {}
+                    if (json && json.forceClose) {
+                        this.close();
+                        toast(json.message || 'تم الحفظ بنجاح', 'success');
+                        if (json.forceReload !== false && window.jQuery && window.jQuery.pjax) {
+                            window.jQuery.pjax.reload({ container: PJAX_ID });
+                        } else if (json.forceReload !== false) {
+                            window.location.reload();
+                        }
+                        return;
+                    }
+                    // Fallback: re-inject (assume validation errors)
+                    this.injectContent(text);
+                    submitBtns.forEach(b => { b.disabled = false; });
+                    if (submitBtns[0]) submitBtns[0].innerHTML = original;
+                })
+                .catch(() => {
+                    submitBtns.forEach(b => { b.disabled = false; });
+                    if (submitBtns[0]) submitBtns[0].innerHTML = original;
+                    toast('خطأ في الاتصال', 'danger');
+                });
+            });
+        },
+
+        close() {
+            if (!this.overlay) return;
+            this.overlay.setAttribute('data-show', '0');
+            document.body.style.overflow = '';
+            setTimeout(() => {
+                if (this.bodyEl) this.bodyEl.innerHTML = '';
+                if (this.footerEl) { this.footerEl.innerHTML = ''; this.footerEl.hidden = true; }
+                if (this.lastTrigger && typeof this.lastTrigger.focus === 'function') {
+                    try { this.lastTrigger.focus(); } catch (_) {}
+                }
+            }, 280);
+        }
+    };
+
+    function bindModalTriggers() {
+        document.addEventListener('click', (e) => {
+            const trigger = e.target.closest('[role="modal-remote"], [data-inv-modal]');
+            if (!trigger) return;
+            const url = trigger.getAttribute('href') || trigger.getAttribute('data-url');
+            if (!url || url === '#') return;
+            e.preventDefault();
+            e.stopPropagation();
+            const title = trigger.getAttribute('title') || trigger.getAttribute('data-modal-title') || trigger.textContent.trim() || 'تفاصيل';
+            Modal.open(url, { title: title });
+        }, true);
+
+        // Hide legacy modal if it exists
+        const legacy = document.getElementById('ajaxCrudModal');
+        if (legacy) legacy.style.display = 'none';
+    }
+
+    /* ═══════════════════════════════════════════════════════
      *  Init
      * ═══════════════════════════════════════════════════════ */
     function init() {
@@ -453,6 +673,7 @@
         Bulk.init();
         SavedViews.init();
         Live.init();
+        bindModalTriggers();
 
         // Re-init after Pjax reload
         if (window.jQuery) {
@@ -473,6 +694,7 @@
         toast: toast,
         Live: Live,
         Bulk: Bulk,
-        SavedViews: SavedViews
+        SavedViews: SavedViews,
+        Modal: Modal
     };
 })();
