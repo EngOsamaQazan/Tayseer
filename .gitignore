@@ -136,3 +136,43 @@ fix-configs.py
 /scripts/deploy/_*
 /scripts/inspect_*
 /scripts/migrate_*
+
+# ─── Plain-text credentials (never commit) ────
+/scripts/credentials.py
+*cookies.txt
+*.cookies.txt
+
+# ─── Local-only operational scripts ───────────
+# These contain hard-coded server passwords, GitHub OAuth tokens, and
+# DB credentials inlined while we were doing migration / hot-fix work.
+# Keep them out of the repo until they've been refactored to read
+# secrets from credentials.py / env vars.
+/scripts/*.py
+/scripts/*.php
+/scripts/*.sh
+/scripts/*.bat
+/scripts/check/
+/scripts/debug/
+/scripts/fix/
+/scripts/verify/
+/scripts/server/
+/scripts/setup/
+/scripts/upgrade/
+/scripts/migration/
+/scripts/dns/
+/scripts/backup/
+/scripts/deploy/
+/scripts/misc/
+
+# ─── Local agent / IDE state ──────────────────
+/.claude/
+
+# ─── Separate v2 monorepo (not tracked here) ──
+/tayseer-v2/
+
+# ─── One-off probe / dump artefacts at repo root ─
+/probe_*.bat
+/zajal_*.bat
+/zajal_*.html
+/z_api.html
+/verify_backend.bat
