@@ -39,6 +39,8 @@ class RouteAccessBehavior extends Behavior
         'pin/list',
         'theme/save',
         'theme/current',
+        'search',
+        'search/global',
     ];
 
     public function events()

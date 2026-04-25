@@ -135,6 +135,7 @@ if (Yii::$app->controller->action->id === 'login') {
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-vuexy.css?v=<?= $assetVersion ?>">
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-responsive.css?v=<?= $assetVersion ?>">
         <link rel="stylesheet" href="<?= $baseUrl ?>/css/tayseer-themes.css?v=<?= $assetVersion ?>">
+        <link rel="stylesheet" href="<?= $baseUrl ?>/css/super-search.css?v=<?= $assetVersion ?>">
 
         <!-- Vuexy Helpers (must load in head before body renders) -->
         <script src="<?= $baseUrl ?>/vuexy/vendor/js/helpers.js"></script>
@@ -177,6 +178,15 @@ if (Yii::$app->controller->action->id === 'login') {
 
                     <div class="navbar-nav-right d-flex align-items-center justify-content-end" id="navbar-collapse">
                         <ul class="navbar-nav flex-row align-items-center ms-md-auto">
+
+                            <!-- Super Search Trigger (Ctrl+K) -->
+                            <li class="nav-item me-3">
+                                <button type="button" id="tssTrigger" class="tss-trigger" aria-label="بحث شامل في النظام (Ctrl+K)">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <span class="tss-trigger-text">بحث شامل…</span>
+                                    <kbd>Ctrl K</kbd>
+                                </button>
+                            </li>
 
                             <!-- Fullscreen Toggle -->
                             <li class="nav-item me-2">
@@ -491,6 +501,32 @@ JS
         });
     }
     </script>
+
+    <!-- ══════════ Super Search (Ctrl+K) ══════════ -->
+    <div id="tssOverlay" class="tss-overlay" role="dialog" aria-modal="true" aria-hidden="true" aria-label="بحث شامل في النظام">
+        <div class="tss-dialog">
+            <div class="tss-search">
+                <i class="fa-solid fa-magnifying-glass tss-search-icon"></i>
+                <input type="text" class="tss-input" placeholder="ابحث عن عميل، عقد، موظف، صنف، قضية، فاتورة، صفحة…" autocomplete="off" spellcheck="false" aria-label="حقل البحث الشامل">
+                <div class="tss-spinner" aria-hidden="true"></div>
+                <button type="button" class="tss-close-btn" aria-label="إغلاق">Esc</button>
+            </div>
+            <div class="tss-body" role="listbox"></div>
+            <div class="tss-footer">
+                <div class="tss-footer-keys">
+                    <span class="tss-footer-key"><kbd>↑</kbd><kbd>↓</kbd> للتنقل</span>
+                    <span class="tss-footer-key"><kbd>Enter</kbd> للفتح</span>
+                    <span class="tss-footer-key"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> فتح في نافذة جديدة</span>
+                    <span class="tss-footer-key"><kbd>Esc</kbd> إغلاق</span>
+                </div>
+                <div>تيسير — البحث الفائق</div>
+            </div>
+        </div>
+    </div>
+    <script>
+        window.TaySuperSearchConfig = { url: '<?= \yii\helpers\Url::to(['/search/global']) ?>' };
+    </script>
+    <script src="<?= $baseUrl ?>/js/super-search.js?v=<?= $assetVersion ?>" defer></script>
 
     <?php $this->endBody() ?>
     </body>
