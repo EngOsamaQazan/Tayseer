@@ -274,6 +274,13 @@ $countNoJob = $totalContracts - $countWithJob;
             <input type="text" id="ctQuickSearch" placeholder="بحث سريع في النتائج..."
                    aria-label="بحث سريع في النتائج المعروضة">
         </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <a href="<?= Url::to(['/judiciary/judiciary/batch-create', 'tab' => 'selection']) ?>"
+               class="ld-action-btn ld-action-primary"
+               title="افتح المعالج الجماعي للبحث عن عقود من النظام">
+                <i class="fa fa-gavel"></i> قضايا جماعية
+            </a>
+        </div>
     </div>
 
     <!-- ===== DATA TABLE ===== -->
@@ -502,8 +509,7 @@ $countNoJob = $totalContracts - $countWithJob;
             <button type="button" id="ctBatchClear" class="ld-action-btn ld-action-ghost">
                 <i class="fa fa-times"></i> إلغاء التحديد
             </button>
-            <form id="ctBatchForm" method="POST" action="<?= Url::to(['/judiciary/judiciary/batch-create']) ?>" style="display:inline">
-                <input type="hidden" name="<?= Yii::$app->request->csrfParam ?>" value="<?= Yii::$app->request->csrfToken ?>">
+            <form id="ctBatchForm" method="GET" action="<?= Url::to(['/judiciary/judiciary/batch-create']) ?>" style="display:inline">
                 <input type="hidden" name="contract_ids" id="ctBatchIds" value="">
                 <button type="submit" class="ld-action-btn ld-action-primary ld-batch-submit">
                     <i class="fa fa-gavel"></i> تجهيز القضايا

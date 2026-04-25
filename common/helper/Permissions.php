@@ -388,6 +388,19 @@ class Permissions
                 'entity-search'          => self::JUD_VIEW,
                 'delete-customer-action' => self::JUD_DELETE,
                 'report'                 => self::JUD_VIEW,
+                /* Bulk wizard MVP */
+                'batch-create'           => self::JUD_CREATE,
+                'batch-parse-input'      => self::JUD_CREATE,
+                'batch-start'            => self::JUD_CREATE,
+                'batch-execute-chunk'    => self::JUD_CREATE,
+                'batch-finalize'         => self::JUD_CREATE,
+                'batch-print-redirect'   => self::JUD_CREATE,
+                'batch-history'          => self::JUD_CREATE,
+                'batch-revert'           => self::JUD_CREATE,
+                'batch-template-list'    => self::JUD_CREATE,
+                'batch-template-save'    => self::JUD_CREATE,
+                'batch-template-delete'  => self::JUD_CREATE,
+                'contract-search'        => self::JUD_CREATE,
             ],
             /* الموظفين */
             'employee/employee' => [

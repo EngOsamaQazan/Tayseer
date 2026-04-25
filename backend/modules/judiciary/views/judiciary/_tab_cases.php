@@ -29,7 +29,8 @@ use backend\widgets\ExportButtons;
             [
                 'content' =>
                     (Permissions::can(Permissions::JUD_CREATE)
-                        ? Html::a('<i class="fa fa-bolt"></i> إدخال مجمّع', ['batch-actions'], ['class' => 'btn btn-warning', 'style' => 'font-weight:600']) .
+                        ? Html::a('<i class="fa fa-gavel"></i> قضايا جماعية', ['batch-create'], ['class' => 'btn btn-primary', 'style' => 'font-weight:600']) .
+                          Html::a('<i class="fa fa-bolt"></i> إدخال مجمّع', ['batch-actions'], ['class' => 'btn btn-warning', 'style' => 'font-weight:600']) .
                           Html::a('<i class="fa fa-plus"></i> إضافة إجراء', ['/judiciaryCustomersActions/judiciary-customers-actions/create'], ['class' => 'btn btn-success', 'role' => 'modal-remote', 'data-pjax' => 0])
                         : '') .
                     Html::a('<i class="fa fa-refresh"></i>', [''], ['data-pjax' => 1, 'class' => 'btn btn-secondary', 'title' => 'تحديث']) .

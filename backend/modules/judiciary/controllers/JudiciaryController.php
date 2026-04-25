@@ -86,6 +86,13 @@ class JudiciaryController extends Controller
                             'create', 'batch-create', 'batch-print',
                             'customer-action',
                             'batch-actions', 'batch-parse', 'batch-execute',
+                            // Bulk wizard MVP — input + chunked execution.
+                            'batch-parse-input', 'batch-start',
+                            'batch-execute-chunk', 'batch-finalize',
+                            'batch-print-redirect', 'batch-history',
+                            'batch-revert',
+                            'batch-template-list', 'batch-template-save',
+                            'batch-template-delete', 'contract-search',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -1463,11 +1470,13 @@ class JudiciaryController extends Controller
                 \backend\modules\contracts\models\Contracts::updateAll(['company_id' => $model->company_id], ['id' => $contract_id]);
 
                 $contractCustamersMosels = \backend\modules\customers\models\ContractsCustomers::find()->where(['contract_id' => $model->contract_id])->all();
+                // Resolve "تجهيز قضية" action id by name/type (idempotent), instead of hardcoding 1.
+                $autoActionId = (new \backend\services\judiciary\BatchCreateService())->resolveCasePreparationActionId();
                 foreach ($contractCustamersMosels as $contractCustamersMosel) {
                     $judicaryCustamerAction = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions();
                     $judicaryCustamerAction->judiciary_id = $model->id;
                     $judicaryCustamerAction->customers_id = $contractCustamersMosel->customer_id;
-                    $judicaryCustamerAction->judiciary_actions_id = 1;
+                    $judicaryCustamerAction->judiciary_actions_id = $autoActionId;
                     $judicaryCustamerAction->note = null;
                     $judicaryCustamerAction->action_date = $model->income_date;
                     $judicaryCustamerAction->save();
@@ -1607,184 +1616,369 @@ class JudiciaryController extends Controller
      * ═══════════════════════════════════════════════════════════════════ */
 
     /**
-     * GET: عرض صفحة المعالج مع العقود المختارة
-     * POST (contract_ids فقط): تحميل بيانات العقود وعرض المعالج
-     * POST (submit): إنشاء القضايا جماعياً
+     * Renders the unified batch-creation wizard.
+     *
+     * Inputs (all optional, all GET): preselected contract_ids (comma- or
+     * array-form), and an `entry_method` hint to land on a specific tab.
+     * The wizard itself drives subsequent calls via the JSON endpoints below.
      */
     public function actionBatchCreate()
     {
         $request = Yii::$app->request;
 
-        // ─── جمع أرقام العقود من POST أو GET ───
-        $rawIds = $request->post('contract_ids', $request->get('contract_ids', ''));
+        $rawIds = $request->get('contract_ids', '');
         if (is_array($rawIds)) {
-            $contractIds = array_map('intval', $rawIds);
+            $preselected = array_values(array_filter(array_map('intval', $rawIds)));
         } else {
-            $contractIds = array_filter(array_map('intval', explode(',', (string)$rawIds)));
+            $preselected = array_values(array_filter(array_map('intval', explode(',', (string)$rawIds))));
         }
 
-        if (empty($contractIds)) {
-            Yii::$app->session->setFlash('error', 'الرجاء تحديد عقود للتجهيز');
-            return $this->redirect(['/contracts/contracts/legal-department']);
-        }
-
-        // ─── التحقق: هل هذا POST للإنشاء الفعلي؟ ───
-        if ($request->isPost && $request->post('batch_submit')) {
-            return $this->processBatchCreate($contractIds, $request);
-        }
-
-        $existingCases = Judiciary::find()
-            ->select('contract_id')
-            ->where(['contract_id' => $contractIds, 'is_deleted' => 0])
-            ->column();
-
-        $validIds = array_diff($contractIds, $existingCases);
-
-        $contractsData = [];
-        if (!empty($validIds)) {
-            $idList = implode(',', array_map('intval', $validIds));
-            $rows = Yii::$app->db->createCommand(
-                "SELECT id, total_value, Date_of_sale, client_names, total_paid, remaining_balance
-                 FROM {{%vw_contracts_overview}} WHERE id IN ($idList)"
-            )->queryAll();
-            foreach ($rows as $r) {
-                $contractsData[] = [
-                    'id'            => $r['id'],
-                    'customer'      => $r['client_names'] ?: '—',
-                    'total'         => (float)$r['total_value'],
-                    'paid'          => (float)$r['total_paid'],
-                    'remaining'     => round((float)$r['remaining_balance'], 2),
-                    'sale_date'     => $r['Date_of_sale'],
-                ];
-            }
-        }
-
-        if (empty($contractsData)) {
-            Yii::$app->session->setFlash('warning', 'جميع العقود المحددة لها قضايا مسبقة');
-            return $this->redirect(['/contracts/contracts/legal-department']);
+        $defaultTab = $request->get('tab', $preselected ? 'preview' : 'paste');
+        if (!in_array($defaultTab, ['paste', 'excel', 'selection', 'preview'], true)) {
+            $defaultTab = 'paste';
         }
 
         return $this->render('batch_create', [
-            'contractsData' => $contractsData,
+            'preselected' => $preselected,
+            'defaultTab'  => $defaultTab,
         ]);
     }
 
     /**
-     * معالجة الإنشاء الجماعي الفعلي داخل Transaction
+     * Step 1 endpoint: parse paste/excel/raw IDs into a validated preview list.
+     * Returns JSON: { valid: [...], invalid: [...], has_existing_case: [...], preview: { id => {...} } }.
      */
-    private function processBatchCreate($contractIds, $request)
+    public function actionBatchParseInput()
     {
-        $courtId     = (int)$request->post('court_id');
-        $typeId      = (int)$request->post('type_id');
-        $lawyerId    = (int)$request->post('lawyer_id');
-        $companyId   = (int)$request->post('company_id');
-        $addressId   = (int)$request->post('judiciary_inform_address_id');
-        $year        = $request->post('year', date('Y'));
-        $percentage  = (float)$request->post('lawyer_percentage', 0);
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $parser  = new \backend\services\judiciary\BatchInputParserService();
 
-        // Validation
-        if (!$courtId || !$lawyerId) {
-            Yii::$app->session->setFlash('error', 'المحكمة والمحامي حقول مطلوبة');
-            return $this->redirect(['batch-create', 'contract_ids' => implode(',', $contractIds)]);
-        }
-
-        // استبعاد العقود التي لها قضايا مسبقة
-        $existingCases = Judiciary::find()
-            ->select('contract_id')
-            ->where(['contract_id' => $contractIds, 'is_deleted' => 0])
-            ->column();
-        $contractIds = array_diff($contractIds, $existingCases);
-
-        if (empty($contractIds)) {
-            Yii::$app->session->setFlash('warning', 'جميع العقود المحددة لها قضايا مسبقة');
-            return $this->redirect(['/contracts/contracts/legal-department']);
-        }
-
-        $transaction = Yii::$app->db->beginTransaction();
-        $createdIds = [];
+        $method = $request->post('method', 'paste');
+        $ids    = [];
 
         try {
-            foreach ($contractIds as $contractId) {
-                $contract = Contracts::findOne($contractId);
-                if (!$contract) continue;
-
-                $vb = \backend\modules\followUp\helper\ContractCalculations::fromView($contractId);
-                $remaining = $vb ? $vb['remaining'] : 0;
-                $lawyerCost = ($percentage > 0) ? round($remaining * ($percentage / 100), 2) : 0;
-
-                // إنشاء سجل القضية
-                $model = new Judiciary();
-                $model->contract_id = $contractId;
-                $model->court_id = $courtId;
-                $model->type_id = $typeId ?: 1;        // افتراضي لتلبية required
-                $model->lawyer_id = $lawyerId;
-                $model->company_id = $companyId ?: null;
-                $model->judiciary_inform_address_id = $addressId ?: 1; // افتراضي لتلبية required
-                $model->lawyer_cost = $lawyerCost;
-                $model->case_cost = 0;
-                $model->year = (string)$year;
-                $model->income_date = date('Y-m-d');
-
-                if (!$model->save(false)) {
-                    throw new \Exception('فشل إنشاء القضية للعقد #' . $contractId);
+            if ($method === 'paste') {
+                $ids = $parser->parsePaste((string)$request->post('raw', ''));
+            } elseif ($method === 'excel') {
+                $file = \yii\web\UploadedFile::getInstanceByName('file');
+                if (!$file) {
+                    return ['ok' => false, 'message' => 'لم يتم تحديد ملف'];
                 }
-
-                $createdIds[] = $model->id;
-
-                Contracts::updateAll(
-                    ['company_id' => $companyId ?: $contract->company_id],
-                    ['id' => $contractId]
-                );
-
-                // إنشاء إجراءات العملاء
-                $contractCustomers = \backend\modules\customers\models\ContractsCustomers::find()
-                    ->where(['contract_id' => $contractId])
-                    ->all();
-                foreach ($contractCustomers as $cc) {
-                    $action = new JudiciaryCustomersActions();
-                    $action->judiciary_id = $model->id;
-                    $action->customers_id = $cc->customer_id;
-                    $action->judiciary_actions_id = 1;
-                    $action->note = null;
-                    $action->action_date = date('Y-m-d');
-                    $action->save();
+                $ids = $parser->parseExcel($file);
+            } elseif ($method === 'selection') {
+                $raw = $request->post('contract_ids', []);
+                if (!is_array($raw)) {
+                    $raw = explode(',', (string)$raw);
                 }
-
-                // إنشاء ملف المستند
-                $docFile = new ContractDocumentFile();
-                $docFile->document_type = 'judiciary file';
-                $docFile->contract_id = $model->id;
-                $docFile->save();
+                $ids = array_values(array_filter(array_map('intval', $raw)));
+            } else {
+                return ['ok' => false, 'message' => 'طريقة إدخال غير معروفة'];
             }
-
-            $transaction->commit();
-
-            // تحديث الكاش
-            try {
-                if (isset(Yii::$app->params['key_judiciary_contract'])) {
-                    Yii::$app->cache->set(
-                        Yii::$app->params['key_judiciary_contract'],
-                        Yii::$app->db->createCommand(Yii::$app->params['judiciary_contract_query'])->queryAll(),
-                        Yii::$app->params['time_duration']
-                    );
-                    Yii::$app->cache->set(
-                        Yii::$app->params['key_judiciary_year'],
-                        Yii::$app->db->createCommand(Yii::$app->params['judiciary_year_query'])->queryAll(),
-                        Yii::$app->params['time_duration']
-                    );
-                }
-            } catch (\Exception $e) { /* ignore cache errors */ }
-
-            Yii::$app->session->setFlash('success', 'تم إنشاء ' . count($createdIds) . ' قضية بنجاح');
-
-            // التحويل لصفحة الطباعة الجماعية
-            return $this->redirect(['batch-print', 'ids' => implode(',', $createdIds)]);
-
-        } catch (\Exception $e) {
-            $transaction->rollBack();
-            Yii::$app->session->setFlash('error', 'حدث خطأ: ' . $e->getMessage());
-            return $this->redirect(['batch-create', 'contract_ids' => implode(',', $contractIds)]);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
         }
+
+        if (empty($ids)) {
+            return ['ok' => false, 'message' => 'لم يتم استخراج أي رقم عقد'];
+        }
+
+        $buckets = $parser->validateContractIds($ids);
+        $preview = $parser->buildPreview($buckets['valid']);
+
+        return [
+            'ok'                => true,
+            'valid'             => $buckets['valid'],
+            'invalid'           => $buckets['invalid'],
+            'has_existing_case' => $buckets['has_existing_case'],
+            'preview'           => array_values($preview),
+            'count_input'       => count($ids),
+            'count_valid'       => count($buckets['valid']),
+        ];
+    }
+
+    /**
+     * Step 3a: persist the batch row + items, return chunks plan to the client.
+     */
+    public function actionBatchStart()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+
+        try {
+            $service = new \backend\services\judiciary\BatchCreateService();
+            $result  = $service->startBatch([
+                'contract_ids' => (array)$request->post('contract_ids', []),
+                'shared'       => (array)$request->post('shared', []),
+                'overrides'    => (array)$request->post('overrides', []),
+                'entry_method' => (string)$request->post('entry_method', 'paste'),
+                'user_id'      => (int)Yii::$app->user->id,
+            ]);
+
+            $templateId = (int)$request->post('template_id', 0);
+            if ($templateId > 0) {
+                (new \backend\services\judiciary\BatchTemplateService())->incrementUsage($templateId);
+            }
+            return ['ok' => true] + $result;
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Step 3b: process N items belonging to one chunk. Stateless and idempotent
+     * (only acts on items still 'pending'), so the client may retry safely.
+     */
+    public function actionBatchExecuteChunk()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $batchId = (int)$request->post('batch_id', 0);
+        $chunk   = (int)$request->post('chunk_index', 0);
+
+        try {
+            $service = new \backend\services\judiciary\BatchCreateService();
+            // Resolve which items belong to this chunk.
+            $offset = $chunk * \backend\services\judiciary\BatchCreateService::CHUNK_SIZE;
+            $itemIds = (new \yii\db\Query())
+                ->from(\backend\modules\judiciary\models\JudiciaryBatchItem::tableName())
+                ->select('id')
+                ->where(['batch_id' => $batchId])
+                ->orderBy(['id' => SORT_ASC])
+                ->offset($offset)
+                ->limit(\backend\services\judiciary\BatchCreateService::CHUNK_SIZE)
+                ->column();
+
+            $result = $service->executeChunk($batchId, array_map('intval', $itemIds));
+            return ['ok' => true, 'chunk_index' => $chunk] + $result;
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Step 3c: finalize counters and bust caches.
+     */
+    public function actionBatchFinalize()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $batchId = (int)Yii::$app->request->post('batch_id', 0);
+        try {
+            $service = new \backend\services\judiciary\BatchCreateService();
+            return ['ok' => true] + $service->finalizeBatch($batchId);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Convenience redirect: takes a batch_id and forwards to batch-print.
+     */
+    public function actionBatchPrintRedirect($batch_id)
+    {
+        $batchId = (int)$batch_id;
+        $ids = \backend\modules\judiciary\models\JudiciaryBatchItem::find()
+            ->select('judiciary_id')
+            ->where(['batch_id' => $batchId, 'status' => \backend\modules\judiciary\models\JudiciaryBatchItem::STATUS_SUCCESS])
+            ->andWhere(['IS NOT', 'judiciary_id', null])
+            ->column();
+        if (empty($ids)) {
+            Yii::$app->session->setFlash('warning', 'لا توجد قضايا قابلة للطباعة في هذه الدفعة');
+            return $this->redirect(['index']);
+        }
+        return $this->redirect(['batch-print', 'ids' => implode(',', $ids)]);
+    }
+
+    /**
+     * Batch history screen — list, filter, revert.
+     */
+    public function actionBatchHistory()
+    {
+        $userId = (int)Yii::$app->user->id;
+        $isManager = Permissions::can(Permissions::JUD_DELETE);
+
+        $query = \backend\modules\judiciary\models\JudiciaryBatch::find()
+            ->orderBy(['created_at' => SORT_DESC])
+            ->limit(200);
+        if (!$isManager) {
+            $query->andWhere(['created_by' => $userId]);
+        }
+        $batches = $query->all();
+
+        return $this->render('batch_history', [
+            'batches'   => $batches,
+            'isManager' => $isManager,
+            'userId'    => $userId,
+        ]);
+    }
+
+    /**
+     * Soft-delete a batch's cases (within 72h, owner/manager only).
+     */
+    public function actionBatchRevert()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $batchId = (int)$request->post('batch_id', 0);
+        $reason  = (string)$request->post('reason', '');
+
+        try {
+            $service   = new \backend\services\judiciary\BatchCreateService();
+            $isManager = Permissions::can(Permissions::JUD_DELETE);
+            $userId    = (int)Yii::$app->user->id;
+            $result    = $service->revertBatch($batchId, $reason, $userId, $isManager);
+            return ['ok' => true] + $result;
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function actionBatchTemplateList()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $svc = new \backend\services\judiciary\BatchTemplateService();
+        $includeData = (int)Yii::$app->request->get('include_data', 0) === 1;
+        return ['ok' => true, 'items' => $svc->listTemplates($includeData)];
+    }
+
+    public function actionBatchTemplateSave()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        try {
+            $svc = new \backend\services\judiciary\BatchTemplateService();
+            $id  = $svc->saveTemplate(
+                (string)$request->post('name', ''),
+                (array)$request->post('data', []),
+                (int)Yii::$app->user->id
+            );
+            return ['ok' => true, 'id' => $id];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    public function actionBatchTemplateDelete()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        try {
+            $svc = new \backend\services\judiciary\BatchTemplateService();
+            $ok  = $svc->deleteTemplate((int)Yii::$app->request->post('id', 0), (int)Yii::$app->user->id);
+            return ['ok' => $ok];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * AJAX search across ALL contracts (not only legal_department) for the
+     * "Selection" tab. Wide filters: status, contract type, customer job type,
+     * months overdue, sale-date range, company, free-text.
+     */
+    public function actionContractSearch()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $request = Yii::$app->request;
+        $page    = max(1, (int)$request->get('page', 1));
+        $perPage = 50;
+        $offset  = ($page - 1) * $perPage;
+
+        $statuses      = array_values(array_filter((array)$request->get('statuses', []), 'strlen'));
+        $companyIds    = array_values(array_filter(array_map('intval', (array)$request->get('company_ids', [])), fn($v) => $v > 0));
+        $contractTypes = array_values(array_filter((array)$request->get('contract_types', []), 'strlen'));
+        $jobTypeIds    = array_values(array_filter(array_map('intval', (array)$request->get('job_type_ids', [])), fn($v) => $v > 0));
+        $jobIds        = array_values(array_filter(array_map('intval', (array)$request->get('job_ids', [])), fn($v) => $v > 0));
+        $dateFrom      = (string)$request->get('date_from', '');
+        $dateTo        = (string)$request->get('date_to', '');
+        $q             = trim((string)$request->get('q', ''));
+
+        $where     = ['c.is_deleted = 0'];
+        $params    = [];
+        $needsJobs = !empty($jobTypeIds) || !empty($jobIds);
+
+        $appendIn = function (string $col, array $values, string $prefix) use (&$where, &$params) {
+            if (empty($values)) return;
+            $placeholders = [];
+            foreach ($values as $i => $val) {
+                $key = ":{$prefix}{$i}";
+                $placeholders[] = $key;
+                $params[$key] = $val;
+            }
+            $where[] = "{$col} IN (" . implode(',', $placeholders) . ')';
+        };
+
+        $appendIn('c.status',     $statuses,      'st');
+        $appendIn('c.company_id', $companyIds,    'co');
+        $appendIn('c.type',       $contractTypes, 'tp');
+        $appendIn('cu.job_title', $jobIds,        'jb');
+        if (!empty($jobTypeIds)) {
+            $appendIn('jb.job_type', $jobTypeIds, 'jt');
+        }
+        if ($dateFrom !== '') {
+            $where[] = 'c.Date_of_sale >= :df';
+            $params[':df'] = $dateFrom;
+        }
+        if ($dateTo !== '') {
+            $where[] = 'c.Date_of_sale <= :dt';
+            $params[':dt'] = $dateTo;
+        }
+        if ($q !== '') {
+            $where[] = '(c.id = :qi OR vw.client_names LIKE :ql)';
+            $params[':qi'] = (int)preg_replace('/[^0-9]/', '', $q) ?: 0;
+            $params[':ql'] = '%' . $q . '%';
+        }
+
+        $whereSql = 'WHERE ' . implode(' AND ', $where);
+        $jobsJoin = '';
+        if ($needsJobs) {
+            $jobsJoin = "INNER JOIN {{%contracts_customers}} cc ON cc.contract_id = c.id AND cc.customer_type = 'client'\n"
+                      . "INNER JOIN {{%customers}} cu ON cu.id = cc.customer_id\n"
+                      . "INNER JOIN {{%jobs}} jb ON jb.id = cu.job_title";
+        }
+
+        $sql = "
+            SELECT DISTINCT c.id, c.status, c.type, c.Date_of_sale, c.company_id,
+                   vw.client_names, vw.total_value, vw.total_paid, vw.remaining_balance,
+                   j.id AS judiciary_id
+            FROM {{%contracts}} c
+            $jobsJoin
+            LEFT JOIN {{%vw_contracts_overview}} vw ON vw.id = c.id
+            LEFT JOIN {{%judiciary}} j ON j.contract_id = c.id AND j.is_deleted = 0
+            $whereSql
+            ORDER BY c.id DESC
+            LIMIT $perPage OFFSET $offset
+        ";
+        $rows = Yii::$app->db->createCommand($sql, $params)->queryAll();
+
+        $countSql = "
+            SELECT COUNT(DISTINCT c.id)
+            FROM {{%contracts}} c
+            $jobsJoin
+            LEFT JOIN {{%vw_contracts_overview}} vw ON vw.id = c.id
+            $whereSql
+        ";
+        $total = (int)Yii::$app->db->createCommand($countSql, $params)->queryScalar();
+
+        return [
+            'ok'    => true,
+            'items' => array_map(function ($r) {
+                return [
+                    'id'           => (int)$r['id'],
+                    'client_names' => $r['client_names'],
+                    'status'       => $r['status'],
+                    'type'         => $r['type'],
+                    'date_of_sale' => $r['Date_of_sale'],
+                    'company_id'   => (int)$r['company_id'],
+                    'total_value'  => (float)$r['total_value'],
+                    'total_paid'   => (float)$r['total_paid'],
+                    'remaining'    => (float)$r['remaining_balance'],
+                    'judiciary_id' => $r['judiciary_id'] ? (int)$r['judiciary_id'] : null,
+                ];
+            }, $rows),
+            'page'    => $page,
+            'total'   => $total,
+            'perPage' => $perPage,
+        ];
     }
 
     /**
