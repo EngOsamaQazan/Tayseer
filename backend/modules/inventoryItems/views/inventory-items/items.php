@@ -26,8 +26,8 @@ use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة المخزون — الأصناف';
 
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=3');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=3', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
@@ -291,6 +291,14 @@ $builtinViews = [
            aria-pressed="<?= $flagFilter === 'out' ? 'true' : 'false' ?>">
             <i class="fa fa-ban"></i> نفد
             <span class="inv-pill-count"><?= number_format($kpi['out']) ?></span>
+        </a>
+        <a href="<?= $urlWith(['flag' => 'abandoned', 'InventoryItemsSearch.status' => null]) ?>"
+           class="inv-pill"
+           data-inv-pill data-pjax="0" data-tone="muted"
+           aria-pressed="<?= $flagFilter === 'abandoned' ? 'true' : 'false' ?>"
+           title="أصناف مهجورة (لم تعد قيد الاستخدام)">
+            <i class="fa fa-archive"></i> مهجور
+            <span class="inv-pill-count"><?= number_format($kpi['abandoned'] ?? 0) ?></span>
         </a>
     </nav>
 
@@ -651,6 +659,16 @@ $builtinViews = [
             <button type="button" class="inv-btn inv-btn--sm" data-bulk-reject title="رفض جماعي">
                 <i class="fa fa-times"></i> رفض
             </button>
+            <button type="button" class="inv-btn inv-btn--sm" data-bulk-abandon
+                    title="تمييز كمهجور — لم تعد قيد الاستخدام">
+                <i class="fa fa-archive"></i> مهجور
+            </button>
+            <?php if ($flagFilter === 'abandoned'): ?>
+                <button type="button" class="inv-btn inv-btn--sm" data-bulk-unabandon
+                        title="استعادة من قائمة المهجور">
+                    <i class="fa fa-undo"></i> استعادة
+                </button>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php if ($canDelete): ?>
@@ -679,16 +697,22 @@ $bulkApproveUrl = Url::to(['bulk-approve']);
 $bulkRejectUrl  = Url::to(['bulk-reject']);
 $bulkDeleteUrl  = Url::to(['bulk-delete']);
 $streamUrl      = Url::to(['items-stream']);
+$markAbandonedBaseUrl   = Url::to(['mark-abandoned',   'id' => '__ID__']);
+$unmarkAbandonedBaseUrl = Url::to(['unmark-abandoned', 'id' => '__ID__']);
+$bulkAbandonUrl         = Url::to(['bulk-mark-abandoned']);
 $csrf           = Yii::$app->request->csrfToken;
 
 $cfg = json_encode([
-    'csrf'           => $csrf,
-    'approveBaseUrl' => $approveBaseUrl,
-    'rejectBaseUrl'  => $rejectBaseUrl,
-    'bulkApproveUrl' => $bulkApproveUrl,
-    'bulkRejectUrl'  => $bulkRejectUrl,
-    'bulkDeleteUrl'  => $bulkDeleteUrl,
-    'streamUrl'      => $streamUrl,
+    'csrf'                 => $csrf,
+    'approveBaseUrl'       => $approveBaseUrl,
+    'rejectBaseUrl'        => $rejectBaseUrl,
+    'bulkApproveUrl'       => $bulkApproveUrl,
+    'bulkRejectUrl'        => $bulkRejectUrl,
+    'bulkDeleteUrl'        => $bulkDeleteUrl,
+    'streamUrl'            => $streamUrl,
+    'markAbandonedBaseUrl'   => $markAbandonedBaseUrl,
+    'unmarkAbandonedBaseUrl' => $unmarkAbandonedBaseUrl,
+    'bulkAbandonUrl'       => $bulkAbandonUrl,
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
 $js = <<<JS
@@ -718,6 +742,82 @@ $(document).on('click', '.inv-reject-btn', function(e){
         { reason: reason, _csrf: window.InvItemsProCfg.csrf }, function(resp){
             if (resp && resp.success) {
                 if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast(resp.message || 'تم الرفض', 'success');
+                $.pjax.reload({container: '#crud-datatable-pjax'});
+            } else {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast((resp && resp.message) || 'خطأ', 'danger');
+            }
+        }, 'json');
+});
+
+/* Per-card abandon / unabandon */
+$(document).on('click', '.inv-abandon-btn', function(e){
+    e.preventDefault();
+    var id = $(this).data('id');
+    if (!confirm('هل تريد تمييز هذا الصنف كصنف مهجور؟ لن يتم حذفه ويبقى ضمن السجلات.')) return;
+    $.post(window.InvItemsProCfg.markAbandonedBaseUrl.replace('__ID__', id),
+        { _csrf: window.InvItemsProCfg.csrf }, function(resp){
+            if (resp && resp.success) {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast(resp.message || 'تم التمييز كمهجور', 'success');
+                $.pjax.reload({container: '#crud-datatable-pjax'});
+            } else {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast((resp && resp.message) || 'خطأ', 'danger');
+            }
+        }, 'json');
+});
+$(document).on('click', '.inv-unabandon-btn', function(e){
+    e.preventDefault();
+    var id = $(this).data('id');
+    $.post(window.InvItemsProCfg.unmarkAbandonedBaseUrl.replace('__ID__', id),
+        { _csrf: window.InvItemsProCfg.csrf }, function(resp){
+            if (resp && resp.success) {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast(resp.message || 'تمت الاستعادة', 'success');
+                $.pjax.reload({container: '#crud-datatable-pjax'});
+            } else {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast((resp && resp.message) || 'خطأ', 'danger');
+            }
+        }, 'json');
+});
+
+/* Bulk abandon / unabandon */
+function _invCollectPicked() {
+    var ids = [];
+    document.querySelectorAll('[data-inv-pick]:checked').forEach(function(cb){
+        var v = cb.getAttribute('data-inv-pick');
+        if (v) ids.push(v);
+    });
+    return ids;
+}
+$(document).on('click', '[data-bulk-abandon]', function(e){
+    e.preventDefault();
+    var ids = _invCollectPicked();
+    if (!ids.length) {
+        if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast('لم يتم تحديد أي صنف', 'warning');
+        return;
+    }
+    if (!confirm('سيتم تمييز ' + ids.length + ' صنف كمهجور. هل تريد المتابعة؟')) return;
+    $.post(window.InvItemsProCfg.bulkAbandonUrl,
+        { pks: ids, action: 'mark', _csrf: window.InvItemsProCfg.csrf },
+        function(resp){
+            if (resp && resp.success) {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast(resp.message || 'تم التحديث', 'success');
+                $.pjax.reload({container: '#crud-datatable-pjax'});
+            } else {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast((resp && resp.message) || 'خطأ', 'danger');
+            }
+        }, 'json');
+});
+$(document).on('click', '[data-bulk-unabandon]', function(e){
+    e.preventDefault();
+    var ids = _invCollectPicked();
+    if (!ids.length) {
+        if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast('لم يتم تحديد أي صنف', 'warning');
+        return;
+    }
+    $.post(window.InvItemsProCfg.bulkAbandonUrl,
+        { pks: ids, action: 'unmark', _csrf: window.InvItemsProCfg.csrf },
+        function(resp){
+            if (resp && resp.success) {
+                if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast(resp.message || 'تم التحديث', 'success');
                 $.pjax.reload({container: '#crud-datatable-pjax'});
             } else {
                 if (window.InvItemsPro && window.InvItemsPro.toast) window.InvItemsPro.toast((resp && resp.message) || 'خطأ', 'danger');

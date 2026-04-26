@@ -54,7 +54,7 @@ class InventoryItems extends ActiveRecord
     {
         return [
             [['item_name', 'item_barcode'], 'required'],
-            [['created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'approved_by', 'approved_at', 'supplier_id', 'company_id', 'min_stock_level'], 'integer'],
+            [['created_at', 'updated_at', 'created_by', 'last_update_by', 'is_deleted', 'approved_by', 'approved_at', 'supplier_id', 'company_id', 'min_stock_level', 'is_abandoned', 'abandoned_at', 'abandoned_by'], 'integer'],
             [['unit_price'], 'number'],
             [['item_name'], 'string', 'max' => 50],
             [['item_barcode'], 'string', 'max' => 30],
@@ -67,7 +67,7 @@ class InventoryItems extends ActiveRecord
             [['status'], 'default', 'value' => self::STATUS_APPROVED],
             [['min_stock_level'], 'default', 'value' => 0],
             [['unit'], 'default', 'value' => 'قطعة'],
-            [['serial_number', 'description', 'category', 'unit_price', 'supplier_id', 'company_id', 'rejection_reason', 'min_stock_level', 'unit'], 'safe'],
+            [['serial_number', 'description', 'category', 'unit_price', 'supplier_id', 'company_id', 'rejection_reason', 'min_stock_level', 'unit', 'is_abandoned', 'abandoned_at', 'abandoned_by'], 'safe'],
         ];
     }
 

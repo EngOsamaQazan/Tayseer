@@ -8,8 +8,8 @@ use common\helper\Permissions;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=3');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=3', [
     'depends' => [\yii\web\JqueryAsset::class],
     'position' => \yii\web\View::POS_END,
 ]);
@@ -54,14 +54,10 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', 
 
 .inv-stat--total .inv-stat-icon { background: #e0f2fe; color: #075985; }
 .inv-stat--total .inv-stat-num { color: #075985; }
-.inv-stat--pending .inv-stat-icon { background: #fef3c7; color: #92400e; }
-.inv-stat--pending .inv-stat-num { color: #92400e; }
-.inv-stat--approved .inv-stat-icon { background: #dcfce7; color: #166534; }
-.inv-stat--approved .inv-stat-num { color: #166534; }
+.inv-stat--stock .inv-stat-icon { background: #dcfce7; color: #166534; }
+.inv-stat--stock .inv-stat-num { color: #166534; }
 .inv-stat--invoices .inv-stat-icon { background: #ede9fe; color: #5b21b6; }
 .inv-stat--invoices .inv-stat-num { color: #5b21b6; }
-.inv-stat--suppliers .inv-stat-icon { background: #fce7f3; color: #9d174d; }
-.inv-stat--suppliers .inv-stat-num { color: #9d174d; }
 .inv-stat--rejected .inv-stat-icon { background: #fee2e2; color: #991b1b; }
 .inv-stat--rejected .inv-stat-num { color: #991b1b; }
 
@@ -131,18 +127,11 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', 
                 <span class="inv-stat-lbl">إجمالي الأصناف</span>
             </div>
         </div>
-        <div class="inv-stat inv-stat--approved">
-            <div class="inv-stat-icon"><i class="fa fa-check-circle"></i></div>
+        <div class="inv-stat inv-stat--stock">
+            <div class="inv-stat-icon"><i class="fa fa-archive"></i></div>
             <div class="inv-stat-body">
-                <span class="inv-stat-num"><?= number_format($stats['approved']) ?></span>
-                <span class="inv-stat-lbl">أصناف معتمدة</span>
-            </div>
-        </div>
-        <div class="inv-stat inv-stat--pending">
-            <div class="inv-stat-icon"><i class="fa fa-clock-o"></i></div>
-            <div class="inv-stat-body">
-                <span class="inv-stat-num"><?= number_format($stats['pending']) ?></span>
-                <span class="inv-stat-lbl">بانتظار الموافقة</span>
+                <span class="inv-stat-num"><?= number_format($stats['total_stock']) ?></span>
+                <span class="inv-stat-lbl">المخزون الإجمالي الحالي</span>
             </div>
         </div>
         <div class="inv-stat inv-stat--invoices">
@@ -152,14 +141,7 @@ $this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', 
                 <span class="inv-stat-lbl">أوامر الشراء</span>
             </div>
         </div>
-        <div class="inv-stat inv-stat--suppliers">
-            <div class="inv-stat-icon"><i class="fa fa-truck"></i></div>
-            <div class="inv-stat-body">
-                <span class="inv-stat-num"><?= number_format($stats['suppliers']) ?></span>
-                <span class="inv-stat-lbl">الموردين</span>
-            </div>
-        </div>
-        <?php if ($stats['rejected'] > 0): ?>
+        <?php if (!empty($stats['rejected']) && $stats['rejected'] > 0): ?>
         <div class="inv-stat inv-stat--rejected">
             <div class="inv-stat-icon"><i class="fa fa-times-circle"></i></div>
             <div class="inv-stat-body">

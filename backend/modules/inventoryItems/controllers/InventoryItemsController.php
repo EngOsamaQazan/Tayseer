@@ -73,6 +73,7 @@ class InventoryItemsController extends Controller
                         'actions' => [
                             'update', 'approve', 'reject', 'bulk-approve', 'bulk-reject',
                             'adjustment', 'serial-update', 'serial-change-status',
+                            'mark-abandoned', 'unmark-abandoned', 'bulk-mark-abandoned',
                         ],
                         'allow' => true,
                         'roles' => ['@'],
@@ -115,6 +116,9 @@ class InventoryItemsController extends Controller
                     'serial-delete'       => ['post'],
                     'serial-change-status'=> ['post'],
                     'serial-bulk-delete'  => ['post'],
+                    'mark-abandoned'      => ['post'],
+                    'unmark-abandoned'    => ['post'],
+                    'bulk-mark-abandoned' => ['post'],
                     'delete-supplier'     => ['post'],
                     'transfer-supplier-data' => ['post'],
                 ],
@@ -128,13 +132,19 @@ class InventoryItemsController extends Controller
     public function actionIndex()
     {
         /* إحصائيات */
+        $itmTbl = InventoryItems::tableName();
+        $qtyTbl = \backend\modules\inventoryItemQuantities\models\InventoryItemQuantities::tableName();
+        $totalStockUnits = (int) (new \yii\db\Query())
+            ->from(['q' => $qtyTbl])
+            ->innerJoin(['i' => $itmTbl], 'i.id = q.item_id AND i.is_deleted = 0')
+            ->where(['q.is_deleted' => 0])
+            ->sum('q.quantity');
+
         $stats = [
-            'total'    => (int) InventoryItems::find()->count(),
-            'pending'  => (int) InventoryItems::find()->andWhere(['status' => 'pending'])->count(),
-            'approved' => (int) InventoryItems::find()->andWhere(['status' => 'approved'])->count(),
-            'rejected' => (int) InventoryItems::find()->andWhere(['status' => 'rejected'])->count(),
-            'invoices' => (int) \backend\modules\inventoryInvoices\models\InventoryInvoices::find()->count(),
-            'suppliers'=> (int) InventorySuppliers::find()->count(),
+            'total'        => (int) InventoryItems::find()->count(),
+            'total_stock'  => $totalStockUnits,
+            'rejected'     => (int) InventoryItems::find()->andWhere(['status' => 'rejected'])->count(),
+            'invoices'     => (int) \backend\modules\inventoryInvoices\models\InventoryInvoices::find()->count(),
         ];
 
         /* أصناف تحت الحد الأدنى */
@@ -209,6 +219,14 @@ class InventoryItemsController extends Controller
             ]);
         } elseif ($flag === 'recent') {
             $query->andWhere(['>=', 'created_at', strtotime('-7 days')]);
+        } elseif ($flag === 'abandoned') {
+            $query->andWhere([$itmTblFull . '.is_abandoned' => 1]);
+        } elseif ($flag === 'active') {
+            $query->andWhere([
+                'or',
+                [$itmTblFull . '.is_abandoned' => 0],
+                [$itmTblFull . '.is_abandoned' => null],
+            ]);
         }
 
         /* فرز */
@@ -292,15 +310,18 @@ class InventoryItemsController extends Controller
             }
         }
 
+        $abandonedCount = (int) InventoryItems::find()->andWhere(['is_abandoned' => 1])->count();
+
         return [
-            'total'    => $totalItems,
-            'approved' => $approvedCount,
-            'pending'  => $pendingCount,
-            'rejected' => $rejectedCount,
-            'low'      => $lowStock,
-            'out'      => $outOfStock,
-            'units'    => $totalUnits,
-            'value'    => round($stockValue, 2),
+            'total'     => $totalItems,
+            'approved'  => $approvedCount,
+            'pending'   => $pendingCount,
+            'rejected'  => $rejectedCount,
+            'abandoned' => $abandonedCount,
+            'low'       => $lowStock,
+            'out'       => $outOfStock,
+            'units'     => $totalUnits,
+            'value'     => round($stockValue, 2),
         ];
     }
 
@@ -669,6 +690,74 @@ class InventoryItemsController extends Controller
             }
         }
         return ['success' => true, 'message' => "تم رفض {$count} صنف"];
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+     *  Abandoned items — تمييز كمهجور / إلغاء التمييز
+     * ═══════════════════════════════════════════════════════════ */
+    public function actionMarkAbandoned($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = InventoryItems::findOne($id);
+        if (!$model) {
+            return ['success' => false, 'message' => 'الصنف غير موجود'];
+        }
+        $model->is_abandoned = 1;
+        $model->abandoned_at = time();
+        $model->abandoned_by = Yii::$app->user->id;
+        $model->save(false);
+        return ['success' => true, 'message' => 'تم تمييز الصنف كمهجور'];
+    }
+
+    public function actionUnmarkAbandoned($id)
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $model = InventoryItems::findOne($id);
+        if (!$model) {
+            return ['success' => false, 'message' => 'الصنف غير موجود'];
+        }
+        $model->is_abandoned = 0;
+        $model->abandoned_at = null;
+        $model->abandoned_by = null;
+        $model->save(false);
+        return ['success' => true, 'message' => 'تم استعادة الصنف من قائمة المهجور'];
+    }
+
+    public function actionBulkMarkAbandoned()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $pks    = Yii::$app->request->post('pks', []);
+        $action = Yii::$app->request->post('action', 'mark'); // mark | unmark
+        if (is_string($pks)) $pks = explode(',', $pks);
+        $pks = array_filter(array_map('intval', (array) $pks));
+
+        if (empty($pks)) {
+            return ['success' => false, 'message' => 'لم يتم تحديد أصناف'];
+        }
+
+        $now = time();
+        $uid = Yii::$app->user->id;
+        $count = 0;
+        foreach ($pks as $pk) {
+            $model = InventoryItems::findOne($pk);
+            if (!$model) continue;
+            if ($action === 'unmark') {
+                $model->is_abandoned = 0;
+                $model->abandoned_at = null;
+                $model->abandoned_by = null;
+            } else {
+                $model->is_abandoned = 1;
+                $model->abandoned_at = $now;
+                $model->abandoned_by = $uid;
+            }
+            $model->save(false);
+            $count++;
+        }
+
+        $msg = $action === 'unmark'
+            ? "تم استعادة {$count} صنف من قائمة المهجور"
+            : "تم تمييز {$count} صنف كمهجور";
+        return ['success' => true, 'message' => $msg, 'count' => $count];
     }
 
     /* ═══════════════════════════════════════════════════════════

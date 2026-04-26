@@ -6,8 +6,8 @@ use backend\widgets\ExportButtons;
 
 $this->title = 'إدارة المخزون';
 $this->registerCssFile(Yii::getAlias('@web') . '/css/fin-transactions.css', ['depends' => ['yii\web\YiiAsset']]);
-$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=2');
-$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=2', [
+$this->registerCssFile(Yii::$app->request->baseUrl . '/css/inv-items-pro.css?v=3');
+$this->registerJsFile(Yii::$app->request->baseUrl . '/js/inv-items-pro.js?v=3', [
     'depends' => [\yii\web\JqueryAsset::class],
 ]);
 ?>

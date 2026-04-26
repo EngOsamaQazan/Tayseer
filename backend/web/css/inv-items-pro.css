@@ -537,6 +537,33 @@
 .inv-card--rejected { opacity: 0.85; }
 .inv-card--rejected .inv-card-title { text-decoration: line-through; text-decoration-color: var(--inv-danger); }
 
+/* abandoned items: visually distinct (greyed-out diagonal stripes) */
+.inv-card--abandoned {
+    opacity: 0.78;
+    background:
+        repeating-linear-gradient(-45deg, rgba(100,116,139,0.04) 0 12px, transparent 12px 24px),
+        var(--inv-surface);
+    border-color: #cbd5e1;
+}
+.inv-card--abandoned .inv-card-title {
+    color: var(--inv-text-2);
+}
+.inv-card--abandoned::before {
+    content: 'مهجور';
+    position: absolute;
+    inset-block-start: 8px;
+    inset-inline-end: 8px;
+    background: #475569;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.5px;
+    z-index: 2;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+
 /* watermark for out-of-stock */
 .inv-card-watermark {
     position: absolute;
@@ -587,6 +614,7 @@
 .inv-status--pending  { background: var(--inv-warning-bg); color: var(--inv-warning); animation: invStatusPulse 2s ease-in-out infinite; }
 .inv-status--approved { background: var(--inv-success-bg); color: var(--inv-success); }
 .inv-status--rejected { background: var(--inv-danger-bg);  color: var(--inv-danger); }
+.inv-status--abandoned { background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; }
 @keyframes invStatusPulse {
     0%, 100% { box-shadow: 0 0 0 0 rgba(180,83,9,0.4); }
     50%      { box-shadow: 0 0 0 5px rgba(180,83,9,0); }

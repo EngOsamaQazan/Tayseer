@@ -56,10 +56,13 @@ $stripeColor = $stripeMap[$status] ?? 'var(--inv-info)';
 if ($stockLevel === 'out')      $stripeColor = 'var(--inv-danger)';
 elseif ($stockLevel === 'low')  $stripeColor = '#d97706';
 
+$isAbandoned = (int) ($model->is_abandoned ?? 0) === 1;
+
 $cardClasses = ['inv-card'];
 if ($stockLevel === 'low')          $cardClasses[] = 'inv-card--low';
 if ($stockLevel === 'out')          $cardClasses[] = 'inv-card--out';
 if ($status === 'rejected')         $cardClasses[] = 'inv-card--rejected';
+if ($isAbandoned)                   $cardClasses[] = 'inv-card--abandoned';
 
 $statusIcons = [
     'draft'    => 'fa-pencil',
@@ -114,6 +117,11 @@ $ariaLabel = sprintf(
                 <i class="fa <?= $statusIcons[$status] ?? 'fa-question' ?>"></i>
                 <?= Html::encode($model->getStatusLabel()) ?>
             </span>
+            <?php if ($isAbandoned): ?>
+                <span class="inv-status inv-status--abandoned" title="صنف مهجور — لم يعد قيد الاستخدام">
+                    <i class="fa fa-archive"></i> مهجور
+                </span>
+            <?php endif; ?>
         </div>
     </header>
 
@@ -229,6 +237,24 @@ $ariaLabel = sprintf(
                     aria-label="رفض <?= Html::encode($model->item_name) ?>">
                 <i class="fa fa-times"></i>
             </button>
+        <?php endif; ?>
+
+        <?php if ($canUpdate): ?>
+            <?php if ($isAbandoned): ?>
+                <button type="button" class="inv-btn inv-btn--sm inv-unabandon-btn"
+                        data-id="<?= $model->id ?>"
+                        title="استعادة الصنف"
+                        aria-label="استعادة <?= Html::encode($model->item_name) ?> من قائمة المهجور">
+                    <i class="fa fa-undo"></i> استعادة
+                </button>
+            <?php else: ?>
+                <button type="button" class="inv-btn inv-btn--sm inv-btn--icon inv-abandon-btn"
+                        data-id="<?= $model->id ?>"
+                        title="تمييز كصنف مهجور"
+                        aria-label="تمييز <?= Html::encode($model->item_name) ?> كصنف مهجور">
+                    <i class="fa fa-archive"></i>
+                </button>
+            <?php endif; ?>
         <?php endif; ?>
 
         <?php if ($canDelete): ?>

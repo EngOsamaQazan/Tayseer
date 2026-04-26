@@ -13,7 +13,7 @@ use backend\modules\inventoryItems\models\InventorySerialNumber;
 /** @var $model backend\modules\inventoryItems\models\InventoryItems */
 
 $baseUrl = Yii::$app->request->baseUrl;
-$this->registerCssFile($baseUrl . '/css/inv-items-pro.css?v=2');
+$this->registerCssFile($baseUrl . '/css/inv-items-pro.css?v=3');
 
 $serials = InventorySerialNumber::find()
     ->where(['item_id' => $model->id])

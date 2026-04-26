@@ -25,7 +25,7 @@ $categoryList = array_combine($existingCategories, $existingCategories);
 $categoryList['__new__'] = '＋ إضافة تصنيف جديد...';
 
 $baseUrl = Yii::$app->request->baseUrl;
-$this->registerCssFile($baseUrl . '/css/inv-items-pro.css?v=2');
+$this->registerCssFile($baseUrl . '/css/inv-items-pro.css?v=3');
 ?>
 
 <div class="inv-form-pro">
