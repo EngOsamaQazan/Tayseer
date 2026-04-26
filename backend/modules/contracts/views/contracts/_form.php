@@ -158,13 +158,24 @@ foreach ($flashes as $type => $msg): ?>
 
         <span class="cf-manual-link" id="cf-manual-link"><i class="fa fa-list-ul"></i> إضافة يدوية بدون سيريال</span>
         <div class="cf-manual-box" id="cf-manual-box">
-            <select id="cf-manual-sel" class="form-control" style="flex:1">
-                <option value="">— اختر الصنف —</option>
-                <?php foreach ($inventoryItems as $id => $name): ?>
-                    <option value="<?= $id ?>"><?= Html::encode($name) ?></option>
-                <?php endforeach ?>
-            </select>
-            <button type="button" id="cf-manual-add" class="btn btn-success btn-sm"><i class="fa fa-plus"></i> أضف</button>
+            <?php if (empty($inventoryItems)): ?>
+                <div class="alert alert-info" style="flex:1;margin:0;padding:8px 12px;font-size:13px">
+                    <i class="fa fa-info-circle"></i>
+                    لا توجد أصناف متاحة للبيع اليدوي — جميع الأصناف تستخدم سيريالات. يرجى اختيار سيريال من الأعلى.
+                </div>
+            <?php else: ?>
+                <select id="cf-manual-sel" class="form-control" style="flex:1">
+                    <option value="">— اختر الصنف —</option>
+                    <?php foreach ($inventoryItems as $id => $name): ?>
+                        <option value="<?= $id ?>"><?= Html::encode($name) ?></option>
+                    <?php endforeach ?>
+                </select>
+                <button type="button" id="cf-manual-add" class="btn btn-success btn-sm"><i class="fa fa-plus"></i> أضف</button>
+            <?php endif; ?>
+        </div>
+        <div class="cf-manual-hint" style="font-size:12px;color:#6b7280;margin-top:6px">
+            <i class="fa fa-shield-check"></i>
+            البيع اليدوي متاح فقط للأصناف غير السيريالية لتفادي التعارض مع المخزون.
         </div>
     </div>
 </div>

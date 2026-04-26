@@ -17,6 +17,8 @@ use backend\modules\judiciary\models\Judiciary;
 use backend\modules\inventoryItems\models\ContractInventoryItem;
 use backend\modules\inventoryItems\models\InventorySerialNumber;
 use backend\modules\inventoryItems\models\StockMovement;
+use backend\modules\inventoryItemQuantities\models\InventoryItemQuantities;
+use backend\modules\inventoryStockLocations\models\InventoryStockLocations;
 use backend\modules\loanScheduling\models\LoanScheduling;
 use backend\modules\followUp\helper\ContractCalculations;
 use yii\db;
@@ -443,13 +445,15 @@ class Contracts extends \yii\db\ActiveRecord
             return 0;
         }
 
-        $items = ContractInventoryItem::find()
+        // (1) البنود ذات السيريال — تحرير + إعادة كمية
+        $serialItems = ContractInventoryItem::find()
             ->where(['contract_id' => $contractId])
             ->andWhere(['IS NOT', 'serial_number_id', null])
             ->all();
 
         $released = 0;
-        foreach ($items as $ci) {
+        $serialIdsToDelete = [];
+        foreach ($serialItems as $ci) {
             $serial = InventorySerialNumber::findOne($ci->serial_number_id);
             if (!$serial) {
                 continue;
@@ -469,18 +473,81 @@ class Contracts extends \yii\db\ActiveRecord
                     'notes'          => 'إرجاع بسبب إلغاء عقد #' . $contractId . ' — سيريال: ' . $serial->serial_number,
                 ]);
 
+                self::restoreItemQuantity($contract, (int) $serial->item_id);
+                $serialIdsToDelete[] = (int) $ci->serial_number_id;
                 $released++;
             }
         }
 
+        if (!empty($serialIdsToDelete)) {
+            ContractInventoryItem::deleteAll([
+                'contract_id' => $contractId,
+                'serial_number_id' => $serialIdsToDelete,
+            ]);
+        }
+
+        // (2) البنود اليدوية — إعادة كمية + تسجيل حركة + حذف
+        $manualItems = ContractInventoryItem::find()
+            ->where(['contract_id' => $contractId, 'serial_number_id' => null])
+            ->all();
+
+        foreach ($manualItems as $ci) {
+            if (!$ci->item_id) continue;
+            self::restoreItemQuantity($contract, (int) $ci->item_id);
+            StockMovement::record((int) $ci->item_id, StockMovement::TYPE_RETURN, 1, [
+                'reference_type' => 'contract_cancel_manual',
+                'reference_id'   => $contractId,
+                'company_id'     => $contract->company_id,
+                'notes'          => 'إرجاع بند يدوي بسبب إلغاء عقد #' . $contractId,
+            ]);
+            $released++;
+        }
+
         ContractInventoryItem::deleteAll([
             'contract_id' => $contractId,
-            'serial_number_id' => array_filter(array_map(function ($ci) {
-                return $ci->serial_number_id;
-            }, $items)),
+            'serial_number_id' => null,
         ]);
 
         return $released;
+    }
+
+    /**
+     * إعادة قطعة واحدة إلى مخزون الصنف (helper مشترك)
+     */
+    public static function restoreItemQuantity($contract, int $itemId): void
+    {
+        if ($itemId <= 0) return;
+        $companyId = (int) ($contract->company_id ?? 0);
+
+        $qtyRecord = InventoryItemQuantities::find()
+            ->where(['item_id' => $itemId, 'is_deleted' => 0])
+            ->andFilterWhere(['company_id' => $companyId ?: null])
+            ->one();
+
+        if ($qtyRecord) {
+            $qtyRecord->quantity = (int) $qtyRecord->quantity + 1;
+            $qtyRecord->save(false);
+            return;
+        }
+
+        $anyRecord = InventoryItemQuantities::find()
+            ->where(['item_id' => $itemId, 'is_deleted' => 0])
+            ->one();
+
+        $location = null;
+        if ($companyId > 0) {
+            $location = InventoryStockLocations::find()
+                ->andWhere(['company_id' => $companyId])
+                ->one();
+        }
+
+        $newRec = new InventoryItemQuantities();
+        $newRec->item_id      = $itemId;
+        $newRec->quantity     = 1;
+        $newRec->company_id   = $companyId ?: ($anyRecord->company_id ?? 0);
+        $newRec->suppliers_id = $anyRecord->suppliers_id ?? ($companyId ?: 0);
+        $newRec->locations_id = $location ? $location->id : ($anyRecord->locations_id ?? 0);
+        $newRec->save(false);
     }
 
     /** @deprecated Status is now computed automatically. Use toggleLegalDepartment() instead. */

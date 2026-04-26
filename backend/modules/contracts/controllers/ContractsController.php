@@ -976,7 +976,10 @@ class ContractsController extends Controller
 
     public function actionDelete($id)
     {
-        $this->findModel($id)->delete();
+        $model = $this->findModel($id);
+        // إعادة كل المخزون والسيريالات قبل الحذف
+        Contracts::releaseInventoryOnCancel((int) $id);
+        $model->delete();
 
         if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
@@ -993,7 +996,9 @@ class ContractsController extends Controller
         }
         $pks = is_array($raw) ? $raw : explode(',', (string)$raw);
         foreach ($pks as $pk) {
-            $this->findModel($pk)->delete();
+            $m = $this->findModel($pk);
+            Contracts::releaseInventoryOnCancel((int) $pk);
+            $m->delete();
         }
         if (Yii::$app->request->isAjax) {
             Yii::$app->response->format = Response::FORMAT_JSON;
@@ -1257,7 +1262,21 @@ class ContractsController extends Controller
     private function buildFormParams($model)
     {
         $companies = ArrayHelper::map(Companies::find()->asArray()->all(), 'id', 'name');
-        $inventoryItems = ArrayHelper::map(InventoryItems::find()->asArray()->all(), 'id', 'item_name');
+
+        // الأصناف للقائمة اليدوية: نستثني الأصناف التي تحوي سيريالات
+        // (الأصناف ذات السيريالات يجب أن تُباع عبر اختيار سيريال محدد لتجنّب التعارض)
+        $serialItemIds = (new \yii\db\Query())
+            ->select('item_id')
+            ->distinct()
+            ->from('{{%inventory_serial_numbers}}')
+            ->where(['is_deleted' => 0])
+            ->column();
+
+        $manualItemsQuery = InventoryItems::find();
+        if (!empty($serialItemIds)) {
+            $manualItemsQuery->andWhere(['NOT IN', 'id', $serialItemIds]);
+        }
+        $inventoryItems = ArrayHelper::map($manualItemsQuery->asArray()->all(), 'id', 'item_name');
 
         $scannedSerials = [];
         $existingCustomers = [];
@@ -1345,18 +1364,70 @@ class ContractsController extends Controller
 
     /**
      * حفظ بنود يدوية (بدون سيريال)
+     *
+     * يرفض البيع اليدوي للأصناف التي تحوي سيريالات (لمنع التعارض):
+     * إذا كان للصنف سيريالات متاحة، يجب اختيار سيريال بدل اختيار الصنف يدوياً.
      */
     private function saveManualItems($model)
     {
         $manualItemIds = Yii::$app->request->post('manual_item_ids', []);
+        $errors = [];
+
         foreach ($manualItemIds as $itemId) {
+            $itemId = (int) $itemId;
+            if ($itemId <= 0) continue;
+
+            // منع: هل الصنف يحوي سيريالات؟
+            if ($this->itemHasSerials($itemId)) {
+                $invItem = InventoryItems::findOne($itemId);
+                $errors[] = sprintf(
+                    'الصنف "%s" يستخدم سيريالات — يرجى اختيار سيريال بدل البيع اليدوي.',
+                    $invItem ? $invItem->item_name : ('#' . $itemId)
+                );
+                continue;
+            }
+
+            // تحقق توفر الكمية
+            $invItem = InventoryItems::findOne($itemId);
+            if (!$invItem) continue;
+            $currentStock = $invItem->getTotalStock();
+            if ($currentStock <= 0) {
+                $errors[] = sprintf(
+                    'الصنف "%s" نافد المخزون — لا يمكن بيعه.',
+                    $invItem->item_name
+                );
+                continue;
+            }
+
             $ci = new ContractInventoryItem();
             $ci->contract_id = $model->id;
-            $ci->item_id = (int)$itemId;
+            $ci->item_id = $itemId;
             $ci->save(false);
 
-            $this->deductInventoryQuantity($model, (int)$itemId);
+            $this->deductInventoryQuantity($model, $itemId);
+
+            // سجل حركة OUT (لم يكن مسجلاً للبيع اليدوي)
+            StockMovement::record($itemId, StockMovement::TYPE_OUT, 1, [
+                'reference_type' => 'contract_sale_manual',
+                'reference_id'   => $model->id,
+                'company_id'     => $model->company_id,
+                'notes'          => 'بيع يدوي عبر عقد #' . $model->id,
+            ]);
         }
+
+        if (!empty($errors)) {
+            Yii::$app->session->addFlash('warning', implode(' • ', $errors));
+        }
+    }
+
+    /**
+     * هل للصنف سيريالات (تتطلب اختيار محدد)؟
+     */
+    private function itemHasSerials(int $itemId): bool
+    {
+        return InventorySerialNumber::find()
+            ->where(['item_id' => $itemId, 'is_deleted' => 0])
+            ->exists();
     }
 
     /**
@@ -1390,6 +1461,7 @@ class ContractsController extends Controller
                     'company_id'     => $model->company_id,
                     'notes'          => 'إرجاع من عقد #' . $model->id . ' — سيريال: ' . $releasedSerial->serial_number,
                 ]);
+                $this->restoreInventoryQuantity($model, $releasedSerial->item_id);
             }
         }
 
@@ -1456,33 +1528,112 @@ class ContractsController extends Controller
 
     /**
      * تحديث بنود يدوية عند التعديل
+     *
+     * يعيد الكميات القديمة للمخزون قبل الحذف، ثم يخصم للبنود الجديدة.
      */
     private function updateManualItems($model)
     {
-        // حذف البنود اليدوية القديمة
+        $oldManual = ContractInventoryItem::find()
+            ->where(['contract_id' => $model->id, 'serial_number_id' => null])
+            ->all();
+
+        foreach ($oldManual as $ci) {
+            if ($ci->item_id) {
+                $this->restoreInventoryQuantity($model, (int) $ci->item_id);
+                StockMovement::record((int) $ci->item_id, StockMovement::TYPE_RETURN, 1, [
+                    'reference_type' => 'contract_update_release',
+                    'reference_id'   => $model->id,
+                    'company_id'     => $model->company_id,
+                    'notes'          => 'إرجاع بند يدوي عبر تعديل عقد #' . $model->id,
+                ]);
+            }
+        }
+
         ContractInventoryItem::deleteAll([
             'contract_id' => $model->id,
             'serial_number_id' => null,
         ]);
-        // إضافة الجديدة
+
         $this->saveManualItems($model);
     }
 
     /**
-     * خصم كمية من المخزون
+     * خصم قطعة واحدة من مخزون الصنف
+     *
+     * يبحث عن أوّل سجل كميات للصنف وينقّص منه؛ إذا أصبح صفراً يحذفه.
+     * هذا يطابق منطق InventoryInvoicesController::updateItemQuantity('subtract').
+     *
+     * @return bool true إذا نجح الخصم، false إذا لا توجد كمية متوفرة
      */
-    private function deductInventoryQuantity($model, $itemId)
+    private function deductInventoryQuantity($model, $itemId): bool
     {
-        $location = InventoryStockLocations::find()
-            ->andWhere(['company_id' => $model->company_id])
+        // ابحث عن أنسب سجل: نفس الشركة أولاً، ثم أي سجل به كمية > 0
+        $qtyRecord = InventoryItemQuantities::find()
+            ->where(['item_id' => (int) $itemId, 'is_deleted' => 0])
+            ->andWhere(['>', 'quantity', 0])
+            ->orderBy([
+                new \yii\db\Expression('CASE WHEN company_id = ' . (int) $model->company_id . ' THEN 0 ELSE 1 END'),
+                'id' => SORT_ASC,
+            ])
             ->one();
 
-        $qty = new InventoryItemQuantities();
-        $qty->item_id = $itemId;
-        $qty->suppliers_id = $model->company_id;
-        $qty->locations_id = $location ? $location->id : 0;
-        $qty->quantity = 1;
-        $qty->save(false);
+        if (!$qtyRecord) {
+            // لا توجد كمية → سجّل OUT لكن لا تنشئ كمية سالبة (تجنّب diff تاريخي)
+            return false;
+        }
+
+        $qtyRecord->quantity = max(0, $qtyRecord->quantity - 1);
+        if ($qtyRecord->quantity <= 0) {
+            $qtyRecord->delete();
+        } else {
+            $qtyRecord->save(false);
+        }
+        return true;
+    }
+
+    /**
+     * إعادة قطعة واحدة لمخزون الصنف (عكس deductInventoryQuantity)
+     *
+     * يستخدم عند: إلغاء عقد، تحديث عقد بإزالة سيريال، حذف عقد.
+     */
+    private function restoreInventoryQuantity($model, $itemId): void
+    {
+        $itemId = (int) $itemId;
+        if ($itemId <= 0) return;
+
+        $companyId = (int) ($model->company_id ?? 0);
+
+        // ابحث عن أي سجل قائم للصنف ضمن نفس الشركة
+        $qtyRecord = InventoryItemQuantities::find()
+            ->where(['item_id' => $itemId, 'is_deleted' => 0])
+            ->andFilterWhere(['company_id' => $companyId ?: null])
+            ->one();
+
+        if ($qtyRecord) {
+            $qtyRecord->quantity = (int) $qtyRecord->quantity + 1;
+            $qtyRecord->save(false);
+            return;
+        }
+
+        // لا يوجد سجل → ابحث عن أي سجل آخر للصنف (حتى ولو بشركة مختلفة) لاستخدام موقعه
+        $anyRecord = InventoryItemQuantities::find()
+            ->where(['item_id' => $itemId, 'is_deleted' => 0])
+            ->one();
+
+        $location = null;
+        if ($companyId > 0) {
+            $location = InventoryStockLocations::find()
+                ->andWhere(['company_id' => $companyId])
+                ->one();
+        }
+
+        $newRec = new InventoryItemQuantities();
+        $newRec->item_id      = $itemId;
+        $newRec->quantity     = 1;
+        $newRec->company_id   = $companyId ?: ($anyRecord->company_id ?? 0);
+        $newRec->suppliers_id = $anyRecord->suppliers_id ?? ($companyId ?: 0);
+        $newRec->locations_id = $location ? $location->id : ($anyRecord->locations_id ?? 0);
+        $newRec->save(false);
     }
 
     /**
