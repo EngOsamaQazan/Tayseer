@@ -397,6 +397,8 @@ class Permissions
                 'batch-print-redirect'   => self::JUD_CREATE,
                 'batch-history'          => self::JUD_CREATE,
                 'batch-revert'           => self::JUD_CREATE,
+                'batch-resume'           => self::JUD_CREATE,
+                'batch-details'          => self::JUD_CREATE,
                 'batch-template-list'    => self::JUD_CREATE,
                 'batch-template-save'    => self::JUD_CREATE,
                 'batch-template-delete'  => self::JUD_CREATE,

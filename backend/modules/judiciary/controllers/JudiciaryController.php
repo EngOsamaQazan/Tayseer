@@ -1471,7 +1471,14 @@ class JudiciaryController extends Controller
 
                 $contractCustamersMosels = \backend\modules\customers\models\ContractsCustomers::find()->where(['contract_id' => $model->contract_id])->all();
                 // Resolve "تجهيز قضية" action id by name/type (idempotent), instead of hardcoding 1.
-                $autoActionId = (new \backend\services\judiciary\BatchCreateService())->resolveCasePreparationActionId();
+                // Wrapped defensively: never let case-action seeding break case creation
+                // (e.g. on tenants where the actions table differs).
+                try {
+                    $autoActionId = (new \backend\services\judiciary\BatchCreateService())->resolveCasePreparationActionId();
+                } catch (\Throwable $e) {
+                    Yii::warning('resolveCasePreparationActionId failed, falling back to id=1: ' . $e->getMessage(), __METHOD__);
+                    $autoActionId = 1;
+                }
                 foreach ($contractCustamersMosels as $contractCustamersMosel) {
                     $judicaryCustamerAction = new \backend\modules\judiciaryCustomersActions\models\JudiciaryCustomersActions();
                     $judicaryCustamerAction->judiciary_id = $model->id;
@@ -1740,10 +1747,14 @@ class JudiciaryController extends Controller
             $service = new \backend\services\judiciary\BatchCreateService();
             // Resolve which items belong to this chunk.
             $offset = $chunk * \backend\services\judiciary\BatchCreateService::CHUNK_SIZE;
+            // Only pending items — keeps resume from re-running already-succeeded ones.
             $itemIds = (new \yii\db\Query())
                 ->from(\backend\modules\judiciary\models\JudiciaryBatchItem::tableName())
                 ->select('id')
-                ->where(['batch_id' => $batchId])
+                ->where([
+                    'batch_id' => $batchId,
+                    'status'   => \backend\modules\judiciary\models\JudiciaryBatchItem::STATUS_PENDING,
+                ])
                 ->orderBy(['id' => SORT_ASC])
                 ->offset($offset)
                 ->limit(\backend\services\judiciary\BatchCreateService::CHUNK_SIZE)
@@ -1828,6 +1839,51 @@ class JudiciaryController extends Controller
             $userId    = (int)Yii::$app->user->id;
             $result    = $service->revertBatch($batchId, $reason, $userId, $isManager);
             return ['ok' => true] + $result;
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Resume a partial batch — resets failed items to pending and returns a
+     * fresh chunks plan that the wizard executes via batch-execute-chunk.
+     */
+    public function actionBatchResume()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $batchId = (int)Yii::$app->request->post('batch_id', 0);
+        try {
+            $service   = new \backend\services\judiciary\BatchCreateService();
+            $isManager = Permissions::can(Permissions::JUD_DELETE);
+            $userId    = (int)Yii::$app->user->id;
+            $plan      = $service->resumeBatch($batchId, $userId, $isManager);
+            return ['ok' => true] + $plan;
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Returns full per-item details for a batch (for the history modal).
+     */
+    public function actionBatchDetails()
+    {
+        Yii::$app->response->format = Response::FORMAT_JSON;
+        $batchId = (int)Yii::$app->request->get('batch_id', 0);
+        try {
+            $service = new \backend\services\judiciary\BatchCreateService();
+            $isManager = Permissions::can(Permissions::JUD_DELETE);
+            $userId    = (int)Yii::$app->user->id;
+
+            // Same visibility rule as listing: owners or managers.
+            $batch = \backend\modules\judiciary\models\JudiciaryBatch::findOne($batchId);
+            if (!$batch) {
+                return ['ok' => false, 'message' => 'الدفعة غير موجودة'];
+            }
+            if (!$isManager && (int)$batch->created_by !== $userId) {
+                return ['ok' => false, 'message' => 'غير مصرح لك'];
+            }
+            return ['ok' => true] + $service->getBatchDetails($batchId);
         } catch (\Throwable $e) {
             return ['ok' => false, 'message' => $e->getMessage()];
         }

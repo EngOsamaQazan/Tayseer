@@ -247,6 +247,103 @@ class BatchCreateService
     }
 
     /**
+     * Reset failed/pending items to pending so a partial batch can be retried.
+     * Returns chunks plan analogous to startBatch().
+     *
+     * @return array{batch_id:int, total:int, chunks:int, chunk_size:int, reset:int}
+     */
+    public function resumeBatch(int $batchId, int $userId, bool $isManager): array
+    {
+        /** @var JudiciaryBatch|null $batch */
+        $batch = JudiciaryBatch::findOne($batchId);
+        if (!$batch) {
+            throw new \InvalidArgumentException('الدفعة غير موجودة');
+        }
+        if ($batch->status === JudiciaryBatch::STATUS_REVERTED) {
+            throw new \DomainException('لا يمكن استكمال دفعة متراجَع عنها');
+        }
+        if (!$isManager && (int)$batch->created_by !== $userId) {
+            throw new \DomainException('غير مصرح لك باستكمال هذه الدفعة');
+        }
+
+        // Reset failed items back to pending so they re-run, and clear stale errors.
+        $reset = (int)Yii::$app->db->createCommand()
+            ->update(
+                JudiciaryBatchItem::tableName(),
+                ['status' => JudiciaryBatchItem::STATUS_PENDING, 'error_message' => null],
+                ['batch_id' => $batchId, 'status' => [JudiciaryBatchItem::STATUS_FAILED]]
+            )->execute();
+
+        $pendingCount = (int)JudiciaryBatchItem::find()
+            ->where(['batch_id' => $batchId, 'status' => JudiciaryBatchItem::STATUS_PENDING])
+            ->count();
+
+        if ($pendingCount === 0) {
+            throw new \DomainException('لا توجد عقود قابلة للاستكمال في هذه الدفعة');
+        }
+
+        // Decrement failed counter; set status back to running.
+        $batch->failed_count = max(0, (int)$batch->failed_count - $reset);
+        $batch->status       = JudiciaryBatch::STATUS_RUNNING;
+        $batch->save(false);
+
+        return [
+            'batch_id'   => $batch->id,
+            'total'      => $pendingCount,
+            'chunks'     => (int)ceil($pendingCount / self::CHUNK_SIZE),
+            'chunk_size' => self::CHUNK_SIZE,
+            'reset'      => $reset,
+        ];
+    }
+
+    /**
+     * Returns full per-item details of a batch for the history modal.
+     *
+     * @return array{batch: array, items: array<int, array>}
+     */
+    public function getBatchDetails(int $batchId): array
+    {
+        /** @var JudiciaryBatch|null $batch */
+        $batch = JudiciaryBatch::findOne($batchId);
+        if (!$batch) {
+            throw new \InvalidArgumentException('الدفعة غير موجودة');
+        }
+
+        $rows = (new \yii\db\Query())
+            ->from(JudiciaryBatchItem::tableName() . ' bi')
+            ->leftJoin('os_vw_contracts_overview vw', 'vw.id = bi.contract_id')
+            ->select([
+                'bi.id', 'bi.contract_id', 'bi.judiciary_id', 'bi.status', 'bi.error_message',
+                'vw.client_names', 'vw.remaining_balance',
+            ])
+            ->where(['bi.batch_id' => $batchId])
+            ->orderBy(['bi.id' => SORT_ASC])
+            ->all();
+
+        return [
+            'batch' => [
+                'id'             => (int)$batch->id,
+                'created_at'     => (int)$batch->created_at,
+                'entry_method'   => $batch->entry_method,
+                'status'         => $batch->status,
+                'contract_count' => (int)$batch->contract_count,
+                'success_count'  => (int)$batch->success_count,
+                'failed_count'   => (int)$batch->failed_count,
+            ],
+            'items' => array_map(function ($r) {
+                return [
+                    'contract_id'  => (int)$r['contract_id'],
+                    'judiciary_id' => $r['judiciary_id'] ? (int)$r['judiciary_id'] : null,
+                    'status'       => $r['status'],
+                    'error'        => $r['error_message'],
+                    'client_names' => $r['client_names'],
+                    'remaining'    => (float)$r['remaining_balance'],
+                ];
+            }, $rows),
+        ];
+    }
+
+    /**
      * Audit-only check: who/when/what is reverteable. Does not mutate.
      *
      * @return array{
@@ -504,33 +601,68 @@ class BatchCreateService
             return $this->cachedCasePrepActionId;
         }
 
-        // Prefer match by action_type, then by Arabic name (singular/plural variants).
-        $row = Yii::$app->db->createCommand(
-            "SELECT id FROM " . JudiciaryActions::tableName() . "
-             WHERE (action_type = :t OR name REGEXP :rx)
-               AND (is_deleted = 0 OR is_deleted IS NULL)
-             ORDER BY (action_type = :t) DESC, id ASC
-             LIMIT 1",
-            [':t' => 'case_preparation', ':rx' => 'تجهيز[[:space:]]*(القضية|قضية|القضيه|قضيه)']
-        )->queryScalar();
+        $db    = Yii::$app->db;
+        $table = JudiciaryActions::tableName();
+        $cols  = $db->getTableSchema($table)->getColumnNames();
+        $hasActionType = in_array('action_type', $cols, true);
+        $hasIsDeleted  = in_array('is_deleted', $cols, true);
+
+        // 1) Try to find an existing row — prefer action_type='case_preparation',
+        //    then by Arabic name (singular/plural variants).
+        $where  = [];
+        $params = [];
+        if ($hasActionType) {
+            $where[] = "action_type = :t";
+            $params[':t'] = 'case_preparation';
+        }
+        $where[] = "name LIKE :n1";
+        $where[] = "name LIKE :n2";
+        $where[] = "name LIKE :n3";
+        $params[':n1'] = '%تجهيز قضية%';
+        $params[':n2'] = '%تجهيز قضيه%';
+        $params[':n3'] = '%تجهيز القضية%';
+
+        $whereSql = '(' . implode(' OR ', $where) . ')';
+        if ($hasIsDeleted) {
+            $whereSql .= ' AND (is_deleted = 0 OR is_deleted IS NULL)';
+        }
+        $orderBy = $hasActionType
+            ? "(action_type = :t) DESC, id ASC"
+            : 'id ASC';
+
+        $row = $db->createCommand("SELECT id FROM {$table} WHERE {$whereSql} ORDER BY {$orderBy} LIMIT 1", $params)
+            ->queryScalar();
 
         if ($row) {
             $this->cachedCasePrepActionId = (int)$row;
             return $this->cachedCasePrepActionId;
         }
 
-        // Idempotent seed for this tenant.
-        $now = time();
-        Yii::$app->db->createCommand()->insert(JudiciaryActions::tableName(), [
-            'name'          => 'تجهيز قضية',
-            'action_type'   => 'case_preparation',
-            'action_nature' => 'process',
-            'is_deleted'    => 0,
-        ])->execute();
+        // 2) Idempotent seed.
+        $insert = ['name' => 'تجهيز قضية'];
+        if ($hasActionType) {
+            $insert['action_type'] = 'case_preparation';
+        }
+        if (in_array('action_nature', $cols, true)) {
+            $insert['action_nature'] = 'process';
+        }
+        if ($hasIsDeleted) {
+            $insert['is_deleted'] = 0;
+        }
+        try {
+            $db->createCommand()->insert($table, $insert)->execute();
+            $newId = (int)$db->getLastInsertID();
+            if ($newId > 0) {
+                $this->cachedCasePrepActionId = $newId;
+                return $newId;
+            }
+        } catch (\Throwable $e) {
+            Yii::warning('Failed to seed case_preparation action: ' . $e->getMessage(), __METHOD__);
+        }
 
-        $newId = (int)Yii::$app->db->getLastInsertID();
-        $this->cachedCasePrepActionId = $newId;
-        return $newId;
+        // 3) Last-resort fallback: action id = 1 (legacy hardcoded behaviour).
+        $this->cachedCasePrepActionId = 1;
+        return 1;
     }
 
     private function resolveDefaultTypeId(): int

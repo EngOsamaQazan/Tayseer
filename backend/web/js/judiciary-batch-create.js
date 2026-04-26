@@ -88,6 +88,7 @@
         $('#bw-step-1').style.display = (n === 1) ? '' : 'none';
         $('#bw-step-2').style.display = (n === 2) ? '' : 'none';
         $('#bw-step-3').style.display = (n === 3) ? '' : 'none';
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { window.scrollTo(0, 0); }
     }
 
     function showError(msg) {
@@ -428,23 +429,82 @@
     }
 
     function bindTemplateActions() {
-        $('#bw-tpl-load').addEventListener('change', function () {
-            var id = parseInt(this.value, 10);
-            if (!id) return;
-            state.loadedTemplateId = id;
-            var t = templatesCache.find(function (x) { return x.id === id; });
-            if (t) applyTemplate(t);
-        });
-
-        $('#bw-tpl-save').addEventListener('click', function () {
-            var name = prompt('اسم القالب:');
-            if (!name) return;
-            var data = collectShared();
-            postJson(EP.tplSave, { name: name, data: data }).then(function (resp) {
-                if (!resp.ok) { showError(resp.message || 'فشل حفظ القالب'); return; }
-                alert('تم حفظ القالب');
-                loadTemplates();
+        var loadEl = $('#bw-tpl-load');
+        if (loadEl) {
+            loadEl.addEventListener('change', function () {
+                var id = parseInt(this.value, 10);
+                if (!id) return;
+                state.loadedTemplateId = id;
+                var t = templatesCache.find(function (x) { return x.id === id; });
+                if (t) applyTemplate(t);
             });
+        }
+
+        var saveBtn = $('#bw-tpl-save');
+        var modal   = $('#bw-tpl-modal');
+        var nameInp = $('#bw-tpl-name');
+        var confirm = $('#bw-tpl-confirm');
+        var cancel  = $('#bw-tpl-cancel');
+
+        function openModal() {
+            if (!modal) return;
+            nameInp.value = '';
+            modal.classList.add('bw-show');
+            setTimeout(function () { try { nameInp.focus(); } catch (e) {} }, 30);
+        }
+        function closeModal() {
+            if (modal) modal.classList.remove('bw-show');
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openModal();
+            });
+        }
+        if (cancel) cancel.addEventListener('click', closeModal);
+        if (modal) modal.addEventListener('click', function (e) {
+            if (e.target === modal) closeModal();
+        });
+        if (nameInp) nameInp.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') { e.preventDefault(); confirm.click(); }
+        });
+        if (confirm) confirm.addEventListener('click', function () {
+            var name = (nameInp.value || '').trim();
+            if (!name) { nameInp.focus(); return; }
+            var data = collectShared();
+            confirm.disabled = true;
+            postJson(EP.tplSave, { name: name, data: data }).then(function (resp) {
+                confirm.disabled = false;
+                if (!resp.ok) { showError(resp.message || 'فشل حفظ القالب'); return; }
+                closeModal();
+                loadTemplates();
+            }).catch(function (e) {
+                confirm.disabled = false;
+                showError(e.message);
+            });
+        });
+    }
+
+    function bindBackLink() {
+        var link = $('#bw-back-link');
+        if (!link) return;
+        var indexUrl = link.dataset.indexUrl || link.getAttribute('href');
+        link.addEventListener('click', function (e) {
+            if (state.step === 2) {
+                e.preventDefault();
+                setStep(1);
+            } else if (state.step === 3) {
+                if (state.batchId && state.chunksDone < state.chunksTotal) {
+                    e.preventDefault();
+                    if (!window.confirm('التنفيذ جارٍ. هل تريد فعلاً مغادرة الصفحة؟')) return;
+                    location.href = indexUrl;
+                } else {
+                    e.preventDefault();
+                    setStep(2);
+                }
+            }
+            // step 1 → default link behavior (go to /index)
         });
     }
 
@@ -572,6 +632,7 @@
         bindSelection();
         bindTemplateActions();
         bindStepNav();
+        bindBackLink();
 
         // If pre-selected ids were passed via GET, push them straight to step 2.
         if (BOOT.preselected && BOOT.preselected.length) {

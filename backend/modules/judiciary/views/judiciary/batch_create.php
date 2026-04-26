@@ -211,6 +211,13 @@ $bootstrap = [
 .bw-pill-ok { background: #dcfce7; color: #166534; }
 .bw-pill-warn { background: #fef3c7; color: #92400e; }
 .bw-pill-err { background: #fee2e2; color: #991b1b; }
+
+.bw-modal-bg { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none; align-items: center; justify-content: center; z-index: 9999; }
+.bw-modal-bg.bw-show { display: flex; }
+.bw-modal { background: #fff; border-radius: 12px; padding: 22px; max-width: 420px; width: calc(100% - 32px); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+.bw-modal h3 { margin: 0 0 14px; font-size: 16px; color: #1a365d; }
+.bw-modal input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; }
+.bw-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 </style>
 
 <div class="bw-page" id="bw-root">
@@ -220,7 +227,7 @@ $bootstrap = [
         <span class="bw-count">الحد: 100 عقد</span>
         <div class="bw-spacer"></div>
         <a href="<?= Url::to(['batch-history']) ?>" class="bw-link"><i class="fa fa-history"></i> تاريخ الدفعات</a>
-        <a href="<?= Url::to(['index']) ?>" class="bw-link"><i class="fa fa-arrow-right"></i> رجوع</a>
+        <a href="<?= Url::to(['index']) ?>" class="bw-link" id="bw-back-link" data-index-url="<?= Url::to(['index']) ?>"><i class="fa fa-arrow-right"></i> رجوع</a>
     </div>
 
     <div class="bw-stepper">
@@ -454,6 +461,19 @@ $bootstrap = [
             <button type="button" class="bw-btn bw-btn-primary" id="bw-go-3">بدء التنفيذ ←</button>
         </div>
     </section>
+
+    <!-- Save-template modal -->
+    <div class="bw-modal-bg" id="bw-tpl-modal" role="dialog" aria-modal="true">
+        <div class="bw-modal">
+            <h3>💾 حفظ القالب</h3>
+            <label style="font-size:13px;color:#475569;margin-bottom:6px;display:block;">اسم القالب</label>
+            <input type="text" id="bw-tpl-name" placeholder="مثال: قالب التنفيذ — محكمة عمان">
+            <div class="bw-modal-actions">
+                <button type="button" class="bw-btn bw-btn-secondary" id="bw-tpl-cancel">إلغاء</button>
+                <button type="button" class="bw-btn bw-btn-primary" id="bw-tpl-confirm">حفظ</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ─── Step 3: Execute ─── -->
     <section class="bw-card" id="bw-step-3" style="display:none;">
