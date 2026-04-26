@@ -274,7 +274,7 @@ class InventoryItemsController extends Controller
             ->from(["i" => $itmTbl])
             ->leftJoin(["q" => $qtyTbl], "q.item_id = i.id AND q.is_deleted = 0")
             ->where(['i.is_deleted' => 0])
-            ->groupBy("i.id")
+            ->groupBy(["i.id", "i.min_stock_level", "i.unit_price"])
             ->all();
 
         $lowStock = 0;
