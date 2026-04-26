@@ -79,10 +79,20 @@ class InventoryFixController extends Controller
                     ->where(['inventory_items_id' => $itemId, 'is_deleted' => 0])
                     ->sum('number', $db);
 
-                // sold = COUNT(contract_inventory_item) where is_deleted=0
+                // sold = COUNT(contract_inventory_item joined with non-canceled, non-deleted contracts)
+                // Table os_contract_inventory_item itself is hard-deleted (no is_deleted column).
                 $sold = (int) (new Query())
-                    ->from('os_contract_inventory_item')
-                    ->where(['item_id' => $itemId, 'is_deleted' => 0])
+                    ->from(['ci' => 'os_contract_inventory_item'])
+                    ->leftJoin(['c' => 'os_contracts'], 'c.id = ci.contract_id')
+                    ->where(['ci.item_id' => $itemId])
+                    ->andWhere(['or',
+                        ['c.is_deleted' => 0],
+                        ['c.is_deleted' => null], // legacy rows with no is_deleted
+                    ])
+                    ->andWhere(['or',
+                        ['<>', 'c.status', 'canceled'],
+                        ['c.status' => null],
+                    ])
                     ->count('*', $db);
 
                 $correct = max(0, $purchased - $sold);
