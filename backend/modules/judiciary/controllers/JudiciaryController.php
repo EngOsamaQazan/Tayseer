@@ -1946,6 +1946,7 @@ class JudiciaryController extends Controller
         $jobIds        = array_values(array_filter(array_map('intval', (array)$request->get('job_ids', [])), fn($v) => $v > 0));
         $dateFrom      = (string)$request->get('date_from', '');
         $dateTo        = (string)$request->get('date_to', '');
+        $monthsOverdueMin = (int)$request->get('months_overdue_min', 0);
         $q             = trim((string)$request->get('q', ''));
 
         $where     = ['c.is_deleted = 0'];
@@ -1982,6 +1983,25 @@ class JudiciaryController extends Controller
             $where[] = '(c.id = :qi OR vw.client_names LIKE :ql)';
             $params[':qi'] = (int)preg_replace('/[^0-9]/', '', $q) ?: 0;
             $params[':ql'] = '%' . $q . '%';
+        }
+        if ($monthsOverdueMin > 0) {
+            // Approximate overdue-installments count, mirroring ContractCalculations::overdueInstallments():
+            //   ceil( max(0, min((months_since_first+1)*installment, debt - adjustments) - paid) / installment )
+            // Uses pre-aggregated `os_vw_contracts_overview` columns for speed.
+            $where[] = "(
+                vw.effective_first_date IS NOT NULL
+                AND vw.effective_first_date <= CURDATE()
+                AND COALESCE(vw.effective_installment, 0) > 0
+                AND CEIL(
+                        GREATEST(0,
+                            LEAST(
+                                (TIMESTAMPDIFF(MONTH, vw.effective_first_date, CURDATE()) + 1) * vw.effective_installment,
+                                COALESCE(vw.total_value, 0) - COALESCE(vw.total_adjustments, 0)
+                            ) - COALESCE(vw.total_paid, 0)
+                        ) / vw.effective_installment
+                    ) >= :mom
+            )";
+            $params[':mom'] = $monthsOverdueMin;
         }
 
         $whereSql = 'WHERE ' . implode(' AND ', $where);

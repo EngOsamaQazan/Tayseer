@@ -247,6 +247,9 @@ class RiskEngine
             ->select(['promise_to_pay_at'])
             ->where(['contract_id' => $this->contract->id])
             ->andWhere(['IS NOT', 'promise_to_pay_at', null])
+            // Skip legacy zero-dates (`0000-00-00`) — they aren't real promises
+            // and break MySQL strict mode when bound as a parameter.
+            ->andWhere(['>=', 'promise_to_pay_at', '1970-01-01'])
             ->andWhere(['<', 'promise_to_pay_at', $today])
             ->column();
 
@@ -256,10 +259,15 @@ class RiskEngine
 
         $broken = 0;
         foreach ($promises as $promiseDate) {
+            $pdate = substr((string)$promiseDate, 0, 10);
+            // Defensive: any non-canonical date string is treated as "no promise".
+            if ($pdate === '' || $pdate === '0000-00-00' || strtotime($pdate) === false) {
+                continue;
+            }
             $paidOnOrAfter = (float) Yii::$app->db->createCommand(
                 "SELECT COALESCE(SUM(amount), 0) FROM {{%income}}
                  WHERE contract_id = :cid AND date >= :pdate",
-                [':cid' => $this->contract->id, ':pdate' => substr($promiseDate, 0, 10)]
+                [':cid' => $this->contract->id, ':pdate' => $pdate]
             )->queryScalar();
 
             if ($paidOnOrAfter <= 0) {

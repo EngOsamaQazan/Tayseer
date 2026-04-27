@@ -215,6 +215,8 @@
 
         var df = inputVal('bw-f-from'); if (df) params.append('date_from', df);
         var dt = inputVal('bw-f-to');   if (dt) params.append('date_to', dt);
+        var mo = inputVal('bw-f-months-overdue');
+        if (mo !== '' && parseInt(mo, 10) > 0) params.append('months_overdue_min', parseInt(mo, 10));
         var q  = inputVal('bw-f-q');    if (q)  params.append('q', q);
 
         var tbody = $('#bw-search-table tbody');
@@ -227,7 +229,7 @@
     }
 
     function clearFilters() {
-        ['bw-f-from', 'bw-f-to', 'bw-f-q'].forEach(function (id) {
+        ['bw-f-from', 'bw-f-to', 'bw-f-q', 'bw-f-months-overdue'].forEach(function (id) {
             var el = document.getElementById(id);
             if (el) el.value = '';
         });

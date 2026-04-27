@@ -314,6 +314,10 @@ $bootstrap = [
                 <div><label>من تاريخ بيع</label><input type="date" id="bw-f-from"></div>
                 <div><label>إلى تاريخ بيع</label><input type="date" id="bw-f-to"></div>
                 <div>
+                    <label>أقساط متأخرة (≥)</label>
+                    <input type="number" id="bw-f-months-overdue" min="0" max="60" step="1" placeholder="مثلاً: 3" title="عدد الأقساط المستحقة التي لم تُدفع — يطبَّق فقط حين تكون القيمة أكبر من صفر">
+                </div>
+                <div>
                     <label>بحث سريع</label>
                     <input type="text" id="bw-f-q" placeholder="رقم عقد أو اسم">
                 </div>
