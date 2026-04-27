@@ -210,17 +210,24 @@ $contractModel = $contractCalculations->contract_model;
 .bsms-list::-webkit-scrollbar{width:3px}
 .bsms-list::-webkit-scrollbar-thumb{background:#CBD5E1;border-radius:3px}
 
-.bsms-item{display:flex;align-items:center;gap:6px;padding:3px 8px;background:#FAFBFC;border:1px solid #F1F5F9;border-radius:6px;cursor:pointer;transition:all .15s;line-height:1.2;min-height:26px}
-.bsms-item:hover{border-color:#DDD6FE;background:#FAFAFE;box-shadow:0 1px 4px rgba(124,58,237,.06)}
-.bsms-item.excluded{opacity:.3;background:#F9FAFB}
-.bsms-item.excluded .bsms-num,.bsms-item.excluded .bsms-name{text-decoration:line-through}
-.bsms-item input[type=checkbox]{width:13px;height:13px;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;margin:0}
-.bsms-item .bsms-num{font-size:11px;font-weight:700;color:#1E293B;direction:ltr;font-family:'Courier New',monospace;min-width:88px;letter-spacing:.2px}
-.bsms-item .bsms-name{font-size:10.5px;color:#64748B;flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.bsms-item .bsms-tag{font-size:8px;padding:1px 6px;border-radius:10px;font-weight:700;white-space:nowrap;letter-spacing:.2px;line-height:1.4}
-.bsms-item .bsms-tag.primary{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0}
-.bsms-item .bsms-tag.extra{background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE}
-.bsms-item .bsms-wa-btn{width:20px;height:20px;border:none;border-radius:5px;background:#F0FDF4;color:#16A34A;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;flex-shrink:0;padding:0}
+/* Override WCAG-AAA global 44x44 touch-target rule from tayseer-vuexy.css —
+   inside this dense list it makes rows huge. Our list uses native HTML checkboxes
+   so we explicitly cap min-width/min-height with !important. */
+.bsms-modal .bsms-item{display:flex;align-items:center;gap:6px;padding:2px 8px;background:#FAFBFC;border:1px solid #F1F5F9;border-radius:6px;cursor:pointer;transition:all .15s;line-height:1.15;min-height:24px}
+.bsms-modal .bsms-item:hover{border-color:#DDD6FE;background:#FAFAFE;box-shadow:0 1px 4px rgba(124,58,237,.06)}
+.bsms-modal .bsms-item.excluded{opacity:.3;background:#F9FAFB}
+.bsms-modal .bsms-item.excluded .bsms-num,.bsms-modal .bsms-item.excluded .bsms-name{text-decoration:line-through}
+.bsms-modal .bsms-item input[type=checkbox]{width:14px!important;height:14px!important;min-width:0!important;min-height:0!important;accent-color:#7C3AED;cursor:pointer;flex-shrink:0;margin:0;padding:0}
+.bsms-modal .bsms-item .bsms-num{font-size:11px;font-weight:700;color:#1E293B;direction:ltr;font-family:'Courier New',monospace;min-width:88px;letter-spacing:.2px}
+.bsms-modal .bsms-item .bsms-name{font-size:10.5px;color:#64748B;flex:1;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bsms-modal .bsms-item .bsms-tag{font-size:8px;padding:1px 6px;border-radius:10px;font-weight:700;white-space:nowrap;letter-spacing:.2px;line-height:1.4}
+.bsms-modal .bsms-item .bsms-tag.primary{background:#ECFDF5;color:#059669;border:1px solid #A7F3D0}
+.bsms-modal .bsms-item .bsms-tag.extra{background:#F5F3FF;color:#7C3AED;border:1px solid #DDD6FE}
+.bsms-modal .bsms-item .bsms-wa-btn{width:22px!important;height:22px!important;min-width:0!important;min-height:0!important;border:none;border-radius:5px;background:#F0FDF4;color:#16A34A;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;flex-shrink:0;padding:0}
+.bsms-modal .bsms-toggle-all{min-height:0!important;min-width:0!important}
+.bsms-modal .bsms-close{min-height:0!important;min-width:0!important}
+.bsms-modal .bsms-emoji-btn{min-height:0!important;min-width:0!important}
+.bsms-modal .bsms-clear-btn{min-height:0!important;min-width:0!important}
 .bsms-item .bsms-wa-btn:hover{background:#DCFCE7;color:#15803D;transform:scale(1.1)}
 .bsms-item.excluded .bsms-wa-btn{opacity:.3;pointer-events:none}
 
